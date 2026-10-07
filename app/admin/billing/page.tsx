@@ -1,0 +1,1 @@
+export default function BillingPage(){return <main className="workspace"><header className="workspace-head"><div><h1>المدفوعات والفواتير</h1><p>متابعة التحويلات والفواتير وحالات الدفع والتجديد.</p></div></header><section className="admin-empty-state"><b>مركز المدفوعات</b><p>سيجمع عمليات الدفع والمراجعة والفواتير وسجل التجديد داخل لوحة المنصة.</p></section></main>}
