@@ -173,3 +173,19 @@
  .adminTop{overflow:visible!important}
  .adminTopActions{position:relative;z-index:30}
 }
+
+/* Refine admin utility icons and tap targets */
+.adminIconButton{transition:border-color .15s ease,background .15s ease,transform .15s ease}
+.adminIconButton:hover{background:#f7f8fa!important;border-color:#bfc6cf!important}
+.adminIconButton:active{transform:scale(.96)}
+.adminNotificationButton{font-size:0!important}
+.adminNotificationButton::before{content:"🔔";font-size:1rem;line-height:1}
+.adminTopActions form button{min-height:38px;font-weight:700}
+@media(max-width:650px){
+ .adminTopActions{direction:ltr}
+ .adminTopActions form{order:1}
+ .adminNotificationButton{order:2}
+ .adminTopActions>.adminIconButton:not(.adminNotificationButton){order:3}
+ .adminLanguageMenu{order:4}
+ .adminTop>div:first-child{direction:rtl;text-align:right}
+}
