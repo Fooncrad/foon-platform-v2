@@ -1,1 +1,9 @@
-export default function UsersPage(){return <main className="workspace"><header className="workspace-head"><div><h1>المستخدمون والصلاحيات</h1><p>إدارة مستخدمي المنصة والأدوار والصلاحيات.</p></div></header><section className="admin-empty-state"><b>إدارة الوصول</b><p>هذا القسم مخصص للحسابات الإدارية والأدوار والصلاحيات مع فصل صلاحيات المتاجر.</p></section></main>}
+const roles=[["مدير المنصة","وصول كامل لإدارة FOON"],["دعم المنصة","قراءة ومتابعة بدون صلاحيات حساسة"],["مدير متجر","إدارة متجره وفروعه فقط"],["موظف متجر","صلاحيات حسب الدور داخل المتجر"]];
+export default function UsersPage(){
+ return <main className="workspace">
+  <header className="workspace-head"><div><h1>المستخدمون والصلاحيات</h1><p>إدارة الوصول والأدوار مع فصل واضح بين إدارة المنصة وحسابات المتاجر.</p></div><button className="adminPrimaryButton" type="button">إضافة مستخدم</button></header>
+  <section className="adminAccessStats"><article><span>مديرو المنصة</span><strong>—</strong></article><article><span>فرق الدعم</span><strong>—</strong></article><article><span>حسابات المتاجر</span><strong>—</strong></article></section>
+  <section className="adminPanel"><div className="adminPanelHead"><div><h2>الأدوار</h2><p>نطاق كل دور واضح قبل منح أي صلاحية.</p></div></div><div className="adminRoleGrid">{roles.map(([name,desc])=><article key={name}><div><b>{name}</b><p>{desc}</p></div><button type="button">الصلاحيات</button></article>)}</div></section>
+  <section className="adminPanel"><div className="adminPanelHead"><div><h2>المستخدمون</h2><p>ابحث بالحساب أو البريد أو الدور.</p></div><div className="adminUserFilters"><input aria-label="بحث عن مستخدم" placeholder="الاسم أو البريد..." /><select aria-label="تصفية حسب الدور" defaultValue="all"><option value="all">كل الأدوار</option><option>مدير المنصة</option><option>دعم المنصة</option><option>مدير متجر</option></select></div></div><div className="adminUsersEmpty"><b>قائمة المستخدمين</b><p>ستظهر الحسابات هنا مع الدور والحالة وآخر دخول وإجراءات الإدارة.</p></div></section>
+ </main>
+}
