@@ -5,8 +5,10 @@ import { currentUserId } from "@/lib/auth/session";
 import { requirePlatformRole } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
 import { platformAudit } from "@/lib/platform/audit";
+import { assertSameOrigin } from "@/lib/security/origin";
 
 export async function POST(request:Request){
+ try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentUserId(); if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(actor,["super_admin","admin"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const body=await request.json(); const name=String(body.name??"").trim().slice(0,180); const slug=String(body.slug??"").trim().toLowerCase();
