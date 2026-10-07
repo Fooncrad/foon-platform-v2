@@ -59,3 +59,18 @@
  .adminLogo{font-size:1.15rem}
  .adminTop small{display:none}
 }
+
+/* Mobile admin drawer */
+.adminBrandRow{display:block}.adminMobileMenu{display:none}
+@media(max-width:850px){
+ .adminBrandRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+ .adminBrandRow .adminLogo{flex:1}
+ .adminSide>nav{display:none}
+ .adminMobileMenu{display:block;position:relative}
+ .adminMobileMenu summary{list-style:none;cursor:pointer;width:44px;height:44px;display:grid;place-items:center;border:1px solid #3b3933;border-radius:10px;color:#f8f3e9;font-size:1.35rem}
+ .adminMobileMenu summary::-webkit-details-marker{display:none}
+ .adminDrawer{position:absolute;z-index:50;top:52px;left:0;width:min(330px,calc(100vw - 32px));max-height:70svh;overflow:auto;padding:10px;background:#201f1b;border:1px solid #3b3933;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.35);display:grid;gap:5px}
+ .adminDrawer a,.adminDrawer span{display:block;padding:12px;border-radius:9px;white-space:normal;line-height:1.35}
+ .adminDrawer a{color:#fff;background:#292823}
+ .adminDrawer span{color:#aaa59b;border:1px solid #34322d}
+}
