@@ -1,0 +1,1 @@
+export default function AuditPage(){return <main className="workspace"><header className="workspace-head"><div><h1>سجل العمليات</h1><p>متابعة العمليات الإدارية والتغييرات المهمة داخل المنصة.</p></div></header><section className="admin-empty-state"><b>السجل الإداري</b><p>سيعرض من نفذ العملية ومتى وما الذي تغير مع معلومات التتبع المناسبة للدعم.</p></section></main>}
