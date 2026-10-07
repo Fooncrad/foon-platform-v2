@@ -74,3 +74,14 @@
  .adminDrawer a{color:#fff;background:#292823}
  .adminDrawer span{color:#aaa59b;border:1px solid #34322d}
 }
+
+/* Keep mobile admin drawer above the workspace */
+@media(max-width:850px){
+ .adminSide{position:relative;z-index:100}
+ .adminBrandRow{position:relative;z-index:102}
+ .adminMobileMenu{z-index:110}
+ .adminMobileMenu[open]{z-index:120}
+ .adminDrawer{z-index:9999}
+ .adminStage{position:relative;z-index:1}
+ .adminTop{z-index:5}
+}
