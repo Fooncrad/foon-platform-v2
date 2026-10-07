@@ -1,0 +1,1 @@
+export default function SettingsPage(){return <main className="workspace"><header className="workspace-head"><div><h1>إعدادات المنصة</h1><p>الهوية والإعدادات العامة والتشغيلية للمنصة.</p></div></header><section className="admin-empty-state"><b>إعدادات FOON</b><p>سيجمع الهوية والإعدادات العامة والتكاملات والسياسات في مكان واحد.</p></section></main>}
