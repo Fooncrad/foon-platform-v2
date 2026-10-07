@@ -15,3 +15,13 @@
 .workspace-card{min-width:0;padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#24221e;display:grid;gap:8px;color:#f8f3e9;text-decoration:none}.workspace-card span{color:#aaa59b}.tenant-list select{min-height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#171613;color:#f8f3e9;padding:0 10px}.empty-state{padding:28px;text-align:center;color:#aaa59b;border:1px dashed rgba(255,255,255,.14);border-radius:14px}
 
 .account-card h1{color:#f8f3e9}.account-card>p{color:#aaa59b}.account-actions{display:grid;gap:10px;margin:20px 0}.primary-link,.secondary-link{display:grid;place-items:center;min-height:48px;border-radius:12px;text-decoration:none;font-weight:800}.primary-link{background:#e2a93b;color:#171613}.secondary-link{border:1px solid rgba(255,255,255,.14);color:#f8f3e9}
+
+/* Landing refinement */
+.brand{font-size:24px;font-weight:900;letter-spacing:.08em;color:#d99a24}
+.navCta{background:#d99a24;color:#171713!important;padding:10px 14px;border-radius:11px}
+.cardNo{display:block;color:#d99a24;font-weight:900;font-size:.8rem;margin-bottom:24px}
+.hero{padding-top:110px;padding-bottom:78px}
+.hero h1{letter-spacing:-.035em}
+.grid article{transition:transform .18s ease,border-color .18s ease}
+.grid article:hover{transform:translateY(-2px);border-color:#d6b16c}
+@media(max-width:700px){.nav nav{gap:10px;font-size:.88rem}.nav nav>a:first-child{display:none}.navCta{padding:9px 11px}.hero{padding:72px 16px 52px}.hero h1{font-size:clamp(42px,13vw,64px)}.actions{flex-direction:column}.actions a{text-align:center;width:100%}}
