@@ -19,10 +19,10 @@ export default async function AdminPage(){
  </section>
  <section className="admin-operations"><div className="admin-operations-head"><div><h2>إدارة المنصة</h2><p>كل أدوات الإدارة الرئيسية من نفس اللوحة.</p></div></div><div className="admin-operation-grid">
   <Link href="/admin/tenants"><b>المتاجر</b><span>إنشاء وإدارة المطاعم والمتاجر</span></Link>
-  <article><b>الباقات والاشتراكات</b><span>الخطط، التجديد والفوترة</span><em>قريبًا</em></article>
-  <article><b>المدفوعات والفواتير</b><span>التحويلات وسجل المدفوعات</span><em>قريبًا</em></article>
-  <article><b>المستخدمون والصلاحيات</b><span>إدارة الوصول والأدوار</span><em>قريبًا</em></article>
-  <article><b>الإشعارات والرسائل</b><span>قنوات وتنبيهات المنصة</span><em>قريبًا</em></article>
-  <article><b>إعدادات المنصة</b><span>اللغات والمحتوى والإعدادات العامة</span><em>قريبًا</em></article>
+  <Link href="/admin/plans"><b>الباقات والاشتراكات</b><span>الخطط، التجديد والفوترة</span></Link>
+  <Link href="/admin/billing"><b>المدفوعات والفواتير</b><span>التحويلات وسجل المدفوعات</span></Link>
+  <Link href="/admin/users"><b>المستخدمون والصلاحيات</b><span>إدارة الوصول والأدوار</span></Link>
+  <Link href="/admin/notifications"><b>الإشعارات والرسائل</b><span>قنوات وتنبيهات المنصة</span></Link>
+  <Link href="/admin/settings"><b>إعدادات المنصة</b><span>اللغات والمحتوى والإعدادات العامة</span></Link>
  </div></section></main>;
 }
