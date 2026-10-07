@@ -1,0 +1,1 @@
+export default function PlansPage(){return <main className="workspace"><header className="workspace-head"><div><h1>الباقات والاشتراكات</h1><p>إدارة خطط المنصة ودورات الاشتراك والمزايا من مكان واحد.</p></div></header><section className="admin-empty-state"><b>إدارة الباقات</b><p>هذا القسم جاهز لاستقبال الباقات الشهرية والسنوية والمزايا والأسعار متعددة العملات.</p></section></main>}
