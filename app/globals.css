@@ -134,3 +134,22 @@
 .adminMenuButton{appearance:none;border:1px solid #4a463e;background:#24221e;color:#fff;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:1.45rem;line-height:1;cursor:pointer;padding:0}
 .adminMenuButton span{display:block;line-height:1}
 @media(max-width:850px){.adminTop{box-shadow:0 2px 8px rgba(17,24,39,.08)}.adminDrawer{box-shadow:0 20px 60px rgba(0,0,0,.55)!important}}
+
+/* Admin top controls */
+.adminTopActions{display:flex;align-items:center;gap:8px}
+.adminLanguageMenu{position:relative}
+.adminLanguageMenu summary{list-style:none;cursor:pointer;border:1px solid #d8dde4;background:#fff;color:#172033;border-radius:10px;min-width:72px;height:38px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800}
+.adminLanguageMenu summary::-webkit-details-marker{display:none}
+.adminLanguageMenu>div{position:absolute;top:44px;left:0;z-index:80;width:150px;background:#fff;border:1px solid #d8dde4;border-radius:12px;padding:6px;box-shadow:0 14px 35px rgba(17,24,39,.14);display:grid;gap:4px}
+.adminLanguageMenu>div button{border:0;background:transparent;color:#172033;text-align:start;padding:9px 10px;border-radius:8px;cursor:pointer}.adminLanguageMenu>div button:hover{background:#f3f4f6}
+.adminIconButton{position:relative;width:38px;height:38px;padding:0!important;display:grid;place-items:center;border:1px solid #d8dde4!important;border-radius:10px!important;background:#fff!important;color:#172033!important;font-size:1.05rem}
+.adminNotificationButton span{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#b42318;color:#fff;font-size:.62rem;display:grid;place-items:center;border:2px solid #fff}
+@media(max-width:650px){
+ .adminTop{height:auto;min-height:62px;gap:10px;padding:10px 12px}
+ .adminTop>div:first-child small{display:none}
+ .adminTopActions{gap:5px}
+ .adminTopActions form button{font-size:.72rem;padding:8px 9px}
+ .adminLanguageMenu summary{min-width:58px;height:36px}
+ .adminIconButton{width:36px;height:36px}
+ .adminLanguageMenu>div{position:fixed;top:116px;left:12px;right:12px;width:auto}
+}
