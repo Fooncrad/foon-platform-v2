@@ -153,3 +153,14 @@
  .adminIconButton{width:36px;height:36px}
  .adminLanguageMenu>div{position:fixed;top:116px;left:12px;right:12px;width:auto}
 }
+
+/* Keep admin utilities centered in one mobile top bar */
+@media(max-width:650px){
+ .adminTop{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;padding:9px 12px!important;min-height:58px!important}
+ .adminTop>div:first-child{min-width:0}
+ .adminTop>div:first-child b{display:block;white-space:nowrap;font-size:.9rem}
+ .adminTopActions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important;flex-wrap:nowrap!important}
+ .adminLanguageMenu,.adminIconButton,.adminTopActions form{flex:0 0 auto!important}
+ .adminLanguageMenu summary{min-width:54px!important;width:54px!important;height:36px!important}
+ .adminTopActions form button{height:36px!important;white-space:nowrap!important;margin:0!important}
+}
