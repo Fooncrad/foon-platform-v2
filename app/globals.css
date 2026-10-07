@@ -200,3 +200,10 @@
  .adminMenuButton{touch-action:manipulation}
  .adminDrawer{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 }
+
+/* Active admin navigation */
+.adminSide nav>a.active{background:#343129;color:#f2b63f;border:1px solid #4a453a;font-weight:900}
+.adminDrawer>a.active{background:#3a352a!important;color:#f2b63f!important;border-color:#665b42!important}
+@media(max-width:850px){
+ .adminDrawer>a.active::before{content:"";width:4px;height:22px;border-radius:999px;background:#e2a93b;margin-left:8px;flex:0 0 auto}
+}
