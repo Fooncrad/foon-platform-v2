@@ -189,3 +189,14 @@
  .adminLanguageMenu{order:4}
  .adminTop>div:first-child{direction:rtl;text-align:right}
 }
+
+/* Admin mobile drawer UX */
+@media(max-width:850px){
+ .adminDrawer{padding:12px!important;display:block!important}
+ .adminDrawer>a{display:flex!important;align-items:center;min-height:46px;margin-bottom:8px;padding:11px 13px!important}
+ .adminDrawerGroup{display:grid;gap:5px;margin-top:12px;padding-top:10px;border-top:1px solid #34322d}
+ .adminDrawerGroup small{display:block;color:#e2a93b;font-size:.7rem;font-weight:900;padding:0 8px 4px}
+ .adminDrawerGroup span{display:flex!important;align-items:center;min-height:44px;padding:10px 12px!important;border-radius:9px}
+ .adminMenuButton{touch-action:manipulation}
+ .adminDrawer{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+}
