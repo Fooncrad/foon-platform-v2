@@ -117,3 +117,20 @@
 .admin-operation-grid em{position:absolute;left:12px;top:12px;font-style:normal;font-size:.68rem;color:#9a6c18;background:#fff7e6;padding:4px 7px;border-radius:999px}
 @media(max-width:900px){.admin-operation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.admin-operations{padding:15px}.admin-operation-grid{grid-template-columns:1fr}.admin-operation-grid>a,.admin-operation-grid>article{min-height:92px}}
+
+/* Admin visual clarity */
+.adminShell{font-family:Arial,"Noto Sans Arabic",sans-serif}
+.adminSide{background:#171613;color:#fff}
+.adminLogo{color:#f2b63f}.adminLogo small{color:#d0cbc0}
+.adminSide nav a{color:#fff;font-weight:700}.adminSide nav span{color:#d2cdc3}
+.adminNavGroup{display:grid;gap:5px;margin-top:10px}.adminNavGroup small{color:#8f8a80;padding:8px 12px 3px;font-size:.72rem;font-weight:800}
+.adminTop{background:#fff;color:#111827;border-color:#d8dde4}.adminTop b{font-size:1rem}.adminTop small{color:#596273}
+.adminStage>.workspace{color:#111827}.adminStage .workspace-head h1{color:#111827}.adminStage .workspace-head p{color:#5f6877}
+.adminStage .workspace-card,.adminStage .workspace-grid article,.tenant-summary article,.admin-operations,.admin-operation-grid>a,.admin-operation-grid>article{border-color:#d6dbe2;box-shadow:0 3px 12px rgba(17,24,39,.06)}
+.adminStage .workspace-card strong,.adminStage .workspace-grid article strong,.tenant-summary strong,.admin-operation-grid b{color:#111827}
+.adminDrawer{background:#171613!important;border-color:#3f3b34!important}
+.adminDrawer a{background:#292720!important;color:#fff!important;font-weight:800;border:1px solid #3b3933}
+.adminDrawer span{color:#ddd7cc!important;border-color:#3f3b34!important;font-weight:650}
+.adminMenuButton{appearance:none;border:1px solid #4a463e;background:#24221e;color:#fff;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:1.45rem;line-height:1;cursor:pointer;padding:0}
+.adminMenuButton span{display:block;line-height:1}
+@media(max-width:850px){.adminTop{box-shadow:0 2px 8px rgba(17,24,39,.08)}.adminDrawer{box-shadow:0 20px 60px rgba(0,0,0,.55)!important}}
