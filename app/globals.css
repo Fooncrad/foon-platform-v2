@@ -43,3 +43,19 @@
 .adminStage .workspace-card,.adminStage .workspace-grid article{background:#fff;color:#172033;border-color:#e0e3e7;box-shadow:0 4px 18px rgba(25,31,40,.04)}
 .adminStage .workspace-card span,.adminStage .workspace-grid article span,.adminStage .workspace-head p{color:#737b86}
 @media(max-width:850px){.adminShell{grid-template-columns:1fr}.adminSide{position:static;height:auto;padding:12px}.adminLogo{padding:4px 8px 12px}.adminSide nav{display:flex;gap:5px;overflow-x:auto;padding-top:10px}.adminSide nav a,.adminSide nav span{flex:0 0 auto}.adminTop{height:60px;padding:0 16px}.adminStage>.workspace{padding:18px 16px}.adminStage .workspace-grid{grid-template-columns:1fr}}
+
+/* Admin mobile navigation containment */
+@media(max-width:850px){
+ .adminSide{padding:14px 16px 10px}
+ .adminLogo{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3b3933;padding:2px 4px 12px}
+ .adminLogo small{margin:0}
+ .adminSide nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible;padding-top:10px}
+ .adminSide nav a,.adminSide nav span{min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:center;padding:9px 7px;border:1px solid #34322d;border-radius:9px;font-size:.78rem}
+ .adminSide nav span{display:none}
+ .adminTop{position:sticky;top:0;z-index:10}
+}
+@media(max-width:430px){
+ .adminSide nav{grid-template-columns:1fr 1fr}
+ .adminLogo{font-size:1.15rem}
+ .adminTop small{display:none}
+}
