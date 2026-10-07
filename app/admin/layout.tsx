@@ -1,0 +1,4 @@
+import Link from "next/link";
+export default function AdminLayout({children}:{children:React.ReactNode}){
+ return <div className="adminShell"><aside className="adminSide"><Link href="/admin" className="adminLogo">FOON<small>Platform Admin</small></Link><nav><Link href="/admin">نظرة عامة</Link><Link href="/admin/tenants">المتاجر</Link><span>الباقات والاشتراكات</span><span>المدفوعات والفواتير</span><span>المستخدمون والصلاحيات</span><span>الإشعارات والرسائل</span><span>الترجمات</span><span>صفحات الموقع</span><span>إعدادات المنصة</span><span>سجل العمليات</span></nav></aside><section className="adminStage"><header className="adminTop"><div><b>لوحة المنصة</b><small>إدارة FOON من مكان واحد</small></div><form action="/api/auth/logout" method="post"><button>تسجيل الخروج</button></form></header>{children}</section></div>
+}
