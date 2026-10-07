@@ -1,0 +1,1 @@
+export default function PagesPage(){return <main className="workspace"><header className="workspace-head"><div><h1>صفحات الموقع</h1><p>إدارة الصفحات العامة ومحتوى الواجهة من لوحة المنصة.</p></div></header><section className="admin-empty-state"><b>إدارة المحتوى</b><p>سيضم الصفحات العامة والمحتوى متعدد اللغات وترتيب الظهور.</p></section></main>}
