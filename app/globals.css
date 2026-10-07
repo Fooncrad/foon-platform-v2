@@ -94,3 +94,14 @@
  .adminMobileMenu[open]::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:9000}
  .adminDrawer{position:fixed!important;top:126px!important;right:16px!important;left:16px!important;width:auto!important;max-height:calc(100svh - 142px)!important;z-index:9001!important}
 }
+
+/* Tenant management inside unified admin */
+.tenant-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.tenant-summary article{background:#fff;border:1px solid #e0e3e7;border-radius:14px;padding:16px;display:grid;gap:6px}
+.tenant-summary strong{font-size:1.5rem;color:#172033}.tenant-summary span{color:#737b86;font-size:.88rem}
+.adminStage .provision-form{background:#fff;border:1px solid #e0e3e7;border-radius:14px;padding:14px}
+.adminStage .provision-form input,.adminStage .provision-form select{background:#fff;color:#172033;border-color:#dce0e5}
+.adminStage .tenant-list article{background:#fff;color:#172033;border-color:#e0e3e7}
+.adminStage .tenant-list span{color:#737b86}.adminStage .tenant-list select{background:#fff;color:#172033;border-color:#dce0e5}
+.adminStage .form-note{background:#fff;border-color:#e0e3e7;color:#172033}
+@media(max-width:560px){.tenant-summary{grid-template-columns:repeat(3,1fr)}.tenant-summary article{padding:12px}.tenant-summary strong{font-size:1.25rem}.tenant-summary span{font-size:.75rem}}
