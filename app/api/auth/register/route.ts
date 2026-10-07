@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import { database } from "@/lib/db/mysql";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
+import { assertSameOrigin } from "@/lib/security/origin";
 
 export const runtime="nodejs";
 export async function POST(request:Request){
   try{
+    assertSameOrigin(request);
     const body=await request.json();
     const email=String(body.email??"").trim().toLowerCase();
     const password=String(body.password??"");
