@@ -1,0 +1,1 @@
+export default function UsersPage(){return <main className="workspace"><header className="workspace-head"><div><h1>المستخدمون والصلاحيات</h1><p>إدارة مستخدمي المنصة والأدوار والصلاحيات.</p></div></header><section className="admin-empty-state"><b>إدارة الوصول</b><p>هذا القسم مخصص للحسابات الإدارية والأدوار والصلاحيات مع فصل صلاحيات المتاجر.</p></section></main>}
