@@ -30,3 +30,21 @@ export async function destroySession(){
   if(token) await database().execute("DELETE FROM auth_sessions WHERE token_hash=?",[digest(token)]);
   jar.delete(COOKIE);
 }
+
+/** Admin-only inactivity timeout; ordinary customer sessions remain unchanged. */
+export async function currentActiveAdminUserId(){
+  const token=(await cookies()).get(COOKIE)?.value;
+  if(!token)return null;
+  const hash=digest(token);
+  const [rows]=await database().execute<RowDataPacket[]>(
+    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL 5 MINUTE) LIMIT 1",
+    [hash]
+  );
+  const userId=rows[0]?.user_id as string|undefined;
+  if(!userId)return null;
+  await database().execute(
+    "UPDATE auth_sessions SET last_seen_at=NOW() WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL 5 MINUTE)",
+    [hash]
+  );
+  return userId;
+}
