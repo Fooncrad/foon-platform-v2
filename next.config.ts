@@ -1,3 +1,8 @@
-import type { NextConfig } from "next";
-const nextConfig: NextConfig = { output: "standalone", poweredByHeader: false, reactStrictMode: true };
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: "standalone",
+  poweredByHeader: false,
+  reactStrictMode: true,
+};
+
 export default nextConfig;
