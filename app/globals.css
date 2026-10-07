@@ -25,3 +25,21 @@
 .grid article{transition:transform .18s ease,border-color .18s ease}
 .grid article:hover{transform:translateY(-2px);border-color:#d6b16c}
 @media(max-width:700px){.nav nav{gap:10px;font-size:.88rem}.nav nav>a:first-child{display:none}.navCta{padding:9px 11px}.hero{padding:72px 16px 52px}.hero h1{font-size:clamp(42px,13vw,64px)}.actions{flex-direction:column}.actions a{text-align:center;width:100%}}
+
+/* Admin shell presentation */
+.adminShell{min-height:100svh;display:grid;grid-template-columns:260px minmax(0,1fr);background:#f6f7f9;color:#172033}
+.adminSide{height:100svh;position:sticky;top:0;background:#201f1b;color:#f8f3e9;padding:24px 16px;overflow:auto}
+.adminLogo{display:block;color:#e2a93b;font-size:1.3rem;font-weight:900;letter-spacing:.08em;padding:4px 10px 22px;border-bottom:1px solid #3b3933}
+.adminLogo small{display:block;color:#928d82;font-size:.68rem;letter-spacing:0;margin-top:5px}
+.adminSide nav{display:grid;gap:5px;padding-top:18px}
+.adminSide nav a,.adminSide nav span{display:block;padding:11px 12px;border-radius:10px;font-size:.91rem;white-space:nowrap}
+.adminSide nav a{color:#f8f3e9}.adminSide nav a:hover{background:#302e29}.adminSide nav span{color:#8d887e}
+.adminStage{min-width:0}
+.adminTop{height:68px;padding:0 26px;background:#fff;border-bottom:1px solid #e2e5e9;display:flex;align-items:center;justify-content:space-between}
+.adminTop>div{display:grid;gap:2px}.adminTop small{color:#747b86}.adminTop button{border:1px solid #dfe2e6;background:#fff;color:#303641;border-radius:10px;padding:9px 13px;cursor:pointer}
+.adminStage>.workspace{max-width:none;margin:0;padding:32px}
+.adminStage .workspace-head{margin-bottom:24px}.adminStage .workspace-head .auth-brand{display:none}
+.adminStage .workspace-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.adminStage .workspace-card,.adminStage .workspace-grid article{background:#fff;color:#172033;border-color:#e0e3e7;box-shadow:0 4px 18px rgba(25,31,40,.04)}
+.adminStage .workspace-card span,.adminStage .workspace-grid article span,.adminStage .workspace-head p{color:#737b86}
+@media(max-width:850px){.adminShell{grid-template-columns:1fr}.adminSide{position:static;height:auto;padding:12px}.adminLogo{padding:4px 8px 12px}.adminSide nav{display:flex;gap:5px;overflow-x:auto;padding-top:10px}.adminSide nav a,.adminSide nav span{flex:0 0 auto}.adminTop{height:60px;padding:0 16px}.adminStage>.workspace{padding:18px 16px}.adminStage .workspace-grid{grid-template-columns:1fr}}
