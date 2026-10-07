@@ -3,7 +3,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { currentUserId } from "@/lib/auth/session";
 import { requirePlatformRole } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
-import TenantManager from "./tenant-manager";
+import TenantManager from "@/app/admin/tenants/tenant-manager";
 
 export default async function TenantsPage(){
  const id=await currentUserId();if(!id)redirect("/login");try{await requirePlatformRole(id,["super_admin","admin","support"]);}catch{redirect("/account");}
