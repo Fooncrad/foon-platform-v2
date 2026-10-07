@@ -1,0 +1,1 @@
+export default function NotificationsPage(){return <main className="workspace"><header className="workspace-head"><div><h1>الإشعارات والرسائل</h1><p>إدارة تنبيهات المنصة وقنوات التواصل وقوالب الرسائل.</p></div></header><section className="admin-empty-state"><b>مركز الإشعارات</b><p>سيجمع البريد والتنبيهات داخل المنصة والأصوات والقوالب وحالات الإرسال.</p></section></main>}
