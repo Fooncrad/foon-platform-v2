@@ -1,0 +1,1 @@
+export default function TranslationsPage(){return <main className="workspace"><header className="workspace-head"><div><h1>الترجمات</h1><p>إدارة محتوى العربية والإنجليزية والفرنسية مع عزل كل لغة.</p></div></header><section className="admin-empty-state"><b>محرر الترجمات</b><p>سيعرض مفاتيح الواجهة والنصوص لكل لغة مع البحث والمراجعة.</p></section></main>}
