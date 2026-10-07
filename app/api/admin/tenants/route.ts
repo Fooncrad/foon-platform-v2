@@ -5,6 +5,7 @@ import { currentUserId } from "@/lib/auth/session";
 import { requirePlatformRole } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
 import { platformAudit } from "@/lib/platform/audit";
+import { assertSameOrigin } from "@/lib/security/origin";
 
 export async function GET(){
  const userId=await currentUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
@@ -13,6 +14,7 @@ export async function GET(){
  return NextResponse.json({ok:true,tenants:rows});
 }
 export async function POST(request:Request){
+ try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(userId,["super_admin","admin"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  try{
