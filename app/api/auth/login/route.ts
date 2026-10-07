@@ -4,11 +4,13 @@ import { database } from "@/lib/db/mysql";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { clientIp, loginAllowed, recordLogin } from "@/lib/auth/rate-limit";
+import { assertSameOrigin } from "@/lib/security/origin";
 
 export const runtime="nodejs";
 export async function POST(request:Request){
  const ip=clientIp(request); let email="";
  try{
+  assertSameOrigin(request);
   const body=await request.json(); email=String(body.email??"").trim().toLowerCase(); const password=String(body.password??"");
   if(!(await loginAllowed(email,ip))) return NextResponse.json({ok:false,code:"TOO_MANY_ATTEMPTS"},{status:429});
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id,password_hash,status FROM users WHERE email=? LIMIT 1",[email]);
