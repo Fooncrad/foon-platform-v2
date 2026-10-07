@@ -11,9 +11,22 @@ try {
   for(const file of files){
     const [done]=await db.execute("SELECT id FROM schema_migrations WHERE id=? LIMIT 1",[file]);
     if(done.length){console.log("Already applied",file);continue;}
-    const sql=await readFile(join("migrations",file),"utf8");
+    const source=await readFile(join("migrations",file),"utf8");
+    const statements=source
+      .split(";")
+      .map(statement=>statement.trim())
+      .filter(Boolean);
     await db.beginTransaction();
-    try { await db.query(sql); await db.execute("INSERT INTO schema_migrations(id) VALUES (?)",[file]); await db.commit(); console.log("Applied",file); }
-    catch(error){ await db.rollback(); throw error; }
+    try {
+      for(const statement of statements) await db.query(statement);
+      await db.execute("INSERT INTO schema_migrations(id) VALUES (?)",[file]);
+      await db.commit();
+      console.log("Applied",file);
+    } catch(error) {
+      await db.rollback();
+      throw error;
+    }
   }
-} finally { await db.end(); }
+} finally {
+  await db.end();
+}
