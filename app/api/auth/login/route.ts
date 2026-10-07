@@ -10,7 +10,8 @@ export const runtime="nodejs";
 export async function POST(request:Request){
  const ip=clientIp(request); let email="";
  try{
-  assertSameOrigin(request);
+  try { assertSameOrigin(request); }
+  catch { return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403}); }
   const body=await request.json(); email=String(body.email??"").trim().toLowerCase(); const password=String(body.password??"");
   if(!(await loginAllowed(email,ip))) return NextResponse.json({ok:false,code:"TOO_MANY_ATTEMPTS"},{status:429});
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id,password_hash,status FROM users WHERE email=? LIMIT 1",[email]);
