@@ -29,6 +29,7 @@ export async function PATCH(request:Request){
  if(existing.length)await db.execute("UPDATE tenant_subscriptions SET plan_id=?,status='active',starts_at=IF(status='active' AND ends_at>NOW(),starts_at,NOW()),ends_at=DATE_ADD(GREATEST(COALESCE(ends_at,NOW()),NOW()),"+period+") WHERE tenant_id=?",[payment.plan_id,payment.tenant_id]);
  else await db.execute("INSERT INTO tenant_subscriptions(id,tenant_id,plan_id,status,starts_at,ends_at) VALUES (?,?,?,'active',NOW(),DATE_ADD(NOW(),"+period+"))",[randomUUID(),payment.tenant_id,payment.plan_id]);
  }
+ if(b.status==="approved")await db.execute("INSERT INTO platform_payment_receipts(id,payment_request_id,tenant_id,receipt_number,amount,currency) VALUES (?,?,?,?,?,?)",[randomUUID(),rows[0].id,rows[0].tenant_id,"FOON-"+rows[0].id,rows[0].amount,rows[0].currency]);
  await db.execute("UPDATE platform_payment_requests SET status=?,review_note=?,reviewed_by=?,reviewed_at=NOW() WHERE id=?",[b.status,b.note.trim(),a.user,b.id]);
  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,?,?,?)",[a.user,"platform.payment."+b.status,"payment_request",b.id]);
  await db.commit();return NextResponse.json({ok:true});}
