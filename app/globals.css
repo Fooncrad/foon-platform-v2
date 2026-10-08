@@ -440,3 +440,18 @@
 .publicSiteFooter nav{display:flex;flex-wrap:wrap;gap:12px 20px;max-width:700px}
 .publicSiteFooter a{color:#f8f3e9;text-decoration:none}.publicSiteFooter a:hover{color:#e2a93b}
 @media(max-width:600px){.customerOverview{grid-template-columns:1fr}.publicSiteFooter{flex-direction:column}}
+
+/* Live admin dashboard indicators */
+.adminOverviewSecondary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.adminOverviewSecondary article{display:grid;gap:8px;min-width:0;padding:18px;border-radius:13px;background:#fffdf9;border:1px solid #e6e0d6}
+.adminOverviewSecondary span{font-weight:700;color:#544b40}
+.adminOverviewSecondary strong{font-size:clamp(1.5rem,3vw,2rem);color:#9b6c18;font-variant-numeric:tabular-nums}
+.adminOverviewSecondary small{color:#777064;overflow-wrap:anywhere}
+.adminRecentActivity{margin-top:16px}
+.adminRecentActivity .adminPanelHead a{color:#9b6c18;text-decoration:none;font-weight:700}
+.adminRecentList{display:grid;gap:0}
+.adminRecentList>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #ece5da;font-size:.83rem}
+.adminRecentList>div:last-child{border-bottom:0}
+.adminRecentList span{overflow-wrap:anywhere;color:#6c655b}
+.adminRecentList time{white-space:nowrap;color:#777064;font-variant-numeric:tabular-nums}
+@media(max-width:850px){.adminOverviewSecondary{grid-template-columns:1fr}.adminRecentList>div{grid-template-columns:1fr;gap:4px}.adminRecentList time{white-space:normal}}
