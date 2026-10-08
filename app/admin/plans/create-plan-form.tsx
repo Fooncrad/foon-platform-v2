@@ -12,7 +12,7 @@ export default function CreatePlanForm(){
    form.reset();setSuccess("تم إنشاء الباقة.");router.refresh();
   }catch{setError("تعذر الاتصال بالخادم.");}finally{setBusy(false);}
  }
- return <form onSubmit={submit} className="auth-form" style={{maxWidth:560}}>
+ return <form onSubmit={submit} className="adminOpsForm adminPlanCreateForm">
   <label>رمز الباقة<input name="code" required pattern="[a-z][a-z0-9_-]{1,79}" placeholder="starter" dir="ltr"/></label>
   <label>الاسم بالعربية<input name="name_ar" required minLength={2} maxLength={180}/></label>
   <label>الاسم بالإنجليزية<input name="name_en" required minLength={2} maxLength={180} dir="ltr"/></label>
