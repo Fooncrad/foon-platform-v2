@@ -21,13 +21,15 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Test SQL migration parsing
         run: npm run test:migrations
       - name: Test email templates and configuration
         run: npm run test:mail
       - name: Test administrator access policy
         run: npm run test:admin-policy
+      - name: Test store registration policy
+        run: node --test scripts/registration.test.mjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint
@@ -61,6 +63,10 @@ jobs:
         with:
           node-version: "24"
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Test migrations against disposable MariaDB
         run: node --test scripts/migrations.integration.test.mjs
+      - name: Build production server for registration integration tests
+        run: npm run build
+      - name: Test real registration routes against disposable MariaDB
+        run: node --test scripts/registration-http.integration.test.mjs

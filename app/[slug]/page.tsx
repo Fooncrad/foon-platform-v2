@@ -1,17 +1,14 @@
 import {notFound} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
+import Link from "next/link";
 
-const RESERVED=new Set(["admin","api","login","register","account","dashboard","restaurant","menu","auth","settings","creator","creators","help","about","contact","terms","privacy","favicon.ico"]);
-
-function validSlug(value:string){
- return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value)&&!RESERVED.has(value);
-}
+import {validStoreSlug} from "@/scripts/store-slug.mjs";
 
 export default async function PublicTenantPage({params}:{params:Promise<{slug:string}>}){
  const {slug:raw}=await params;
  const slug=raw.toLowerCase();
- if(!validSlug(slug))notFound();
+ if(!validStoreSlug(slug))notFound();
  const [rows]=await database().execute<RowDataPacket[]>(
   "SELECT id,name,slug,kind,status FROM tenants WHERE slug=? LIMIT 1",[slug]
  );
@@ -22,6 +19,7 @@ export default async function PublicTenantPage({params}:{params:Promise<{slug:st
    <span>FOON</span>
    <h1>{String(tenant.name)}</h1>
    <p>{String(tenant.kind||"business")}</p>
+   <Link href={`/${slug}/register`}>إنشاء حساب عميل</Link>
   </section>
  </main>;
 }
