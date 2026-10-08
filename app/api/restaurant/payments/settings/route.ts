@@ -25,6 +25,7 @@ export async function PUT(req:Request){
  if(b.enabled&&b.provider!=="manual")return NextResponse.json({ok:false,code:"GATEWAY_NOT_CONNECTED"},{status:409});
  const branch=b.branch_id||null;const scope=branch??"tenant";
  if(b.provider!=="manual"&&b.public_key.trim())return NextResponse.json({ok:false,code:"GATEWAY_KEYS_NOT_ACCEPTED"},{status:409});
+ if(b.provider==="manual"&&b.enabled&&!b.merchant_reference.trim())return NextResponse.json({ok:false,code:"PAYMENT_REFERENCE_REQUIRED"},{status:400});
  const db=await database().getConnection();
  try{await db.beginTransaction();
  if(branch){const [rows]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? LIMIT 1",[branch,a.tenantId]);if(!rows.length){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404});}}
