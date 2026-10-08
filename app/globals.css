@@ -471,3 +471,10 @@
 .adminBillingReview button+button{background:transparent;border-color:#a65a4e;color:#9c463c}
 .adminBillingReview button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:850px){.adminBillingGrid{grid-template-columns:1fr}}
+
+.merchantPaymentEditor{display:grid;gap:14px;max-width:800px}
+.merchantPaymentEditor label{display:grid;gap:7px;font-weight:650;min-width:0}
+.merchantPaymentEditor input:not([type="checkbox"]),.merchantPaymentEditor select{width:100%;min-width:0;padding:12px;border:1px solid #cbbfaa;border-radius:9px;background:#fff;color:#171613}
+.merchantPaymentEditor .merchantPaymentCheck{display:flex;align-items:center;gap:10px}
+.merchantPaymentEditor>button{justify-self:start;padding:12px 20px;border:0;border-radius:9px;background:#e2a93b;color:#171613;font-weight:800;cursor:pointer}
+.merchantPaymentEditor>button:disabled{opacity:.6}
