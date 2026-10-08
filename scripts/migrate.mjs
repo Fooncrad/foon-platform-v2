@@ -27,6 +27,12 @@ try {
       throw error;
     }
   }
+  // Reconcile reference language keys on every migration/deployment run.
+  // Existing human-edited translations are never overwritten.
+  const seed=await readFile(join("migrations","0008_seed_reference_translations.sql"),"utf8");
+  const seedSql=seed.split(";").map(s=>s.trim()).filter(Boolean);
+  for(const statement of seedSql)await db.query(statement);
+  console.log("Translation dictionary synchronized (existing edits preserved)");
 } finally {
   await db.end();
 }
