@@ -303,3 +303,61 @@
 .foonConfirmActions{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
 .foonConfirmDialog button:focus-visible{outline:3px solid #f8f3e9;outline-offset:3px}
 @media(max-width:480px){.foonConfirmDialog{padding:20px;border-radius:14px}.foonConfirmActions{display:grid;grid-template-columns:1fr 1fr}.foonConfirmActions button{min-width:0;padding:10px 8px}}
+
+
+/* FOON admin unified design system — shared by every /admin section */
+.adminShell{--foon-gold:#e2a93b;--foon-ink:#171613;--foon-muted:#746e64;--foon-border:#e6e0d6;--foon-paper:#fff;--foon-surface:#f7f5f1;grid-template-columns:244px minmax(0,1fr);background:var(--foon-surface);color:var(--foon-ink);font-family:Arial,Tahoma,sans-serif}
+.adminShell .adminSide{background:#171613;padding:22px 13px;border-inline-end:1px solid #3b352a;scrollbar-width:thin}
+.adminShell .adminLogo{color:var(--foon-gold);font-size:1.45rem;letter-spacing:.12em;padding:10px 12px 20px;border-color:#38342d}
+.adminShell .adminLogo small{color:#aaa59b;font-size:.72rem;letter-spacing:0}
+.adminShell .adminSide nav{gap:3px;padding-top:14px}
+.adminShell .adminNavGroup{display:grid;gap:3px;padding-top:12px;margin-top:8px;border-top:1px solid #333029}
+.adminShell .adminNavGroup>small{padding:6px 12px;color:#9b9487;font-size:.7rem;font-weight:800}
+.adminShell .adminSide nav a{color:#d9d4c9;border:1px solid transparent;padding:11px 12px;border-radius:10px;font-size:.86rem;font-weight:700;transition:background .15s,color .15s}
+.adminShell .adminSide nav a:hover{background:#292720;color:#fff}
+.adminShell .adminSide nav a.active{background:#302c24;color:#e2a93b;border-color:#51422a}
+.adminShell .adminStage{min-width:0;max-width:100%;background:var(--foon-surface)}
+.adminShell .adminTop{height:68px;padding-inline:clamp(16px,2.5vw,32px);background:#fff;border-bottom:1px solid var(--foon-border);gap:16px}
+.adminShell .adminTop b{color:#201c16;font-size:.9rem}
+.adminShell .adminTop small{color:#81796d;font-size:.73rem}
+.adminShell .adminTopActions{display:flex;align-items:center;gap:9px;flex-wrap:nowrap}
+.adminShell .adminTopActions form{margin:0}
+.adminShell .adminTop button,.adminShell .adminTopActions a.adminIconButton{min-height:38px;border:1px solid var(--foon-border);background:#fff;color:#302a20;border-radius:9px;padding:8px 12px;font-weight:700;white-space:nowrap}
+.adminShell .adminTopActions a.adminIconButton{min-width:38px;padding:7px;display:grid;place-items:center}
+.adminShell .adminCurrentLanguage{border-color:var(--foon-border);color:#5f4a24;background:#fffaf0}
+.adminShell .adminStage>.workspace{padding:clamp(16px,2.6vw,32px);min-height:calc(100svh - 68px);max-width:1600px;margin-inline:auto}
+.adminShell .workspace-head{align-items:center;gap:12px;margin-bottom:20px}
+.adminShell .workspace-head h1{color:#171613;font-size:clamp(1.35rem,2.3vw,1.85rem);line-height:1.4}
+.adminShell .workspace-head p{color:var(--foon-muted);font-size:.86rem}
+.adminShell .adminPanel,.adminShell .admin-operations{background:#fff;border:1px solid var(--foon-border);border-radius:14px;box-shadow:0 4px 16px rgba(23,22,19,.035);padding:clamp(14px,2vw,22px);min-width:0}
+.adminShell .adminPanel h2,.adminShell .admin-operations h2{color:#201c16}
+.adminShell .workspace-grid{gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.adminShell .workspace-grid article,.adminShell .workspace-card{border:1px solid var(--foon-border);border-radius:12px;background:#fff;color:#201c16;box-shadow:0 3px 12px rgba(23,22,19,.035);padding:16px;min-width:0}
+.adminShell .workspace-grid article span,.adminShell .workspace-card span{color:var(--foon-muted)}
+.adminShell input:not([type="checkbox"]):not([type="radio"]),.adminShell select,.adminShell textarea{max-width:100%;min-width:0;color:#171613;background:#fff;border:1px solid #d5cec2;border-radius:9px}
+.adminShell input:focus-visible,.adminShell select:focus-visible,.adminShell textarea:focus-visible,.adminShell button:focus-visible,.adminShell a:focus-visible{outline:2px solid #c99432;outline-offset:2px}
+.adminShell button{font-family:inherit}
+.adminDashboard{display:grid;align-content:start;gap:18px}
+.adminDashboard .adminDashboardHead{margin-bottom:0}
+.adminEyebrow{display:block;color:#a77723;font-size:.75rem;font-weight:800;margin-bottom:6px}
+.adminPrimaryLink{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 16px;background:#e2a93b;color:#171613!important;border-radius:9px;font-size:.85rem;font-weight:800;white-space:nowrap}
+.adminMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.adminMetric{min-width:0;display:grid;gap:8px;align-content:center;padding:19px;background:#fff;border:1px solid var(--foon-border);border-radius:13px;box-shadow:0 3px 14px rgba(23,22,19,.035)}
+.adminMetric span{font-size:.82rem;font-weight:800;color:#595247}
+.adminMetric strong{font-size:clamp(1.7rem,2.8vw,2.3rem);line-height:1.1;color:#171613;font-variant-numeric:tabular-nums}
+.adminMetric small{font-size:.73rem;color:#857d72}
+.adminModules{background:#fff;border:1px solid var(--foon-border);border-radius:14px;padding:clamp(14px,2vw,22px)}
+.adminSectionHeading{margin-bottom:17px}
+.adminSectionHeading h2{font-size:1.13rem;color:#171613;margin:0 0 6px}
+.adminSectionHeading p{color:#777065;font-size:.82rem;margin:0}
+.adminModulesGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.adminModuleCard{display:flex;align-items:center;gap:12px;min-width:0;min-height:90px;border:1px solid #e7e0d5;border-radius:12px;padding:14px;background:#fdfcf9;transition:background .15s,border-color .15s}
+.adminModuleCard:hover{background:#fff8e9;border-color:#d8b26d}
+.adminModuleIcon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:10px;background:#f5ecda;color:#8d631d;font-size:1.2rem;font-weight:800}
+.adminModuleContent{display:grid;gap:5px;min-width:0}
+.adminModuleContent b{font-size:.86rem;color:#242019}
+.adminModuleContent small{font-size:.73rem;color:#787064;line-height:1.45}
+.adminModuleArrow{margin-inline-start:auto;color:#a67a2d;font-size:1.3rem}
+@media(max-width:1200px){.adminModulesGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.adminShell{display:block}.adminShell .adminSide{height:auto;position:relative;padding:10px 16px;overflow:visible}.adminShell .adminLogo{border:0;padding:5px 0}.adminShell .adminTop{height:60px;padding-inline:16px}.adminShell .adminStage>.workspace{min-height:calc(100svh - 120px);padding:18px 16px}.adminMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.adminShell .workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.adminShell .adminDrawer{background:#24221e;border:1px solid #51432e;box-shadow:0 18px 55px rgba(0,0,0,.4)}.adminShell .adminDrawer a.active{background:#3a3020;color:#e2a93b}.adminShell .adminDrawerGroup{display:grid;gap:4px;padding-top:8px}.adminShell .adminDrawerGroup small{color:#aaa59b}}
+@media(max-width:600px){.adminModulesGrid{grid-template-columns:1fr}.adminShell .workspace-grid{grid-template-columns:1fr}.adminShell .workspace-head{align-items:flex-start;flex-wrap:wrap}.adminShell .adminTop small{display:none}.adminShell .adminTopActions{gap:6px}.adminShell .adminTop button{padding:8px;font-size:.75rem}.adminShell .adminTop{gap:8px}.adminMetric{padding:14px}.adminModuleCard{min-height:76px}.adminShell .adminStage>.workspace{padding:14px 12px}}
