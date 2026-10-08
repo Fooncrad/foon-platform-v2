@@ -16,7 +16,7 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
 
 export async function requirePlatformRole(userId:string, allowed:readonly PlatformRole[]){
   const [rows]=await database().execute<RowDataPacket[]>(
-    "SELECT role FROM platform_admins WHERE user_id=? AND enabled=TRUE LIMIT 1",[userId]
+    "SELECT pa.role FROM platform_admins pa INNER JOIN users u ON u.id=pa.user_id WHERE pa.user_id=? AND pa.enabled=TRUE AND u.status='active' LIMIT 1",[userId]
   );
   const role=rows[0]?.role as PlatformRole|undefined;
   if(!role || !allowed.includes(role)) throw new Error("FORBIDDEN");
