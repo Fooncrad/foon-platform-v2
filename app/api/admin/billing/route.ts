@@ -21,7 +21,7 @@ export async function PATCH(request:Request){
  if(b.status==="approved"){
  const payment=rows[0];
  const [prices]=await db.execute<RowDataPacket[]>("SELECT price FROM package_plan_prices WHERE plan_id=? AND billing_cycle=? AND currency=? AND enabled=TRUE LIMIT 1",[payment.plan_id,payment.billing_cycle,payment.currency]);
- if(!prices.length||Number(prices[0].price)!==Number(payment.amount)){await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_PRICE_MISMATCH"},{status:409});}
+ if(!prices.length||Math.round(Number(prices[0].price)*100)!==Math.round(Number(payment.amount)*100)){await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_PRICE_MISMATCH"},{status:409});}
  const [plans]=await db.execute<RowDataPacket[]>("SELECT id FROM package_plans WHERE id=? AND enabled=TRUE",[payment.plan_id]);
  if(!plans.length){await db.rollback();return NextResponse.json({ok:false,code:"PLAN_NOT_AVAILABLE"},{status:409});}
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[payment.tenant_id]);
@@ -32,6 +32,13 @@ export async function PATCH(request:Request){
  if(b.status==="approved")await db.execute("INSERT INTO platform_payment_receipts(id,payment_request_id,tenant_id,receipt_number,amount,currency) VALUES (?,?,?,?,?,?)",[randomUUID(),rows[0].id,rows[0].tenant_id,"FOON-"+rows[0].id,rows[0].amount,rows[0].currency]);
  await db.execute("UPDATE platform_payment_requests SET status=?,review_note=?,reviewed_by=?,reviewed_at=NOW() WHERE id=?",[b.status,b.note.trim(),a.user,b.id]);
  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,?,?,?)",[a.user,"platform.payment."+b.status,"payment_request",b.id]);
+ if(b.status==="approved"){
+ const [rule]=await db.execute<RowDataPacket[]>("SELECT enabled,email_enabled FROM platform_notification_rules WHERE event_key='subscription_renewal' LIMIT 1");
+ if(rule[0]?.enabled&&rule[0]?.email_enabled){
+ const [owners]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email FROM memberships m INNER JOIN users u ON u.id=m.user_id WHERE m.tenant_id=? AND m.role='owner' AND m.status='active' AND u.status='active' AND u.email_verified_at IS NOT NULL",[rows[0].tenant_id]);
+ for(const owner of owners)await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'subscription_renewal',?,?,?,?)",[randomUUID(),rows[0].tenant_id,owner.email,"تأكيد تجديد اشتراك FOON","تم اعتماد طلب الدفع وتحديث اشتراك منشأتك. مرجع الطلب: "+b.id]);
+ }
+ }
  await db.commit();return NextResponse.json({ok:true});}
  catch{await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_REVIEW_FAILED"},{status:503});}finally{db.release();}
 }
