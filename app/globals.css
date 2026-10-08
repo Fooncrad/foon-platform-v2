@@ -408,3 +408,16 @@
 .publicContentBrand{display:inline-block;color:#e2a93b;font-size:1.25rem;font-weight:900;letter-spacing:.12em;margin-bottom:28px}
 .publicContentPage h1{font-size:clamp(1.6rem,4vw,2.5rem);line-height:1.4;margin:0 0 22px}
 .publicContentBody{white-space:pre-wrap;line-height:1.95;color:#e2ded6;font-size:1rem}
+
+/* Notification channel configuration */
+.adminNotificationGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.adminNotificationRule{min-width:0;padding:16px;border:1px solid #e5ddce;border-radius:12px;background:#fffdf9;display:grid;gap:10px}
+.adminNotificationRule>strong{color:#24221e}
+.adminNotificationRule>small{color:#82796b;text-align:start;overflow-wrap:anywhere}
+.adminNotificationToggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.adminNotificationToggles label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.86rem}
+.adminNotificationToggles input{accent-color:#c28c29;width:17px;height:17px}
+.adminNotificationRule button{border:0;border-radius:9px;background:#d6a23b;color:#171613;padding:11px 15px;font-weight:800;cursor:pointer}
+.adminNotificationRule button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:850px){.adminNotificationGrid{grid-template-columns:1fr}}
+@media(max-width:450px){.adminNotificationToggles{grid-template-columns:1fr}.adminNotificationRule{padding:12px}}
