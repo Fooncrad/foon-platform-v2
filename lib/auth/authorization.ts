@@ -6,7 +6,7 @@ import type { PlatformRole, TenantRole } from "./roles";
 export async function requireTenantMembership(userId:string, rawTenantId:string, allowed:readonly TenantRole[]){
   const id:TenantId=tenantId(rawTenantId);
   const [rows]=await database().execute<RowDataPacket[]>(
-    "SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",
+    "SELECT m.role FROM memberships m INNER JOIN users u ON u.id=m.user_id INNER JOIN tenants t ON t.id=m.tenant_id WHERE m.tenant_id=? AND m.user_id=? AND m.status='active' AND u.status='active' AND t.status='active' LIMIT 1",
     [id,userId]
   );
   const role=rows[0]?.role as TenantRole|undefined;
