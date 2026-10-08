@@ -377,3 +377,17 @@
 .adminPlanCatalogCard button{max-width:100%}
 @media(max-width:900px){.adminPlansCatalog{grid-template-columns:1fr}}
 @media(max-width:520px){.adminPlanCatalogCard{padding:13px}.adminPlanCreateDetails>summary{padding:12px}.adminPlanCreateDetails>form{padding:12px}}
+
+
+/* Unified operational data tables for admin */
+.adminDataTableWrap{max-width:100%;overflow-x:auto;border:1px solid #e6e0d6;border-radius:12px;overscroll-behavior-inline:contain}
+.adminDataTable{width:100%;min-width:660px;border-collapse:collapse;text-align:start;background:#fff}
+.adminDataTable th,.adminDataTable td{padding:13px 15px;text-align:start;vertical-align:middle;border-bottom:1px solid #eee8de;line-height:1.6;font-size:.84rem}
+.adminDataTable th{position:sticky;top:0;background:#f7f3eb;color:#534535;font-weight:800;white-space:nowrap}
+.adminDataTable tbody tr:last-child td{border-bottom:0}
+.adminDataTable tbody tr:hover{background:#fffaf0}
+.adminDataTable td[dir="ltr"],.adminDataTable td [dir="ltr"]{overflow-wrap:anywhere}
+.adminDataTable time{white-space:nowrap;font-variant-numeric:tabular-nums}
+.adminShell .adminUsersEmpty,.adminShell .adminAuditEmpty,.adminShell .adminBillingEmpty{padding:24px;border:1px dashed #dfd5c4;border-radius:12px;background:#fdfbf7;color:#5b5449;text-align:center}
+.adminShell .adminUsersEmpty p,.adminShell .adminBillingEmpty p{color:#746e64;line-height:1.7}
+@media(max-width:600px){.adminDataTable th,.adminDataTable td{padding:11px 12px;font-size:.8rem}.adminShell .adminUsersEmpty,.adminShell .adminAuditEmpty,.adminShell .adminBillingEmpty{padding:16px}}
