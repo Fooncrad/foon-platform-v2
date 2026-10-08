@@ -1,4 +1,5 @@
 import {notFound} from "next/navigation";
+import Link from "next/link";
 import type {Metadata} from "next";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
@@ -11,5 +12,5 @@ export default async function PublicContentPage({params,searchParams}:Props){
  const page=await readPage(slug);if(!page)notFound();
  const locale=lang==="en"||lang==="fr"?lang:"ar";
  const title=String(page["title_"+locale]),body=String(page["body_"+locale]);
- return <main className="publicContentPage" lang={locale} dir={locale==="ar"?"rtl":"ltr"}><article><a className="publicContentBrand" href="/">FOON</a><h1>{title}</h1><div className="publicContentBody">{body}</div></article></main>;
+ return <main className="publicContentPage" lang={locale} dir={locale==="ar"?"rtl":"ltr"}><article><Link className="publicContentBrand" href="/">FOON</Link><h1>{title}</h1><div className="publicContentBody">{body}</div></article></main>;
 }
