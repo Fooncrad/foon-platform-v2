@@ -22,9 +22,41 @@ jobs:
           node-version: "24"
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Test SQL migration parsing
+        run: npm run test:migrations
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint
         run: npm run lint
       - name: Build
         run: npm run build
+
+  migration-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: foon-ci-only-password
+          MARIADB_DATABASE: foon_migration_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:foon-ci-only-password@127.0.0.1:3306/foon_migration_test
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Test migrations against disposable MariaDB
+        run: node --test scripts/migrations.integration.test.mjs
