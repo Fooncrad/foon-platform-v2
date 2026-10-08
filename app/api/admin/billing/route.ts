@@ -26,7 +26,7 @@ export async function PATCH(request:Request){
  if(!plans.length){await db.rollback();return NextResponse.json({ok:false,code:"PLAN_NOT_AVAILABLE"},{status:409});}
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[payment.tenant_id]);
  const period=payment.billing_cycle==="yearly"?"INTERVAL 1 YEAR":"INTERVAL 1 MONTH";
- if(existing.length)await db.execute("UPDATE tenant_subscriptions SET plan_id=?,status='active',starts_at=NOW(),ends_at=DATE_ADD(NOW(),"+period+") WHERE tenant_id=?",[payment.plan_id,payment.tenant_id]);
+ if(existing.length)await db.execute("UPDATE tenant_subscriptions SET plan_id=?,status='active',starts_at=IF(status='active' AND ends_at>NOW(),starts_at,NOW()),ends_at=DATE_ADD(GREATEST(COALESCE(ends_at,NOW()),NOW()),"+period+") WHERE tenant_id=?",[payment.plan_id,payment.tenant_id]);
  else await db.execute("INSERT INTO tenant_subscriptions(id,tenant_id,plan_id,status,starts_at,ends_at) VALUES (?,?,?,'active',NOW(),DATE_ADD(NOW(),"+period+"))",[randomUUID(),payment.tenant_id,payment.plan_id]);
  }
  await db.execute("UPDATE platform_payment_requests SET status=?,review_note=?,reviewed_by=?,reviewed_at=NOW() WHERE id=?",[b.status,b.note.trim(),a.user,b.id]);
