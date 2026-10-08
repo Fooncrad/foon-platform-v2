@@ -478,3 +478,10 @@
 .merchantPaymentEditor .merchantPaymentCheck{display:flex;align-items:center;gap:10px}
 .merchantPaymentEditor>button{justify-self:start;padding:12px 20px;border:0;border-radius:9px;background:#e2a93b;color:#171613;font-weight:800;cursor:pointer}
 .merchantPaymentEditor>button:disabled{opacity:.6}
+
+.adminUserFilters{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.adminUserFilters label{display:grid;gap:6px;flex:1 1 190px;min-width:0}
+.adminUserFilters input,.adminUserFilters select{width:100%;min-width:0;padding:11px;border:1px solid #cbbfaa;border-radius:9px;background:#fff;color:#171613}
+.adminUserFilters button{padding:11px 18px;background:#e2a93b;color:#171613;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.adminUserFilters a{padding:11px}
+@media(max-width:520px){.adminUserFilters{display:grid;grid-template-columns:minmax(0,1fr)}}
