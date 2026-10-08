@@ -1,13 +1,12 @@
 "use client";
 import Link from "next/link";
-import {useEffect,useState} from "react";
+import {useState} from "react";
 import {usePathname} from "next/navigation";
 const items=[["/admin","نظرة عامة"],["/admin/tenants","المتاجر"]];
 const groups=[["التشغيل",[["/admin/plans","الباقات والاشتراكات"],["/admin/billing","المدفوعات والفواتير"],["/admin/users","المستخدمون والصلاحيات"]]],["التواصل",[["/admin/notifications","الإشعارات والرسائل"],["/admin/translations","الترجمات"]]],["المنصة",[["/admin/pages","صفحات الموقع"],["/admin/settings","إعدادات المنصة"],["/admin/audit","سجل العمليات"]]]] as const;
 export default function AdminLayout({children}:{children:React.ReactNode}){
  const [open,setOpen]=useState(false);
  const pathname=usePathname();
- useEffect(()=>setOpen(false),[pathname]);
  const active=(href:string)=>href==="/admin"?pathname==="/admin":pathname.startsWith(href);
  return <div className="adminShell"><aside className="adminSide"><div className="adminBrandRow"><Link href="/admin" className="adminLogo">FOON<small>Platform Admin</small></Link><div className={"adminMobileMenu"+(open?" isOpen":"")}><button type="button" className="adminMenuButton" aria-label={open?"إغلاق قائمة الإدارة":"فتح قائمة الإدارة"} aria-expanded={open} onClick={()=>setOpen(v=>!v)}><span aria-hidden="true">{open?"×":"☰"}</span></button>{open&&<><button type="button" className="adminMenuBackdrop" aria-label="إغلاق القائمة" onClick={()=>setOpen(false)}/><div className="adminDrawer">{items.map(([href,label])=><Link key={href} href={href} className={active(href)?"active":undefined} onClick={()=>setOpen(false)}>{label}</Link>)}{groups.map(([group,links])=><div className="adminDrawerGroup" key={group}><small>{group}</small>{links.map(([href,label])=><Link key={href} href={href} className={active(href)?"active":undefined} onClick={()=>setOpen(false)}>{label}</Link>)}</div>)}</div></>}</div></div><nav>{items.map(([href,label])=><Link key={href} href={href} className={active(href)?"active":undefined}>{label}</Link>)}{groups.map(([group,links])=><div className="adminNavGroup" key={group}><small>{group}</small>{links.map(([href,label])=><Link key={href} href={href} className={active(href)?"active":undefined}>{label}</Link>)}</div>)}</nav></aside><section className="adminStage"><header className="adminTop"><div><b>لوحة المنصة</b><small>إدارة FOON من مكان واحد</small></div><div className="adminTopActions"><span className="adminCurrentLanguage" aria-label="لغة الواجهة الحالية: العربية">العربية</span><Link href="/admin/notifications" className="adminIconButton adminNotificationButton" aria-label="فتح قسم الإشعارات والرسائل">♢</Link><form action="/api/auth/logout" method="post"><button>تسجيل الخروج</button></form></div></header>{children}</section></div>
 }
