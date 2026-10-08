@@ -258,3 +258,33 @@
 .adminTopActions a.adminIconButton{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .adminTopActions a.adminIconButton:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
 @media(max-width:520px){.adminCurrentLanguage{min-height:32px;padding:0 7px;font-size:12px}}
+
+
+/* FOON V2 shared operational editors: subscription management and translations */
+.adminOperationsPanel{display:grid;gap:18px;min-width:0}
+.adminOperationsPanel h2{margin:0;color:#171613;font-size:1.15rem}
+.adminOperationsPanel .adminOpsLead{margin:0;color:#716b61;font-size:.88rem;line-height:1.6}
+.adminOpsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.adminOpsCard{display:grid;gap:8px;min-width:0;padding:15px;border:1px solid #e3ddd2;border-radius:12px;background:#fcfbf8}
+.adminOpsCard strong{font-size:.98rem;color:#171613;overflow-wrap:anywhere}
+.adminOpsCard span{font-size:.85rem;color:#5c564c}
+.adminOpsCard small{font-size:.78rem;color:#8a6c35}
+.adminOpsForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:800px}
+.adminOpsForm label,.adminOpsSearch label{display:grid;gap:6px;min-width:0;font-weight:700;color:#39352d;font-size:.85rem}
+.adminOpsForm input,.adminOpsForm select,.adminOpsSearch input{width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #cec7bb;border-radius:9px;background:#fff;color:#171613;font:inherit;font-weight:400}
+.adminOpsForm input:focus-visible,.adminOpsForm select:focus-visible,.adminOpsSearch input:focus-visible,.adminTranslationTable textarea:focus-visible{outline:2px solid #c99432;outline-offset:2px}
+.adminOpsForm button,.adminOpsSearch button,.adminOpsPager button,.adminTranslationTable button{min-height:42px;padding:9px 15px;border:1px solid #b78529;border-radius:9px;background:#e2a93b;color:#171613;font:inherit;font-weight:800;cursor:pointer}
+.adminOpsForm button:disabled,.adminOpsPager button:disabled,.adminTranslationTable button:disabled{opacity:.55;cursor:not-allowed}
+.adminOpsForm .adminOpsSubmit{grid-column:1/-1;justify-self:start;min-width:180px}
+.adminOpsMessage{margin:0;padding:12px;border:1px solid #e5d2ae;border-radius:9px;background:#fffaf0;color:#60481e;overflow-wrap:anywhere}
+.adminOpsSearch{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.adminOpsSearch label{flex:1 1 240px}
+.adminOpsTableWrap{width:100%;max-width:100%;overflow-x:auto;border:1px solid #e3ddd2;border-radius:12px;overscroll-behavior-inline:contain}
+.adminTranslationTable{width:100%;min-width:850px;border-collapse:collapse;table-layout:fixed;text-align:start}
+.adminTranslationTable th,.adminTranslationTable td{padding:12px;border-bottom:1px solid #ece7de;vertical-align:top;text-align:start}
+.adminTranslationTable th{background:#f6f2eb;color:#3d382f;font-size:.83rem;white-space:nowrap}
+.adminTranslationTable td code{font-size:.76rem;overflow-wrap:anywhere;white-space:normal}
+.adminTranslationTable textarea{display:block;box-sizing:border-box;width:100%;min-height:90px;resize:vertical;padding:10px;border:1px solid #d8d1c6;border-radius:8px;background:#fff;color:#171613;font:inherit;line-height:1.55}
+.adminOpsPager{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.adminOpsPager span{font-weight:700;font-size:.85rem}
+@media(max-width:650px){.adminOpsForm{grid-template-columns:minmax(0,1fr)}.adminOpsForm .adminOpsSubmit{width:100%}.adminOpsSearch{align-items:stretch}.adminOpsSearch button{width:100%}.adminOperationsPanel{gap:14px}.adminOpsCard{padding:12px}}
