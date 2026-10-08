@@ -9,7 +9,9 @@ export async function PATCH(request:Request,{params}:{params:Promise<{id:string}
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(userId,["super_admin","admin"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- const {id}=await params; const body=await request.json(); const status=String(body.status??"");
+ const {id}=await params; const body=await request.json().catch(()=>null);
+ if(!body || typeof body!=="object" || Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const status=String(body.status??"");
  if(!["pending","active","suspended"].includes(status))return NextResponse.json({ok:false,code:"INVALID_STATUS"},{status:400});
  const [result]=await database().execute("UPDATE tenants SET status=? WHERE id=?",[status,id]);
  if((result as {affectedRows?:number}).affectedRows!==1)return NextResponse.json({ok:false,code:"TENANT_NOT_FOUND"},{status:404});
