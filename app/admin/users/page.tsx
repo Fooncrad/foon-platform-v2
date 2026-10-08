@@ -25,7 +25,7 @@ export default async function UsersPage(){
   <section className="adminAccessStats"><article><span>مديرو المنصة المعروضون</span><strong>{admins}</strong></article><article><span>الدعم المعروض</span><strong>{support}</strong></article><article><span>حسابات المتاجر المعروضة</span><strong>{storeAccounts}</strong></article></section>
   <section className="adminPanel"><div className="adminPanelHead"><div><h2>الحسابات</h2><p>عرض للقراءة فقط؛ تغيير الصلاحيات غير متاح حتى اكتمال مسار تدقيق التعديلات.</p></div></div>
    {users.length===0?<div className="adminUsersEmpty"><b>لا توجد حسابات</b></div>:
-    <div style={{overflowX:"auto"}}><table style={{width:"100%",textAlign:"start",borderCollapse:"collapse"}}>
+    <div className="adminDataTableWrap"><table className="adminDataTable">
      <thead><tr><th scope="col">الحساب</th><th scope="col">الحالة</th><th scope="col">دور المنصة</th><th scope="col">عضويات المتاجر</th></tr></thead>
      <tbody>{users.map(user=><tr key={user.id}><td><b>{user.display_name??"—"}</b><div dir="ltr">{user.email}</div></td><td>{user.status}</td><td>{user.platform_role??"—"}</td><td>{Number(user.tenant_count)}</td></tr>)}</tbody>
     </table></div>}
