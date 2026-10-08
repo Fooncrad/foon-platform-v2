@@ -29,6 +29,7 @@ export async function PUT(req:Request){
  try{await db.beginTransaction();
  if(branch){const [rows]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? LIMIT 1",[branch,a.tenantId]);if(!rows.length){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404});}}
  await db.execute("INSERT INTO tenant_payment_settings(id,tenant_id,branch_id,scope_key,provider,enabled,currency,merchant_reference,public_key) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE provider=VALUES(provider),enabled=VALUES(enabled),currency=VALUES(currency),merchant_reference=VALUES(merchant_reference),public_key=VALUES(public_key)",[randomUUID(),a.tenantId,branch,scope,b.provider,b.enabled,b.currency,b.merchant_reference.trim()||null,b.public_key.trim()||null]);
+ await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?)",[await currentUserId(),"tenant.payment_settings.updated","tenant",a.tenantId,JSON.stringify({scope,provider:b.provider,enabled:b.enabled,currency:b.currency})]);
  await db.commit();return NextResponse.json({ok:true});}
  catch{await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_SETTINGS_SAVE_FAILED"},{status:503});}finally{db.release();}
 }
