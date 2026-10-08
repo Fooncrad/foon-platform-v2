@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
-import type { RowDataPacket } from "mysql2/promise";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { database } from "@/lib/db/mysql";
 
 const COOKIE="foon_session";
@@ -42,9 +42,10 @@ export async function currentActiveAdminUserId(){
   );
   const userId=rows[0]?.user_id as string|undefined;
   if(!userId)return null;
-  await database().execute(
+  const [update]=await database().execute<ResultSetHeader>(
     "UPDATE auth_sessions SET last_seen_at=NOW() WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL 5 MINUTE)",
     [hash]
   );
+  if(update.affectedRows!==1)return null;
   return userId;
 }
