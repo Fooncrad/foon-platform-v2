@@ -1,0 +1,12 @@
+"use client";
+import {useEffect,useState,type FormEvent} from "react";
+type Key="site_name_ar"|"site_name_en"|"site_name_fr"|"support_email"|"contact_phone"|"default_locale";
+type Settings=Record<Key,string>;
+const initial:Settings={site_name_ar:"",site_name_en:"",site_name_fr:"",support_email:"",contact_phone:"",default_locale:"ar"};
+const fields:[Key,string][]=[["site_name_ar","اسم المنصة بالعربية"],["site_name_en","اسم المنصة بالإنجليزية"],["site_name_fr","اسم المنصة بالفرنسية"],["support_email","بريد الدعم"],["contact_phone","رقم التواصل"]];
+export default function SettingsEditor({canEdit}:{canEdit:boolean}){
+ const [values,setValues]=useState<Settings>(initial),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
+ useEffect(()=>{let active=true;fetch("/api/admin/settings").then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);if(active)setValues({...initial,...j.settings});}).catch(e=>{if(active)setMessage("تعذر التحميل: "+String(e));}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
+ async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();setSaving(true);setMessage("");try{const r=await fetch("/api/admin/settings",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(values)});const j=await r.json();if(!r.ok)throw Error(j.code);setMessage("تم حفظ إعدادات المنصة وتسجيل العملية.");}catch(e){setMessage("تعذر الحفظ: "+String(e));}finally{setSaving(false);}}
+ return <section className="adminPanel adminOperationsPanel"><h2>الهوية والتواصل</h2><p className="adminOpsLead">الإعدادات محفوظة في قاعدة البيانات، ولا تُنشر تلقائيًا على الواجهة العامة حتى ربطها.</p>{loading?<p>جارٍ تحميل الإعدادات…</p>:<form className="adminOpsForm" onSubmit={submit}>{fields.map(([key,label])=><label key={key}>{label}<input dir={key==="site_name_ar"?"rtl":"ltr"} type={key==="support_email"?"email":"text"} value={values[key]} maxLength={200} readOnly={!canEdit} onChange={e=>setValues(v=>({...v,[key]:e.target.value}))}/></label>)}<label>اللغة الافتراضية<select disabled={!canEdit} value={values.default_locale} onChange={e=>setValues(v=>({...v,default_locale:e.target.value}))}><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option></select></label>{canEdit&&<button className="adminOpsSubmit" disabled={saving}>{saving?"جارٍ الحفظ…":"حفظ الإعدادات"}</button>}</form>}{message&&<p role="status" className="adminOpsMessage">{message}</p>}</section>;
+}
