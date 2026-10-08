@@ -1,16 +1,16 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { database } from "@/lib/db/mysql";
 
 const COOKIE="foon_session";
 const SESSION_SECONDS=60*60*24*30;
 const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
 
-export async function createSession(userId:string){
+export async function createSession(userId:string, connection?:PoolConnection){
   const token=randomBytes(32).toString("base64url");
   const expires=new Date(Date.now()+SESSION_SECONDS*1000);
-  await database().execute(
+  await (connection??database()).execute(
     "INSERT INTO auth_sessions(id,user_id,token_hash,expires_at) VALUES (?,?,?,?)",
     [randomUUID(),userId,digest(token),expires]
   );

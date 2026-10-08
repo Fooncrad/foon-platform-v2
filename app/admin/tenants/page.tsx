@@ -10,13 +10,13 @@ export default async function TenantsPage({searchParams}:{searchParams:Promise<{
  const params=await searchParams;const q=String(params.q??"").trim().slice(0,100);
  const status=["pending","active","suspended"].includes(params.status??"")?params.status!:"";
  const where:string[]=[];const values:string[]=[];
- if(q){where.push("(name LIKE ? OR slug LIKE ?)");values.push("%"+q+"%","%"+q+"%");}
- if(status){where.push("status=?");values.push(status);}
+ if(q){where.push("(t.name LIKE ? OR t.slug LIKE ?)");values.push("%"+q+"%","%"+q+"%");}
+ if(status){where.push("t.status=?");values.push(status);}
  const filter=where.length?" WHERE "+where.join(" AND "):"";
  const id=await currentActiveAdminUserId();if(!id)redirect("/login");
  let role:"super_admin"|"admin"|"support";
  try{({role}=await requirePlatformRole(id,["super_admin","admin","support"]))}catch{redirect("/account")}
- const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,slug,kind,status,created_at FROM tenants"+filter+" ORDER BY created_at DESC LIMIT 200",values);
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT t.id,t.name,t.slug,t.kind,t.status,t.created_at,p.name_ar AS plan_name,s.status AS subscription_status FROM tenants t LEFT JOIN tenant_subscriptions s ON s.tenant_id=t.id LEFT JOIN package_plans p ON p.id=s.plan_id"+filter+" ORDER BY t.created_at DESC LIMIT 200",values);
  const data=JSON.parse(JSON.stringify(rows));
  const active=data.filter((x:{status:string})=>x.status==="active").length;
  const pending=data.filter((x:{status:string})=>x.status==="pending").length;
