@@ -1,0 +1,14 @@
+"use client";
+import {useEffect,useState} from "react";
+type Entry={translation_key:string;text_ar:string;text_en:string;text_fr:string};
+export default function TranslationEditor({canEdit}:{canEdit:boolean}){
+ const [rows,setRows]=useState<Entry[]>([]),[query,setQuery]=useState(""),[search,setSearch]=useState(""),[page,setPage]=useState(1),[busy,setBusy]=useState(""),[message,setMessage]=useState(""),[loading,setLoading]=useState(true);
+ useEffect(()=>{let active=true;fetch("/api/admin/translations?q="+encodeURIComponent(search)+"&page="+page).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);if(active)setRows(j.rows??[]);}).catch(e=>{if(active)setMessage(String(e));}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[search,page]);
+ function edit(key:string,field:keyof Entry,value:string){setRows(old=>old.map(r=>r.translation_key===key?{...r,[field]:value}:r));}
+ async function save(row:Entry){setBusy(row.translation_key);setMessage("");try{const r=await fetch("/api/admin/translations",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(row)});const j=await r.json();if(!r.ok)throw Error(j.code);setMessage("تم حفظ "+row.translation_key);}catch(e){setMessage("تعذر الحفظ: "+String(e));}finally{setBusy("");}}
+ return <section className="adminPanel" dir="rtl"><form onSubmit={e=>{e.preventDefault();setLoading(true);setPage(1);setSearch(query);}}><label>بحث بالمفتاح أو النص <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="بحث في جميع اللغات"/></label><button type="submit">بحث</button></form>
+ {message&&<p role="status">{message}</p>}
+ {loading?<p>جارٍ تحميل الترجمات…</p>:rows.length===0?<p>لا توجد مفاتيح مسجلة مطابقة. يجب استيراد مفاتيح المشروع الفعلية أولًا.</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",minWidth:780}}><thead><tr><th>المفتاح</th><th>العربية</th><th>English</th><th>Français</th><th>الحفظ</th></tr></thead><tbody>{rows.map(row=><tr key={row.translation_key}><td><code>{row.translation_key}</code></td>{(["text_ar","text_en","text_fr"] as const).map(field=><td key={field}><textarea dir={field==="text_ar"?"rtl":"ltr"} aria-label={field+" "+row.translation_key} value={row[field]} onChange={e=>edit(row.translation_key,field,e.target.value)} readOnly={!canEdit} rows={3} style={{width:"100%",minWidth:175}}/></td>)}<td>{canEdit&&<button type="button" disabled={busy===row.translation_key} onClick={()=>save(row)}>{busy===row.translation_key?"جارٍ الحفظ":"حفظ"}</button>}</td></tr>)}</tbody></table></div>}
+ <div style={{display:"flex",gap:12,marginTop:16}}><button type="button" disabled={page===1} onClick={()=>{setLoading(true);setPage(p=>p-1);}}>السابق</button><span>صفحة {page}</span><button type="button" disabled={rows.length<50} onClick={()=>{setLoading(true);setPage(p=>p+1);}}>التالي</button></div>
+ </section>;
+}
