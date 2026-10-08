@@ -11,6 +11,7 @@ export default async function AccountPage(){
  if(admins.length)redirect("/admin");
  const [memberships]=await database().execute<RowDataPacket[]>("SELECT m.tenant_id FROM memberships m JOIN tenants t ON t.id=m.tenant_id JOIN users u ON u.id=m.user_id WHERE m.user_id=? AND m.status='active' AND t.status='active' AND u.status='active' ORDER BY m.created_at LIMIT 1",[id]);
  if(memberships.length)redirect("/restaurant");
+ redirect("/customer");
  return <main className="auth-shell" dir="rtl"><section className="auth-card">
   <Link href="/" className="auth-brand">FOON</Link>
   <h1>مرحبًا بك في FOON</h1><p>حسابك جاهز. يمكنك تسجيل مطعم أو متجر جديد والانتقال إلى لوحة الإدارة الخاصة به.</p>
