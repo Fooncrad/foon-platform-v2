@@ -4,6 +4,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { currentUserId } from "@/lib/auth/session";
 import { requireTenantMembership } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
+import { assertSameOrigin } from "@/lib/security/origin";
 
 export async function GET(request:Request){
  const userId=await currentUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
@@ -13,6 +14,7 @@ export async function GET(request:Request){
  catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
 }
 export async function POST(request:Request){
+ try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const tenant=request.headers.get("x-foon-tenant"); if(!tenant)return NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400});
  try{const ctx=await requireTenantMembership(userId,tenant,["owner","manager"]); const body=await request.json();const name=String(body.name??"").trim().slice(0,180);const slug=String(body.slug??"").trim().toLowerCase();
