@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { ResultSetHeader } from "mysql2/promise";
-import { currentUserId } from "@/lib/auth/session";
+import { currentActiveAdminUserId } from "@/lib/auth/session";
 import { requirePlatformRole } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
 import { platformAudit } from "@/lib/platform/audit";
@@ -9,7 +9,7 @@ import { assertSameOrigin } from "@/lib/security/origin";
 
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- const actor=await currentUserId(); if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
+ const actor=await currentActiveAdminUserId(); if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(actor,["super_admin","admin"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const body=await request.json().catch(()=>null);
  if(!body || typeof body!=="object" || Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
