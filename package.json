@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
-    "notifications:worker": "node scripts/notification-worker.mjs"
+    "notifications:worker": "node scripts/notification-worker.mjs",
+    "test:migrations": "node --test scripts/sql-statements.test.mjs"
   },
   "dependencies": {
     "next": "16.3.8",
