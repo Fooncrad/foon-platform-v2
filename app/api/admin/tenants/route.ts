@@ -17,8 +17,10 @@ export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentActiveAdminUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(userId,["super_admin","admin"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ const body=await request.json().catch(()=>null);
+ if(!body || typeof body!=="object" || Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{
-  const body=await request.json(); const name=String(body.name??"").trim().slice(0,180); const slug=String(body.slug??"").trim().toLowerCase(); const kind=body.kind==="store"?"store":"restaurant";
+  const name=String(body.name??"").trim().slice(0,180); const slug=String(body.slug??"").trim().toLowerCase(); const kind=body.kind==="store"?"store":"restaurant";
   if(name.length<2||!/^[a-z0-9][a-z0-9-]{1,118}[a-z0-9]$/.test(slug))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
   const id=randomUUID(); await database().execute("INSERT INTO tenants(id,slug,name,kind,status) VALUES (?,?,?,?,?)",[id,slug,name,kind,"pending"]);
   await platformAudit(userId,"tenant.create","tenant",id,{slug,kind}); return NextResponse.json({ok:true,tenant:{id,slug,name,kind,status:"pending"}},{status:201});
