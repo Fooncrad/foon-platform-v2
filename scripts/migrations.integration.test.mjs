@@ -23,9 +23,9 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.equal(schema.name,"foon_migration_test");
     successfulRun();
     const [[tables]]=await db.query("SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()");
-    assert.equal(Number(tables.n),24);
+    assert.equal(Number(tables.n),25);
     const [[history]]=await db.query("SELECT COUNT(*) AS n FROM schema_migrations");
-    assert.equal(Number(history.n),16);
+    assert.equal(Number(history.n),17);
     await db.execute("UPDATE ui_translations SET text_en=? WHERE translation_key=?",
       ["Human edit must survive", "common.account"]);
     successfulRun();

@@ -24,6 +24,10 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test SQL migration parsing
         run: npm run test:migrations
+      - name: Test email templates and configuration
+        run: npm run test:mail
+      - name: Test administrator access policy
+        run: npm run test:admin-policy
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint

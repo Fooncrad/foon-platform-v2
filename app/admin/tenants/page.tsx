@@ -23,5 +23,5 @@ export default async function TenantsPage({searchParams}:{searchParams:Promise<{
  return <main className="workspace"><header className="workspace-head"><div><h1>المتاجر</h1><p>إنشاء وإدارة المطاعم والمتاجر من داخل لوحة المنصة.</p></div></header>
  <section className="adminPanel"><form action="/admin/tenants" className="adminUserFilters"><label>بحث المتجر<input name="q" defaultValue={q} maxLength={100} placeholder="اسم المتجر أو الرابط"/></label><label>الحالة<select name="status" defaultValue={status}><option value="">الكل</option><option value="active">نشط</option><option value="pending">قيد المراجعة</option><option value="suspended">موقوف</option></select></label><button type="submit">بحث</button><Link href="/admin/tenants">إعادة تعيين</Link></form><p>النتائج المعروضة: {data.length} من أصل حد أقصى 200.</p></section>
  <section className="tenant-summary"><article><strong>{data.length}</strong><span>الإجمالي</span></article><article><strong>{active}</strong><span>نشطة</span></article><article><strong>{pending}</strong><span>قيد المراجعة</span></article></section>
- <TenantManager initial={data} canManage={role!=="support"}/></main>;
+ <TenantManager initial={data} canManage={role!=="support"} canAccessAll={role==="super_admin"}/></main>;
 }
