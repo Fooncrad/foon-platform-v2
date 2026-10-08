@@ -39,7 +39,7 @@ jobs:
 
   migration-database:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       mariadb:
         image: mariadb:11.8
@@ -70,3 +70,16 @@ jobs:
         run: npm run build
       - name: Test real registration routes against disposable MariaDB
         run: node --test scripts/registration-http.integration.test.mjs
+
+      - name: Install browser test tools
+        run: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.62.1
+      - name: Install Chromium for visual checks
+        run: npx playwright install --with-deps chromium
+      - name: Verify merchant dashboard desktop and mobile journeys
+        run: npx playwright test scripts/merchant-dashboard.browser.test.mjs --workers=1 --reporter=line
+      - name: Save merchant dashboard screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchant-dashboard-screenshots
+          path: work/merchant-*.png

@@ -1,0 +1,54 @@
+import {test,expect} from "@playwright/test";
+import {spawn} from "node:child_process";
+import mysql from "mysql2/promise";
+import {randomUUID} from "node:crypto";
+let server;
+const origin="http://localhost:3102";
+test.beforeAll(async()=>{
+ const url=new URL(process.env.DATABASE_URL||"");expect(url.hostname).toBe("127.0.0.1");expect(url.pathname).toBe("/foon_migration_test");
+ server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3102"],{env:{...process.env,APP_URL:origin},stdio:"ignore"});
+ for(let i=0;i<60;i++){try{await fetch(origin+"/login");return;}catch{await new Promise(resolve=>setTimeout(resolve,500));}}
+ throw Error("Test server did not start");
+});
+test.afterAll(()=>server?.kill());
+test("reference dashboard: authenticated tenant data, responsive layout and working navigation",async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto(origin+"/register");
+ await page.getByLabel("الاسم",{exact:true}).fill("مالك المعاينة");
+ await page.getByLabel("اسم النشاط",{exact:true}).fill("مطعم المعاينة");
+ await page.getByLabel("رابط المتجر",{exact:true}).fill("visual-dashboard");
+ await page.getByLabel("البريد الإلكتروني",{exact:true}).fill("visual-dashboard@test.example");
+ await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
+ await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"نظرة عامة",exact:true})).toBeVisible();
+ await expect(page.getByRole("heading",{name:"مرحباً بفريق مطعم المعاينة",exact:true})).toBeVisible();
+ await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
+ await expect(page.getByText("خدمة الطلبات لم تُفعّل بعد",{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
+ await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"الباقة والمميزات",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"اشتراك المطعم",exact:true})).toBeVisible();
+ await page.keyboard.press("Control+k");
+ await expect(page.getByRole("dialog",{name:"بحث في أقسام المطعم"})).toBeVisible();
+ await page.getByRole("textbox",{name:"ابحث عن قسم",exact:true}).fill("الفروع");
+ await page.getByRole("dialog").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
+ await expect(page.getByRole("button",{name:"إضافة الفرع",exact:true})).toBeDisabled();
+ await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ await expect(page.getByRole("button",{name:"فتح قائمة المطعم",exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await page.screenshot({path:"work/merchant-mobile.png",fullPage:true});
+ await page.getByRole("button",{name:"فتح قائمة المطعم",exact:true}).click();
+ await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
+ await page.getByRole("combobox",{name:"اختيار الفرع",exact:true}).selectOption({label:"مطعم المعاينة"});
+ await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
+ // A foreign tenant address must not expose its workspace.
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ const foreignId=randomUUID();
+ await db.execute("INSERT INTO tenants(id,slug,name,status) VALUES (?,'visual-foreign','Private foreign tenant','active')",[foreignId]);
+ await db.end();
+ await page.goto(origin+"/restaurant?tenant="+foreignId);
+ await expect(page.getByText("Private foreign tenant",{exact:true})).toHaveCount(0);
+});
