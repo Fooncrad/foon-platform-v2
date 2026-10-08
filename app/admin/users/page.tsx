@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2/promise";
 import { currentActiveAdminUserId } from "@/lib/auth/session";
@@ -29,7 +30,7 @@ export default async function UsersPage({searchParams}:{searchParams:Promise<{q?
  const storeAccounts=users.filter(u=>Number(u.tenant_count)>0).length;
  return <main className="workspace">
   <header className="workspace-head"><div><h1>المستخدمون والصلاحيات</h1><p>آخر 200 حساب فعلي، مع الفصل بين أدوار المنصة وعضويات المتاجر.</p></div></header>
-  <section className="adminPanel"><form action="/admin/users" method="get" className="adminUserFilters"><label>بحث الحساب<input type="search" name="q" defaultValue={q} placeholder="البريد أو اسم المستخدم" maxLength={100}/></label><label>الحالة<select name="status" defaultValue={status}><option value="">جميع الحالات</option><option value="active">نشط</option><option value="pending">قيد الانتظار</option><option value="suspended">موقوف</option></select></label><button type="submit">بحث</button><a href="/admin/users">إعادة تعيين</a></form><p>النتائج المعروضة: {users.length} حساب (بحد أقصى 200 نتيجة).</p></section>
+  <section className="adminPanel"><form action="/admin/users" method="get" className="adminUserFilters"><label>بحث الحساب<input type="search" name="q" defaultValue={q} placeholder="البريد أو اسم المستخدم" maxLength={100}/></label><label>الحالة<select name="status" defaultValue={status}><option value="">جميع الحالات</option><option value="active">نشط</option><option value="pending">قيد الانتظار</option><option value="suspended">موقوف</option></select></label><button type="submit">بحث</button><Link href="/admin/users">إعادة تعيين</Link></form><p>النتائج المعروضة: {users.length} حساب (بحد أقصى 200 نتيجة).</p></section>
   <section className="adminAccessStats"><article><span>مديرو المنصة المعروضون</span><strong>{admins}</strong></article><article><span>الدعم المعروض</span><strong>{support}</strong></article><article><span>حسابات المتاجر المعروضة</span><strong>{storeAccounts}</strong></article></section>
   <section className="adminPanel"><div className="adminPanelHead"><div><h2>الحسابات</h2><p>عرض للقراءة فقط؛ تغيير الصلاحيات غير متاح حتى اكتمال مسار تدقيق التعديلات.</p></div></div>
    {users.length===0?<div className="adminUsersEmpty"><b>لا توجد حسابات</b></div>:
