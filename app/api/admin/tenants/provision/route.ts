@@ -11,7 +11,9 @@ export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentUserId(); if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(actor,["super_admin","admin"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- const body=await request.json(); const name=String(body.name??"").trim().slice(0,180); const slug=String(body.slug??"").trim().toLowerCase();
+ const body=await request.json().catch(()=>null);
+ if(!body || typeof body!=="object" || Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const name=String(body.name??"").trim().slice(0,180); const slug=String(body.slug??"").trim().toLowerCase();
  const ownerEmail=String(body.ownerEmail??"").trim().toLowerCase(); const branchName=String(body.branchName??name).trim().slice(0,180);
  if(name.length<2||branchName.length<2||!/^[a-z0-9][a-z0-9-]{1,118}[a-z0-9]$/.test(slug)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
