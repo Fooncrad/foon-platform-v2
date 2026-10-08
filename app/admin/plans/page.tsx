@@ -22,8 +22,8 @@ export default async function PlansPage(){
   <section className="adminPanel"><div className="adminPanelHead"><div><h2>الباقات المسجلة</h2><p>الباقات والمميزات والأسعار تُقرأ من قاعدة البيانات، ويمكن إدارتها حسب صلاحيات الحساب.</p></div></div>
   {!available?<div className="adminUsersEmpty" role="status"><b>كتالوج الباقات غير جاهز</b><p>قد تكون جداول الباقات لم تُرحّل بعد. الترحيل مؤجل حسب خطة الإطلاق، ولن يُنفذ تلقائيًا.</p></div>:
    plans.length===0?<div className="adminUsersEmpty" role="status"><b>لا توجد باقات مسجلة</b><p>اضغط «إنشاء الباقات الأربع وتوزيع المميزات» أدناه لإضافة الباقات الافتراضية دون تغيير أي إعدادات موجودة.</p></div>:
-   <div className="workspace-grid">{plans.map(plan=><article key={String(plan.id)}><strong>{String(plan.name_ar)}</strong><span>{String(plan.name_en)} · {String(plan.code)}</span><span>{plan.enabled?"مفعّلة":"معطّلة"}</span><small>الأسعار: {String(plan.price_count)} · المميزات: {String(plan.feature_count)}</small><PlanPrices planId={String(plan.id)} canEdit={role!=="support"}/><PlanFeatures planId={String(plan.id)} canEdit={role!=="support"}/></article>)}</div>}
+   <div className="adminPlansCatalog">{plans.map(plan=><article className="adminPlanCatalogCard" key={String(plan.id)}><strong>{String(plan.name_ar)}</strong><span>{String(plan.name_en)} · {String(plan.code)}</span><span>{plan.enabled?"مفعّلة":"معطّلة"}</span><small>الأسعار: {String(plan.price_count)} · المميزات: {String(plan.feature_count)}</small><PlanPrices planId={String(plan.id)} canEdit={role!=="support"}/><PlanFeatures planId={String(plan.id)} canEdit={role!=="support"}/></article>)}</div>}
   </section>
-  {role!=="support"&&<section className="adminPanel"><h2>تهيئة الباقات</h2><BootstrapPlans/><h2>إنشاء باقة جديدة</h2><CreatePlanForm/></section>}
+  {role!=="support"&&<section className="adminPanel adminPlansSetup"><h2>إدارة الكتالوج</h2><p>أضف الباقات الأساسية عند الحاجة، أو افتح النموذج لإنشاء باقة إضافية.</p><BootstrapPlans/><details className="adminPlanCreateDetails"><summary>إنشاء باقة جديدة</summary><CreatePlanForm/></details></section>}
  </main>;
 }
