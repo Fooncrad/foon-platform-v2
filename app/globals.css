@@ -485,3 +485,16 @@
 .adminUserFilters button{padding:11px 18px;background:#e2a93b;color:#171613;border:0;border-radius:9px;font-weight:700;cursor:pointer}
 .adminUserFilters a{padding:11px}
 @media(max-width:520px){.adminUserFilters{display:grid;grid-template-columns:minmax(0,1fr)}}
+
+/* Merchant workspace uses a light page and readable dark operation cards. */
+.merchantWorkspace{width:100%;font-size:1rem;line-height:1.6}
+.merchantWorkspace .workspace-head p{color:#68645c}
+.merchantWorkspace .workspace-grid article{color:#f8f3e9;overflow-wrap:anywhere}
+.merchantWorkspace .workspace-grid article strong{font-size:1rem}
+.merchantWorkspace .workspace-grid article small{color:#d4cdc0;font-size:.875rem}
+.merchantWorkspace .adminPanel>p{color:#68645c}
+.merchantWorkspace .merchantFeatureDetails{margin-top:16px}
+.merchantFeatureDetails summary{cursor:pointer;min-height:44px;display:list-item;list-style-position:inside;padding:10px 12px;border:1px solid #dedbd4;border-radius:10px;background:#f7f5f0;color:#39352d;font-weight:700}
+.merchantFeatureDetails summary:focus-visible{outline:2px solid #c99432;outline-offset:3px}
+.merchantFeatureDetails[open] summary{margin-bottom:16px}
+@media(max-width:720px){.merchantWorkspace .workspace-head{align-items:flex-start;flex-wrap:wrap}.merchantWorkspace .adminPanel{padding:16px}}
