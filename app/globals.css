@@ -455,3 +455,19 @@
 .adminRecentList span{overflow-wrap:anywhere;color:#6c655b}
 .adminRecentList time{white-space:nowrap;color:#777064;font-variant-numeric:tabular-nums}
 @media(max-width:850px){.adminOverviewSecondary{grid-template-columns:1fr}.adminRecentList>div{grid-template-columns:1fr;gap:4px}.adminRecentList time{white-space:normal}}
+
+/* Payment review workspace */
+.adminBillingGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.adminBillingCard{min-width:0;display:grid;gap:12px;padding:18px;border:1px solid #e5ddce;border-radius:12px;background:#fffdf9;color:#2a2721}
+.adminBillingCard>div:first-child{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.adminBillingCard span,.adminBillingCard small{color:#736b60}
+.adminBillingCard>b{font-size:1.3rem;color:#956a20}
+.adminBillingCard p{margin:0;overflow-wrap:anywhere;font-size:.86rem}
+.adminBillingReview{display:grid;gap:10px;border-top:1px solid #ece4d8;padding-top:12px}
+.adminBillingReview label{display:grid;gap:7px;font-size:.84rem}
+.adminBillingReview input{width:100%;min-width:0;padding:10px;border:1px solid #d7cdbd;border-radius:8px;background:#fff;color:#171613}
+.adminBillingReview>div{display:flex;flex-wrap:wrap;gap:8px}
+.adminBillingReview button{cursor:pointer;padding:10px 12px;border:1px solid #c99436;background:#e2a93b;color:#171613;border-radius:8px;font-weight:700}
+.adminBillingReview button+button{background:transparent;border-color:#a65a4e;color:#9c463c}
+.adminBillingReview button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:850px){.adminBillingGrid{grid-template-columns:1fr}}
