@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import type { ResultSetHeader } from "mysql2/promise";
+import type { RowDataPacket } from "mysql2/promise";
 import { currentActiveAdminUserId } from "@/lib/auth/session";
 import { requirePlatformRole } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
@@ -19,7 +19,7 @@ export async function POST(request:Request){
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
-  const [users]=await db.execute<any[]>("SELECT id FROM users WHERE email=? LIMIT 1",[ownerEmail]); if(!users.length){await db.rollback();return NextResponse.json({ok:false,code:"OWNER_NOT_FOUND"},{status:404});}
+  const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE email=? LIMIT 1",[ownerEmail]); if(!users.length){await db.rollback();return NextResponse.json({ok:false,code:"OWNER_NOT_FOUND"},{status:404});}
   const tenantId=randomUUID(),branchId=randomUUID(),membershipId=randomUUID(),ownerId=String(users[0].id);
   await db.execute("INSERT INTO tenants(id,slug,name,kind,status) VALUES (?,?,?,?,?)",[tenantId,slug,name,body.kind==="store"?"store":"restaurant","active"]);
   await db.execute("INSERT INTO branches(id,tenant_id,name,slug,enabled) VALUES (?,?,?,?,TRUE)",[branchId,tenantId,branchName,"main"]);
