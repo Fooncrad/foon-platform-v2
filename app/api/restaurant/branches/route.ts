@@ -4,6 +4,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { currentUserId } from "@/lib/auth/session";
 import { requireTenantMembership } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
+import { tenantEntitlement } from "@/lib/plans/entitlements";
 import { assertSameOrigin } from "@/lib/security/origin";
 
 export async function GET(request:Request){
@@ -22,6 +23,11 @@ export async function POST(request:Request){
  try{const ctx=await requireTenantMembership(userId,tenant,["owner","manager"]);
  const name=String(body.name??"").trim().slice(0,180);const slug=String(body.slug??"").trim().toLowerCase();
  if(name.length<2||!/^[a-z0-9][a-z0-9-]{1,118}[a-z0-9]$/.test(slug))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const entitlement=await tenantEntitlement(ctx.tenantId,"multi_branch");
+ const [existing]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM branches WHERE tenant_id=?",[ctx.tenantId]);
+ const count=Number(existing[0]?.total??0);
+ if(count>=1&&!entitlement.enabled)return NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED",feature:"multi_branch"},{status:403});
+ if(entitlement.limit!==null&&count>=entitlement.limit)return NextResponse.json({ok:false,code:"PLAN_LIMIT_REACHED",feature:"multi_branch",limit:entitlement.limit},{status:403});
  const id=randomUUID();await database().execute("INSERT INTO branches(id,tenant_id,name,slug) VALUES (?,?,?,?)",[id,ctx.tenantId,name,slug]);return NextResponse.json({ok:true,branch:{id,name,slug,enabled:true}},{status:201});}
  catch(e){if((e as {code?:string}).code==="ER_DUP_ENTRY")return NextResponse.json({ok:false,code:"BRANCH_SLUG_EXISTS"},{status:409});return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
 }
