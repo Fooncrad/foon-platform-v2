@@ -11,7 +11,7 @@ export async function GET(request:Request){
  const tenant=request.headers.get("x-foon-tenant"); if(!tenant)return NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400});
  try{const ctx=await requireTenantMembership(userId,tenant,["owner","manager","cashier","waiter","kitchen","driver","accountant"]);
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,slug,enabled,created_at FROM branches WHERE tenant_id=? ORDER BY created_at",[ctx.tenantId]);return NextResponse.json({ok:true,branches:rows});}
- catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ catch{return NextResponse.json({ok:false,code:"BRANCH_CREATE_UNAVAILABLE"},{status:503});}
 }
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
