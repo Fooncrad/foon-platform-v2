@@ -421,3 +421,22 @@
 .adminNotificationRule button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:850px){.adminNotificationGrid{grid-template-columns:1fr}}
 @media(max-width:450px){.adminNotificationToggles{grid-template-columns:1fr}.adminNotificationRule{padding:12px}}
+
+/* Customer portal and public CMS navigation */
+.customerDashboard{min-height:100svh;background:#171613;color:#f8f3e9;padding:clamp(16px,3vw,36px);overflow-x:clip}
+.customerHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:auto}
+.customerHeader a{color:#e2a93b;text-decoration:none}
+.customerBrand{font-weight:900;letter-spacing:.12em;font-size:1.35rem}
+.customerWelcome{max-width:1100px;margin:clamp(28px,5vw,64px) auto 24px}
+.customerWelcome>span{color:#e2a93b;font-weight:700}
+.customerWelcome h1{font-size:clamp(1.65rem,4vw,2.8rem);margin:10px 0}
+.customerWelcome p{max-width:680px;line-height:1.8;color:#aaa59b}
+.customerOverview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1100px;margin:auto}
+.customerOverview article{min-width:0;border:1px solid rgba(255,255,255,.1);background:#24221e;border-radius:14px;padding:clamp(16px,3vw,26px)}
+.customerOverview h2{color:#e2a93b;font-size:1.05rem;margin:0 0 12px}
+.customerOverview p{color:#d5cfc4;overflow-wrap:anywhere;line-height:1.7}
+.publicSiteFooter{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;padding:30px clamp(18px,4vw,60px);background:#171613;color:#f8f3e9}
+.publicSiteFooter>div{display:grid;gap:7px}.publicSiteFooter strong{color:#e2a93b}.publicSiteFooter span{color:#aaa59b}
+.publicSiteFooter nav{display:flex;flex-wrap:wrap;gap:12px 20px;max-width:700px}
+.publicSiteFooter a{color:#f8f3e9;text-decoration:none}.publicSiteFooter a:hover{color:#e2a93b}
+@media(max-width:600px){.customerOverview{grid-template-columns:1fr}.publicSiteFooter{flex-direction:column}}
