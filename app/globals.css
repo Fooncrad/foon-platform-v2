@@ -716,3 +716,7 @@
 .foonCleanMenuLang{position:relative}.foonCleanMenuLang>div{left:0;white-space:nowrap;font-size:13px}
 .foonCleanMenuCart{opacity:.65;cursor:not-allowed}.foonCleanMenuCart>span{position:absolute;top:-5px;right:-5px;display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#d5a337;color:#fff;font-size:11px;font-weight:700}
 @media(max-width:420px){.foonCleanMenuHeader{gap:5px;padding:8px 9px;min-height:66px}.foonCleanMenuHeader svg{width:21px;height:21px}.foonCleanMenuNav>summary,.foonCleanMenuLang>summary,.foonCleanMenuAccount,.foonCleanMenuCart{width:34px;height:36px;border-radius:11px}.foonCleanMenuBrand{max-width:30vw;font-size:20px}.foonCleanMenuTools{gap:3px}}
+
+/* Mobile public header: keep sign-in visible at all supported widths. */
+@media(max-width:640px){.foonPublicHeader .foonLogin{display:inline-flex!important;align-items:center;min-height:38px;padding:7px 9px;border:1px solid var(--fp-line);border-radius:10px;font-size:12px}.foonPublicHeader .foonPublicControls{flex-wrap:wrap;justify-content:flex-end;max-width:100%}.foonPublicHeader .foonHeaderCta{display:none}.foonPublicHeader{flex-wrap:wrap}.foonPublicHeader .foonPublicBrand{flex-shrink:0}}
+@media(max-width:370px){.foonPublicHeader .foonLogin{padding:6px 8px}.foonPublicHeader .foonPublicControls{gap:4px}}
