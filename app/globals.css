@@ -554,3 +554,20 @@
 @media(max-width:640px){.foonPublicHeader{min-height:70px;gap:8px;flex-wrap:wrap}.foonPublicBrand{font-size:18px}.foonBrandMark{width:34px;height:34px;font-size:23px}.foonPublicControls{gap:6px}.foonLanguageControl select{max-width:98px;font-size:12px}.foonLogin{display:none}.foonHeaderCta{padding:10px 12px;font-size:12px}.foonPublicHero{padding-top:45px;min-height:0}.foonHeroCopy h1{font-size:clamp(35px,10vw,50px)}.foonHeroArt{border-radius:25px;width:min(100%,320px)}.foonFeatureGrid,.foonSteps{grid-template-columns:1fr}.foonPublicSection{padding-top:45px;padding-bottom:45px}.foonFeatureCard{min-height:0;padding:24px}.foonPublicFooter{align-items:flex-start;flex-direction:column}}
 @media(max-width:370px){.foonPublicHeader{padding:10px}.foonPublicControls{margin-inline-start:auto}.foonHeaderCta{font-size:11px;padding:10px 8px}.foonLanguageControl select{max-width:80px}.foonPublicBrand small{font-size:7px}}
 @media(prefers-reduced-motion:reduce){.foonPublic *{transition:none!important;animation:none!important}}
+
+/* FOON unified authentication surfaces */
+.foonAuthPage{position:relative;isolation:isolate;background:radial-gradient(ellipse at 12% 14%,#544025 0,transparent 42%),radial-gradient(ellipse at 85% 82%,#30281c 0,transparent 48%),#171613;overflow-x:clip}
+.foonAuthPage::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(to bottom,#000,transparent)}
+.foonAuthPage .auth-card{width:min(100%,490px);background:#24221eea;border:1px solid #e2a93b33;box-shadow:0 28px 90px #0008;border-radius:24px;padding:clamp(22px,4vw,38px);backdrop-filter:blur(18px)}
+.foonAuthPage .auth-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+.foonAuthPage .auth-heading .auth-brand{margin:0;font-size:24px;letter-spacing:.1em}
+.foonAuthTag{border:1px solid #e2a93b55;background:#e2a93b13;color:#e2a93b;border-radius:99px;padding:7px 11px;font-size:12px;font-weight:800}
+.foonAuthPage .auth-card h1{font-size:clamp(27px,5vw,36px);letter-spacing:-.02em}
+.foonAuthPage .auth-card>p{line-height:1.8}
+.foonAuthPage .auth-form{gap:15px}.foonAuthPage .auth-form label{gap:8px;font-size:14px}
+.foonAuthPage .auth-form input,.foonAuthPage .auth-form select{min-height:48px;background:#171613;border-color:#ffffff25;transition:border-color .15s,box-shadow .15s}
+.foonAuthPage .auth-form button{font-weight:900;box-shadow:0 8px 22px #e2a93b20}
+.foonAuthPage .auth-form a,.foonAuthPage .auth-home{color:#e2a93b;font-weight:700}
+.foonAuthPage .auth-home{display:block;text-align:center;margin-top:16px;font-size:13px}
+.foonAuthPage :is(a,button,input,select):focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:480px){.foonAuthPage{padding:12px}.foonAuthPage .auth-card{border-radius:18px;padding:22px 18px}}
