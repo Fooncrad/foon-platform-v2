@@ -579,3 +579,16 @@
 .foonAuthPage[dir="rtl"] .auth-card{text-align:right}
 .foonAuthPage .auth-form input[dir="ltr"]{text-align:left}
 @media(max-width:390px){.foonAuthPage .auth-heading{align-items:flex-start;flex-wrap:wrap}.foonAuthTopControls{width:100%;justify-content:space-between}.foonAuthLanguage{max-width:130px}}
+
+/* Persisted public appearance shared with login; only user action overrides saved preference */
+.foonAuthPage[data-theme="light"]{background:radial-gradient(ellipse at 12% 14%,#f4e5c7 0,transparent 42%),radial-gradient(ellipse at 85% 82%,#eee8dd 0,transparent 48%),#f8f7f3;color-scheme:light}
+.foonAuthPage[data-theme="light"]::before{background-image:linear-gradient(#6b532409 1px,transparent 1px),linear-gradient(90deg,#6b532409 1px,transparent 1px)}
+.foonAuthPage[data-theme="light"] .auth-card{background:#ffffffed;color:#24221e;border-color:#e9e4da;box-shadow:0 24px 65px #4637191a;color-scheme:light}
+.foonAuthPage[data-theme="light"] .auth-card>p,.foonAuthPage[data-theme="light"] .auth-form small{color:#706c62}
+.foonAuthPage[data-theme="light"] .auth-form input,.foonAuthPage[data-theme="light"] .auth-form select{background:#fff;color:#24221e;border-color:#dcd5c8}
+.foonAuthPage[data-theme="light"] .foonAuthTag{color:#906519;border-color:#c9943260;background:#c9943210}
+.foonAuthPage[data-theme="light"] .foonAuthLanguage,.foonAuthPage[data-theme="light"] .foonAuthThemeToggle{background:#fff;color:#24221e;border-color:#dcd5c8}
+.foonAuthPage[data-theme="light"] .form-error{background:#fff0ee;color:#9c2828;border-color:#f2b4ae}
+.foonAuthPage[data-theme="light"] .auth-form a,.foonAuthPage[data-theme="light"] .auth-switch a,.foonAuthPage[data-theme="light"] .auth-home{color:#956516}
+.foonAuthThemeToggle{min-width:35px;min-height:35px;display:grid;place-items:center;border:1px solid #ffffff30;border-radius:10px;background:#171613;color:#f8f3e9;font-size:19px;cursor:pointer}
+.foonAuthPage .foonAuthThemeToggle:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
