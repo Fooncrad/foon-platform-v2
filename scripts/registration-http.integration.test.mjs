@@ -17,12 +17,17 @@ test("production registration routes activate owners and isolate store customers
    try{await fetch(origin+"/login");ready=true;break;}catch{await new Promise(resolve=>setTimeout(resolve,500));}
   }
   assert.ok(ready,output);
-  const owner={email:"http-owner@test.example",password:"a-strong-test-password",name:"Owner",storeName:"HTTP store",slug:"http-owner-store",kind:"store"};
+  const owner={email:"http-owner@test.example",password:"a-strong-test-password",name:"Owner",storeName:"HTTP store",slug:"http-owner-store",kind:"store",activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"};
   assert.equal((await post("/api/auth/register",owner,"https://foreign.example")).status,403);
   assert.equal((await post("/api/auth/register",{...owner,slug:"admin"})).status,400);
   const created=await post("/api/auth/register",owner);assert.equal(created.status,201,await created.clone().text());
   assert.match(created.headers.get("set-cookie")||"",/foon_session=/);
   const result=await created.json();assert.equal(result.plan,"free");assert.equal(result.tenant.status,"active");
+  const [[business]]=await db.execute("SELECT activity_code,country_code,currency,region FROM tenant_business_profiles WHERE tenant_id=?",[result.tenant.id]);
+  assert.equal(business.activity_code,"grocery");assert.equal(business.country_code,"SA");assert.equal(business.currency,"SAR");assert.equal(business.region,"الرياض");
+  assert.equal((await post("/api/auth/register",{...owner,email:"invalid-activity@test.example",slug:"invalid-activity",activity:"unknown"})).status,400);
+  assert.equal((await post("/api/auth/register",{...owner,email:"invalid-locale@test.example",slug:"invalid-locale",currency:"USD"})).status,400);
+  const [[rejectedProfiles]]=await db.query("SELECT COUNT(*) AS n FROM users WHERE email IN ('invalid-activity@test.example','invalid-locale@test.example')");assert.equal(Number(rejectedProfiles.n),0);
   const [[state]]=await db.execute("SELECT s.status,p.code,(SELECT COUNT(*) FROM branches b WHERE b.tenant_id=s.tenant_id) AS branches,(SELECT COUNT(*) FROM memberships m WHERE m.tenant_id=s.tenant_id AND m.role='owner') AS owners FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id WHERE s.tenant_id=?",[result.tenant.id]);
   assert.equal(state.status,"active");assert.equal(state.code,"free");assert.equal(Number(state.branches),1);assert.equal(Number(state.owners),1);
   assert.equal((await post("/api/auth/register",owner)).status,409);
