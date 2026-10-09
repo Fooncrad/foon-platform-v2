@@ -21,7 +21,6 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel("رابط المتجر",{exact:true}).fill("visual-dashboard");
  await page.getByLabel("البريد الإلكتروني",{exact:true}).fill("visual-dashboard@test.example");
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
- await page.locator("select[name=kind]").selectOption("restaurant");
  await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
  await expect(page.getByRole("heading",{name:"نظرة عامة",exact:true})).toBeVisible();
  await expect(page.getByRole("heading",{name:"مرحباً بفريق مطعم المعاينة",exact:true})).toBeVisible();
