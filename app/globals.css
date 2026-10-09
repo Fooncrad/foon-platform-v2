@@ -724,3 +724,23 @@
 /* Admin navigation: one desktop sidebar and one mobile drawer, with contained scrolling. */
 @media(min-width:851px){.adminShell .adminSide{height:100dvh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminSide>nav{display:grid}.adminShell .adminMobileMenu{display:none}}
 @media(max-width:850px){.adminShell .adminSide>nav{display:none!important}.adminShell .adminMobileMenu{display:block}.adminShell .adminDrawer{max-height:calc(100dvh - 110px)!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminStage{min-width:0}.adminShell .adminStage>.workspace{max-width:100%;overflow-wrap:anywhere}}
+
+/* FOON dashboard interaction system: charcoal + gold identity */
+:root{--foon-ui-gold:#e2a93b;--foon-ui-ink:#171613;--foon-ui-line:#ded9cf;--foon-ui-radius:12px}
+.adminShell :is(button,a,input,select,textarea),.restaurantShell :is(button,a,input,select,textarea),.foonMenuWorkspace :is(button,a,input,select,textarea){transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.adminShell :is(button,a,input,select,textarea):focus-visible,.restaurantShell :is(button,a,input,select,textarea):focus-visible,.foonMenuWorkspace :is(button,a,input,select,textarea):focus-visible{outline:3px solid var(--foon-ui-gold);outline-offset:3px}
+.adminShell button:disabled,.restaurantShell button:disabled,.foonMenuWorkspace button:disabled{opacity:.58;cursor:not-allowed}
+.foonMenuWorkspace{width:100%;min-width:0;color:var(--foon-ui-ink)}
+.foonMenuWorkspace>h1{font-size:clamp(1.45rem,3vw,2rem);letter-spacing:-.02em}
+.foonMenuWorkspace>p{line-height:1.8;max-width:780px;color:#615c52}
+.foonMenuTabs{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 26px;padding:8px;background:#f5f1e9;border:1px solid #e5ddcf;border-radius:16px}
+.foonMenuTabs a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border:1px solid #e2d8c5;border-radius:11px;background:#fff;color:#332b1e;font-size:.9rem;font-weight:800}
+.foonMenuTabs a:hover{border-color:var(--foon-ui-gold);background:#fff8e9;transform:translateY(-1px)}
+.foonMenuStep{min-width:0;scroll-margin-top:90px;margin-bottom:26px}
+.foonMenuWorkspace :is(.adminPanel,.restaurantPanel){border-radius:18px}
+.foonMenuWorkspace :is(input,select,textarea){max-width:100%;min-width:0}
+.foonMenuWorkspace :is(button,.restaurantPrimary){min-height:44px;border-radius:11px;font-weight:800}
+.foonMenuWorkspace details{margin:12px 0 24px;border:1px solid #e2d8c5;border-radius:14px;background:#fff;overflow:hidden}
+.foonMenuWorkspace details>summary{padding:16px 18px;cursor:pointer;font-weight:800;color:#43341d}
+.foonMenuWorkspace details[open]>summary{border-bottom:1px solid #e9e1d5;background:#fff8ec}
+@media(max-width:600px){.foonMenuTabs{display:grid;grid-template-columns:1fr;padding:7px}.foonMenuTabs a{width:100%;justify-content:flex-start}.foonMenuWorkspace{padding-inline:14px}.foonMenuWorkspace .foonMenuStep{max-width:100%}}
