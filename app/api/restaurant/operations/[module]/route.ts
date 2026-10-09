@@ -38,7 +38,12 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
  const [[tables]]=await db.execute<RowDataPacket[]>("SELECT COUNT(DISTINCT table_id) AS occupied FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
  const [series]=await db.execute<RowDataPacket[]>("SELECT DATE(created_at+INTERVAL 3 HOUR) AS day,SUM(total) AS total FROM restaurant_orders WHERE tenant_id=?"+filter+" AND payment_status='paid' AND status<>'cancelled' AND created_at>=UTC_TIMESTAMP()-INTERVAL 7 DAY GROUP BY day ORDER BY day",params);
  const financial=["owner","manager","cashier","accountant"].includes(role);
- return {summary:{sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
+ const serviceCounts={waiterCalls:0,reservations:0};
+ if(["owner","manager","waiter"].includes(role)){
+  const [pending]=await db.execute<RowDataPacket[]>("SELECT kind,COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND status='pending' AND kind IN ('waiter_call','reservation') GROUP BY kind",params);
+  for(const row of pending){const key=row.kind==='waiter_call'?'waiterCalls':'reservations';if((await tenantEntitlement(tenantId,key==='waiterCalls'?'tables':'reservations')).enabled)serviceCounts[key]=Number(row.n);}
+ }
+ return {summary:{...serviceCounts,sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
 }
 export async function GET(request:Request,{params}:{params:Promise<{module:string}>}){
  let db:PoolConnection|undefined;

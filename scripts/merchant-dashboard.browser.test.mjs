@@ -11,7 +11,7 @@ test.beforeAll(async()=>{
  throw Error("Test server did not start");
 });
 test.afterAll(()=>server?.kill());
-test("reference dashboard: authenticated tenant data, responsive layout and working navigation",async({page})=>{
+test("reference dashboard: authenticated tenant data, responsive layout and working navigation",async({page,browser})=>{
  await page.setViewportSize({width:1440,height:1000});
  await page.goto(origin+"/register");
  await page.getByLabel("الاسم",{exact:true}).fill("مالك المعاينة");
@@ -69,7 +69,8 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const menuResponse=await page.request.get(origin+"/api/restaurant/operations/menu",{headers:{"x-foon-tenant":visualTenant.tenant}});
  const menuData=await menuResponse.json();const fixtureCategory=menuData.references.categories[0].id;
  for(const [name,price,description] of [["لاتيه الشوفان",18,"إسبريسو وحليب الشوفان بقوام ناعم."],["شاي بالنعناع",12,"شاي دافئ مع أوراق النعناع الطازجة."],["كيكة التمر",22,"كيكة تمر ناعمة، تُقدّم مع صوص الكراميل."]]){const saved=await page.request.post(origin+"/api/restaurant/operations/menu",{headers:{origin,"x-foon-tenant":visualTenant.tenant},data:{name,status:"active",branchId:visualTenant.branch,data:{categoryId:fixtureCategory,price,description}}});expect(saved.status()).toBe(201);}
- const publicPage=await page.context().newPage();
+ const publicContext=await browser.newContext();
+ const publicPage=await publicContext.newPage();
  for(const [template,name] of [["classic","المعرض"],["minimal","القائمة"],["modern","السريع"],["sufra","السفرة"]]){
   await page.getByRole("radio",{name,exact:true}).check();
   await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("template");
@@ -77,6 +78,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await expect(page.getByText("تم حفظ القالب والمظهر. يظهر التغيير في منيو مطعمك مباشرة.",{exact:true})).toBeVisible();
   await publicPage.setViewportSize({width:1440,height:1000});
   await publicPage.goto(origin+"/visual-dashboard");
+  await expect(publicPage.getByRole("heading",{name:"مطعم المعاينة",exact:true})).toHaveCount(1);
   await expect(publicPage.locator(".publicMenu")).toHaveAttribute("data-template",template);
   await expect(publicPage.getByRole("heading",{name:"قهوة المعاينة",exact:true})).toBeVisible();
   await publicPage.getByRole("searchbox",{name:"البحث في المنيو"}).fill("لا يوجد صنف بهذا الاسم");
@@ -90,7 +92,41 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await publicPage.screenshot({path:"work/menu-"+template+"-mobile.png",fullPage:true});
  }
+ await publicPage.locator('.publicMenuCategoryTrigger').click();
+ await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();
+ await publicPage.getByRole('dialog').getByRole('button',{name:'مشروبات المعاينة',exact:false}).click();
+ await expect(publicPage.getByRole('dialog')).toHaveCount(0);
+ const dining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة 7',branchId:visualTenant.branch,status:'available',data:{capacity:4}}});expect(dining.status()).toBe(201);
+ const tableId=(await dining.json()).id;
+ await publicPage.reload();
+ await publicPage.getByRole('button',{name:'نداء النادل',exact:true}).click();
+ await publicPage.getByRole('dialog').getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
+ await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
+ await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill('visual-guest@test.example');
+ await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+ await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
+ await expect(publicPage.getByRole('dialog').getByLabel('طاولتك',{exact:true})).toBeVisible();
+ await publicPage.getByRole('dialog').screenshot({path:'work/menu-waiter-mobile.png'});
+ await publicPage.getByRole('dialog').getByLabel('طاولتك',{exact:true}).selectOption(tableId);
+ await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
+ await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
+ await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
+ await publicPage.getByRole('button',{name:'حجز طاولة',exact:true}).click();
+ const nextDay=new Date(Date.now()+86400000);const localDate=new Date(nextDay.getTime()-nextDay.getTimezoneOffset()*60000).toISOString().slice(0,16);
+ await publicPage.getByRole('dialog').getByLabel('موعد الحجز',{exact:true}).fill(localDate);
+ await publicPage.getByRole('dialog').getByLabel('رقم التواصل',{exact:true}).fill('0500000000');
+ await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
+ await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('ينتظر التأكيد');
+ await publicPage.getByRole('dialog').screenshot({path:'work/menu-booking-mobile.png'});
+ await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
+ const calls=await page.request.get(origin+'/api/restaurant/operations/waiterCalls',{headers:{'x-foon-tenant':visualTenant.tenant}});expect((await calls.json()).resources.some(row=>row.data.tableId===tableId&&row.status==='pending')).toBeTruthy();
+ await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطاولات',exact:true}).click();
+ await page.getByRole('button',{name:'نداءات النادل',exact:true}).click();
+ await expect(page.getByText('ضيف المعاينة',{exact:true})).toBeVisible();
  await publicPage.close();
+ await publicContext.close();
+ await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'المنيو والأصناف',exact:true}).click();
+ await page.getByRole('button',{name:'القوالب والمظهر',exact:true}).click();
  await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();
  await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-template","sufra");
  await expect(page.locator(".menuPreviewViewport").getByText("معاينة التصميم فقط",{exact:true})).toBeVisible();
