@@ -92,3 +92,5 @@
  .publicMenu .publicMenuItemBody{padding:10px!important}
  .publicMenu .publicMenuCatalogContent{min-width:0}
 }
+
+.publicMenuLoadMore{grid-column:1/-1;display:flex;justify-content:center;padding:14px 0 20px}.publicMenuLoadMore button{border:1px solid var(--public-line);border-radius:12px;background:var(--public-surface);color:var(--public-text);padding:12px 20px;font-weight:700;max-width:100%;cursor:pointer}.publicMenuLoadMore button:hover{border-color:var(--public-brand)}
