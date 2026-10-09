@@ -5,9 +5,9 @@ import { database } from "@/lib/db/mysql";
 import { tenantId, type TenantId } from "@/lib/tenant/scope";
 import type { PlatformRole, TenantRole } from "./roles";
 
-export async function requireTenantMembership(userId:string, rawTenantId:string, allowed:readonly TenantRole[]){
+export async function requireTenantMembership(userId:string, rawTenantId:string, allowed:readonly TenantRole[],touchAdminSession=true){
   const id:TenantId=tenantId(rawTenantId);
-  const admin=await currentActiveAdminUserId();
+  const admin=await currentActiveAdminUserId(touchAdminSession);
   if(admin===userId){
     const [admins]=await database().execute<RowDataPacket[]>("SELECT pa.role FROM platform_admins pa JOIN users u ON u.id=pa.user_id WHERE pa.user_id=? AND pa.enabled=TRUE AND u.status='active'",[userId]);
     if(canAccessAllTenants(String(admins[0]?.role??""),admin===userId)){

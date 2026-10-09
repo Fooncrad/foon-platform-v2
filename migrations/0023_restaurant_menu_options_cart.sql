@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS restaurant_customer_carts (
  KEY ix_rcc_user (tenant_id,user_id,status),
  KEY ix_rcc_guest (tenant_id,guest_token_hash,status),
  CONSTRAINT fk_rcc_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE RESTRICT,
- CONSTRAINT fk_rcc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+ CONSTRAINT fk_rcc_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
  CONSTRAINT ck_rcc_identity CHECK (user_id IS NOT NULL OR guest_token_hash IS NOT NULL)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

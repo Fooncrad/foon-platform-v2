@@ -25,6 +25,11 @@ export async function currentUserId(){
   );
   return (rows[0]?.user_id as string|undefined)??null;
 }
+export async function currentSessionId(){
+ const token=(await cookies()).get(COOKIE)?.value;if(!token)return null;
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() LIMIT 1",[digest(token)]);
+ return rows[0]?.id as string|undefined??null;
+}
 export async function destroySession(){
   const jar=await cookies(); const token=jar.get(COOKIE)?.value;
   if(token) await database().execute("DELETE FROM auth_sessions WHERE token_hash=?",[digest(token)]);
@@ -32,7 +37,7 @@ export async function destroySession(){
 }
 
 /** Admin-only inactivity timeout; ordinary customer sessions remain unchanged. */
-export async function currentActiveAdminUserId(){
+export async function currentActiveAdminUserId(touch=true){
   const token=(await cookies()).get(COOKIE)?.value;
   if(!token)return null;
   const hash=digest(token);
@@ -42,6 +47,7 @@ export async function currentActiveAdminUserId(){
   );
   const userId=rows[0]?.user_id as string|undefined;
   if(!userId)return null;
+  if(!touch)return userId;
   const [update]=await database().execute<ResultSetHeader>(
     "UPDATE auth_sessions SET last_seen_at=NOW() WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL 5 MINUTE)",
     [hash]

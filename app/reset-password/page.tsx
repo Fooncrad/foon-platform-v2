@@ -1,5 +1,6 @@
 "use client";
-import {Suspense,type FormEvent,useEffect,useState} from "react";
+import {useSavedPreference} from "@/lib/ui/saved-preference";
+import {Suspense,type FormEvent,useState} from "react";
 import {useSearchParams} from "next/navigation";
 import Link from "next/link";
 type Lang="ar"|"en"|"fr";type Theme="light"|"dark";
@@ -9,8 +10,7 @@ const copy={
  fr:{title:"Définir un nouveau mot de passe",intro:"Choisissez un nouveau mot de passe pour votre compte.",password:"Nouveau mot de passe",confirm:"Confirmer le mot de passe",submit:"Enregistrer",busy:"Enregistrement…",success:"Votre mot de passe a été modifié. Vous pouvez vous connecter.",mismatch:"Les mots de passe ne correspondent pas.",invalid:"Ce lien est invalide ou expiré. Demandez un nouveau lien.",error:"Impossible de modifier le mot de passe. Réessayez.",login:"Se connecter",forgot:"Demander un autre lien"}
 } as const;
 function ResetForm(){
- const params=useSearchParams();const token=params.get("token")||"";const [lang,setLang]=useState<Lang>("ar");const [theme,setTheme]=useState<Theme>("light");const [busy,setBusy]=useState(false);const [done,setDone]=useState(false);const [error,setError]=useState("");
- useEffect(()=>{const saved=localStorage.getItem("foon-public-lang");if(saved==="ar"||saved==="en"||saved==="fr")setLang(saved);const chosen=localStorage.getItem("foon-public-theme");setTheme(chosen==="dark"||chosen==="light"?chosen:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))},[]);
+ const params=useSearchParams();const token=params.get("token")||"";const [lang,setLang]=useSavedPreference<Lang>("foon-public-lang",["ar","en","fr"],"ar");const [theme,setTheme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);const [busy,setBusy]=useState(false);const [done,setDone]=useState(false);const [error,setError]=useState("");
  const t=copy[lang];const valid=/^[A-Za-z0-9_-]{43}$/.test(token);
  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();if(busy||!valid)return;const form=new FormData(event.currentTarget);const password=String(form.get("password")||"");if(password!==form.get("confirm")){setError(t.mismatch);return}setBusy(true);setError("");
   try{const response=await fetch("/api/auth/reset-password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token,password})});if(!response.ok){const data=await response.json().catch(()=>({}));setError(data.code==="RESET_TOKEN_INVALID"?t.invalid:t.error);return}setDone(true)}catch{setError(t.error)}finally{setBusy(false)}

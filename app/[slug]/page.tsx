@@ -49,7 +49,7 @@ export default async function PublicTenantPage({params}:{params:Promise<{slug:st
     <Link className="foonCleanMenuBrand" href={`/${slug}`}>{String(tenant.name)}</Link>
     <div className="foonCleanMenuTools">
      <details className="foonCleanMenuLang"><summary aria-label="اللغات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18"/></svg></summary><div>العربية · English · Français</div></details>
-     <span className="foonCleanMenuCart" aria-label="السلة غير مفعلة بعد"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M2 3h2l3 12h12l2-9H5"/></svg><span>0</span></span>
+     <Link className="foonCleanMenuCart" href={`/${slug}/order`} aria-label="المنيو والسلة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M2 3h2l3 12h12l2-9H5"/></svg></Link>
      <Link className="foonCleanMenuAccount" href={`/${slug}/login`} aria-label="حساب العميل"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M6.5 19c.7-3.2 3-4.5 5.5-4.5s4.8 1.3 5.5 4.5"/></svg></Link>
     </div>
    </header>
