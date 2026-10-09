@@ -30,6 +30,8 @@ jobs:
         run: npm run test:admin-policy
       - name: Test store registration policy
         run: node --test scripts/registration.test.mjs
+      - name: Test operational resource validation
+        run: npm run test:resources
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint
@@ -39,7 +41,7 @@ jobs:
 
   migration-database:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       mariadb:
         image: mariadb:11.8
@@ -70,3 +72,16 @@ jobs:
         run: npm run build
       - name: Test real registration routes against disposable MariaDB
         run: node --test scripts/registration-http.integration.test.mjs
+
+      - name: Test restaurant operational integrity
+        run: npm run test:operations
+      - name: Install Chromium for visual checks
+        run: npx playwright install --with-deps chromium
+      - name: Verify merchant dashboard desktop and mobile journeys
+        run: npm run test:browser
+      - name: Save merchant dashboard screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchant-dashboard-screenshots
+          path: work/merchant-*.png

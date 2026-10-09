@@ -1,5 +1,6 @@
 "use client";
-import {type FormEvent,useEffect,useState} from "react";
+import {useSavedPreference} from "@/lib/ui/saved-preference";
+import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
 type Lang="ar"|"en"|"fr";
@@ -10,8 +11,7 @@ const copy={
  fr:{tag:"Commencer gratuitement",title:"Créer un compte et une boutique",intro:"Votre boutique et votre formule gratuite sont activées dès l'inscription.",name:"Votre nom",store:"Nom de l'activité",kind:"Type d'activité",retail:"Boutique",restaurant:"Restaurant",slug:"Adresse de la boutique",email:"Adresse e-mail",password:"Mot de passe",hint:"Au moins 9 caractères",submit:"Créer un compte",busy:"Création en cours…",hasAccount:"Vous avez déjà un compte ?",login:"Se connecter",language:"Langue",theme:"Changer l'apparence",exists:"Cette adresse e-mail est déjà utilisée.",slugExists:"Cette adresse de boutique est déjà utilisée.",failure:"Impossible de créer le compte et la boutique. Vérifiez vos informations.",network:"Connexion au serveur impossible. Réessayez."}
 } as const;
 export default function RegisterPage(){
- const router=useRouter();const [error,setError]=useState("");const [busy,setBusy]=useState(false);const [lang,setLang]=useState<Lang>("ar");const [theme,setTheme]=useState<Theme>("light");
- useEffect(()=>{const saved=localStorage.getItem("foon-public-lang");if(saved==="ar"||saved==="en"||saved==="fr")setLang(saved);const chosen=localStorage.getItem("foon-public-theme");setTheme(chosen==="dark"||chosen==="light"?chosen:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))},[]);
+ const router=useRouter();const [error,setError]=useState("");const [busy,setBusy]=useState(false);const [lang,setLang]=useSavedPreference<Lang>("foon-public-lang",["ar","en","fr"],"ar");const [theme,setTheme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=copy[lang];
  function changeLang(next:Lang){setLang(next);localStorage.setItem("foon-public-lang",next);setError("")}
  function toggleTheme(){const next=theme==="light"?"dark":"light";setTheme(next);localStorage.setItem("foon-public-theme",next)}

@@ -1,13 +1,13 @@
 "use client";
+import {useSavedPreference} from "@/lib/ui/saved-preference";
 import Link from "next/link";
-import {useEffect,useState} from "react";
+import {useState} from "react";
 import {usePathname} from "next/navigation";
 const items=[["/admin","نظرة عامة"],["/admin/tenants","المتاجر"]];
 const groups=[["التشغيل",[["/admin/plans","الباقات والمميزات"],["/admin/subscriptions","الاشتراكات"],["/admin/billing","المدفوعات والفواتير"],["/admin/users","المستخدمون والصلاحيات"]]],["التواصل",[["/admin/notifications","الإشعارات والرسائل"],["/admin/translations","الترجمات"]]],["المنصة",[["/admin/pages","صفحات الموقع"],["/admin/settings","إعدادات المنصة"],["/admin/audit","سجل العمليات"]]]] as const;
 export default function AdminLayout({children}:{children:React.ReactNode}){
  const [open,setOpen]=useState(false);
- const [theme,setTheme]=useState<"light"|"dark">("light");
- useEffect(()=>{const saved=window.localStorage.getItem("foon-admin-theme");const initial=saved==="dark"||saved==="light"?saved:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");setTheme(initial);},[]);
+ const [theme,setTheme]=useSavedPreference<"light"|"dark">("foon-admin-theme",["light","dark"],"light",true);
  const changeTheme=()=>{const next=theme==="light"?"dark":"light";setTheme(next);window.localStorage.setItem("foon-admin-theme",next);};
  const pathname=usePathname();
  const active=(href:string)=>href==="/admin"?pathname==="/admin":pathname.startsWith(href);

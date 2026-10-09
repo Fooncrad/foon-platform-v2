@@ -1,5 +1,6 @@
 "use client";
-import {type FormEvent,useEffect,useState} from "react";
+import {useSavedPreference} from "@/lib/ui/saved-preference";
+import {type FormEvent,useState} from "react";
 import Link from "next/link";
 type Lang="ar"|"en"|"fr";type Theme="light"|"dark";
 const copy={
@@ -8,8 +9,7 @@ const copy={
  fr:{tag:"Récupération du compte",title:"Mot de passe oublié ?",intro:"Saisissez votre adresse e-mail pour demander un lien de réinitialisation.",email:"Adresse e-mail",send:"Envoyer le lien",sending:"Envoi…",back:"Retour à la connexion",success:"Si cette adresse est enregistrée, vous recevrez un lien de réinitialisation.",failure:"Impossible d'envoyer le lien.",unavailable:"La récupération du mot de passe n'est pas encore configurée. Contactez l'assistance.",network:"Connexion au serveur impossible. Réessayez.",language:"Langue",theme:"Changer l'apparence",code:"Code d'erreur"}
 } as const;
 export default function ForgotPasswordPage(){
- const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [success,setSuccess]=useState(false);const [lang,setLang]=useState<Lang>("ar");const [theme,setTheme]=useState<Theme>("light");
- useEffect(()=>{const saved=localStorage.getItem("foon-public-lang");if(saved==="ar"||saved==="en"||saved==="fr")setLang(saved);const chosen=localStorage.getItem("foon-public-theme");setTheme(chosen==="dark"||chosen==="light"?chosen:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))},[]);
+ const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [success,setSuccess]=useState(false);const [lang,setLang]=useSavedPreference<Lang>("foon-public-lang",["ar","en","fr"],"ar");const [theme,setTheme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=copy[lang];
  function changeLang(next:Lang){setLang(next);localStorage.setItem("foon-public-lang",next);setMessage("")}
  function toggleTheme(){const next=theme==="light"?"dark":"light";setTheme(next);localStorage.setItem("foon-public-theme",next)}

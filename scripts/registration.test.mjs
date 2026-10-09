@@ -18,9 +18,10 @@ test("customer registration binds only the selected active store and never creat
  const calls=[];
  const db={execute:async(sql,params)=>{calls.push({sql,params});return sql.startsWith("SELECT")?[[{id:"source-store"}]]:[{}];}};
  const result=await registerCustomer(db,{id:"customer",email:"c@test.example",passwordHash:"hash",name:"Client",storeSlug:"source-store"});
- assert.equal(result.tenantId,"source-store");assert.equal(calls.length,3);
+ assert.equal(result.tenantId,"source-store");assert.equal(calls.length,4);
  assert.match(calls[0].sql,/status='active'/);
  assert.deepEqual(calls[2].params,["source-store","customer"]);
+ assert.match(calls[3].sql,/customer_origins/);
  assert.ok(calls.every(c=>!c.sql.includes("memberships")&&!c.sql.includes("tenant_subscriptions")));
 });
 test("unavailable source store cannot leave a new customer account",async()=>{

@@ -1,0 +1,60 @@
+const managers=["owner","manager"];
+const field=(key,label,type="text",options={})=>({key,label,type,...options});
+export const resourceModules={
+ categories:{kind:"menu_category",label:"تصنيفات المنيو",feature:"digital_menu",roles:managers,statuses:["active","inactive"],fields:[field("description","الوصف","textarea")]},
+ menu:{kind:"menu_item",label:"الأصناف",feature:"digital_menu",roles:managers,statuses:["active","unavailable"],fields:[field("categoryId","التصنيف","ref",{ref:"categories",required:true}),field("price","السعر","number",{required:true,min:0,max:1000000}),field("description","الوصف","textarea",{maxLength:5000}),field("imageUrl","رابط صورة الصنف","url"),field("allergens","معلومات الحساسية")]},
+ menuGroups:{kind:"menu_option_group",label:"خيارات الأصناف",feature:"variants",roles:managers,statuses:["active","inactive"],fields:[field("itemId","الصنف","ref",{ref:"menu",required:true}),field("selectionType","نوع الاختيار","select",{required:true,options:["single","multiple"]}),field("requiredFlag","الإلزام","select",{options:["no","yes"]}),field("minSelect","الحد الأدنى","number",{min:0,max:100,integer:true}),field("maxSelect","الحد الأعلى","number",{min:1,max:100,integer:true})]},
+ menuValues:{kind:"menu_option_value",label:"قيم الخيارات",feature:"variants",roles:managers,statuses:["active","inactive"],fields:[field("groupId","مجموعة الخيارات","ref",{ref:"menuGroups",required:true}),field("priceDelta","فرق السعر","number",{required:true,min:-1000000,max:1000000})]},
+ menuImages:{kind:"menu_item_image",label:"صور الأصناف",feature:"digital_menu",roles:managers,statuses:["active"],fields:[field("itemId","الصنف","ref",{ref:"menu",required:true}),field("imageUrl","رابط الصورة","url",{required:true})]},
+ tables:{kind:"dining_table",label:"الطاولات",feature:"tables",roles:[...managers,"waiter"],statuses:["available","occupied","reserved","inactive"],fields:[field("capacity","عدد المقاعد","number",{required:true,min:1,max:100,integer:true})]},
+ inventory:{kind:"inventory_item",label:"مواد المخزون",feature:"inventory",roles:[...managers,"accountant"],statuses:["active","inactive"],fields:[field("quantity","الكمية الحالية","number",{required:true,min:0,max:1000000}),field("unit","الوحدة"),field("minimum","حد التنبيه","number",{min:0,max:1000000})]},
+ suppliers:{kind:"supplier",label:"الموردون",feature:"suppliers",roles:[...managers,"accountant"],statuses:["active","inactive"],fields:[field("phone","الهاتف"),field("email","البريد","email"),field("notes","ملاحظات","textarea")]},
+ purchases:{kind:"purchase",label:"المشتريات",feature:"purchases",roles:[...managers,"accountant"],statuses:["planned","received"],fields:[field("inventoryId","مادة المخزون","ref",{ref:"inventory",required:true}),field("supplierId","المورد","ref",{ref:"suppliers"}),field("quantity","الكمية","number",{required:true,min:.001,max:1000000}),field("unitCost","تكلفة الوحدة","number",{required:true,min:0,max:1000000}),field("notes","ملاحظات","textarea")]},
+ team:{kind:"employee",label:"الموظفون",feature:"employees",roles:managers,statuses:["active","suspended"],fields:[field("email","بريد الحساب المسجّل","email",{required:true}),field("role","الدور","select",{required:true,options:["manager","cashier","waiter","kitchen","driver","accountant"]}),field("phone","الهاتف")]},
+ attendance:{kind:"attendance",label:"الحضور",feature:"employees",roles:managers,statuses:["present","absent","leave"],fields:[field("employeeId","الموظف","ref",{ref:"team",required:true}),field("date","التاريخ","date",{required:true}),field("checkIn","وقت الحضور","datetime"),field("checkOut","وقت الانصراف","datetime"),field("notes","ملاحظات","textarea")]},
+ coupons:{kind:"coupon",label:"الكوبونات",feature:"coupons",roles:managers,statuses:["active","paused"],fields:[field("code","رمز الكوبون","text",{required:true,maxLength:40}),field("discountType","نوع الخصم","select",{required:true,options:["percent","fixed"]}),field("value","قيمة الخصم","number",{required:true,min:.01,max:1000000}),field("usageLimit","حد الاستخدام","number",{min:1,max:1000000,integer:true}),field("endsAt","نهاية الصلاحية","datetime")]},
+ marketing:{kind:"campaign",label:"الحملات",feature:"campaigns",roles:managers,statuses:["draft","scheduled","paused"],fields:[field("message","نص الرسالة","textarea",{required:true,maxLength:5000}),field("channel","القناة","select",{required:true,options:["email","sms","whatsapp"]}),field("scheduledAt","موعد الإرسال","datetime"),field("audience","الجمهور المستهدف")]},
+ reservations:{kind:"reservation",label:"الحجوزات",feature:"reservations",roles:[...managers,"waiter"],statuses:["pending","confirmed","seated","completed","cancelled"],fields:[field("phone","هاتف الضيف"),field("partySize","عدد الضيوف","number",{required:true,min:1,max:100,integer:true}),field("scheduledAt","وقت الحجز","datetime",{required:true}),field("tableId","الطاولة","ref",{ref:"tables"}),field("notes","ملاحظات","textarea")]},
+ waitlist:{kind:"waitlist",label:"قائمة الانتظار",feature:"waitlist",roles:[...managers,"waiter"],statuses:["waiting","called","seated","cancelled"],fields:[field("phone","هاتف الضيف"),field("partySize","عدد الضيوف","number",{required:true,min:1,max:100,integer:true}),field("notes","ملاحظات","textarea")]},
+ remote:{kind:"remote_task",label:"مهام العمل عن بُعد",feature:"employees",roles:managers,statuses:["open","assigned","in_progress","completed","cancelled"],fields:[field("employeeId","الموظف المسؤول","ref",{ref:"team"}),field("budget","الميزانية المخططة","number",{min:0,max:1000000}),field("dueAt","الموعد النهائي","datetime"),field("description","تفاصيل المهمة","textarea",{required:true,maxLength:5000})]},
+ remoteWorkers:{kind:"remote_worker",label:"العاملون عن بُعد",feature:"employees",roles:managers,statuses:["active","suspended"],fields:[field("employeeId","حساب الموظف","ref",{ref:"team",required:true}),field("skills","المهارات"),field("rate","الأجر المخطط","number",{min:0,max:1000000}),field("notes","ملاحظات","textarea")]},
+ remoteMessages:{kind:"remote_message",label:"تواصل المهام",feature:"employees",roles:managers,statuses:["posted"],fields:[field("taskId","المهمة","ref",{ref:"remote",required:true}),field("message","الرسالة","textarea",{required:true,maxLength:5000})]},
+ remoteDeliveries:{kind:"remote_delivery",label:"تسليمات المهام",feature:"employees",roles:managers,statuses:["submitted","approved","rejected"],fields:[field("taskId","المهمة","ref",{ref:"remote",required:true}),field("resultUrl","رابط النتيجة","url"),field("notes","ملاحظة التسليم","textarea",{required:true,maxLength:5000})]},
+ storefront:{kind:"storefront_config",label:"هوية واجهة المطعم",feature:"branding.colors",roles:managers,statuses:["active"],singleton:true,fields:[field("brandName","اسم العرض"),field("description","وصف المطعم","textarea"),field("phone","الهاتف"),field("address","العنوان"),field("primaryColor","اللون الأساسي","color"),field("logoUrl","رابط الشعار","url"),field("coverUrl","رابط الغلاف","url"),field("menuTheme","قالب المنيو","select",{options:["classic","modern","minimal","sufra"]}),field("fontPreset","الخط","select",{options:["arial","tahoma","georgia"]}),field("platformBranding","علامة FOON","select",{options:["visible","hidden"]})]},
+ settings:{kind:"branch_config",label:"إعدادات تشغيل الفرع",roles:managers,statuses:["active"],fields:[field("openingTime","وقت الافتتاح","time"),field("closingTime","وقت الإغلاق","time"),field("address","العنوان"),field("phone","الهاتف"),field("notes","ملاحظات","textarea")]},
+};
+export const fieldLabels={single:"اختيار واحد",multiple:"اختيارات متعددة",yes:"نعم",no:"لا",posted:"منشور",submitted:"مسلّم",approved:"مقبول",rejected:"مرفوض",minimal:"بسيط",sufra:"سفرة",active:"نشط",inactive:"غير نشط",unavailable:"غير متوفر",available:"متاحة",occupied:"مشغولة",reserved:"محجوزة",planned:"مخطط",received:"مستلم",suspended:"موقوف",present:"حاضر",absent:"غائب",leave:"إجازة",paused:"متوقف",draft:"مسودة",scheduled:"مجدول",pending:"بانتظار التأكيد",confirmed:"مؤكد",seated:"تم الجلوس",completed:"مكتمل",cancelled:"ملغي",waiting:"بانتظار الطاولة",called:"تم النداء",open:"مفتوح",assigned:"مسند",in_progress:"قيد التنفيذ",manager:"مدير",cashier:"كاشير",waiter:"نادل",kitchen:"مطبخ",driver:"توصيل",accountant:"محاسب",percent:"نسبة مئوية",fixed:"مبلغ ثابت",email:"بريد إلكتروني",sms:"رسالة نصية",whatsapp:"واتساب",classic:"كلاسيكي",modern:"عصري",dark:"داكن",arial:"Arial",tahoma:"Tahoma",georgia:"Georgia",visible:"إظهار علامة FOON",hidden:"إخفاء علامة FOON"};
+export class ResourceError extends Error{constructor(code){super(code);this.code=code;}}
+export function validateResource(module,body){
+ const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
+ if(!config||!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
+ const name=typeof body.name==="string"?body.name.trim():"";
+ if(!name||name.length>180||!config.statuses.includes(body.status))throw new ResourceError("INVALID_INPUT");
+ const source=body.data??{},data={};
+ if(typeof source!=="object"||Array.isArray(source)||Object.keys(source).some(key=>!config.fields.some(f=>f.key===key)))throw new ResourceError("INVALID_INPUT");
+ for(const f of config.fields){
+  let value=source[f.key];
+  if(value===undefined||value===null||value===""){if(f.required)throw new ResourceError("REQUIRED_"+f.key);data[f.key]=null;continue;}
+  if(f.type==="number"){if(typeof value!=="number"||!Number.isFinite(value)||value<(f.min??0)||value>(f.max??1000000)||f.integer&&!Number.isInteger(value))throw new ResourceError("INVALID_"+f.key);}
+  else{
+   if(typeof value!=="string"||value.length>(f.maxLength??(f.type==="textarea"?3000:500)))throw new ResourceError("INVALID_"+f.key);
+   value=value.trim();
+   if(f.required&&!value)throw new ResourceError("REQUIRED_"+f.key);
+   if(f.type==="email"&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="color"&&!/^#[0-9a-f]{6}$/i.test(value))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="select"&&!f.options.includes(value))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="ref"&&!/^[a-f0-9-]{36}$/i.test(value))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="date"&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="time"&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="datetime"&&(!/^\d{4}-\d\d-\d\dT/.test(value)||!Number.isFinite(Date.parse(value))))throw new ResourceError("INVALID_"+f.key);
+   if(f.type==="url"&&!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(value)){let u;try{u=new URL(value);}catch{throw new ResourceError("INVALID_"+f.key);}if(u.protocol!=="https:"||u.username||u.password)throw new ResourceError("INVALID_"+f.key);}
+  }
+  data[f.key]=value;
+ }
+ if(module==="coupons"){data.code=data.code.toUpperCase();if(!/^[A-Z0-9_-]{2,40}$/.test(data.code)||data.discountType==="percent"&&data.value>100)throw new ResourceError("INVALID_COUPON");}
+ if(module==="attendance"&&data.checkIn&&data.checkOut&&Date.parse(data.checkOut)<Date.parse(data.checkIn))throw new ResourceError("INVALID_TIME_RANGE");
+ if(module==="marketing"&&body.status==="scheduled"&&!data.scheduledAt)throw new ResourceError("REQUIRED_scheduledAt");
+ const branchId=body.branchId??null;
+ if(branchId!==null&&(typeof branchId!=="string"||!branchId.trim()||branchId.length>36))throw new ResourceError("INVALID_BRANCH");
+ return {name,status:body.status,data,branchId};
+}
