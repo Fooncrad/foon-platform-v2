@@ -11,6 +11,8 @@ export default function CustomerLoginForm({slug,name}:{slug:string;name:string})
    const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:form.get("email"),password:form.get("password")})});
    const body=await response.json().catch(()=>({}));
    if(!response.ok){setError(body.code==="TOO_MANY_ATTEMPTS"?"محاولات كثيرة، حاول لاحقًا.":"تعذر الدخول. تحقق من البريد وكلمة المرور.");return}
+   const join=await fetch("/api/customer/join-store",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({storeSlug:slug})});
+   if(!join.ok){setError("تم تسجيل الدخول، لكن تعذر ربط هذا المتجر بحسابك. حاول مجددًا.");return}
    router.replace("/customer");router.refresh();
   }catch{setError("تعذر الاتصال بالخادم. حاول مجددًا.")}finally{setBusy(false)}
  }
