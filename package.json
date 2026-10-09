@@ -17,17 +17,21 @@
     "test:migrations": "node --test scripts/sql-statements.test.mjs",
     "test:mail": "node --test scripts/mail.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
-    "test:admin-policy": "node --test scripts/admin-policy.test.mjs"
+    "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
+    "test:resources": "node --test scripts/restaurant-resource-schema.test.mjs",
+    "test:operations": "node --test scripts/restaurant-operations.integration.test.mjs",
+    "test:browser": "playwright test scripts/merchant-dashboard.browser.test.mjs --workers=1 --reporter=line"
   },
   "dependencies": {
-    "next": "16.3.8",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "mysql2": "^3.15.3",
     "bcryptjs": "^3.0.2",
-    "nodemailer": "^10.0.16"
+    "mysql2": "^3.15.3",
+    "next": "16.3.8",
+    "nodemailer": "^10.0.16",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
