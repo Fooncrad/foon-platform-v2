@@ -7,6 +7,8 @@ import { createSession } from "@/lib/auth/session";
 import { assertSameOrigin } from "@/lib/security/origin";
 import { provisionStore } from "@/scripts/provision-store.mjs";
 
+const restaurantActivities=new Set(["restaurant","cafe","sweets"]);
+const storeActivities=new Set(["grocery","clothing","perfume","accessories","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]);
 export const runtime="nodejs";
 export async function POST(request:Request){
   try{
@@ -17,6 +19,8 @@ export async function POST(request:Request){
     const password=String(body.password??"");
     const name=String(body.name??"").trim().slice(0,180);
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length>254 || password.length<9 || password.length>128) return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+    const activity=typeof body.activity==="string"?body.activity:"";
+    if(!restaurantActivities.has(activity)&&!storeActivities.has(activity))return NextResponse.json({ok:false,code:"ACTIVITY_REQUIRED"},{status:400});
     const id=randomUUID(), hash=await hashPassword(password);
     const storeName=typeof body.storeName==="string"?body.storeName.trim():name||"متجري";
     const slug=typeof body.slug==="string"?body.slug.trim().toLowerCase():"store-"+id;
@@ -27,7 +31,7 @@ export async function POST(request:Request){
       await db.beginTransaction();
       await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?,?)",[id,email,hash,name||null,"active"]);
       stage="store";
-      const workspace=await provisionStore(db,{ownerId:id,name:storeName,slug,kind:body.kind==="restaurant"?"restaurant":"store"});
+      const workspace=await provisionStore(db,{ownerId:id,name:storeName,slug,kind:restaurantActivities.has(activity)?"restaurant":"store"});
       await createSession(id,db);
       await db.commit();
       return NextResponse.json({ok:true,user:{id,email},...workspace,plan:"free"},{status:201});
