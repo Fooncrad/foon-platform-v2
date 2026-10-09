@@ -16,6 +16,8 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.goto(origin+"/register");
  await page.getByLabel("الاسم",{exact:true}).fill("مالك المعاينة");
  await page.getByLabel("اسم النشاط",{exact:true}).fill("مطعم المعاينة");
+ await page.locator('select[name="activity"]').selectOption("restaurant");
+ await page.getByRole("button",{name:"التالي: بيانات الحساب",exact:true}).click();
  await page.getByLabel("رابط المتجر",{exact:true}).fill("visual-dashboard");
  await page.getByLabel("البريد الإلكتروني",{exact:true}).fill("visual-dashboard@test.example");
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");

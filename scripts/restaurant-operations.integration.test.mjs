@@ -14,7 +14,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const r=await fetch(origin+path,{method,headers:{origin,"content-type":"application/json",...(cookie?{cookie}:{}),...(tenant?{"x-foon-tenant":tenant}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
   return{status:r.status,body:await r.json(),cookie:r.headers.get("set-cookie")?.split(";")[0]};
  };
- const register=async(name)=>{const r=await call("/api/auth/register","POST",{name,storeName:name,slug:name,email:name+"@test.example",password,kind:"restaurant"});assert.equal(r.status,201,JSON.stringify(r.body));return{tenant:r.body.tenant.id,branch:r.body.branch.id,user:r.body.user.id,cookie:r.cookie,email:name+"@test.example"};};
+ const register=async(name)=>{const r=await call("/api/auth/register","POST",{name,storeName:name,slug:name,email:name+"@test.example",password,kind:"restaurant",activity:"restaurant",countryCode:"SA",currency:"SAR",region:"الرياض"});assert.equal(r.status,201,JSON.stringify(r.body));return{tenant:r.body.tenant.id,branch:r.body.branch.id,user:r.body.user.id,cookie:r.cookie,email:name+"@test.example"};};
  const resource=async(owner,module,body,method="POST")=>call("/api/restaurant/operations/"+module,method,body,owner.cookie,owner.tenant);
  const save=async(owner,module,name,data,status="active")=>{const r=await resource(owner,module,{name,status,data,branchId:owner.branch});assert.equal(r.status,201,JSON.stringify(r.body));return r.body.id;};
  try{
