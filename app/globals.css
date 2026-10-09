@@ -571,3 +571,11 @@
 .foonAuthPage .auth-home{display:block;text-align:center;margin-top:16px;font-size:13px}
 .foonAuthPage :is(a,button,input,select):focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
 @media(max-width:480px){.foonAuthPage{padding:12px}.foonAuthPage .auth-card{border-radius:18px;padding:22px 18px}}
+
+/* FOON authentication locale selector */
+.foonAuthTopControls{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.foonAuthLanguage{max-width:110px;min-height:35px;padding:0 8px;border-radius:10px;border:1px solid #ffffff30;background:#171613;color:#f8f3e9;font:inherit;font-size:12px;cursor:pointer}
+.foonAuthPage[dir="ltr"] .auth-card{text-align:left}
+.foonAuthPage[dir="rtl"] .auth-card{text-align:right}
+.foonAuthPage .auth-form input[dir="ltr"]{text-align:left}
+@media(max-width:390px){.foonAuthPage .auth-heading{align-items:flex-start;flex-wrap:wrap}.foonAuthTopControls{width:100%;justify-content:space-between}.foonAuthLanguage{max-width:130px}}
