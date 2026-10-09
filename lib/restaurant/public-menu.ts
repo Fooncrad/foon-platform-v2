@@ -3,6 +3,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {resourceRows,parseData} from "./operations";
 import {menuOptions} from "./menu";
+import {tenantEntitlement} from "@/lib/plans/entitlements";
 export async function publicMenuData(tenant:{id:string;name:string},slug:string){
  const tenantId=tenant.id,db=await database().getConnection();
  try{
@@ -18,6 +19,8 @@ export async function publicMenuData(tenant:{id:string;name:string},slug:string)
   if(user){const [relations]=await db.execute<RowDataPacket[]>("SELECT c.user_id FROM tenant_customers c JOIN users u ON u.id=c.user_id AND u.status='active' WHERE c.tenant_id=? AND c.user_id=? LIMIT 1",[tenantId,user]);linked=relations.length>0;}
 
   branding.colorMode=String(appearances[0]?.color_mode??"template");
-  return {name:tenant.name,slug,branding,options,items:activeItems.map(i=>({id:i.id,name:i.name,branchId:i.branch_id,categoryId:String(i.data.categoryId),price:Number(i.data.price),description:String(i.data.description||""),imageUrl:i.data.imageUrl?String(i.data.imageUrl):null,allergens:String(i.data.allergens||""),oldPrice:Number(i.data.oldPrice||0)>Number(i.data.price)?Number(i.data.oldPrice):null,images:Array.isArray(i.data.images)?i.data.images.filter((v:unknown):v is string=>typeof v==="string"&&v.startsWith("/")):[],quantity:typeof i.data.quantity==="number"?i.data.quantity:null,calories:typeof i.data.calories==="number"?i.data.calories:null,nutrition:typeof i.data.nutrition==="string"?i.data.nutrition:""})),categories:enabledCategories.map(c=>({id:c.id,name:c.name})),branches:branches.map(b=>({id:String(b.id),name:String(b.name)})),signedIn:Boolean(user),linked};
+  const [tableAccess,reservationAccess]=await Promise.all([tenantEntitlement(tenantId,"tables"),tenantEntitlement(tenantId,"reservations")]);
+  const tables=tableAccess.enabled?(await resourceRows(db,tenantId,"tables")).filter(t=>t.status!=="inactive").map(t=>({id:t.id,name:t.name,branchId:t.branch_id})):[];
+  return {name:tenant.name,slug,branding,options,services:{waiter:tableAccess.enabled,reservations:reservationAccess.enabled},tables,items:activeItems.map(i=>({id:i.id,name:i.name,branchId:i.branch_id,categoryId:String(i.data.categoryId),price:Number(i.data.price),description:String(i.data.description||""),imageUrl:i.data.imageUrl?String(i.data.imageUrl):null,allergens:String(i.data.allergens||""),oldPrice:Number(i.data.oldPrice||0)>Number(i.data.price)?Number(i.data.oldPrice):null,images:Array.isArray(i.data.images)?i.data.images.filter((v:unknown):v is string=>typeof v==="string"&&v.startsWith("/")):[],quantity:typeof i.data.quantity==="number"?i.data.quantity:null,calories:typeof i.data.calories==="number"?i.data.calories:null,nutrition:typeof i.data.nutrition==="string"?i.data.nutrition:""})),categories:enabledCategories.map(c=>({id:c.id,name:c.name})),branches:branches.map(b=>({id:String(b.id),name:String(b.name)})),signedIn:Boolean(user),linked};
  }finally{db.release();}
 }

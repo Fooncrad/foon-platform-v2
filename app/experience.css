@@ -1,0 +1,20 @@
+/* Shared interaction rhythm; retain each surface's theme and business colors. */
+:root{--experience-radius:18px;--experience-shadow:0 12px 34px #14203308;--experience-ease:cubic-bezier(.2,.7,.2,1)}
+body{font-family:Arial,Tahoma,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit}button,a{-webkit-tap-highlight-color:transparent}
+:where(button,a,input,select,textarea):focus-visible{outline:3px solid #b86c26;outline-offset:4px}
+:where(button,a){touch-action:manipulation}
+.landing :is(button,.primary,.secondary,.navCta),.foonLanding :is(button,a),.foonMarket :is(button,a),.restaurantApp button,.adminShell button{transition:background-color .18s var(--experience-ease),border-color .18s var(--experience-ease),box-shadow .18s var(--experience-ease),transform .18s var(--experience-ease)}
+.restaurantPanel,.adminPanel,.foonMarketCard,.grid article,.workspace-card{box-shadow:var(--experience-shadow)}
+.restaurantStatusFilters{gap:6px!important;padding:5px!important;border:1px solid #dfe5ed;border-radius:14px;background:#edf1f6;width:fit-content;max-width:100%;overflow-x:auto}
+.restaurantStatusFilters button{border:0!important;white-space:nowrap;min-height:42px;border-radius:10px!important;background:transparent;color:#526178}
+.restaurantStatusFilters button[aria-pressed=true]{background:#fff!important;color:#15283e!important;box-shadow:0 2px 8px #1420330d}
+.restaurantResourceForm :is(input,select,textarea),.adminPanel :is(input,select,textarea){transition:border-color .18s,box-shadow .18s}
+.restaurantResourceForm :is(input,select,textarea):focus{border-color:#c84f20;box-shadow:0 0 0 3px #c84f2014}
+.foonMarketCard{border-radius:22px!important;transition:transform .2s,border-color .2s,box-shadow .2s}
+.foonMarketCard:hover{transform:translateY(-4px);border-color:#c89653;box-shadow:0 18px 40px #1722220d}
+.foonMarketSearch button,.navCta{box-shadow:0 5px 15px #b36c201a}
+.auth-card{box-shadow:0 24px 80px #0002}.auth-form input,.auth-form select{transition:border-color .18s,box-shadow .18s}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+.foonPublic .foonPublicHeader{border-bottom-color:#868c8b20}.foonPublic :is(button,a){transition:background-color .2s,border-color .2s,box-shadow .2s,transform .2s}.foonPublic :is(.foonHeaderCta,.foonButtonPrimary,.foonButtonOutline){border-radius:14px;min-height:46px}.foonPublic .foonButtonPrimary{box-shadow:0 8px 22px #b77c2322}.foonPublic :is(.foonFeatureCard,.foonPlanCard){border-radius:22px;box-shadow:var(--experience-shadow);transition:border-color .2s,transform .2s,box-shadow .2s}.foonPublic .foonFeatureCard:hover{transform:translateY(-5px);box-shadow:0 18px 40px #1722220b}.foonPublic .foonPublicSection{scroll-margin-top:90px}.foonPublic :is(.foonThemeControl,.foonLanguageControl select){min-height:42px;border-radius:12px}.foonPublic .foonFeatureIcon{border-radius:15px}.foonPublic h2{letter-spacing:-.03em}
+@media(prefers-reduced-motion:reduce){.foonPublic .foonFeatureCard:hover{transform:none}.foonPublic :is(button,a,.foonFeatureCard,.foonPlanCard){transition:none}}

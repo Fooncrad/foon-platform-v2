@@ -4,6 +4,7 @@ import TemplateEditor from "./menu/template-editor";
 import ResourceManager,{operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 const groups:Record<string,{key:string;label:string}[]>={
+ tables:[{key:"tables",label:"الطاولات"},{key:"waiterCalls",label:"نداءات النادل"}],
  menu:[{key:"menu",label:"الأصناف"},{key:"categories",label:"التصنيفات"},{key:"menuGroups",label:"الخيارات"},{key:"menuValues",label:"قيم الخيارات"},{key:"menuImages",label:"الصور"},{key:"templates",label:"القوالب والمظهر"}],
  inventory:[{key:"inventory",label:"المخزون"},{key:"suppliers",label:"الموردون"},{key:"purchases",label:"المشتريات"}],
  team:[{key:"team",label:"الموظفون"},{key:"attendance",label:"الحضور"}],
