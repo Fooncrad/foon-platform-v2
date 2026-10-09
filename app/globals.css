@@ -665,3 +665,27 @@
 
 
 .foonItemForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}.foonItemForm label{display:grid;gap:6px;min-width:0;font-weight:700}.foonItemForm input,.foonItemForm select,.foonItemForm textarea{width:100%;min-width:0;padding:12px;border:1px solid #d4d4d4;border-radius:10px;font:inherit}.foonItemForm label:has(textarea){grid-column:1/-1}.foonItemForm button{border:0;border-radius:10px;padding:12px 20px;background:#e2a93b;color:#171613;font:inherit;font-weight:700;cursor:pointer}.foonItemForm button:disabled{opacity:.6}@media(max-width:600px){.foonItemForm{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Restaurant-only template families inspired by reference theme1-4. */
+.foonRestaurantPage{min-height:100svh;background:#171613;color:#f8f3e9}
+.foonRestaurantPage .publicTenantTop{background:transparent;color:inherit}
+.foonRestaurantPage .publicTenantHero{min-height:0;padding:clamp(18px,4vw,34px);margin-top:12px}
+.foonRestaurantPage .publicTenantHero h1{font-size:clamp(26px,5vw,42px);margin:8px 0}
+.foonRestaurantPage .publicTenantHero p{margin:8px 0}
+.foonRestaurantPage .foonRestaurantMenu{margin-top:12px}
+.foonRestaurantPage .publicTenantFooter{color:inherit}
+.foonTheme-classic{background:#fffaf2;color:#39291b}
+.foonTheme-classic .publicTenantHero{background:#efe0c7;color:#39291b}
+.foonTheme-classic .foonRestaurantMenu{background:#fff;color:#39291b;border-color:#e3cfaa}
+.foonTheme-classic .foonMenuItem{background:#faf3e8;color:#39291b;border-color:#e8d9bf}
+.foonTheme-modern{background:#f4f7f9;color:#152735}
+.foonTheme-modern .publicTenantHero{background:#183e50;color:#fff}
+.foonTheme-modern .foonRestaurantMenu{background:#fff;color:#152735;border-color:#dae4e9}
+.foonTheme-modern .foonMenuItem{background:#edf5f8;color:#152735;border-color:#dae4e9}
+.foonTheme-minimal{background:#fff;color:#1c1c1c}
+.foonTheme-minimal .publicTenantHero{background:#f1f1f1;color:#1c1c1c;box-shadow:none}
+.foonTheme-minimal .foonRestaurantMenu{background:#fff;color:#1c1c1c;border-color:#ddd}
+.foonTheme-minimal .foonMenuItem{background:#fafafa;color:#1c1c1c;border-color:#eee}
+.foonRestaurantPage .foonMenuItems{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.foonRestaurantPage .publicTenantHero{padding:18px}.foonRestaurantPage .foonRestaurantMenu{width:calc(100% - 20px)}}
