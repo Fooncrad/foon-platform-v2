@@ -689,3 +689,6 @@
 .foonTheme-minimal .foonMenuItem{background:#fafafa;color:#1c1c1c;border-color:#eee}
 .foonRestaurantPage .foonMenuItems{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:600px){.foonRestaurantPage .publicTenantHero{padding:18px}.foonRestaurantPage .foonRestaurantMenu{width:calc(100% - 20px)}}
+
+
+.foonTemplateChoices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.foonTemplateChoice{display:grid;align-content:start;gap:10px;min-width:0;min-height:120px;padding:16px;border:2px solid #ddd;border-radius:16px;cursor:pointer}.foonTemplateChoice:has(input:checked){border-color:#d99e29;box-shadow:0 0 0 2px rgba(226,169,59,.16)}.foonTemplateChoice input{accent-color:#d99e29}.foonTemplateChoice span{font-size:13px;opacity:.8}.foonTemplateChoice-sufra{background:#24221e;color:#f8f3e9}.foonTemplateChoice-classic{background:#efe0c7;color:#39291b}.foonTemplateChoice-modern{background:#183e50;color:#fff}.foonTemplateChoice-minimal{background:#fafafa;color:#1c1c1c}.foonTemplateSave{padding:12px 22px;border:0;border-radius:10px;background:#e2a93b;color:#171613;font:inherit;font-weight:700;cursor:pointer}.foonTemplateSave:disabled{opacity:.55;cursor:not-allowed}@media(max-width:800px){.foonTemplateChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:360px){.foonTemplateChoice{padding:10px}}
