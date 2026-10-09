@@ -25,14 +25,24 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.equal(schema.name,"foon_migration_test");
     successfulRun();
     const [[tables]]=await db.query("SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()");
-    assert.equal(Number(tables.n),40);
+    assert.equal(Number(tables.n),44);
     const [[history]]=await db.query("SELECT COUNT(*) AS n FROM schema_migrations");
-    assert.equal(Number(history.n),25);
+    assert.equal(Number(history.n),29);
+    // New account/profile tables must retain real parent constraints on fresh installs.
+    await assert.rejects(db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency) VALUES ('missing-profile-tenant','restaurant','SA','SAR')"),error=>error.code==="ER_NO_REFERENCED_ROW_2");
+    await assert.rejects(db.execute("INSERT INTO user_profiles(user_id,phone) VALUES ('missing-profile-user','123456789')"),error=>error.code==="ER_NO_REFERENCED_ROW_2");
+    await assert.rejects(db.execute("INSERT INTO user_media_library(id,user_id,file_name,mime_type,image_data,size_bytes) VALUES ('missing-media','missing-profile-user','fixture.png','image/png',?,1)",[Buffer.from([1])]),error=>error.code==="ER_NO_REFERENCED_ROW_2");
+    await db.execute("UPDATE media_library_settings SET max_files=237 WHERE account_type='owner'");
     await db.execute("UPDATE ui_translations SET text_en=? WHERE translation_key=?",
       ["Human edit must survive", "common.account"]);
     successfulRun();
     const [[translation]]=await db.execute("SELECT text_en FROM ui_translations WHERE translation_key=?",["common.account"]);
     assert.equal(translation.text_en,"Human edit must survive");
+    // Replay a manually imported media migration without resetting administrator quotas.
+    await db.execute("DELETE FROM schema_migrations WHERE id='0063_media_library_quotas.sql'");
+    successfulRun();
+    const [[quota]]=await db.query("SELECT max_files FROM media_library_settings WHERE account_type='owner'");
+    assert.equal(Number(quota.max_files),237);
 
     // New owner starts working with an active free subscription immediately.
     await db.beginTransaction();
