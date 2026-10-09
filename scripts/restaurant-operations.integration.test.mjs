@@ -80,6 +80,12 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
    ["settings","Branch settings",{openingTime:"08:00",closingTime:"23:00"},"active"],
    ["storefront","Brand",{primaryColor:"#224466",brandName:"Published brand",menuTheme:"modern",platformBranding:"hidden"},"active"]
   ])await save(a,module,name,data,status);
+  const appearancePath="/api/restaurant/menu/appearance";
+  assert.equal((await call(appearancePath,"PUT",{template:"classic",colorMode:"light"},a.cookie,b.tenant)).status,403);
+  assert.equal((await call(appearancePath,"PUT",{template:"not-a-template"},a.cookie,a.tenant)).status,400);
+  assert.equal((await call(appearancePath,"PUT",{template:"classic",colorMode:"invalid"},a.cookie,a.tenant)).status,400);
+  for(const template of ["classic","minimal","modern","sufra"]){assert.equal((await call(appearancePath,"PUT",{template,colorMode:"dark"},a.cookie,a.tenant)).status,200);const saved=await call(appearancePath,"GET",undefined,a.cookie,a.tenant);assert.equal(saved.body.template,template);assert.equal(saved.body.colorMode,"dark");assert.equal(saved.body.preview.name,"operations-owner-a");const page=await fetch(origin+"/operations-owner-a");assert.equal(page.status,200);const html=await page.text();assert.ok(html.includes('data-template="'+template+'"'));assert.ok(html.includes('data-color-mode="dark"'));}
+  assert.equal((await call(appearancePath,"GET",undefined,b.cookie,b.tenant)).body.template,"sufra");
   const publicMenu=await fetch(origin+"/operations-owner-a/order");assert.equal(publicMenu.status,200);assert.match(await publicMenu.text(),/Published brand/);
   const group=await save(a,"menuGroups","Size",{itemId:item,selectionType:"single",requiredFlag:"yes",minSelect:1,maxSelect:1});
   const option=await save(a,"menuValues","Large",{groupId:group,priceDelta:2});

@@ -43,3 +43,9 @@ Migration `0024_restaurant_operations.sql` adds tenant-scoped operational resour
 - Electronic payment processing, external campaign delivery, payroll transfers and two-factor authentication are not enabled by these operational forms. Campaign schedules are saved drafts awaiting a connected provider/worker; recorded manual payments do not charge a gateway.
 
 CI runs `test:resources`, `test:operations` and `test:browser` with a disposable MariaDB and Chromium. The browser journey creates a menu item, records a POS sale, checks navigation/search and captures desktop/mobile screenshots. No preview-only route or fixture data is deployed.
+
+## Restaurant menu templates
+
+Four modern layouts adapt the uploaded reference theme1–theme4: classic photo cards (المعرض), minimal circular-thumbnail rows (القائمة), modern compact square-thumbnail rows (السريع), and sufra category tiles/mobile dock (السفرة). Templates share the actual menu, option choices, server-priced cart and customer-store relationship. No reference demo data or PHP runtime is copied.
+
+Owners/managers choose a template and light/dark/system appearance through the dashboard Menu → Templates tab or /restaurant/menu. The inline preview uses their actual menu, saves nothing until requested, and cannot submit orders. Migration 0025 adds color_mode while preserving existing template selections. Both /<slug> and /<slug>/order render the selected layout; retailer pages remain unchanged.
