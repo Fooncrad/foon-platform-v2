@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { assertSameOrigin } from "@/lib/security/origin";
 import { provisionStore } from "@/scripts/provision-store.mjs";
+import {currencyForCountry,countryRegions} from "@/lib/tenant/country-catalog";
 
 const restaurantActivities=new Set(["restaurant","cafe","sweets"]);
 const storeActivities=new Set(["grocery","clothing","perfume","accessories","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]);
@@ -22,8 +23,10 @@ export async function POST(request:Request){
     const activity=typeof body.activity==="string"?body.activity:"";
     if(!restaurantActivities.has(activity)&&!storeActivities.has(activity))return NextResponse.json({ok:false,code:"ACTIVITY_REQUIRED"},{status:400});
     const countryCode=String(body.countryCode??"");
-    const defaults:Record<string,{currency:string;tax:number}>={SA:{currency:"SAR",tax:15},AE:{currency:"AED",tax:5},BH:{currency:"BHD",tax:10},KW:{currency:"KWD",tax:0},OM:{currency:"OMR",tax:5},QA:{currency:"QAR",tax:0},EG:{currency:"EGP",tax:14},JO:{currency:"JOD",tax:16},FR:{currency:"EUR",tax:20},US:{currency:"USD",tax:0}};
-    if(!defaults[countryCode]||body.currency!==defaults[countryCode].currency||typeof body.taxRate!=="number"||!Number.isFinite(body.taxRate)||body.taxRate<0||body.taxRate>100)return NextResponse.json({ok:false,code:"INVALID_LOCALE"},{status:400});
+    const currency=currencyForCountry(countryCode);
+    const region=typeof body.region==="string"?body.region.trim():"";
+    const taxNumber=typeof body.taxNumber==="string"?body.taxNumber.trim():"";
+    if(!currency||body.currency!==currency||region.length<2||region.length>120||taxNumber.length>64||countryRegions[countryCode]&&!countryRegions[countryCode].includes(region))return NextResponse.json({ok:false,code:"INVALID_LOCALE"},{status:400});
     const id=randomUUID(), hash=await hashPassword(password);
     const storeName=typeof body.storeName==="string"?body.storeName.trim():name||"متجري";
     const slug=typeof body.slug==="string"?body.slug.trim().toLowerCase():"store-"+id;
@@ -35,7 +38,7 @@ export async function POST(request:Request){
       await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?,?)",[id,email,hash,name||null,"active"]);
       stage="store";
       const workspace=await provisionStore(db,{ownerId:id,name:storeName,slug,kind:restaurantActivities.has(activity)?"restaurant":"store"});
-      await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,tax_rate) VALUES (?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,defaults[countryCode].currency,body.taxRate]);
+      await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
       await createSession(id,db);
       await db.commit();
       return NextResponse.json({ok:true,user:{id,email},...workspace,plan:"free"},{status:201});
