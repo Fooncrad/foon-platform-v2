@@ -1,5 +1,5 @@
-import InlineCustomerAuth from "./inline-customer-auth";
 "use client";
+import InlineCustomerAuth from "./inline-customer-auth";
 import {useRef,useState,type CSSProperties,type FormEvent} from "react";
 import Image from "next/image";
 import Link from "next/link";
