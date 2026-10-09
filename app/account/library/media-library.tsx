@@ -1,0 +1,13 @@
+"use client";
+import {useCallback,useEffect,useState} from "react";
+type Media={id:string;name:string;size:number};
+type Policy={accountType:string;maxFiles:number;maxStorageMb:number;maxFileMb:number;enabled:boolean};
+export default function MediaLibrary(){
+ const [files,setFiles]=useState<Media[]>([]),[policy,setPolicy]=useState<Policy|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const load=useCallback(async()=>{const r=await fetch("/api/account/library",{cache:"no-store"});if(!r.ok)throw Error();const data=await r.json();setFiles(data.files);setPolicy(data.policy)},[]);
+ useEffect(()=>{void load().catch(()=>setMessage("تعذر تحميل مكتبة الصور. تحقق من تهيئة قاعدة البيانات."))},[load]);
+ async function upload(file?:File){if(!file)return;setBusy(true);setMessage("");try{const form=new FormData();form.set("file",file);const r=await fetch("/api/account/library",{method:"POST",body:form});const result=await r.json().catch(()=>({}));if(!r.ok)throw Error(result.code??"UPLOAD_FAILED");await load();setMessage("تم حفظ الصورة بمقاس مربع 800×800.");}catch(e){setMessage("تعذر حفظ الصورة: "+(e instanceof Error?e.message:"خطأ غير معروف"))}finally{setBusy(false)}}
+ async function remove(id:string){if(!confirm("هل تريد حذف الصورة من مكتبتك؟"))return;setBusy(true);try{const r=await fetch("/api/account/library",{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({id})});if(!r.ok)throw Error();await load();setMessage("تم حذف الصورة.")}catch{setMessage("تعذر حذف الصورة.")}finally{setBusy(false)}}
+ const used=files.reduce((n,f)=>n+f.size,0)/1048576;
+ return <section className="foonMediaLibrary" dir="rtl"><header><div><h2>مكتبة صوري</h2><p>ارفع صورك من الجوال أو الجهاز واحتفظ بها في حسابك. تُضبط تلقائيًا على مقاس مربع 4:4.</p></div><label className="foonMediaUpload">إضافة صور<input type="file" accept="image/png,image/jpeg,image/webp" capture={undefined} disabled={busy||!policy?.enabled} onChange={e=>{void upload(e.target.files?.[0]);e.target.value=""}}/></label></header>{policy&&<p>المساحة المستخدمة: {used.toFixed(1)} من {policy.maxStorageMb} ميجابايت · الصور: {files.length} من {policy.maxFiles} · الحد للصورة {policy.maxFileMb} ميجابايت</p>}{message&&<p role="status">{message}</p>}<div className="foonMediaGrid">{files.map(f=><article key={f.id}><img src={"/api/account/library/"+f.id} alt={f.name} loading="lazy"/><strong title={f.name}>{f.name}</strong><button disabled={busy} onClick={()=>void remove(f.id)}>حذف الصورة</button></article>)}{!files.length&&<p>مكتبتك فارغة. أضف أول صورة من زر إضافة صور.</p>}</div></section>
+}
