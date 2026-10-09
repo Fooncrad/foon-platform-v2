@@ -3,6 +3,7 @@ import {useSavedPreference} from "@/lib/ui/saved-preference";
 import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
+import {getSystemMessage} from "@/lib/ui/system-messages";
 type Lang="ar"|"en"|"fr";
 type Theme="light"|"dark";
 const strings={
@@ -11,18 +12,18 @@ const strings={
  fr:{tag:"Connexion sécurisée",title:"Bon retour",intro:"Connectez-vous pour accéder à votre espace de travail.",email:"Adresse e-mail",password:"Mot de passe",forgot:"Mot de passe oublié ?",busy:"Connexion…",submit:"Se connecter",noAccount:"Pas encore de compte ?",register:"Créer un compte",home:"Retour à l'accueil",invalid:"Adresse e-mail ou mot de passe incorrect.",rate:"Trop de tentatives. Réessayez plus tard.",failure:"Connexion impossible. Réessayez.",network:"Connexion au serveur impossible. Réessayez.",language:"Langue"}
 } as const;
 export default function LoginPage(){
- const router=useRouter();const [error,setError]=useState("");const [busy,setBusy]=useState(false);const [lang]=useSavedPreference<Lang>("foon-public-lang",["ar","en","fr"],"ar");const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
+ const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [lang]=useSavedPreference<Lang>("foon-public-lang",["ar","en","fr"],"ar");const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=strings[lang];
  async function submit(e:FormEvent<HTMLFormElement>){
-  e.preventDefault();if(busy)return;setBusy(true);setError("");const data=new FormData(e.currentTarget);
+  e.preventDefault();if(busy)return;setBusy(true);setError("");setErrorCode("");const data=new FormData(e.currentTarget);
   try{
    const res=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:data.get("email"),password:data.get("password")})});
    const body=await res.json().catch(()=>({}));
-   if(!res.ok){setError(body.code==="INVALID_CREDENTIALS"?t.invalid:body.code==="TOO_MANY_ATTEMPTS"?t.rate:t.failure);return;}
+   if(!res.ok){const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
    router.replace("/account");router.refresh();
-  }catch{setError(t.network)}finally{setBusy(false)}
+  }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
  }
  return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><Link href="/" className="auth-brand">FOON</Link><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
- <form onSubmit={submit} className="auth-form"><label>{t.email}<input name="email" type="email" inputMode="email" autoComplete="email" required dir="ltr" placeholder="name@example.com"/></label><label>{t.password}<input name="password" type="password" autoComplete="current-password" required minLength={9} dir="ltr" placeholder="•••••••••"/></label><Link href="/forgot-password">{t.forgot}</Link>{error&&<div className="form-error" role="alert">{error}</div>}<button disabled={busy} aria-busy={busy}>{busy?t.busy:t.submit}</button></form>
+ <form onSubmit={submit} className="auth-form"><label>{t.email}<input name="email" type="email" inputMode="email" autoComplete="email" required dir="ltr" placeholder="name@example.com"/></label><label>{t.password}<input name="password" type="password" autoComplete="current-password" required minLength={9} dir="ltr" placeholder="•••••••••"/></label><Link href="/forgot-password">{t.forgot}</Link>{error&&<div className="form-error" role="alert"><strong>{getSystemMessage(errorCode,lang).title}</strong><p>{error}</p><small dir="ltr">{errorCode}</small></div>}<button disabled={busy} aria-busy={busy}>{busy?t.busy:t.submit}</button></form>
  <p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
 }
