@@ -720,3 +720,7 @@
 /* Mobile public header: keep sign-in visible at all supported widths. */
 @media(max-width:640px){.foonPublicHeader .foonLogin{display:inline-flex!important;align-items:center;min-height:38px;padding:7px 9px;border:1px solid var(--fp-line);border-radius:10px;font-size:12px}.foonPublicHeader .foonPublicControls{flex-wrap:wrap;justify-content:flex-end;max-width:100%}.foonPublicHeader .foonHeaderCta{display:none}.foonPublicHeader{flex-wrap:wrap}.foonPublicHeader .foonPublicBrand{flex-shrink:0}}
 @media(max-width:370px){.foonPublicHeader .foonLogin{padding:6px 8px}.foonPublicHeader .foonPublicControls{gap:4px}}
+
+/* Admin navigation: one desktop sidebar and one mobile drawer, with contained scrolling. */
+@media(min-width:851px){.adminShell .adminSide{height:100dvh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminSide>nav{display:grid}.adminShell .adminMobileMenu{display:none}}
+@media(max-width:850px){.adminShell .adminSide>nav{display:none!important}.adminShell .adminMobileMenu{display:block}.adminShell .adminDrawer{max-height:calc(100dvh - 110px)!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminStage{min-width:0}.adminShell .adminStage>.workspace{max-width:100%;overflow-wrap:anywhere}}
