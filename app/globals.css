@@ -646,3 +646,13 @@
 .customerAuthTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:5px;margin:18px 0 22px;border-radius:14px;background:rgba(140,125,98,.12);max-width:100%}
 .customerAuthTabs>a,.customerAuthTabs>span{display:flex;justify-content:center;align-items:center;min-height:44px;padding:9px 10px;text-align:center;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;color:inherit}
 .customerAuthTabs>[aria-current="page"]{background:#e2a93b;color:#171613;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+
+/* Restaurant and cafe menu only; other store kinds are unchanged. */
+.foonRestaurantMenu{max-width:1120px;width:calc(100% - 32px);margin:32px auto;padding:clamp(18px,4vw,36px);background:#171613;color:#f8f3e9;border:1px solid rgba(226,169,59,.2);border-radius:24px;scroll-margin-top:80px;overflow:hidden}
+.foonRestaurantMenuHeading>span{color:#e2a93b;font-size:12px;letter-spacing:.14em;font-weight:800}
+.foonRestaurantMenuHeading h2{font-size:clamp(24px,5vw,38px);margin:8px 0}
+.foonRestaurantMenuHeading p{color:#aaa59b;line-height:1.7}
+.foonRestaurantMenuEmpty{display:flex;flex-direction:column;align-items:center;text-align:center;justify-content:center;gap:10px;margin-top:22px;padding:40px 16px;background:#24221e;border:1px dashed rgba(255,255,255,.18);border-radius:18px;min-height:210px}
+.foonRestaurantMenuEmpty>span{font-size:34px}.foonRestaurantMenuEmpty strong{font-size:18px}.foonRestaurantMenuEmpty p{color:#aaa59b;margin:0}
+@media(max-width:480px){.foonRestaurantMenu{width:calc(100% - 20px);margin:20px auto;padding:16px;border-radius:16px}}
