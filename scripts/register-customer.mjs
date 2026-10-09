@@ -6,5 +6,6 @@ export async function registerCustomer(db, { id, email, passwordHash, name, stor
   if (!stores.length) throw new Error("STORE_NOT_FOUND");
   await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?,'active')", [id, email, passwordHash, name || null]);
   await db.execute("INSERT INTO tenant_customers(tenant_id,user_id) VALUES (?,?)", [stores[0].id, id]);
+  await db.execute("INSERT INTO customer_origins(user_id,tenant_id) VALUES (?,?)", [id, stores[0].id]);
   return { tenantId: String(stores[0].id) };
 }
