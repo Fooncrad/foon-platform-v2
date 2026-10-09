@@ -12,7 +12,8 @@ export async function POST(request:Request){
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  let tenantId:string;
  try{tenantId=(await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",["owner","manager"])).tenantId;}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- if(!(await tenantEntitlement(tenantId,"branding.logo")).enabled)return NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403});
+ const [menuGrant,logoGrant]=await Promise.all([tenantEntitlement(tenantId,"digital_menu"),tenantEntitlement(tenantId,"branding.logo")]);
+ if(!menuGrant.enabled&&!logoGrant.enabled)return NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED",feature:"digital_menu",reason:menuGrant.reason},{status:403});
  if(Number(request.headers.get("content-length")??0)>3*1024*1024)return NextResponse.json({ok:false,code:"IMAGE_TOO_LARGE"},{status:413});
  const form=await request.formData().catch(()=>null),file=form?.get("file");
  if(!(file instanceof File)||!file.size||file.size>2*1024*1024)return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});
