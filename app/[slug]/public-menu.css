@@ -94,3 +94,6 @@
 }
 
 .publicMenuLoadMore{grid-column:1/-1;display:flex;justify-content:center;padding:14px 0 20px}.publicMenuLoadMore button{border:1px solid var(--public-line);border-radius:12px;background:var(--public-surface);color:var(--public-text);padding:12px 20px;font-weight:700;max-width:100%;cursor:pointer}.publicMenuLoadMore button:hover{border-color:var(--public-brand)}
+
+/* Fast navigation for long menus without changing the phone card grid. */
+.publicMenuQuickNav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0 9px;padding:7px 10px;background:var(--public-surface);border:1px solid var(--public-line);border-radius:12px}.publicMenuQuickNav span{font-size:12px;color:var(--public-muted);white-space:nowrap}.publicMenuQuickNav select{max-width:330px;min-width:0;padding:7px 10px;font-size:13px}.publicMenuCategoryRail{scroll-margin-top:75px}.publicMenuCategories{scroll-snap-type:x proximity;overscroll-behavior-inline:contain}.publicMenuCategories button{scroll-snap-align:start}.publicMenuSectionTitle{scroll-margin-top:95px}@media(max-width:700px){.publicMenuQuickNav{position:sticky;top:0;z-index:15;margin:3px 0 7px;padding:5px 8px;box-shadow:0 4px 12px #00000010}.publicMenuQuickNav select{flex:1;max-width:none;font-size:12px;padding:7px}.publicMenuQuickNav span{font-size:11px}}
