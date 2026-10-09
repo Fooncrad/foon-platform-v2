@@ -30,7 +30,7 @@ export async function POST(request:Request){
    if(!tables.length)throw new ResourceError("REFERENCE_NOT_FOUND");
   }else{
    const date=typeof body.scheduledAt==='string'?Date.parse(body.scheduledAt):NaN;
-   if(!Number.isFinite(date)||date<Date.now()+15*60*1000||date>Date.now()+90*86400000||!Number.isInteger(body.partySize)||body.partySize<1||body.partySize>100||typeof body.phone!=='string'||!/^\+?[\d ()-]{7,40}$/.test(body.phone))throw new ResourceError("INVALID_INPUT");
+   if(!Number.isFinite(date)||date<Date.now()+15*60*1000||date>Date.now()+90*86400000||!Number.isInteger(body.partySize)||body.partySize<1||body.partySize>100||typeof body.phone!=='string'||(!/^\+?[\d ()-]{7,40}$/.test(body.phone)||body.phone.replace(/\D/g,'').length<7))throw new ResourceError("INVALID_INPUT");
   }
   const data=waiter?{tableId:body.tableId,notes}:{phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),notes};
   const fingerprint=createHash('sha256').update(JSON.stringify({branchId:body.branchId,data})).digest('hex'),lookup=user+':'+body.requestKey;
