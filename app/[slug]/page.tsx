@@ -5,6 +5,19 @@ import Link from "next/link";
 
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){
+ const {slug:raw}=await params;
+ const slug=raw.toLowerCase();
+ if(!validStoreSlug(slug))return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
+ try{
+  const [rows]=await database().execute<RowDataPacket[]>("SELECT name,kind,status FROM tenants WHERE slug=? LIMIT 1",[slug]);
+  const tenant=rows[0];
+  if(!tenant||tenant.status!=="active")return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
+  const name=String(tenant.name);
+  return {title:name+" | FOON",description:(tenant.kind==="restaurant"?"اكتشف مطعم ":"اكتشف متجر ")+name+" على منصة FOON.",alternates:{canonical:"/"+encodeURIComponent(slug)}};
+ }catch{return {title:"FOON",robots:{index:false,follow:false}}}
+}
+
 export default async function PublicTenantPage({params}:{params:Promise<{slug:string}>}){
  const {slug:raw}=await params;
  const slug=raw.toLowerCase();
