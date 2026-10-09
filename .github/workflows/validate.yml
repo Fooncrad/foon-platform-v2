@@ -84,4 +84,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: merchant-dashboard-screenshots
-          path: work/merchant-*.png
+          path: |
+            work/merchant-*.png
+            work/menu-*.png

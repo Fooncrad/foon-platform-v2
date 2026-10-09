@@ -19,12 +19,14 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel("رابط المتجر",{exact:true}).fill("visual-dashboard");
  await page.getByLabel("البريد الإلكتروني",{exact:true}).fill("visual-dashboard@test.example");
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
+ await page.locator("select[name=kind]").selectOption("restaurant");
  await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
  await expect(page.getByRole("heading",{name:"نظرة عامة",exact:true})).toBeVisible();
  await expect(page.getByRole("heading",{name:"مرحباً بفريق مطعم المعاينة",exact:true})).toBeVisible();
  await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
  await expect(page.getByText("لا توجد طلبات محفوظة بعد",{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"الباقة والمميزات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"اشتراك المطعم",exact:true})).toBeVisible();
@@ -36,6 +38,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByRole("button",{name:"إضافة الفرع",exact:true})).toBeDisabled();
  const database=await mysql.createConnection(process.env.DATABASE_URL);
  await database.execute("UPDATE tenant_subscriptions s JOIN tenants t ON t.id=s.tenant_id SET s.plan_id='operations-enterprise' WHERE t.slug='visual-dashboard'");
+ const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug='visual-dashboard' LIMIT 1");
  await database.end();
  await page.reload();
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
@@ -60,6 +63,38 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 ر.س",{exact:true})).toBeVisible();
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
+ await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
+ await page.getByRole("button",{name:"القوالب والمظهر",exact:true}).click();
+ const menuResponse=await page.request.get(origin+"/api/restaurant/operations/menu",{headers:{"x-foon-tenant":visualTenant.tenant}});
+ const menuData=await menuResponse.json();const fixtureCategory=menuData.references.categories[0].id;
+ for(const [name,price,description] of [["لاتيه الشوفان",18,"إسبريسو وحليب الشوفان بقوام ناعم."],["شاي بالنعناع",12,"شاي دافئ مع أوراق النعناع الطازجة."],["كيكة التمر",22,"كيكة تمر ناعمة، تُقدّم مع صوص الكراميل."]]){const saved=await page.request.post(origin+"/api/restaurant/operations/menu",{headers:{origin,"x-foon-tenant":visualTenant.tenant},data:{name,status:"active",branchId:visualTenant.branch,data:{categoryId:fixtureCategory,price,description}}});expect(saved.status()).toBe(201);}
+ const publicPage=await page.context().newPage();
+ for(const [template,name] of [["classic","المعرض"],["minimal","القائمة"],["modern","السريع"],["sufra","السفرة"]]){
+  await page.getByRole("radio",{name,exact:true}).check();
+  await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("template");
+  await page.getByRole("button",{name:"حفظ القالب",exact:true}).click();
+  await expect(page.getByText("تم حفظ القالب والمظهر. يظهر التغيير في منيو مطعمك مباشرة.",{exact:true})).toBeVisible();
+  await publicPage.setViewportSize({width:1440,height:1000});
+  await publicPage.goto(origin+"/visual-dashboard");
+  await expect(publicPage.locator(".publicMenu")).toHaveAttribute("data-template",template);
+  await expect(publicPage.getByRole("heading",{name:"قهوة المعاينة",exact:true})).toBeVisible();
+  await publicPage.getByRole("searchbox",{name:"البحث في المنيو"}).fill("لا يوجد صنف بهذا الاسم");
+  await expect(publicPage.getByRole("heading",{name:"لا توجد أصناف مطابقة",exact:true})).toBeVisible();
+  await publicPage.getByRole("searchbox",{name:"البحث في المنيو"}).fill("");
+  await publicPage.getByRole("button",{name:"إضافة قهوة المعاينة إلى السلة",exact:true}).click();
+  await expect(publicPage.getByLabel("كمية قهوة المعاينة",{exact:true})).toHaveValue("1");
+  await publicPage.evaluate(()=>window.scrollTo(0,0));
+  await publicPage.screenshot({path:"work/menu-"+template+"-desktop.png",fullPage:true});
+  await publicPage.setViewportSize({width:390,height:844});
+  expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  await publicPage.screenshot({path:"work/menu-"+template+"-mobile.png",fullPage:true});
+ }
+ await publicPage.close();
+ await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();
+ await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-template","sufra");
+ await expect(page.locator(".menuPreviewViewport").getByText("معاينة التصميم فقط",{exact:true})).toBeVisible();
+ await page.getByRole("button",{name:"إغلاق المعاينة",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await page.setViewportSize({width:390,height:844});
  await expect(page.getByRole("button",{name:"فتح قائمة المطعم",exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
@@ -77,4 +112,4 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.goto(origin+"/restaurant?tenant="+foreignId);
  await expect(page.getByText("Private foreign tenant",{exact:true})).toHaveCount(0);
 });
-test.setTimeout(90000);
+test.setTimeout(120000);
