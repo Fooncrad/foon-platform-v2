@@ -25,6 +25,16 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const keys=new Set([...Object.values(resourceModules).map(m=>m.feature).filter(Boolean),"orders","pos","kds","customers","multi_branch","analytics","branding.logo","branding.menu_theme","branding.dark_mode","branding.custom_font","branding.white_label"]);
   for(const key of keys){await db.execute("INSERT IGNORE INTO package_features(feature_key,name_ar,name_en,category) VALUES (?,?,?,'test')",[key,key,key]);await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled) VALUES ('operations-enterprise',?,TRUE)",[key]);}
   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[a.tenant]);
+  // An active label must not hide an expired term or grant menu writes.
+  await db.execute("UPDATE tenant_subscriptions SET ends_at=NOW()-INTERVAL 1 SECOND WHERE tenant_id=?",[a.tenant]);
+  assert.equal((await resource(a,"menu",{name:"Expired item",status:"active",data:{price:10,categoryId:randomUUID()}})).body.code,"PLAN_FEATURE_REQUIRED");
+  const expiredDashboard=await (await fetch(origin+"/restaurant?tenant="+a.tenant,{headers:{cookie:a.cookie}})).text();
+  assert.ok(expiredDashboard.includes('منتهي'));
+  assert.ok(!expiredDashboard.includes('الاشتراك نشط'));
+  await db.execute("UPDATE tenant_subscriptions SET ends_at=NULL WHERE tenant_id=?",[a.tenant]);
+  assert.equal((await resource(a,"menu",undefined,"GET")).status,200);
+  const activeDashboard=await (await fetch(origin+"/restaurant?tenant="+a.tenant,{headers:{cookie:a.cookie}})).text();
+  assert.ok(activeDashboard.includes('الاشتراك نشط'));
   const categoryA=await save(a,"categories","Drinks",{}),categoryB=await save(b,"categories","Private category",{});
   assert.equal((await resource(a,"menu",{name:"Invalid",status:"active",data:{price:10,categoryId:categoryB}})).status,404);
   assert.equal((await resource(a,"menu",{name:"Invalid branch",status:"active",branchId:b.branch,data:{price:10,categoryId:categoryA}})).status,404);

@@ -16,7 +16,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const db=database();
  const [[branches],[subscriptions],[features],[tenants],[choices]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
-  db.execute<RowDataPacket[]>("SELECT p.name_ar AS plan_name,s.status,s.starts_at,s.ends_at,p.enabled FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id WHERE s.tenant_id=? LIMIT 1",[tenantId]),
+  db.execute<RowDataPacket[]>("SELECT p.name_ar AS plan_name,CASE WHEN s.status<>'active' THEN s.status WHEN s.ends_at IS NOT NULL AND s.ends_at<=NOW() THEN 'expired' WHEN p.enabled=FALSE OR (s.starts_at IS NOT NULL AND s.starts_at>NOW()) THEN 'pending' ELSE 'active' END AS status,s.starts_at,s.ends_at,p.enabled FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id WHERE s.tenant_id=? LIMIT 1",[tenantId]),
   db.execute<RowDataPacket[]>("SELECT f.feature_key,f.name_ar,pf.enabled,pf.limit_value FROM package_features f LEFT JOIN tenant_subscriptions s ON s.tenant_id=? AND s.status='active' AND (s.starts_at IS NULL OR s.starts_at<=NOW()) AND (s.ends_at IS NULL OR s.ends_at>NOW()) LEFT JOIN package_plans p ON p.id=s.plan_id AND p.enabled=TRUE LEFT JOIN package_plan_features pf ON pf.plan_id=p.id AND pf.feature_key=f.feature_key ORDER BY f.category,f.feature_key",[tenantId]),
   db.execute<RowDataPacket[]>("SELECT slug FROM tenants WHERE id=? LIMIT 1",[tenantId]),
   db.execute<RowDataPacket[]>("SELECT t.id,t.name FROM memberships m JOIN tenants t ON t.id=m.tenant_id AND t.status='active' JOIN users u ON u.id=m.user_id AND u.status='active' WHERE m.user_id=? AND m.status='active' ORDER BY m.created_at",[userId])
