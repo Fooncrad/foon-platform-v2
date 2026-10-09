@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import sharp from "sharp";
 import {currentUserId} from "@/lib/auth/session";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
@@ -14,8 +15,9 @@ export async function POST(request:Request){
  const file=form?.get("file");if(!(file instanceof File)||file.size<1||file.size>2*1024*1024)return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});
  const bytes=Buffer.from(await file.arrayBuffer());const png=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));const jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;const webp=bytes.toString("ascii",0,4)==="RIFF"&&bytes.toString("ascii",8,12)==="WEBP";const mime=png?"image/png":jpg?"image/jpeg":webp?"image/webp":null;
  if(!mime||file.type!==mime)return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});
+ const square=await sharp(bytes).rotate().resize(800,800,{fit:"cover",position:"centre"}).jpeg({quality:82}).toBuffer();
  const [imageCol,mimeCol]=fields[type as keyof typeof fields];
- try{await database().execute(`INSERT INTO user_profiles(user_id,${imageCol},${mimeCol}) VALUES (?,?,?) ON DUPLICATE KEY UPDATE ${imageCol}=VALUES(${imageCol}),${mimeCol}=VALUES(${mimeCol})`,[id,bytes,mime]);return NextResponse.json({ok:true,url:"/api/account/media?type="+type});}catch{return NextResponse.json({ok:false,code:"UPLOAD_UNAVAILABLE"},{status:503});}
+ try{await database().execute(`INSERT INTO user_profiles(user_id,${imageCol},${mimeCol}) VALUES (?,?,?) ON DUPLICATE KEY UPDATE ${imageCol}=VALUES(${imageCol}),${mimeCol}=VALUES(${mimeCol})`,[id,square,"image/jpeg"]);return NextResponse.json({ok:true,url:"/api/account/media?type="+type});}catch{return NextResponse.json({ok:false,code:"UPLOAD_UNAVAILABLE"},{status:503});}
 }
 export async function GET(request:Request){
  const id=await currentUserId();if(!id)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
