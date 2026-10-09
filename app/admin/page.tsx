@@ -33,8 +33,8 @@ export default async function AdminPage(){
   <header className="workspace-head adminDashboardHead"><div><span className="adminEyebrow">إدارة المنصة</span><h1>نظرة عامة</h1><p>ملخص النشاط والوصول السريع إلى أدوات FOON.</p></div><Link className="adminPrimaryLink" href="/admin/tenants">إدارة المتاجر ←</Link></header>
   <section aria-label="مؤشرات المتاجر" className="adminMetrics">
    <Link href="/admin/tenants" className="adminMetric"><span>إجمالي المتاجر</span><strong>{Number(s.total??0)}</strong><small>كل الأنشطة المسجلة</small></Link>
-   <div className="adminMetric"><span>متاجر نشطة</span><strong>{Number(s.active??0)}</strong><small>جاهزة للتشغيل</small></div>
-   <div className="adminMetric"><span>قيد المراجعة</span><strong>{Number(s.pending??0)}</strong><small>بانتظار الاعتماد</small></div>
+   <div className="adminMetric"><span>متاجر نشطة</span><strong>{Number(s.active??0)}</strong><small>تعمل بعد التسجيل مباشرة</small></div>
+   <div className="adminMetric"><span>غير مفعّلة</span><strong>{Number(s.pending??0)}</strong><small>تحتاج مراجعة سبب عدم التفعيل</small></div>
    <div className="adminMetric"><span>متاجر موقوفة</span><strong>{Number(s.suspended??0)}</strong><small>تتطلب مراجعة</small></div>
   </section>
   <section className="adminOverviewSecondary" aria-label="مؤشرات التشغيل">
