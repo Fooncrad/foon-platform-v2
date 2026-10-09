@@ -4,6 +4,7 @@ import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
 import CountrySelect from "./country-select";
+import "./country-select.css";
 import {getSystemMessage} from "@/lib/ui/system-messages";
 import {supportedCountries,countryRegions,currencyForCountry} from "@/lib/tenant/country-catalog";
 type Lang="ar"|"en"|"fr";
