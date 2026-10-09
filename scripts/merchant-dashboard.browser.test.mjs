@@ -98,9 +98,15 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.getByRole('dialog')).toHaveCount(0);
  const dining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة 7',branchId:visualTenant.branch,status:'available',data:{capacity:4}}});expect(dining.status()).toBe(201);
  const tableId=(await dining.json()).id;
- const customer=await publicPage.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'visual-dashboard',name:'ضيف المعاينة',email:'visual-guest@test.example',password:'a-strong-test-password'}});expect(customer.status()).toBe(201);
  await publicPage.reload();
  await publicPage.getByRole('button',{name:'نداء النادل',exact:true}).click();
+ await publicPage.getByRole('dialog').getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
+ await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
+ await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill('visual-guest@test.example');
+ await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+ await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
+ await expect(publicPage.getByRole('dialog').getByLabel('طاولتك',{exact:true})).toBeVisible();
+ await publicPage.getByRole('dialog').screenshot({path:'work/menu-waiter-mobile.png'});
  await publicPage.getByRole('dialog').getByLabel('طاولتك',{exact:true}).selectOption(tableId);
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
