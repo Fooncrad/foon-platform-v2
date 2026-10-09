@@ -509,3 +509,48 @@
 .adminShell .adminThemeToggle{display:inline-flex;align-items:center;justify-content:center;min-width:38px;min-height:38px;border:1px solid var(--foon-line);border-radius:10px;background:var(--foon-surface);color:var(--foon-text);font-size:20px;cursor:pointer}
 .adminShell .adminThemeToggle:focus-visible{outline:3px solid var(--foon-accent);outline-offset:2px}
 @media(max-width:520px){.adminShell .adminThemeToggle{min-width:34px;min-height:34px}}
+
+/* FOON V2 public experience: scoped, responsive, bilingual direction-aware design */
+.foonPublic{--fp-bg:#f8f7f3;--fp-surface:#fff;--fp-ink:#24221e;--fp-muted:#706c62;--fp-line:#e9e4da;--fp-gold:#c99432;--fp-gold-ink:#211b0f;--fp-panel:#24221e;background:var(--fp-bg);color:var(--fp-ink);min-height:100svh;font-family:Arial,sans-serif;overflow-x:clip;transition:background .2s,color .2s}
+.foonPublic[data-theme="dark"]{--fp-bg:#171613;--fp-surface:#24221e;--fp-ink:#f8f3e9;--fp-muted:#bcb4a6;--fp-line:#413c33;--fp-gold:#e2a93b;--fp-gold-ink:#171613;--fp-panel:#292720;color-scheme:dark}
+.foonPublic *{box-sizing:border-box;min-width:0}
+.foonPublicHeader{max-width:1320px;margin:auto;min-height:82px;padding:12px clamp(16px,4vw,44px);display:flex;align-items:center;gap:clamp(12px,3vw,40px);justify-content:space-between;border-bottom:1px solid var(--fp-line)}
+.foonPublicBrand{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:900;letter-spacing:.07em;white-space:nowrap}
+.foonPublicBrand small{display:block;font-size:9px;letter-spacing:.25em;color:var(--fp-muted)}
+.foonBrandMark{display:grid;place-items:center;width:42px;height:42px;background:var(--fp-gold);color:var(--fp-gold-ink);border-radius:12px;font-size:27px}
+.foonPublicHeader nav,.foonPublicControls{display:flex;align-items:center;gap:clamp(8px,2vw,24px)}
+.foonPublicHeader nav a{font-size:14px;font-weight:700;color:var(--fp-muted)}
+.foonPublicHeader a:hover{color:var(--fp-gold)}
+.foonLanguageControl select,.foonThemeControl{min-height:38px;background:var(--fp-surface);color:var(--fp-ink);border:1px solid var(--fp-line);border-radius:11px;padding:0 9px;font:inherit;cursor:pointer}
+.foonThemeControl{min-width:40px;font-size:20px}
+.foonLogin{font-size:14px;font-weight:700;white-space:nowrap}
+.foonHeaderCta,.foonButtonPrimary{display:inline-flex;justify-content:center;align-items:center;gap:14px;background:var(--fp-gold);color:var(--fp-gold-ink)!important;border-radius:12px;padding:13px 20px;font-size:14px;font-weight:800;white-space:nowrap}
+.foonPublicHero{max-width:1320px;margin:auto;padding:clamp(44px,7vw,96px) clamp(18px,5vw,64px);display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:30px;min-height:560px}
+.foonEyebrow,.foonSectionKicker{display:inline-block;color:var(--fp-gold);font-size:13px;font-weight:900;letter-spacing:.05em}
+.foonHeroCopy h1{font-size:clamp(42px,5.7vw,82px);line-height:1.13;letter-spacing:-.035em;margin:22px 0 24px;max-width:750px}
+.foonHeroCopy>p{font-size:clamp(16px,1.5vw,19px);line-height:1.9;color:var(--fp-muted);max-width:590px}
+.foonHeroActions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.foonButtonOutline{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--fp-line);border-radius:12px;padding:13px 20px;background:var(--fp-surface);font-weight:800;font-size:14px}
+.foonHeroTags{display:flex;align-items:center;gap:16px;color:var(--fp-muted);font-size:11px;letter-spacing:.14em;margin-top:60px}
+.foonHeroArt{position:relative;aspect-ratio:1/1;width:min(100%,470px);margin:auto;border-radius:38px;background:radial-gradient(circle at 50% 42%,#64502a,#292720 58%,#1b1a17);overflow:hidden;display:grid;place-items:center;box-shadow:0 24px 80px #0002}
+.foonArtOrbit{position:absolute;border:1px solid #e2a93b55;border-radius:50%;width:76%;aspect-ratio:1}
+.foonArtOrbitTwo{width:112%;border-style:dashed;transform:rotate(20deg)}
+.foonArtCenter{display:grid;place-items:center;width:43%;aspect-ratio:1;border-radius:32px;background:linear-gradient(145deg,#f5ca69,#b67d20);box-shadow:0 20px 60px #0008;color:#211b0f;transform:rotate(-9deg)}
+.foonArtCenter span{font-size:clamp(70px,12vw,140px);font-weight:900;line-height:.8}.foonArtCenter small{font-weight:900;letter-spacing:.3em;font-size:11px}
+.foonArtChip{position:absolute;display:grid;place-items:center;width:62px;height:62px;border:1px solid #ffffff35;border-radius:20px;background:#ffffff16;color:#e2a93b;font-size:34px;backdrop-filter:blur(10px)}
+.foonArtChipTop{top:13%;inset-inline-start:13%}.foonArtChipBottom{bottom:13%;inset-inline-end:12%}
+.foonPublicSection{max-width:1320px;margin:auto;padding:76px clamp(18px,5vw,64px)}
+.foonSectionIntro{max-width:730px;margin-bottom:34px}.foonSectionIntro h2{font-size:clamp(30px,3.5vw,48px);margin:12px 0}.foonSectionIntro p{color:var(--fp-muted);line-height:1.8}
+.foonFeatureGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.foonFeatureCard{position:relative;padding:32px;min-height:265px;border-radius:22px;background:var(--fp-surface);border:1px solid var(--fp-line);box-shadow:0 12px 30px #00000005}
+.foonFeatureNumber{font-size:12px;color:var(--fp-muted)}.foonFeatureIcon{display:block;color:var(--fp-gold);font-size:40px;margin:20px 0 10px}
+.foonFeatureCard h3,.foonSteps h3{font-size:21px;margin:12px 0}.foonFeatureCard p,.foonSteps p{line-height:1.8;color:var(--fp-muted)}
+.foonHowSection{border-top:1px solid var(--fp-line)}.foonSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.foonSteps article{padding:25px;border-inline-start:2px solid var(--fp-gold)}.foonSteps strong{font-size:29px;color:var(--fp-gold)}
+.foonPublicFooter{padding:42px clamp(18px,5vw,64px);background:var(--fp-panel);color:#f8f3e9;display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.foonPublicFooter strong{font-size:24px;letter-spacing:.1em}.foonPublicFooter p{color:#c4bcae}.foonPublicFooter nav{display:flex;gap:16px;flex-wrap:wrap}.foonPublicFooter nav a{font-size:13px;color:#e5ded0}
+.foonPublic :is(a,button,select):focus-visible{outline:3px solid var(--fp-gold);outline-offset:3px}
+@media(max-width:900px){.foonPublicHeader nav{display:none}.foonPublicHero{grid-template-columns:1fr}.foonHeroArt{width:min(100%,380px)}.foonHeroTags{margin-top:30px}}
+@media(max-width:640px){.foonPublicHeader{min-height:70px;gap:8px;flex-wrap:wrap}.foonPublicBrand{font-size:18px}.foonBrandMark{width:34px;height:34px;font-size:23px}.foonPublicControls{gap:6px}.foonLanguageControl select{max-width:98px;font-size:12px}.foonLogin{display:none}.foonHeaderCta{padding:10px 12px;font-size:12px}.foonPublicHero{padding-top:45px;min-height:0}.foonHeroCopy h1{font-size:clamp(35px,10vw,50px)}.foonHeroArt{border-radius:25px;width:min(100%,320px)}.foonFeatureGrid,.foonSteps{grid-template-columns:1fr}.foonPublicSection{padding-top:45px;padding-bottom:45px}.foonFeatureCard{min-height:0;padding:24px}.foonPublicFooter{align-items:flex-start;flex-direction:column}}
+@media(max-width:370px){.foonPublicHeader{padding:10px}.foonPublicControls{margin-inline-start:auto}.foonHeaderCta{font-size:11px;padding:10px 8px}.foonLanguageControl select{max-width:80px}.foonPublicBrand small{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.foonPublic *{transition:none!important;animation:none!important}}
