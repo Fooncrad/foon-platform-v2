@@ -93,6 +93,11 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();
  await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-template","sufra");
  await expect(page.locator(".menuPreviewViewport").getByText("معاينة التصميم فقط",{exact:true})).toBeVisible();
+ await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("light");
+ await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-color-mode","light");
+ const unchanged=await page.request.get(origin+"/api/restaurant/menu/appearance",{headers:{"x-foon-tenant":visualTenant.tenant}});expect((await unchanged.json()).colorMode).toBe("template");
+ await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("template");
+ await page.locator(".menuTemplateEditor").screenshot({path:"work/menu-studio-preview.png"});
  await page.getByRole("button",{name:"إغلاق المعاينة",exact:true}).click();
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await page.setViewportSize({width:390,height:844});
