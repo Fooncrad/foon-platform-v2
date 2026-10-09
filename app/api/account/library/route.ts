@@ -1,4 +1,5 @@
 import {randomUUID} from "node:crypto";
+import sharp from "sharp";
 import {NextResponse} from "next/server";
 import {currentUserId} from "@/lib/auth/session";
 import {assertSameOrigin} from "@/lib/security/origin";
@@ -26,13 +27,15 @@ export async function POST(request:Request){
   const webp=bytes.toString("ascii",0,4)==="RIFF"&&bytes.toString("ascii",8,12)==="WEBP";
   const mime=png?"image/png":jpg?"image/jpeg":webp?"image/webp":null;
   if(!mime||file.type!==mime)return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});
+  const square=await sharp(bytes).rotate().resize(800,800,{fit:"cover",position:"centre"}).jpeg({quality:82,mozjpeg:true}).toBuffer();
+  if(square.length>policy.maxFileMb*1024*1024)return NextResponse.json({ok:false,code:"IMAGE_TOO_LARGE"},{status:413});
   const db=await database().getConnection();
   try{await db.beginTransaction();
    const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? FOR UPDATE",[userId]);
    if(!users.length){await db.rollback();return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});}
    const [[usage]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS total,COALESCE(SUM(size_bytes),0) AS bytes FROM user_media_library WHERE user_id=?",[userId]);
-   if(Number(usage.total)>=policy.maxFiles||Number(usage.bytes)+file.size>policy.maxStorageMb*1024*1024){await db.rollback();return NextResponse.json({ok:false,code:"STORAGE_LIMIT_REACHED"},{status:409});}
-   const id=randomUUID();await db.execute("INSERT INTO user_media_library(id,user_id,file_name,mime_type,image_data,size_bytes) VALUES (?,?,?,?,?,?)",[id,userId,file.name.slice(0,180),mime,bytes,bytes.length]);await db.commit();return NextResponse.json({ok:true,id},{status:201});
+   if(Number(usage.total)>=policy.maxFiles||Number(usage.bytes)+square.length>policy.maxStorageMb*1024*1024){await db.rollback();return NextResponse.json({ok:false,code:"STORAGE_LIMIT_REACHED"},{status:409});}
+   const id=randomUUID();await db.execute("INSERT INTO user_media_library(id,user_id,file_name,mime_type,image_data,size_bytes) VALUES (?,?,?,?,?,?)",[id,userId,file.name.slice(0,180),"image/jpeg",square,square.length]);await db.commit();return NextResponse.json({ok:true,id},{status:201});
   }catch{await db.rollback();throw Error("SAVE_FAILED")}finally{db.release()}
  }catch{return NextResponse.json({ok:false,code:"LIBRARY_UNAVAILABLE"},{status:503})}
 }
