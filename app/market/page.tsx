@@ -2,6 +2,7 @@ import Link from "next/link";
 import {cookies,headers} from "next/headers";
 import {supportedCountries} from "@/lib/tenant/country-catalog";
 import CountryPicker from "./country-picker";
+import "./country-picker.css";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 type Store=RowDataPacket&{slug:string;name:string;kind:"restaurant"|"store"};
