@@ -14,6 +14,7 @@ const modules=[
  {href:"/admin/notifications",icon:"♧",title:"الإشعارات والرسائل",description:"التنبيهات وقنوات التواصل"},
  {href:"/admin/translations",icon:"文",title:"الترجمات",description:"العربية والإنجليزية والفرنسية"},
  {href:"/admin/pages",icon:"▧",title:"صفحات الموقع",description:"إدارة المحتوى العام"},
+ {href:"/admin/media",icon:"▧",title:"مكتبة الصور والمساحات",description:"تخصيص سعة الصور لجميع الحسابات"},
  {href:"/admin/settings",icon:"⚙",title:"إعدادات المنصة",description:"الهوية والإعدادات العامة"},
  {href:"/admin/audit",icon:"≡",title:"سجل العمليات",description:"مراجعة الأنشطة والتغييرات"}
 ];
