@@ -19,7 +19,7 @@ export default function RegisterPage(){
  const t=copy[lang];
  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();if(busy)return;setBusy(true);setError("");const data=new FormData(e.currentTarget);
   try{
-   const res=await fetch("/api/auth/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),email:data.get("email"),password:data.get("password"),storeName:data.get("storeName"),slug:data.get("slug"),kind:data.get("kind"),activity:data.get("activity"),countryCode:country,currency:currencyForCountry(country),region:region.trim(),taxNumber:taxNumber.trim()})});const body=await res.json().catch(()=>({}));
+   const res=await fetch("/api/auth/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),email:data.get("email"),password:data.get("password"),storeName:data.get("storeName"),slug:data.get("slug"),activity:data.get("activity"),countryCode:country,currency:currencyForCountry(country),region:region.trim(),taxNumber:taxNumber.trim()})});const body=await res.json().catch(()=>({}));
    if(!res.ok){const code=typeof body.code==="string"?body.code:"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
    router.replace("/restaurant");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
