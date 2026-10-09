@@ -115,6 +115,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/customer/services","POST",{...bookingPayload,scheduledAt:new Date(Date.now()-60000).toISOString()},customer.cookie)).status,400);
   const booking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);assert.equal(booking.status,201,JSON.stringify(booking.body));
   const savedBookings=await resource(a,"reservations",undefined,"GET");assert.equal(savedBookings.body.resources.find(row=>row.id===booking.body.id).status,"pending");
+  const serviceOverview=await resource(a,"overview",undefined,"GET");assert.equal(serviceOverview.body.summary.waiterCalls,1);assert.equal(serviceOverview.body.summary.reservations,1);
+  const privateOverview=await call("/api/restaurant/operations/overview","GET",undefined,staff.cookie,a.tenant);assert.equal(privateOverview.body.summary.waiterCalls,0);
   const [[noStaff]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=? AND tenant_id=?",[customer.body.user.id,a.tenant]);assert.equal(noStaff.n,0);
   assert.equal((await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie)).status,403);
   const placed=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",total:0,items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(placed.status,201);assert.equal(placed.body.total,22);
