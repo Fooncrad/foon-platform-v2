@@ -34,8 +34,9 @@ export default async function PublicTenantPage({params}:{params:Promise<{slug:st
    <span>{isRestaurant?"مطعم على منصة FOON":"نشاط على منصة FOON"}</span>
    <h1>{String(tenant.name)}</h1>
    <p>{isRestaurant?"مرحبًا بك في صفحة المطعم. اكتشف نشاطنا وتابع الخدمات المتاحة.":"مرحبًا بك في صفحة المتجر. اكتشف نشاطنا وتابع الخدمات المتاحة."}</p>
-   <div className="publicTenantActions"><Link href={`/${slug}/register`}>إنشاء حساب عميل</Link><Link href={`/${slug}/login`}>حسابي · دخول العملاء</Link></div>
+   <div className="publicTenantActions">{isRestaurant&&<a href="#restaurant-menu">استعرض المنيو</a>}<Link href={`/${slug}/register`}>إنشاء حساب عميل</Link><Link href={`/${slug}/login`}>حسابي · دخول العملاء</Link></div>
   </section>
+  {isRestaurant&&<section id="restaurant-menu" className="foonRestaurantMenu" aria-labelledby="restaurant-menu-title"><div className="foonRestaurantMenuHeading"><span>MENU · FOON</span><h2 id="restaurant-menu-title">المنيو</h2><p>الأقسام والأصناف ستظهر هنا عند إضافتها وتفعيلها من لوحة المطعم.</p></div><div className="foonRestaurantMenuEmpty" role="status"><span aria-hidden="true">☕</span><strong>المنيو قيد التجهيز</strong><p>لم تُنشر أصناف لهذا المطعم بعد.</p></div></section>}
   <section className="publicTenantDetails"><article><span>نوع النشاط</span><strong>{isRestaurant?"مطعم":"متجر أو نشاط خدمي"}</strong></article><article><span>حالة النشاط</span><strong>متاح على المنصة</strong></article><article><span>حساب العملاء</span><strong>التسجيل من خلال هذا النشاط</strong></article></section>
   <footer className="publicTenantFooter"><span>FOON PLATFORM</span><Link href={`/${slug}/login`}>دخول العملاء</Link></footer>
  </main>;
