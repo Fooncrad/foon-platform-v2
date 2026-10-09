@@ -44,7 +44,8 @@ jobs:
     timeout-minutes: 15
     services:
       mariadb:
-        image: mariadb:11.8
+        # Docker Official Images mirror; avoid Docker Hub's shared runner pull quota.
+        image: public.ecr.aws/docker/library/mariadb:11.8
         env:
           MARIADB_ROOT_PASSWORD: foon-ci-only-password
           MARIADB_DATABASE: foon_migration_test
