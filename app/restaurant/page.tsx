@@ -26,7 +26,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const subscription=subscriptions[0];
  const now=new Date();
  const data:MerchantData={
-  tenantId,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
+  userId,tenantId,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
   tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),

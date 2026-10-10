@@ -60,10 +60,18 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
    }
    let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
    if(module==="reservations"){const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");if(from||to){const a=Date.parse(from||""),b=Date.parse(to||"");if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>93*86400000)throw new ResourceError("INVALID_DATE_RANGE");const [found]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))>=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))<? ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt')) LIMIT 1001",[ctx.tenantId,...(branch?[branch]:[]),new Date(a).toISOString(),new Date(b).toISOString()]);truncated=found.length>1000;resources=found.slice(0,1000).map(r=>({id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),data:parseData(r.data),version:Number(r.version),created_at:String(r.created_at)}));}}
+   if(["tables","sections"].includes(module)){
+    const sectionRows=module==="sections"?resources:refs.sections as typeof resources||[],staffIds=sectionRows.flatMap(r=>[r.data.waiterId,r.data.supervisorId]).filter(Boolean);
+    if(staffIds.length){const [staff]=await db.execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='employee' AND archived=FALSE AND id IN ("+staffIds.map(()=>"?").join(",")+")",[ctx.tenantId,...staffIds]);refs.staffLabels=staff;}
+   }
+   if(module==="reservations"){
+    const ids=resources.map(r=>String(r.data.customerUserId||'')).filter(Boolean);
+    if(ids.length){const [contacts]=await db.execute<RowDataPacket[]>("SELECT u.id,u.email FROM users u JOIN tenant_customers tc ON tc.user_id=u.id AND tc.tenant_id=? WHERE u.id IN ("+ids.map(()=>"?").join(",")+")",[ctx.tenantId,...ids]);resources=resources.map(r=>({...r,data:{...r.data,email:String(contacts.find(c=>c.id===r.data.customerUserId)?.email||r.data.email||'')}}));}
+   }
    if(module==="storefront"&&resources.length){const [appearance]=await db.execute<RowDataPacket[]>("SELECT template_key FROM restaurant_menu_appearance WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);resources[0].data.menuTheme=String(appearance[0]?.template_key??resources[0].data.menuTheme??"sufra");}
    return NextResponse.json({ok:true,resources,references:refs,truncated});
   }
-  if(["orders","pos","kds"].includes(module)){const menu=module==="pos"?await resourceRows(db,ctx.tenantId,"menu",branch):[];return NextResponse.json({ok:true,orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,options:module==="pos"?await menuOptions(db,ctx.tenantId,menu.map(i=>i.id)):{},tables:module==="pos"&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
+  if(["orders","pos","kds"].includes(module)){const menu=module==="pos"?await resourceRows(db,ctx.tenantId,"menu",branch):[];return NextResponse.json({ok:true,orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,categories:module==="pos"?(await resourceRows(db,ctx.tenantId,"categories",branch)).map(c=>({id:c.id,name:c.name})):[],options:module==="pos"?await menuOptions(db,ctx.tenantId,menu.map(i=>i.id)):{},tables:module==="pos"&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
   if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch)});
   if(module==="reports"){
    const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");
