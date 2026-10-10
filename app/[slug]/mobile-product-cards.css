@@ -15,16 +15,16 @@
 @media(max-width:700px){
  .publicMenu{padding-inline:10px!important}
  .publicMenu .publicMenuLayout .publicMenuItems{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;align-items:stretch;direction:inherit}
- .publicMenu .publicMenuItem{display:flex!important;flex-direction:column;gap:0!important;padding:0!important;border-radius:12px;min-width:0;box-shadow:0 3px 12px #00000004;transform:none!important;transition:none!important}
- .publicMenu .publicMenuItem .publicMenuItemBody{padding:7px 5px 5px!important;min-width:0}
+ .publicMenu .publicMenuItem{display:flex!important;flex-direction:column;gap:0!important;padding:0!important;border-radius:14px;min-width:0;box-shadow:0 3px 12px #00000004;transform:none!important;transition:none!important}
+ .publicMenu .publicMenuLayout .publicMenuItem .publicMenuItemBody{height:74px;padding:6px!important;display:flex;flex-direction:column;gap:3px;min-width:0;flex-shrink:0}
  .publicMenu .publicMenuItem .publicMenuItemCategory{display:none!important}
- .publicMenu .publicMenuItem h2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:11px!important;line-height:1.5;min-height:3em;max-height:3em;font-weight:750;letter-spacing:0}
- .publicMenu .publicMenuItem p.publicMenuItemSummary{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:10px!important;line-height:1.5;min-height:3em;max-height:3em;margin-top:3px;overflow:hidden;color:var(--public-muted)}
- .publicMenu .publicMenuItem .publicMenuItemImage{width:100%!important;height:auto!important;aspect-ratio:1!important;max-height:none;border-radius:0!important;align-self:stretch;margin:0;order:0;min-height:0}
- .publicMenu .publicMenuItem footer.publicMenuItemFooter{flex-direction:column;align-items:stretch;gap:5px;padding:6px 5px 5px!important;margin-top:auto}
- .publicMenu .publicMenuItem .publicMenuProductPrice{min-height:34px;justify-content:flex-end;gap:1px}
+ .publicMenu .publicMenuLayout .publicMenuItem h2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:12px!important;line-height:1.3!important;min-height:2.6em;max-height:2.6em;font-weight:750;letter-spacing:0}
+ .publicMenu .publicMenuItem p.publicMenuItemSummary{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:10px!important;line-height:1.3!important;min-height:2.6em;max-height:2.6em;margin-top:0;overflow:hidden;color:var(--public-muted)}
+ .publicMenu .publicMenuItem .publicMenuItemImage{width:100%!important;height:auto!important;aspect-ratio:4/3!important;max-height:none;border-radius:0!important;align-self:stretch;margin:0;order:0;min-height:44px}
+ .publicMenu .publicMenuItem footer.publicMenuItemFooter{flex-direction:column;align-items:stretch;gap:4px;padding:5px 6px 6px!important;margin-top:auto}
+ .publicMenu .publicMenuItem .publicMenuProductPrice{min-height:32px;justify-content:flex-end;gap:1px}
  .publicMenu .publicMenuItem .publicMenuProductPrice del{font-size:9px;line-height:1.4}
- .publicMenu .publicMenuItem .publicMenuProductPrice strong{font-size:11px!important;line-height:1.4;letter-spacing:0}
+ .publicMenu .publicMenuItem .publicMenuProductPrice strong{font-size:12px!important;line-height:1.4;letter-spacing:0}
  .publicMenu .publicMenuItem .publicMenuProductPrice small{font-size:8px!important;line-height:inherit;margin:0}
  .publicMenu .publicMenuItem .publicMenuCardCart{width:100%!important;min-height:44px;height:44px;padding:0;border-radius:8px;gap:0}
  .publicMenu .publicMenuItem .publicMenuCardCart>span{display:none!important}
@@ -52,3 +52,12 @@
 .publicMenuProductDialog>footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--public-line);background:var(--public-surface);flex-shrink:0}
 .publicMenuProductDialog>footer>button{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--public-brand);color:var(--public-on-brand);border:0;border-radius:12px;min-height:48px;padding:12px 18px;font-size:14px;font-weight:750}
 @media(max-width:400px){.publicMenuProductDialog>header{padding:14px}.publicMenuProductDialog h2{font-size:18px}.publicMenuProductScroll{padding-inline:14px}.publicMenuProductDialog>footer{padding-inline:14px;gap:10px}.publicMenuProductDialog>footer>button{font-size:12px;padding-inline:12px}.publicMenuProductDialog .publicMenuProductPrice strong{font-size:17px}.publicMenuProductFacts{gap:8px}}
+
+/* A balanced full-width cover: panoramic photos fill it; tall photos keep their subject intact. */
+.publicMenu .publicMenuHero{width:100%!important;max-width:100%;height:clamp(180px,18vw,240px)!important;min-height:0!important;max-height:240px;padding:0!important;margin:14px 0 10px!important;border-radius:22px;display:block;isolation:isolate;overflow:hidden;background:var(--public-surface)}
+.publicMenu .publicMenuHero .publicMenuHeroImage{z-index:1;object-fit:cover!important;object-position:center;opacity:1!important}
+.publicMenu .publicMenuHero .publicMenuHeroBackdrop{z-index:0;object-fit:cover;object-position:center;filter:blur(22px);transform:scale(1.08);opacity:0;pointer-events:none}
+.publicMenu .publicMenuHero[data-cover-shape=portrait] .publicMenuHeroBackdrop{opacity:.55}
+.publicMenu .publicMenuHero[data-cover-shape=portrait] .publicMenuHeroImage{object-fit:contain!important;filter:drop-shadow(0 4px 18px #0002)}
+.publicMenu .publicMenuHero[data-cover-shape=empty]{height:112px!important;background:linear-gradient(120deg,#b59c6714,transparent),var(--public-surface)}
+@media(max-width:700px){.publicMenu .publicMenuHero{height:clamp(140px,42vw,200px)!important;max-height:200px;margin:10px 0 8px!important;border-radius:18px}.publicMenu .publicMenuHero[data-cover-shape=empty]{height:84px!important}}
