@@ -25,10 +25,19 @@ test("waiter test fixture accepts syntactically valid email and rejects malforme
  assert.throws(()=>validateResource("team",{name:"محمد",status:"active",data:{email:"invalid-email",role:"waiter"}}));
 });
 test("four dining sections validate independently without a database",()=>{
- const names=["مدخنون – خارجي","غير مدخنين – خارجي","مدخنون – داخلي","غير مدخنين – داخلي"];
- for(const name of names){
-  const section=validateResource("sections",{name,status:"active",data:{description:"قسم صالة تجريبي"}});
+ const cases=[
+  {name:"مدخنون – خارجي",area:"outdoor",smoking:"smoking"},
+  {name:"غير مدخنين – خارجي",area:"outdoor",smoking:"non_smoking"},
+  {name:"مدخنون – داخلي",area:"indoor",smoking:"smoking"},
+  {name:"غير مدخنين – داخلي",area:"indoor",smoking:"non_smoking"}
+ ];
+ for(const {name,area,smoking} of cases){
+  const section=validateResource("sections",{name,status:"active",data:{area,smoking,description:"قسم صالة تجريبي"}});
   assert.equal(section.name,name);
   assert.equal(section.status,"active");
+  assert.equal(section.data.area,area);
+  assert.equal(section.data.smoking,smoking);
  }
+ assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{area:"roof",smoking:"smoking"}}));
+ assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{area:"indoor",smoking:"sometimes"}}));
 });
