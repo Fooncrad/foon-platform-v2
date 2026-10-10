@@ -11,11 +11,15 @@ export default function OrderLiveRefresh(){
   let hadFailure=false;
   let reservationsWereUnavailable=false;
   let inFlight=false;
+  let activeController:AbortController|null=null;
   async function check(){
    if(!alive||inFlight||document.visibilityState!=="visible"||!navigator.onLine)return;
    inFlight=true;
+   const controller=new AbortController();
+   activeController=controller;
+   const timeout=window.setTimeout(()=>controller.abort(),8000);
    try{
-    const response=await fetch("/api/customer/order-revision",{cache:"no-store"});
+    const response=await fetch("/api/customer/order-revision",{cache:"no-store",signal:controller.signal});
     if(!response.ok){hadFailure=true;return;}
     const body=await response.json() as {revision?:string;reservationsAvailable?:boolean};
     if(typeof body.revision!=="string")return;
@@ -25,14 +29,14 @@ export default function OrderLiveRefresh(){
     hadFailure=false;
     previous=body.revision;
    }catch{hadFailure=true;}
-   finally{inFlight=false;}
+   finally{window.clearTimeout(timeout);if(activeController===controller)activeController=null;inFlight=false;}
   }
   void check();
   const timer=window.setInterval(()=>void check(),10000);
   const onVisibility=()=>void check();
   document.addEventListener("visibilitychange",onVisibility);
   window.addEventListener("online",onVisibility);
-  return()=>{alive=false;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("online",onVisibility);};
+  return()=>{alive=false;activeController?.abort();window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("online",onVisibility);};
  },[router]);
  return null;
 }
