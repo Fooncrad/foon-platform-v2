@@ -21,7 +21,7 @@ export default function ServiceWorkspace({tenantId,section,branch,branches,onCha
  return <>{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="diningBatch"?<DiningBatch tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="calendar"?<ReservationCalendar tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="templates"?<TemplateEditor tenantId={tenantId}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged}/>}</>;
 }
 type Session={id:string;created_at:string;last_seen_at:string;expires_at:string;current:boolean};
-type Customer={id:string;display_name:string|null;email:string;created_at:string};
+type Customer={id:string;display_name:string|null;created_at:string};
 export function UtilityWorkspace({tenantId,section}:{tenantId:string;section:string}){
  const [data,setData]=useState<{sessions?:Session[];customers?:Customer[];database?:string;migrations?:number;mailConfigured?:boolean;checkedAt?:string}>({}),[error,setError]=useState(""),[loading,setLoading]=useState(true);
  async function refresh(){const result=await operationApi(tenantId,section);setData(result);setError("");setLoading(false);}
