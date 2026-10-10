@@ -22,7 +22,7 @@ export async function prepareDiningResource(db:PoolConnection,tenant:string,modu
   if(!input.branchId)throw new ResourceError('INVALID_BRANCH');
   for(const [key,role] of [['waiterId','waiter'],['supervisorId','manager']]){
    if(!d[key])continue;
-   const [staff]=await db.execute<RowDataPacket[]>("SELECT r.id FROM restaurant_resources r JOIN memberships m ON m.tenant_id=r.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.userId')) AND m.status='active' AND m.role IN ("+(role==='manager'?"'manager','owner'":"'waiter'")+") WHERE r.tenant_id=? AND r.id=? AND r.kind='employee' AND r.archived=FALSE AND r.status='active' AND (r.branch_id=? OR r.branch_id IS NULL) LIMIT 1 LOCK IN SHARE MODE",[tenant,d[key],input.branchId]);
+   const [staff]=await db.execute<RowDataPacket[]>("SELECT r.id FROM restaurant_resources r JOIN memberships m ON m.tenant_id=r.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.userId')) AND m.status='active' AND m.role IN ("+(role==='manager'?"'manager','owner','supervisor'":"'waiter'")+") WHERE r.tenant_id=? AND r.id=? AND r.kind='employee' AND r.archived=FALSE AND r.status='active' AND (r.branch_id=? OR r.branch_id IS NULL) LIMIT 1 LOCK IN SHARE MODE",[tenant,d[key],input.branchId]);
    if(!staff.length)throw new ResourceError('INVALID_SECTION_STAFF');
   }
  }
