@@ -32,7 +32,8 @@ export async function POST(request:Request){
    const date=typeof body.scheduledAt==='string'?Date.parse(body.scheduledAt):NaN;
    if(!Number.isFinite(date)||date<Date.now()+15*60*1000||date>Date.now()+90*86400000||!Number.isInteger(body.partySize)||body.partySize<1||body.partySize>100||typeof body.phone!=='string'||(!/^\+?[\d ()-]{7,40}$/.test(body.phone)||body.phone.replace(/\D/g,'').length<7))throw new ResourceError("INVALID_INPUT");
   }
-  const data=waiter?{tableId:body.tableId,notes}:{phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),notes};
+  const data=waiter?{tableId:body.tableId,sectionId:body.sectionId||null,notes}:{tableId:body.tableId||null,sectionId:body.sectionId||null,phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),notes};
+  if(body.action==="reservation"){const [sections]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL)",[tenant,body.branchId]);if(sections.length&&!body.sectionId)throw new ResourceError("SECTION_REQUIRED");}
   const fingerprint=createHash('sha256').update(JSON.stringify({branchId:body.branchId,data})).digest('hex'),lookup=user+':'+body.requestKey;
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,JSON_UNQUOTE(JSON_EXTRACT(data,'$.requestFingerprint')) AS fingerprint FROM restaurant_resources WHERE tenant_id=? AND kind=? AND lookup_key=? FOR UPDATE",[tenant,kind,lookup]);
   if(existing.length){if(existing[0].fingerprint!==fingerprint)throw new ResourceError("CONFLICT");await db.commit();return NextResponse.json({ok:true,id:existing[0].id},{status:200});}

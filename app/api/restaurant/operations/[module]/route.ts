@@ -7,7 +7,8 @@ import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
-import {resourceRows,saveResource,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
+import {parseData,resourceRows,saveResource,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
+import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
 
 export const runtime="nodejs";
@@ -45,6 +46,7 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
  }
  return {summary:{...serviceCounts,sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
 }
+async function labelledTables(db:PoolConnection,tenantId:string,branch:string|null){const [tables,sections]=await Promise.all([resourceRows(db,tenantId,"tables",branch),resourceRows(db,tenantId,"sections",branch)]);return tables.map(t=>({...t,name:(sections.find(s=>s.id===t.data.sectionId)?.name||"الصالة الرئيسية")+" · "+t.name}));}
 export async function GET(request:Request,{params}:{params:Promise<{module:string}>}){
  let db:PoolConnection|undefined;
  try{
@@ -56,11 +58,12 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
     const config=resourceModules[field.ref!];
     if(config.roles.includes(ctx.role)&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled))refs[field.ref!]=await resourceRows(db,ctx.tenantId,field.ref!,branch);
    }
-   const resources=await resourceRows(db,ctx.tenantId,module,branch);
+   let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
+   if(module==="reservations"){const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");if(from||to){const a=Date.parse(from||""),b=Date.parse(to||"");if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>93*86400000)throw new ResourceError("INVALID_DATE_RANGE");const [found]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))>=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))<? ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt')) LIMIT 1001",[ctx.tenantId,...(branch?[branch]:[]),new Date(a).toISOString(),new Date(b).toISOString()]);truncated=found.length>1000;resources=found.slice(0,1000).map(r=>({id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),data:parseData(r.data),version:Number(r.version),created_at:String(r.created_at)}));}}
    if(module==="storefront"&&resources.length){const [appearance]=await db.execute<RowDataPacket[]>("SELECT template_key FROM restaurant_menu_appearance WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);resources[0].data.menuTheme=String(appearance[0]?.template_key??resources[0].data.menuTheme??"sufra");}
-   return NextResponse.json({ok:true,resources,references:refs});
+   return NextResponse.json({ok:true,resources,references:refs,truncated});
   }
-  if(["orders","pos","kds"].includes(module)){const menu=module==="pos"?await resourceRows(db,ctx.tenantId,"menu",branch):[];return NextResponse.json({ok:true,orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,options:module==="pos"?await menuOptions(db,ctx.tenantId,menu.map(i=>i.id)):{},tables:module==="pos"&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await resourceRows(db,ctx.tenantId,"tables",branch):[]});}
+  if(["orders","pos","kds"].includes(module)){const menu=module==="pos"?await resourceRows(db,ctx.tenantId,"menu",branch):[];return NextResponse.json({ok:true,orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,options:module==="pos"?await menuOptions(db,ctx.tenantId,menu.map(i=>i.id)):{},tables:module==="pos"&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
   if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch)});
   if(module==="reports"){
    const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");
@@ -84,9 +87,11 @@ async function mutate(request:Request,module:string,method:string){
  try{
   const ctx=await authorize(request,module,true),body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
+  if(module==="sections"&&!["owner","manager"].includes(ctx.role))throw new ResourceError("FORBIDDEN");
   db=await connection();await db.beginTransaction();
+  if(["tables","sections"].includes(module))await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[ctx.tenantId]);
   let result;
-  if(Object.hasOwn(resourceModules,module)){
+  if(module==="sections"&&method==="POST"&&body.sections){result=await createDiningBatch(db,ctx.tenantId,ctx.user,ctx.role,body);}else if(Object.hasOwn(resourceModules,module)){
    if(method==="POST"&&body.id!==undefined||method!=="POST"&&typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
    if(module==="storefront"&&method!=="DELETE"){
     for(const [key,feature] of [["logoUrl","branding.logo"],["menuTheme","branding.menu_theme"],["fontPreset","branding.custom_font"],["platformBranding","branding.white_label"]]){
