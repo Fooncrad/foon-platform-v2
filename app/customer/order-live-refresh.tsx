@@ -9,6 +9,7 @@ export default function OrderLiveRefresh(){
   let alive=true;
   let previous:string|null=null;
   let hadFailure=false;
+  let reservationsWereUnavailable=false;
   let inFlight=false;
   async function check(){
    if(!alive||inFlight||document.visibilityState!=="visible"||!navigator.onLine)return;
@@ -16,9 +17,11 @@ export default function OrderLiveRefresh(){
    try{
     const response=await fetch("/api/customer/order-revision",{cache:"no-store"});
     if(!response.ok){hadFailure=true;return;}
-    const body=await response.json() as {revision?:string};
+    const body=await response.json() as {revision?:string;reservationsAvailable?:boolean};
     if(typeof body.revision!=="string")return;
-    if((previous!==null&&previous!==body.revision)||hadFailure)router.refresh();
+    const recovered=reservationsWereUnavailable&&body.reservationsAvailable===true;
+    if((previous!==null&&previous!==body.revision)||hadFailure||recovered)router.refresh();
+    reservationsWereUnavailable=body.reservationsAvailable===false;
     hadFailure=false;
     previous=body.revision;
    }catch{hadFailure=true;}
