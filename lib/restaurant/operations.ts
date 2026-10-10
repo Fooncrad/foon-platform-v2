@@ -118,6 +118,19 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(body.channel==="dine_in"&&(!tableId||!Number.isInteger(body.partySize)||Number(body.partySize)<1))throw new ResourceError("DINING_DETAILS_REQUIRED");
  const dining=tableId?await diningTable(db,tenantId,branchId,tableId,Number(body.partySize)):null;
  if(tableId){const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='dining_table' AND status<>'inactive' AND archived=FALSE LIMIT 1 LOCK IN SHARE MODE",[tableId,tenantId]);if(!rows.length||rows[0].branch_id&&rows[0].branch_id!==branchId)throw new ResourceError("TABLE_NOT_FOUND");}
+ if(tableId){
+  // Serialize orders for a table to prevent two concurrent checkouts from taking it.
+  const [lockedTable]=await db.execute<RowDataPacket[]>(
+   "SELECT id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='dining_table' AND archived=FALSE FOR UPDATE",
+   [tableId,tenantId]
+  );
+  if(!lockedTable.length)throw new ResourceError("TABLE_NOT_FOUND");
+  const [unfinished]=await db.execute<RowDataPacket[]>(
+   "SELECT id FROM restaurant_orders WHERE tenant_id=? AND branch_id=? AND table_id=? AND status NOT IN ('completed','cancelled') LIMIT 1 FOR UPDATE",
+   [tenantId,branchId,tableId]
+  );
+  if(unfinished.length)throw new ResourceError("TABLE_HAS_UNFINISHED_ORDER");
+ }
  let couponId:string|null=null,discount=0;
  if(body.couponCode){
   const [rows]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='coupon' AND lookup_key=? AND status='active' AND archived=FALSE FOR UPDATE",[tenantId,String(body.couponCode).trim().toUpperCase()]);
