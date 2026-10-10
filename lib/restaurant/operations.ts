@@ -120,7 +120,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(tableId){
   // Serialize orders for a table to prevent two concurrent checkouts from taking it.
   const [unfinished]=await db.execute<RowDataPacket[]>(
-   "SELECT id FROM restaurant_orders WHERE tenant_id=? AND branch_id=? AND table_id=? AND status NOT IN ('completed','cancelled','delivered','refunded','rejected') LIMIT 1 FOR UPDATE",
+   "SELECT id FROM restaurant_orders WHERE tenant_id=? AND branch_id=? AND table_id=? AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected')) LIMIT 1 FOR UPDATE",
    [tenantId,branchId,tableId]
   );
   if(unfinished.length)throw new ResourceError("TABLE_HAS_UNFINISHED_ORDER");
