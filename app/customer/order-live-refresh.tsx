@@ -22,7 +22,7 @@ export default function OrderLiveRefresh(){
     const response=await fetch("/api/customer/order-revision",{cache:"no-store",signal:controller.signal});
     if(!response.ok){hadFailure=true;return;}
     const body=await response.json() as {revision?:string;reservationsAvailable?:boolean};
-    if(typeof body.revision!=="string")return;
+    if(typeof body.revision!=="string"){hadFailure=true;return;}
     const recovered=reservationsWereUnavailable&&body.reservationsAvailable===true;
     if((previous!==null&&previous!==body.revision)||hadFailure||recovered)router.refresh();
     reservationsWereUnavailable=body.reservationsAvailable===false;
