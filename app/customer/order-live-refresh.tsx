@@ -8,18 +8,20 @@ export default function OrderLiveRefresh(){
  useEffect(()=>{
   let alive=true;
   let previous:string|null=null;
+  let hadFailure=false;
   let inFlight=false;
   async function check(){
    if(!alive||inFlight||document.visibilityState!=="visible"||!navigator.onLine)return;
    inFlight=true;
    try{
     const response=await fetch("/api/customer/order-revision",{cache:"no-store"});
-    if(!response.ok)return;
+    if(!response.ok){hadFailure=true;return;}
     const body=await response.json() as {revision?:string};
     if(typeof body.revision!=="string")return;
-    if(previous!==null&&previous!==body.revision)router.refresh();
+    if((previous!==null&&previous!==body.revision)||hadFailure)router.refresh();
+    hadFailure=false;
     previous=body.revision;
-   }catch{/* Keep the last known state when connectivity fails. */}
+   }catch{hadFailure=true;}
    finally{inFlight=false;}
   }
   void check();
