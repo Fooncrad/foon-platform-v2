@@ -69,7 +69,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).some(k=>k.startsWith('foon:pos:v1:')&&k.endsWith(':catalog')))).toBeTruthy();
  const beforeOffline=await page.request.get(origin+'/api/restaurant/operations/orders',{headers:{'x-foon-tenant':visualTenant.tenant}});const beforeOfflineCount=(await beforeOffline.json()).orders.length;
  await page.locator('.restaurantPosMenu article').filter({hasText:'قهوة المعاينة'}).getByRole('button').click();await page.context().setOffline(true);await expect(page.locator('.posConnection')).toContainText('دون اتصال');
- await page.getByRole('button',{name:'حفظ المسودة محليًا',exact:true}).click();await expect(page.getByRole('status')).toContainText('المسودة محفوظة');
+ await page.getByRole('button',{name:'حفظ المسودة محليًا',exact:true}).click();await expect(page.locator('.posTerminal').getByRole('status')).toContainText('المسودة محفوظة');
  await page.goto(origin+'/offline');await expect(page.getByRole('heading',{name:'نقطة البيع دون اتصال',exact:true})).toBeVisible();await expect(page.locator('.posTicketLines')).toContainText('قهوة المعاينة');
  await page.getByRole('button',{name:'زيادة كمية قهوة المعاينة',exact:true}).click();await page.reload();await expect(page.locator('.posQuantity b')).toHaveText('2');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-pos-offline-mobile.png',fullPage:true});
