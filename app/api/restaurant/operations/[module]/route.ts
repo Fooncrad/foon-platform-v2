@@ -29,7 +29,7 @@ async function authorize(request:Request,module:string,write:boolean){
 }
 function failure(error:unknown){
  const code=error instanceof ResourceError?error.code:(error as {code?:string})?.code==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":(error as {code?:string})?.code==="ER_LOCK_DEADLOCK"?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"?403:code.endsWith("_NOT_FOUND")?404:code==="CONFLICT"||code==="DUPLICATE_RESOURCE"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"?403:code.endsWith("_NOT_FOUND")?404:code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  return NextResponse.json({ok:false,code},{status});
 }
 async function connection(){const db=await database().getConnection();try{await db.query("SET time_zone='+00:00'");return db;}catch(error){db.release();throw error;}}
