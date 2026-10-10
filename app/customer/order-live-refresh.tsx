@@ -12,8 +12,10 @@ export default function OrderLiveRefresh(){
   let reservationsWereUnavailable=false;
   let inFlight=false;
   let activeController:AbortController|null=null;
+  let lastCheck=0;
   async function check(){
-   if(!alive||inFlight||document.visibilityState!=="visible"||!navigator.onLine)return;
+   if(!alive||inFlight||document.visibilityState!=="visible"||!navigator.onLine||Date.now()-lastCheck<1500)return;
+   lastCheck=Date.now();
    inFlight=true;
    const controller=new AbortController();
    activeController=controller;
