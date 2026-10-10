@@ -2,6 +2,7 @@ import type {ReactNode} from "react";
 export function MerchantIcon({name}:{name:string}){
  const paths:Record<string,ReactNode>={
   dashboard:<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+ calendar:<><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2"/></>,
   store:<><path d="M3 10V5h18v5M3 10c0 4 6 4 6 0 0 4 6 4 6 0 0 4 6 4 6 0M5 14v7h14v-7M10 21v-6h4v6"/></>,
   bag:<><rect x="4" y="7" width="16" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></>,
   wallet:<><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M15 14h3"/></>,

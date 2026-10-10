@@ -157,7 +157,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const admin=await register("operations-platform-admin");
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,200);
-  await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 6 MINUTE) WHERE user_id=?",[admin.user]);
+  await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
  }finally{server.kill();await db.end();}
 });
