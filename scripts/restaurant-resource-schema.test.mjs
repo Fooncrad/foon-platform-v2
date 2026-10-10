@@ -16,3 +16,19 @@ test("staff roles, coupon bounds and attendance chronology are constrained",()=>
  const coupon=validateResource("coupons",{name:"Offer",status:"active",data:{code:"save_10",discountType:"percent",value:10}});
  assert.equal(coupon.data.code,"SAVE_10");
 });
+
+test("waiter test fixture accepts syntactically valid email and rejects malformed email",()=>{
+ const waiter=validateResource("team",{name:"محمد",status:"active",data:{email:"m@gmil.com",role:"waiter",phone:"0569867000"}});
+ assert.equal(waiter.data.email,"m@gmil.com");
+ assert.equal(waiter.data.role,"waiter");
+ assert.equal(waiter.data.phone,"0569867000");
+ assert.throws(()=>validateResource("team",{name:"محمد",status:"active",data:{email:"invalid-email",role:"waiter"}}));
+});
+test("four dining sections validate independently without a database",()=>{
+ const names=["مدخنون – خارجي","غير مدخنين – خارجي","مدخنون – داخلي","غير مدخنين – داخلي"];
+ for(const name of names){
+  const section=validateResource("sections",{name,status:"active",data:{description:"قسم صالة تجريبي"}});
+  assert.equal(section.name,name);
+  assert.equal(section.status,"active");
+ }
+});
