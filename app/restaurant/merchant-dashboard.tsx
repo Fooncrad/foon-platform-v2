@@ -24,7 +24,7 @@ const modules:{key:Section;label:string;icon:string;feature?:string;roles:string
  {key:"tables",label:"الطاولات",icon:"table",feature:"tables",roles:["owner","manager","waiter"]},
  {key:"inventory",label:"المخزون والمشتريات",icon:"box",feature:"inventory",roles:["owner","manager","accountant"]},
  {key:"printers",label:"الطابعات والفواتير",icon:"wallet",feature:"departments",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
- {key:"team",label:"الموظفون والحضور",icon:"users",feature:"employees",roles:["owner","manager"]},
+ {key:"team",label:"إدارة الموظفين والصلاحيات",icon:"users",feature:"employees",roles:["owner","manager"]},
  {key:"marketing",label:"التسويق والحملات",icon:"trend",feature:"campaigns",roles:["owner","manager"]},
  {key:"reservations",label:"الحجوزات والانتظار",icon:"clock",feature:"reservations",roles:["owner","manager","waiter"]},
  {key:"reports",label:"التقارير",icon:"trend",feature:"analytics",roles:["owner","manager","accountant"]},
