@@ -13,7 +13,11 @@ export async function GET(){
    "SELECT id,status,payment_status,total,updated_at FROM restaurant_orders WHERE customer_user_id=? ORDER BY created_at DESC LIMIT 100",
    [userId]
   );
-  const revision=createHash("sha256").update(JSON.stringify(rows.map(row=>[row.id,row.status,row.payment_status,String(row.total),String(row.updated_at)]))).digest("hex");
+  const [reservations]=await database().execute<RowDataPacket[]>(
+   "SELECT id,status,version,created_at FROM restaurant_resources WHERE kind='reservation' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 50",
+   [userId]
+  );
+  const revision=createHash("sha256").update(JSON.stringify({orders:rows.map(row=>[row.id,row.status,row.payment_status,String(row.total),String(row.updated_at)]),reservations:reservations.map(row=>[row.id,row.status,row.version])})).digest("hex");
   return NextResponse.json({revision},{headers:{"Cache-Control":"no-store, private"}});
  }catch{
   return NextResponse.json({code:"ORDER_STATUS_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});
