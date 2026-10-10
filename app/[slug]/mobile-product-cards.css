@@ -4,10 +4,10 @@
 .publicMenuItem .publicMenuItemImage img{object-fit:cover}
 .publicMenu .publicMenuItem .publicMenuNoImage{display:grid;place-items:center;background:linear-gradient(145deg,#b59c6714,#9da9a814)}
 .publicMenuItemSummary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:3em}
-.publicMenu .publicMenuItem footer.publicMenuItemFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:12px;margin-top:auto}
+.publicMenu .publicMenuItem footer.publicMenuItemFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:12px;margin-top:auto;grid-column:1/-1;flex-wrap:wrap;min-width:0}
 .publicMenuProductPrice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;font-variant-numeric:tabular-nums}
 .publicMenuProductPrice del{font-size:12px;color:var(--public-muted);line-height:1.4;white-space:nowrap}
-.publicMenuProductPrice strong{font-size:18px;font-weight:750;line-height:1.4;white-space:nowrap;letter-spacing:0}
+.publicMenuProductPrice strong{font-size:18px;font-weight:750;line-height:1.4;white-space:normal;overflow-wrap:anywhere;letter-spacing:0}
 .publicMenuProductPrice small{font-size:.7em;font-weight:400;color:inherit;line-height:inherit;margin:0}
 .publicMenu .publicMenuItem .publicMenuCardCart{display:flex;justify-content:center;align-items:center;gap:6px;border-radius:12px;min-width:44px;min-height:44px;width:auto;height:auto;padding:9px 12px;background:var(--public-brand);color:var(--public-on-brand);flex-shrink:0}
 .publicMenu .publicMenuItem .publicMenuCardCart>span{display:inline;font-size:12px}
@@ -28,6 +28,8 @@
  .publicMenu .publicMenuItem .publicMenuProductPrice small{font-size:8px!important;line-height:inherit;margin:0}
  .publicMenu .publicMenuItem .publicMenuCardCart{width:100%!important;min-height:44px;height:44px;padding:0;border-radius:8px;gap:0}
  .publicMenu .publicMenuItem .publicMenuCardCart>span{display:none!important}
+ .publicMenu .publicMenuItem .publicMenuProductPrice[data-long=true] strong{font-size:9px!important}
+ .publicMenu .publicMenuItem .publicMenuProductPrice[data-long=true] small{display:block}
  .publicMenu .publicMenuViewToggle{display:none}
 }
 .publicMenuProductDialog{border:1px solid var(--public-line);border-radius:22px;padding:0;width:min(560px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:92dvh;background:var(--public-surface);color:var(--public-text);box-shadow:0 22px 90px #0006;overflow:hidden}

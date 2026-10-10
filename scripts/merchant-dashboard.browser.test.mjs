@@ -96,6 +96,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await expect(publicPage.getByLabel("كمية قهوة المعاينة",{exact:true})).toHaveValue("1");
   await publicPage.evaluate(()=>window.scrollTo(0,0));
   await publicPage.screenshot({path:"work/menu-"+template+"-desktop.png",fullPage:true});
+  expect(await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>nodes.every(n=>{const c=n.getBoundingClientRect(),p=n.querySelector('.publicMenuProductPrice strong').getBoundingClientRect(),b=n.querySelector('.publicMenuCardCart').getBoundingClientRect();return p.left>=c.left-1&&p.right<=c.right+1&&!(p.left<b.right&&p.right>b.left&&p.top<b.bottom&&p.bottom>b.top)}))).toBeTruthy();
   await publicPage.setViewportSize({width:390,height:844});
   expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await publicPage.screenshot({path:"work/menu-"+template+"-mobile.png",fullPage:true});
