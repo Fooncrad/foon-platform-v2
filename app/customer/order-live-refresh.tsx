@@ -22,13 +22,14 @@ export default function OrderLiveRefresh(){
     const response=await fetch("/api/customer/order-revision",{cache:"no-store",signal:controller.signal});
     if(!response.ok){hadFailure=true;return;}
     const body=await response.json() as {revision?:string;reservationsAvailable?:boolean};
+    if(!alive)return;
     if(typeof body.revision!=="string"){hadFailure=true;return;}
     const recovered=reservationsWereUnavailable&&body.reservationsAvailable===true;
     if((previous!==null&&previous!==body.revision)||hadFailure||recovered)router.refresh();
     reservationsWereUnavailable=body.reservationsAvailable===false;
     hadFailure=false;
     previous=body.revision;
-   }catch{hadFailure=true;}
+   }catch{if(alive)hadFailure=true;}
    finally{window.clearTimeout(timeout);if(activeController===controller)activeController=null;inFlight=false;}
   }
   void check();
