@@ -14,6 +14,7 @@ export async function GET(){
    [userId]
   );
   let reservations:RowDataPacket[]=[];
+  let reservationsAvailable=true;
   try{
    const [linked]=await database().execute<RowDataPacket[]>(
     "SELECT id,status,version,created_at FROM restaurant_resources WHERE kind='reservation' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 50",
@@ -21,10 +22,11 @@ export async function GET(){
    );
    reservations=linked;
   }catch(error){
+   reservationsAvailable=false;
    console.error("CUSTOMER_RESERVATION_REVISION_UNAVAILABLE",error);
   }
   const revision=createHash("sha256").update(JSON.stringify({orders:rows.map(row=>[row.id,row.status,row.payment_status,String(row.total),String(row.updated_at)]),reservations:reservations.map(row=>[row.id,row.status,row.version])})).digest("hex");
-  return NextResponse.json({revision},{headers:{"Cache-Control":"no-store, private"}});
+  return NextResponse.json({revision,reservationsAvailable},{headers:{"Cache-Control":"no-store, private"}});
  }catch{
   return NextResponse.json({code:"CUSTOMER_ACTIVITY_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});
  }
