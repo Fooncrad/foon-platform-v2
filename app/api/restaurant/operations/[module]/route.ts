@@ -97,7 +97,7 @@ async function mutate(request:Request,module:string,method:string){
  try{
   const ctx=await authorize(request,module,true),body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
-  if(module==="sections"&&!["owner","manager"].includes(ctx.role))throw new ResourceError("FORBIDDEN");
+  
   db=await connection();await db.beginTransaction();
   if(["tables","sections"].includes(module))await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[ctx.tenantId]);
   let result;
