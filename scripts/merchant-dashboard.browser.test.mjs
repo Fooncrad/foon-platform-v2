@@ -151,6 +151,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole('dialog',{name:'تفاصيل الحجز'}).getByRole('button',{name:'حفظ البيانات',exact:true}).click();
  await expect(page.getByRole('dialog',{name:'تفاصيل الحجز'})).toHaveCount(0);
  await expect(page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'})).toHaveAttribute('data-status','confirmed');
+ const bookingDay=new Date(nextDay.getTime()+3*3600000).toISOString().slice(0,10);await page.getByRole('button',{name:'عرض حجوزات '+bookingDay,exact:true}).click();
  await page.getByRole('button',{name:'أسبوع',exact:true}).click();await expect(page.locator('.calendarGrid-week')).toBeVisible();
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.screenshot({path:'work/merchant-reservations-calendar-mobile.png',fullPage:true});
