@@ -1,0 +1,39 @@
+name: FOON V2 Quality Gate
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: foon-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    name: Validate before Hostinger deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Validate resource schemas
+        run: npm run test:resources
+      - name: Validate TypeScript
+        run: npm run typecheck
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: Summarize quality gate
+        if: always()
+        run: |
+          echo "## FOON V2 deployment readiness" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow validates source code only. Hostinger deployment is a separate integration." >> "$GITHUB_STEP_SUMMARY"
