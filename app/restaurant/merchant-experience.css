@@ -13,6 +13,8 @@
 .restaurantApp :is(input,select,textarea):not([type=checkbox]):not([type=color]):not([type=file]){border-radius:12px}
 .restaurantApp :is(input,select,textarea):focus-visible{outline-width:2px;outline-offset:2px}
 .restaurantApp .restaurantResourceForm{background:#f8f9fb;border-radius:18px;padding:22px;gap:18px}
+.restaurantApp .restaurantListTools select{width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--rc-border);background:#fff;color:var(--rc-text);font-size:13px;line-height:1.5;border-radius:12px}
+.restaurantApp label.restaurantListTools{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,260px);align-items:center;font-size:12px;color:var(--rc-muted);gap:12px}
 .restaurantApp .restaurantEmptyMessage{padding:44px 22px;border-radius:18px;line-height:1.8}
 .restaurantApp :is(.restaurantResourceList article,.restaurantOrderCards article){--rc-state:#a15c12;--rc-state-bg:#fff5e5;border-radius:20px;box-shadow:0 4px 18px #18223004}
 .restaurantApp [data-status=confirmed],.restaurantApp [data-status=preparing]{--rc-state:#2e559c;--rc-state-bg:#ebf3ff}
@@ -49,3 +51,4 @@
 .restaurantApp .calendarEvent{border-radius:11px;box-shadow:0 2px 5px #18223004}.restaurantApp .calendarGrid{border-radius:18px}.restaurantApp .calendarNavigation button{border-radius:12px}.restaurantApp .calendarGrid-day .calendarEvent{max-width:none;padding:20px;border-radius:16px;gap:8px}.restaurantApp .calendarGrid-day .calendarEvent>b{font-size:18px}.restaurantApp .calendarGrid-day .calendarEvent>span{align-items:center}.restaurantApp .calendarGrid-day .calendarEvent em{padding:5px 10px;background:#ffffff80;border-radius:30px;font-size:11px}
 @media(max-width:680px){.restaurantApp .restaurantPanel{padding:18px;border-radius:19px}.restaurantApp .restaurantPanel>header{flex-wrap:wrap;align-items:flex-start}.restaurantApp .restaurantStatusFilters{width:100%;gap:3px}.restaurantApp .restaurantStatusFilters button{flex:1 1 auto;padding:8px 10px;min-width:44px}.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList{grid-template-columns:1fr}.restaurantApp .restaurantResourceForm{padding:16px}.restaurantApp .restaurantOrderCards article,.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article{padding:17px}.restaurantApp .calendarSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.restaurantApp .restaurantReservationSummary dl{grid-template-columns:1fr}.restaurantApp .restaurantResourceList article>header>div{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.restaurantApp button{transition:none!important}}
+@media(max-width:680px){.restaurantApp label.restaurantListTools{grid-template-columns:1fr;gap:7px}}
