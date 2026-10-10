@@ -4,7 +4,6 @@ import {database} from "@/lib/db/mysql";
 import Link from "next/link";
 import PublicMenu from "./public-menu";
 import {publicMenuData} from "@/lib/restaurant/public-menu";
-import "./public-menu.css";
 
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 
