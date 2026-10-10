@@ -34,7 +34,7 @@ export async function saveCanonicalMenu(db:PoolConnection,tenantId:string,actor:
   if(module!=="menuImages")await db.execute("UPDATE "+table+" SET enabled=FALSE WHERE id=? AND tenant_id=?",[id,tenantId]);
   await db.execute("INSERT INTO restaurant_resources(id,tenant_id,kind,name,status,data,archived) VALUES (?,?,?,?,?, ?,TRUE) ON DUPLICATE KEY UPDATE archived=TRUE,version=version+1",[id,tenantId,kind,previous.name,previous.status,JSON.stringify(previous.data)]);
  }else{
-  const input=validateResource(module,body);await branchExists(db,tenantId,input.branchId);
+  const input=validateResource(module,body);if(module==="menu"&&previous){const source=body.data as Record<string,unknown>|undefined;for(const key of ["oldPrice","calories","nutrition","quantity"])if(!source||!Object.hasOwn(source,key))input.data[key]=previous.data[key]??null;}await branchExists(db,tenantId,input.branchId);
   for(const field of resourceModules[module].fields.filter(f=>f.ref)){
    const value=input.data[field.key];if(!value)continue;
    const found=(await canonicalMenuRows(db,tenantId,field.ref!,null,String(value)))[0];
