@@ -10,13 +10,16 @@ function printResourceReceipt(row:StoredResource,kind:"customerInvoices"|"printe
  const doc=popup.document;
  doc.title=kind==="printers"?"اختبار الطابعة":"فاتورة العميل";
  const style=doc.createElement("style");
- style.textContent="@page{size:80mm auto;margin:4mm}body{font:14px Arial,sans-serif;direction:rtl;max-width:76mm;margin:0 auto;color:#111}h2{text-align:center}section{border-top:1px dashed #777;padding:8px 0}p{overflow-wrap:anywhere;margin:7px 0}small{display:block;text-align:center}";
+ const width=kind==="printers"&&String(row.data.paperWidth)==="58"?"58":"80";
+ style.textContent="@page{size:"+width+"mm auto;margin:3mm}body{font:13px Arial,sans-serif;direction:rtl;max-width:calc("+width+"mm - 6mm);margin:0 auto;color:#111}h2{text-align:center}section{border-top:1px dashed #777;padding:8px 0}p{overflow-wrap:anywhere;margin:7px 0}small{display:block;text-align:center}";
  doc.head.appendChild(style);
  const title=doc.createElement("h2");title.textContent=kind==="printers"?"اختبار إعداد الطابعة":"فاتورة العميل";doc.body.appendChild(title);
+ if(kind==="printers"&&row.data.headerText){const header=doc.createElement("p");header.textContent=String(row.data.headerText);doc.body.appendChild(header);}
  const heading=doc.createElement("p");heading.textContent=row.name;doc.body.appendChild(heading);
  const section=doc.createElement("section");doc.body.appendChild(section);
  const fields=kind==="printers"?[["الاتصال",row.data.connection],["العنوان",row.data.address],["عرض الورق",row.data.paperWidth]]:[["رقم الفاتورة",row.data.invoiceNumber],["المبلغ قبل الضريبة",row.data.subtotal],["الضريبة",row.data.tax],["الإجمالي",row.data.total],["الحالة",row.status]];
  for(const [label,value] of fields){const p=doc.createElement("p");p.textContent=label+": "+String(value??"—");section.appendChild(p);}
+ if(kind==="printers"&&row.data.footerText){const custom=doc.createElement("p");custom.textContent=String(row.data.footerText);doc.body.appendChild(custom);}
  const footer=doc.createElement("small");footer.textContent=new Date().toLocaleString("en-GB",{numberingSystem:"latn"});doc.body.appendChild(footer);
  popup.focus();popup.print();
 }
