@@ -25,6 +25,12 @@ jobs:
         run: npm ci
       - name: Validate resource schemas
         run: npm run test:resources
+      - name: Validate SQL migrations
+        run: npm run test:migrations
+      - name: Validate mail flows
+        run: npm run test:mail
+      - name: Validate admin permissions
+        run: npm run test:admin-policy
       - name: Validate TypeScript
         run: npm run typecheck
       - name: Build Next.js
