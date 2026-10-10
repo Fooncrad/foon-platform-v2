@@ -20,7 +20,9 @@ export async function POST(request:Request){
   if(!(await tenantEntitlement(tenantId,"orders")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.couponCode&&!(await tenantEntitlement(tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.channel==="dine_in"&&!(await tenantEntitlement(tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
-  const result=await createOrder(db,tenantId,user,{...body,customerName:String(stores[0].display_name||"عميل")},user);
+  const [profiles]=await db.execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[user]);
+  const customerPhone=typeof body.customerPhone==="string"&&body.customerPhone.trim()?body.customerPhone.trim():String(profiles[0]?.phone||"");
+  const result=await createOrder(db,tenantId,user,{...body,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
   await db.commit();return NextResponse.json({ok:true,...result},{status:201});
  }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"?403:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }
