@@ -46,6 +46,13 @@ export async function prepareDiningResource(db:PoolConnection,tenant:string,modu
   d.scheduledAt=new Date(String(d.scheduledAt)).toISOString();
   d.durationMinutes=d.durationMinutes??90;
   if(d.tableId&&['pending','confirmed','seated'].includes(input.status)){
+   const [unfinished]=await db.execute<RowDataPacket[]>(
+    "SELECT id FROM restaurant_orders WHERE tenant_id=? AND table_id=? AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected')) LIMIT 1 FOR UPDATE",
+    [tenant,d.tableId]
+   );
+   if(unfinished.length)throw new ResourceError('TABLE_HAS_UNFINISHED_ORDER');
+  }
+  if(d.tableId&&['pending','confirmed','seated'].includes(input.status)){
    const start=Date.parse(String(d.scheduledAt)),end=start+Number(d.durationMinutes)*60000;
    const [conflicts]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=? AND id<>? FOR UPDATE",[tenant,d.tableId,id]);
    if(conflicts.some(row=>{const other=json(row.data),a=Date.parse(String(other.scheduledAt)),b=a+Number(other.durationMinutes??90)*60000;return start<b&&end>a;}))throw new ResourceError('BOOKING_CONFLICT');
