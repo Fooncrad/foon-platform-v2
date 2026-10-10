@@ -13,7 +13,7 @@ import "./merchant-experience.css";
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;enabled:boolean;limit:number|null};
 export type MerchantData={tenantId:string;name:string;slug:string;role:string;adminAccess:boolean;date:string;reportDay:string;branches:Branch[];features:Feature[];subscription:{name:string;status:string;endsAt:string|null}|null;customerCount:number|null;tenantChoices:{id:string;name:string}[]};
-type Section="overview"|"branches"|"orders"|"pos"|"kds"|"menu"|"tables"|"inventory"|"team"|"marketing"|"reservations"|"subscription"|"customers"|"storefront"|"remote"|"security"|"health"|"payments"|"reports";
+type Section="overview"|"branches"|"orders"|"pos"|"kds"|"menu"|"tables"|"inventory"|"team"|"marketing"|"reservations"|"subscription"|"customers"|"storefront"|"remote"|"security"|"health"|"payments"|"reports"|"printers";
 const modules:{key:Section;label:string;icon:string;feature?:string;roles:string[]}[]=[
  {key:"overview",label:"نظرة عامة",icon:"dashboard",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
  {key:"branches",label:"الفروع والإعدادات",icon:"store",roles:["owner","manager"]},
@@ -23,6 +23,7 @@ const modules:{key:Section;label:string;icon:string;feature?:string;roles:string
  {key:"menu",label:"المنيو والأصناف",icon:"menu",feature:"digital_menu",roles:["owner","manager"]},
  {key:"tables",label:"الطاولات",icon:"table",feature:"tables",roles:["owner","manager","waiter"]},
  {key:"inventory",label:"المخزون والمشتريات",icon:"box",feature:"inventory",roles:["owner","manager","accountant"]},
+ {key:"printers",label:"الطابعات والفواتير",icon:"wallet",feature:"departments",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
  {key:"team",label:"الموظفون والحضور",icon:"users",feature:"employees",roles:["owner","manager"]},
  {key:"marketing",label:"التسويق والحملات",icon:"trend",feature:"campaigns",roles:["owner","manager"]},
  {key:"reservations",label:"الحجوزات والانتظار",icon:"clock",feature:"reservations",roles:["owner","manager","waiter"]},
