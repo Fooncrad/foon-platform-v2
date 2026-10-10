@@ -2,17 +2,16 @@
 import {useEffect} from "react";
 import {useRouter} from "next/navigation";
 
+/** Refresh server-rendered customer data only when an order update is signaled.
+ * Background polling should use a lightweight order-status endpoint rather than
+ * refreshing the entire customer page on a fixed interval.
+ */
 export default function OrderLiveRefresh(){
  const router=useRouter();
  useEffect(()=>{
-  let active=true;
-  const refresh=()=>{if(active&&document.visibilityState==="visible"&&navigator.onLine)router.refresh();};
-  const timer=window.setInterval(refresh,10000);
-  const onVisibility=()=>{if(document.visibilityState==="visible")refresh();};
-  document.addEventListener("visibilitychange",onVisibility);
-  window.addEventListener("focus",refresh);
-  window.addEventListener("online",refresh);
-  return()=>{active=false;window.clearInterval(timer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);};
+  const onUpdate=()=>router.refresh();
+  window.addEventListener("foon:customer-order-updated",onUpdate);
+  return()=>window.removeEventListener("foon:customer-order-updated",onUpdate);
  },[router]);
  return null;
 }
