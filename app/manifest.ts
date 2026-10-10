@@ -1,0 +1,2 @@
+import type {MetadataRoute} from 'next';
+export default function manifest():MetadataRoute.Manifest{return{name:'FOON · تشغيل المطاعم',short_name:'FOON',description:'إدارة المطاعم ونقطة البيع',lang:'ar',dir:'rtl',start_url:'/restaurant',scope:'/',display:'standalone',background_color:'#f6f7f9',theme_color:'#111c2e',icons:[{src:'/pwa/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/pwa/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'},{src:'/pwa/icon-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}]}}

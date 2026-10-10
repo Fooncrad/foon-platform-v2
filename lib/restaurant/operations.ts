@@ -10,6 +10,11 @@ export async function resourceRows(db:PoolConnection,tenantId:string,module:stri
  if(canonicalMenuModules.includes(module))return canonicalMenuRows(db,tenantId,module,branchId);
  const config=resourceModules[module];
  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE"+(branchId?" AND (branch_id=? OR branch_id IS NULL)":"")+" ORDER BY created_at DESC LIMIT 200",branchId?[tenantId,config.kind,branchId]:[tenantId,config.kind]);
+ if(["reservations","waiterCalls","waitlist"].includes(module)){
+  const ids=rows.map(r=>String(parseData(r.data).customerUserId||'')).filter(Boolean);
+  const contacts=ids.length?(await db.execute<RowDataPacket[]>("SELECT u.id,u.email FROM users u JOIN tenant_customers tc ON tc.user_id=u.id AND tc.tenant_id=? WHERE u.id IN ("+ids.map(()=>"?").join(",")+")",[tenantId,...ids]))[0]:[];
+  return rows.map(r=>{const data=parseData(r.data),contact=contacts.find(c=>c.id===data.customerUserId);return {...r,id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),created_at:String(r.created_at),data:{...data,email:contact?String(contact.email):data.email||null},version:Number(r.version)}}) as StoredResource[];
+ }
  return rows.map(r=>({...r,data:parseData(r.data),version:Number(r.version)})) as StoredResource[];
 }
 export async function branchExists(db:PoolConnection,tenantId:string,branchId:string|null,activeOnly=true){
@@ -43,7 +48,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  const diningLookup=await prepareDiningResource(db,tenantId,module,input,id);
  let lookup:string|null=diningLookup??(config.singleton?"config":module==="coupons"?String(input.data.code):null);
- if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
+ if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId","email"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
  if(module==="team"){
   const email=String(input.data.email).toLowerCase(),memberRole=String(input.data.role);
   if(role!=="owner"&&memberRole==="manager")throw new ResourceError("FORBIDDEN");
@@ -77,10 +82,10 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  const values:string[]=[tenantId];let filter="";
  if(branchId){filter+=" AND branch_id=?";values.push(branchId);}
  if(role==="driver")filter+=" AND channel='delivery'";
- const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,currency,version,customer_name,customer_phone,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
+ const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,currency,version,customer_name,customer_phone,customer_email,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
  if(!orders.length)return [];
  const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
- return orders.map(o=>({...o,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null})),version:Number(o.version)}));
+ return orders.map(o=>({...o,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,customer_email:["owner","manager","cashier","waiter","driver","accountant"].includes(role)?o.customer_email:null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null})),version:Number(o.version)}));
 }
 export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
  const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
@@ -90,7 +95,8 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const requestKey=body.requestKey==null?null:String(body.requestKey);
  if(requestKey&&!/^[a-f0-9-]{36}$/i.test(requestKey))throw new ResourceError("INVALID_REQUEST_KEY");
  if(cart.some(item=>item.options!==undefined&&(!Array.isArray(item.options)||item.options.length>100||item.options.some(id=>typeof id!=="string"||id.length>36))))throw new ResourceError("INVALID_OPTIONS");
- const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
+ if(body.customerEmail!=null&&(typeof body.customerEmail!=="string"||body.customerEmail.length>254||body.customerEmail.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.customerEmail.trim())))throw new ResourceError("INVALID_EMAIL");
+ const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,...(body.customerEmail&&!customerId?{customerEmail:body.customerEmail}:{}),couponCode:body.couponCode??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
  if(requestKey){
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,total,request_fingerprint FROM restaurant_orders WHERE tenant_id=? AND created_by=? AND request_key=? FOR UPDATE",[tenantId,actor,requestKey]);
@@ -129,7 +135,9 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const customerName=body.customerName==null?null:String(body.customerName).trim(),phone=body.customerPhone==null?null:String(body.customerPhone).trim();
  if((customerName?.length??0)>180||(phone?.length??0)>40)throw new ResourceError("INVALID_INPUT");
  const id=randomUUID();
- await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,dining?.sectionId??null,dining?Number(body.partySize):null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,(subtotal-discount)/100]);
+ let customerEmail=typeof body.customerEmail==="string"?body.customerEmail.trim().toLowerCase()||null:null;
+ if(customerId){const [contacts]=await db.execute<RowDataPacket[]>("SELECT u.email FROM users u JOIN tenant_customers tc ON tc.user_id=u.id AND tc.tenant_id=? WHERE u.id=? LIMIT 1",[tenantId,customerId]);if(!contacts.length)throw new ResourceError("FORBIDDEN");customerEmail=String(contacts[0].email);}
+ await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_email,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,dining?.sectionId??null,dining?Number(body.partySize):null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerEmail,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,(subtotal-discount)/100]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
  await audit(db,tenantId,actor,"order.create",id,{total:(subtotal-discount)/100});
  return {id,total:(subtotal-discount)/100};

@@ -56,11 +56,28 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
+ await page.getByRole('button',{name:'تكبير القسم',exact:true}).click();await expect(page.locator('.restaurantApp')).toHaveAttribute('data-expanded','true');await page.keyboard.press('Escape');await expect(page.locator('.restaurantApp')).toHaveAttribute('data-expanded','false');
  await page.locator(".restaurantPosMenu article").filter({hasText:"قهوة المعاينة"}).getByRole("button").click();
+ await page.locator('.posGuestFields summary').click();await page.getByLabel('بريد العميل',{exact:true}).fill('walk-in@test.example');
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
  await expect(page.locator(".restaurantOrderCards").getByText("مدفوع",{exact:true})).toBeVisible();
+ await expect(page.locator('.restaurantOrderCards')).toContainText('walk-in@test.example');
+ await page.screenshot({path:'work/merchant-pos-terminal-desktop.png',fullPage:true});
+ await page.evaluate(async()=>{await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}))});
+ await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).some(k=>k.startsWith('foon:pos:v1:')&&k.endsWith(':catalog')))).toBeTruthy();
+ const beforeOffline=await page.request.get(origin+'/api/restaurant/operations/orders',{headers:{'x-foon-tenant':visualTenant.tenant}});const beforeOfflineCount=(await beforeOffline.json()).orders.length;
+ await page.locator('.restaurantPosMenu article').filter({hasText:'قهوة المعاينة'}).getByRole('button').click();await page.context().setOffline(true);await expect(page.locator('.posConnection')).toContainText('دون اتصال');
+ await page.getByRole('button',{name:'حفظ المسودة محليًا',exact:true}).click();await expect(page.getByRole('status')).toContainText('المسودة محفوظة');
+ await page.goto(origin+'/offline');await expect(page.getByRole('heading',{name:'نقطة البيع دون اتصال',exact:true})).toBeVisible();await expect(page.locator('.posTicketLines')).toContainText('قهوة المعاينة');
+ await page.getByRole('button',{name:'زيادة كمية قهوة المعاينة',exact:true}).click();await page.reload();await expect(page.locator('.posQuantity b')).toHaveText('2');
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-pos-offline-mobile.png',fullPage:true});
+ expect(await page.evaluate(async()=>{const keys=await caches.keys();for(const k of keys){const cache=await caches.open(k);for(const r of await cache.keys()){const p=new URL(r.url).pathname;if(p!=='/offline'&&!p.startsWith('/_next/static/')&&!p.startsWith('/pwa/'))return false}}return true})).toBeTruthy();
+ await page.context().setOffline(false);await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/restaurant');await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'نقطة البيع',exact:true}).click();await expect(page.locator('.posQuantity b')).toHaveText('2');
+ const afterOffline=await page.request.get(origin+'/api/restaurant/operations/orders',{headers:{'x-foon-tenant':visualTenant.tenant}});expect((await afterOffline.json()).orders.length).toBe(beforeOfflineCount);
+ await page.getByRole('button',{name:'تقليل كمية قهوة المعاينة',exact:true}).click();await page.getByRole('button',{name:'تقليل كمية قهوة المعاينة',exact:true}).click();await page.setViewportSize({width:1440,height:1000});
+ const appManifest=await page.request.get(origin+'/manifest.webmanifest');expect(appManifest.status()).toBe(200);expect((await appManifest.json()).display).toBe('standalone');for(const size of [192,512]){const icon=await page.request.get(origin+'/pwa/icon-'+size+'.png');expect(icon.status()).toBe(200);expect((await icon.body()).readUInt32BE(16)).toBe(size)}
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 ر.س",{exact:true})).toBeVisible();
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
@@ -131,6 +148,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel('عدد الطاولات',{exact:true}).fill('3');
  await page.getByRole('button',{name:'إنشاء الدفعة',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('تم إنشاء 3 طاولة');
+ await page.locator('.restaurantStatusFilters').getByRole('button',{name:'الطاولات',exact:true}).click();await expect(page.locator('.restaurantDiningSummary').first()).toBeVisible();await page.screenshot({path:'work/merchant-table-cards-desktop.png',fullPage:true});
  const floors=await page.request.get(origin+'/api/restaurant/operations/sections',{headers:{'x-foon-tenant':visualTenant.tenant}});const familySection=(await floors.json()).resources.find(r=>r.name==='صالة العائلات').id;
  await page.screenshot({path:'work/merchant-dining-batch-desktop.png',fullPage:true});
  const dining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة 7',branchId:visualTenant.branch,status:'available',data:{sectionId:familySection,number:7,capacity:4}}});expect(dining.status()).toBe(201);

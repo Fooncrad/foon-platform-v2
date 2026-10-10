@@ -4,6 +4,8 @@ import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 import {resourceModules} from "./restaurant-resource-schema.mjs";
 import {randomUUID} from "node:crypto";
+import {readFile} from 'node:fs/promises';
+import {splitSqlStatements} from './sql-statements.mjs';
 const origin="http://localhost:3103";
 test("restaurant operations preserve tenant, role, plan, pricing and transactional integrity",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
@@ -58,10 +60,13 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   inventory=await resource(a,"inventory",undefined,"GET");assert.equal(inventory.body.resources[0].data.quantity,3);
   const coupon=await save(a,"coupons","Save",{code:"SAVE10",discountType:"percent",value:10,usageLimit:1});
   assert.ok(coupon);
-  const requestKey=randomUUID(),orderPayload={branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,couponCode:"SAVE10",requestKey,total:0,items:[{id:item,quantity:2,price:0}]};
+  const requestKey=randomUUID(),orderPayload={branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,customerEmail:'walk-in@test.example',couponCode:"SAVE10",requestKey,total:0,items:[{id:item,quantity:2,price:0}]};
   const order=await resource(a,"pos",orderPayload);
   assert.equal(order.status,201,JSON.stringify(order.body));assert.equal(order.body.total,18);
   const replay=await resource(a,"pos",orderPayload);assert.equal(replay.status,201);assert.equal(replay.body.id,order.body.id);
+  assert.equal((await resource(a,'pos',{...orderPayload,customerEmail:'different@test.example'})).body.code,'CONFLICT');
+  assert.equal((await resource(a,'pos',{...orderPayload,requestKey:randomUUID(),customerEmail:'invalid'})).status,400);
+  assert.equal((await resource(a,'orders',undefined,'GET')).body.orders.find(o=>o.id===order.body.id).customer_email,'walk-in@test.example');
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",couponCode:"SAVE10",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,a.cookie,b.tenant)).status,403);
   assert.equal((await resource(a,"categories",{id:categoryB,version:1},"DELETE")).status,404);
@@ -69,6 +74,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
   const kitchen=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchen.status,200);assert.equal(kitchen.body.orders[0].total,null);assert.equal(kitchen.body.orders[0].customer_phone,null);
+  assert.equal(kitchen.body.orders[0].customer_email,null);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:1,paymentStatus:"paid"},"PATCH")).status,200);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:2,status:"cancelled"},"PATCH")).body.code,"REFUND_REQUIRED");
   assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:2,status:"preparing"},staff.cookie,a.tenant)).status,200);
@@ -120,11 +126,15 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const replayCall=await call("/api/customer/services","POST",waiterPayload,customer.cookie);assert.equal(replayCall.status,200);assert.equal(replayCall.body.id,waiterCall.body.id);
   assert.equal((await call("/api/customer/services","POST",{...waiterPayload,requestKey:randomUUID()},customer.cookie)).status,429);
   const calls=await resource(a,"waiterCalls",undefined,"GET");assert.equal(calls.body.resources[0].status,"pending");assert.equal(calls.body.resources[0].data.tableId,table);
+  assert.equal(calls.body.resources[0].data.email,'operations-customer@test.example');
   assert.equal((await call("/api/restaurant/operations/waiterCalls","GET",undefined,customer.cookie,a.tenant)).status,403);
   const bookingPayload={storeSlug:"operations-owner-a",branchId:a.branch,action:"reservation",sectionId:family,partySize:3,phone:"0500000000",scheduledAt:new Date(Date.now()+86400000).toISOString(),requestKey:randomUUID()};
   assert.equal((await call("/api/customer/services","POST",{...bookingPayload,scheduledAt:new Date(Date.now()-60000).toISOString()},customer.cookie)).status,400);
   const booking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);assert.equal(booking.status,201,JSON.stringify(booking.body));
   const savedBookings=await resource(a,"reservations",undefined,"GET");assert.equal(savedBookings.body.resources.find(row=>row.id===booking.body.id).status,"pending");
+  await db.execute("UPDATE restaurant_resources SET data=JSON_REMOVE(data,'$.email') WHERE id=?",[booking.body.id]);
+  assert.equal((await resource(a,'reservations',undefined,'GET')).body.resources.find(r=>r.id===booking.body.id).data.email,'operations-customer@test.example');
+  const legacyRange=await call('/api/restaurant/operations/reservations?from='+encodeURIComponent(new Date(Date.now()).toISOString())+'&to='+encodeURIComponent(new Date(Date.now()+3*86400000).toISOString()),'GET',undefined,a.cookie,a.tenant);assert.equal(legacyRange.body.resources.find(r=>r.id===booking.body.id).data.email,'operations-customer@test.example');
   const serviceOverview=await resource(a,"overview",undefined,"GET");assert.equal(serviceOverview.body.summary.waiterCalls,1);assert.equal(serviceOverview.body.summary.reservations,1);
   const bookingTime=new Date(Date.now()+2*86400000).toISOString();
   const allocated=await save(a,"reservations","Allocated guest",{partySize:2,scheduledAt:bookingTime,durationMinutes:90,sectionId:family,tableId:diningTable},"confirmed");assert.ok(allocated);
@@ -135,6 +145,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const waiterAccount=await register("operations-floor-waiter"),supervisorAccount=await register("operations-floor-supervisor");
   const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterAccount.email,role:"waiter"}),supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorAccount.email,role:"manager"});
   const assignment=await resource(a,"sections",{id:family,version:1,name:"Families",status:"active",branchId:a.branch,data:{waiterId:waiterEmployee,supervisorId:supervisorEmployee}},"PATCH");assert.equal(assignment.status,200,JSON.stringify(assignment.body));
+  const labelled=(await resource(a,'tables',undefined,'GET')).body.references.staffLabels;assert.ok(labelled.some(s=>s.name==='Floor waiter'));assert.ok(labelled.every(s=>!s.email&&!s.data));
   assert.equal((await resource(a,"sections",{name:"Wrong role",status:"active",branchId:a.branch,data:{waiterId:supervisorEmployee}})).body.code,"INVALID_SECTION_STAFF");
   assert.equal((await call("/api/restaurant/operations/sections","POST",{branchId:a.branch,sections:[{name:"Unauthorised",start:1,count:1,capacity:4}]},waiterAccount.cookie,a.tenant)).status,403);
   const dinePayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"dine_in",items:[{id:item,quantity:1,options:[option]}]};
@@ -148,6 +159,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie)).status,403);
   const placed=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",total:0,items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(placed.status,201);assert.equal(placed.body.total,22);
   const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);
+  await db.execute('UPDATE restaurant_orders SET customer_email=NULL WHERE id=?',[placed.body.id]);for(const sql of splitSqlStatements(await readFile('migrations/0067_order_customer_email.sql','utf8')))await db.query(sql);
+  assert.equal((await resource(a,'orders',undefined,'GET')).body.orders.find(o=>o.id===placed.body.id).customer_email,'operations-customer@test.example');
   const [[savedOptions]]=await db.execute("SELECT options_snapshot FROM restaurant_order_items WHERE order_id=?",[placed.body.id]);assert.match(JSON.stringify(savedOptions.options_snapshot),/Large/);
   const sessions=await resource(a,"security",undefined,"GET");assert.equal(sessions.status,200);
   const current=sessions.body.sessions.find(s=>s.current);assert.ok(current);
