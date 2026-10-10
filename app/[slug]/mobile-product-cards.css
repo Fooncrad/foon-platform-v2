@@ -67,10 +67,11 @@
  .publicMenu{padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}
  .publicMenu .publicMenuMobileDock{display:flex!important;position:fixed!important;inset-inline:8px;bottom:0;gap:2px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0;background:var(--public-surface);color:var(--public-text);border:1px solid var(--public-line);box-shadow:0 -4px 24px #00000012;z-index:60;max-width:680px;margin-inline:auto;min-height:68px;align-items:stretch}
  .publicMenu .publicMenuMobileDock .publicMenuServices{display:contents}
- .publicMenu .publicMenuMobileDock :is(a,button){display:flex;flex:1 1 0;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;min-width:0;min-height:52px;margin:0;padding:4px 1px;background:transparent;color:var(--public-text);border:0;border-radius:10px;text-decoration:none;font-size:10px;font-weight:600;line-height:1.4;white-space:nowrap}
- .publicMenu .publicMenuMobileDock :is(a,button):focus-visible{outline:2px solid var(--public-brand);outline-offset:-2px;background:var(--public-bg)}
- .publicMenu .publicMenuMobileDock :is(a,button):active{background:var(--public-bg)}
- .publicMenu .publicMenuMobileDock svg{width:21px;height:21px;flex-shrink:0}
+ .publicMenu .publicMenuMobileDock :is(a,button):not(dialog *){display:flex;flex:1 1 0;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;min-width:0;min-height:52px;margin:0;padding:4px 1px;background:transparent;color:var(--public-text);border:0;border-radius:10px;text-decoration:none;font-size:10px;font-weight:600;line-height:1.4;white-space:nowrap}
+ .publicMenu .publicMenuMobileDock :is(a,button):not(dialog *):focus-visible{outline:2px solid var(--public-brand);outline-offset:-2px;background:var(--public-bg)}
+ .publicMenu .publicMenuMobileDock :is(a,button):not(dialog *):active{background:var(--public-bg)}
+ .publicMenu .publicMenuMobileDock > button>span,.publicMenu .publicMenuMobileDock > .publicMenuServices>button>span{max-width:100%;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:1.2;text-align:center}
+ .publicMenu .publicMenuMobileDock svg:not(dialog *){width:21px;height:21px;flex-shrink:0}
  .publicMenu .publicMenuMobileDock a>span{font-size:23px;line-height:21px}
  .publicMenu .publicMenuMobileDock b{position:absolute;top:0;inset-inline-end:calc(50% - 25px);min-width:18px;height:18px;padding-inline:3px;border-radius:20px;display:grid;place-items:center;background:var(--public-brand);color:var(--public-on-brand);font-size:10px;font-weight:700}
  .publicMenu #menu-items,.publicMenu #menu-cart{scroll-margin-top:16px;scroll-margin-bottom:100px}
