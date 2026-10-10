@@ -1,5 +1,5 @@
 "use client";
-import {useMemo,useState} from "react";
+import {useState} from "react";
 
 const months=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const weekdays=["Su","Mo","Tu","We","Th","Fr","Sa"];
@@ -14,7 +14,7 @@ export default function BookingCalendar({min,max,language="ar"}:{min:string;max:
  const [y,m]=view.split("-").map(Number);
  const first=new Date(y,m-1,1).getDay();
  const days=new Date(y,m,0).getDate();
- const cells=useMemo(()=>Array.from({length:Math.ceil((first+days)/7)*7},(_,i)=>i-first+1),[first,days]);
+ const cells=Array.from({length:Math.ceil((first+days)/7)*7},(_,i)=>i-first+1);
  const value=selected+"T"+hour+":"+minute;
  const valid=value>=min&&value<=max;
  const title=language==="ar"?"اختر تاريخ الحجز (ميلادي)":language==="fr"?"Choisissez la date (grégorien)":"Choose booking date (Gregorian)";
