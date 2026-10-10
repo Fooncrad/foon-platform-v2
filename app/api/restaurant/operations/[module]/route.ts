@@ -46,7 +46,17 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
  }
  return {summary:{...serviceCounts,sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
 }
-async function labelledTables(db:PoolConnection,tenantId:string,branch:string|null){const [tables,sections]=await Promise.all([resourceRows(db,tenantId,"tables",branch),resourceRows(db,tenantId,"sections",branch)]);return tables.map(t=>({...t,name:(sections.find(s=>s.id===t.data.sectionId)?.name||"الصالة الرئيسية")+" · "+t.name}));}
+async function availableTables(db:PoolConnection,tenantId:string,branch:string|null){
+ const tables=await resourceRows(db,tenantId,"tables",branch);
+ if(!tables.length)return tables;
+ const [busy]=await db.execute<RowDataPacket[]>(
+  "SELECT DISTINCT table_id FROM restaurant_orders WHERE tenant_id=? AND table_id IS NOT NULL AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected'))"+(branch?" AND branch_id=?":""),
+  branch?[tenantId,branch]:[tenantId]
+ );
+ const occupied=new Set(busy.map(row=>String(row.table_id)));
+ return tables.filter(table=>table.status!=="inactive"&&!occupied.has(table.id));
+}
+async function labelledTables(db:PoolConnection,tenantId:string,branch:string|null){const [tables,sections]=await Promise.all([availableTables(db,tenantId,branch),resourceRows(db,tenantId,"sections",branch)]);return tables.map(t=>({...t,name:(sections.find(s=>s.id===t.data.sectionId)?.name||"الصالة الرئيسية")+" · "+t.name}));}
 export async function GET(request:Request,{params}:{params:Promise<{module:string}>}){
  let db:PoolConnection|undefined;
  try{
@@ -56,7 +66,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
    const refs:Record<string,unknown[]>={};
    for(const field of resourceModules[module].fields.filter(f=>f.ref)){
     const config=resourceModules[field.ref!];
-    if(config.roles.includes(ctx.role)&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled))refs[field.ref!]=await resourceRows(db,ctx.tenantId,field.ref!,branch);
+    if(config.roles.includes(ctx.role)&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled))refs[field.ref!]=field.ref==="tables"&&module==="reservations"?await availableTables(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,field.ref!,branch);
    }
    let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
    if(module==="reservations"){const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");if(from||to){const a=Date.parse(from||""),b=Date.parse(to||"");if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>93*86400000)throw new ResourceError("INVALID_DATE_RANGE");const [found]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))>=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))<? ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt')) LIMIT 1001",[ctx.tenantId,...(branch?[branch]:[]),new Date(a).toISOString(),new Date(b).toISOString()]);truncated=found.length>1000;resources=found.slice(0,1000).map(r=>({id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),data:parseData(r.data),version:Number(r.version),created_at:String(r.created_at)}));}}
