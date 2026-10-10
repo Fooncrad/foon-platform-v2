@@ -5,6 +5,7 @@ import { database } from "@/lib/db/mysql";
 
 const COOKIE="foon_session";
 const SESSION_SECONDS=60*60*24*30;
+const ADMIN_IDLE_MINUTES=60;
 const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
 
 export async function createSession(userId:string, connection?:PoolConnection){
@@ -42,15 +43,15 @@ export async function currentActiveAdminUserId(touch=true){
   if(!token)return null;
   const hash=digest(token);
   const [rows]=await database().execute<RowDataPacket[]>(
-    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL 5 MINUTE) LIMIT 1",
-    [hash]
+    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL ? MINUTE) LIMIT 1",
+    [hash,ADMIN_IDLE_MINUTES]
   );
   const userId=rows[0]?.user_id as string|undefined;
   if(!userId)return null;
   if(!touch)return userId;
   const [update]=await database().execute<ResultSetHeader>(
-    "UPDATE auth_sessions SET last_seen_at=NOW() WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL 5 MINUTE)",
-    [hash]
+    "UPDATE auth_sessions SET last_seen_at=NOW() WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL ? MINUTE)",
+    [hash,ADMIN_IDLE_MINUTES]
   );
   if(update.affectedRows!==1)return null;
   return userId;
