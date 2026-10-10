@@ -20,6 +20,6 @@ export async function GET(){
   const revision=createHash("sha256").update(JSON.stringify({orders:rows.map(row=>[row.id,row.status,row.payment_status,String(row.total),String(row.updated_at)]),reservations:reservations.map(row=>[row.id,row.status,row.version])})).digest("hex");
   return NextResponse.json({revision},{headers:{"Cache-Control":"no-store, private"}});
  }catch{
-  return NextResponse.json({code:"ORDER_STATUS_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({code:"CUSTOMER_ACTIVITY_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});
  }
 }
