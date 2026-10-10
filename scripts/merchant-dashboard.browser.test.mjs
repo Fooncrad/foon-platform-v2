@@ -164,9 +164,9 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByText('ضيف المعاينة',{exact:true})).toBeVisible();
  await publicPage.getByRole('button',{name:'إضافة قهوة المعاينة إلى السلة',exact:true}).click();
  await publicPage.getByLabel('نوع الطلب',{exact:true}).selectOption('dine_in');
- await publicPage.getByLabel('قسم الصالة',{exact:true}).selectOption(familySection);
- await publicPage.getByLabel('طاولتك',{exact:true}).selectOption(tableId);
- await publicPage.getByLabel('عدد الأشخاص',{exact:true}).fill('3');
+ await publicPage.locator('#menu-cart').getByLabel('قسم الصالة',{exact:true}).selectOption(familySection);
+ await publicPage.locator('#menu-cart').getByLabel('طاولتك',{exact:true}).selectOption(tableId);
+ await publicPage.locator('#menu-cart').getByLabel('عدد الأشخاص',{exact:true}).fill('3');
  await publicPage.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
  await expect(publicPage.getByRole('status')).toContainText('تم تسجيل طلبك');
  await page.setViewportSize({width:1440,height:1000});
