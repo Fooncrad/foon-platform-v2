@@ -45,14 +45,14 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  let lookup:string|null=diningLookup??(config.singleton?"config":module==="coupons"?String(input.data.code):null);
  if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
  if(module==="team"){
-  const email=String(input.data.email).toLowerCase(),memberRole=String(input.data.role);
+  const email=String(input.data.email).toLowerCase(),memberRole=String(input.data.role),membershipRole=memberRole==="supervisor"?"waiter":memberRole;
   if(role!=="owner"&&memberRole==="manager")throw new ResourceError("FORBIDDEN");
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE email=? AND status='active' LIMIT 1 LOCK IN SHARE MODE",[email]);
   if(!users.length)throw new ResourceError("EMPLOYEE_ACCOUNT_NOT_FOUND");
   const userId=String(users[0].id),[members]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? FOR UPDATE",[tenantId,userId]);
   if(userId===actor||members.some(m=>m.role==="owner")||role!=="owner"&&members.some(m=>m.role==="manager"))throw new ResourceError("FORBIDDEN");
   if(previous&&parseData(previous.data).userId!==userId)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
-  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status)",[randomUUID(),tenantId,userId,memberRole,input.status]);
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status)",[randomUUID(),tenantId,userId,membershipRole,input.status]);
   input.data.userId=userId;input.data.email=email;lookup=email;
  }
  if(module==="purchases"){
