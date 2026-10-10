@@ -17,7 +17,7 @@ function printResourceReceipt(row:StoredResource,kind:"customerInvoices"|"printe
  if(kind==="printers"&&row.data.headerText){const header=doc.createElement("p");header.textContent=String(row.data.headerText);doc.body.appendChild(header);}
  const heading=doc.createElement("p");heading.textContent=row.name;doc.body.appendChild(heading);
  const section=doc.createElement("section");doc.body.appendChild(section);
- const fields=kind==="printers"?[["الاتصال",row.data.connection],["العنوان",row.data.address],["عرض الورق",row.data.paperWidth]]:[["رقم الفاتورة",row.data.invoiceNumber],["المبلغ قبل الضريبة",row.data.subtotal],["الضريبة",row.data.tax],["الإجمالي",row.data.total],["الحالة",row.status]];
+ const fields=kind==="printers"?[["الاتصال",row.data.connection],["العنوان",row.data.address],["عرض الورق",row.data.paperWidth],["وقت الطباعة",row.data.printOn],["نسخ الطباعة",row.data.copies]]:[["رقم الفاتورة",row.data.invoiceNumber],["المبلغ قبل الضريبة",row.data.subtotal],["الضريبة",row.data.taxAmount],["رسوم الخدمة",row.data.serviceFee],["الإجمالي",(Number(row.data.subtotal||0)+Number(row.data.taxAmount||0)+Number(row.data.serviceFee||0)).toFixed(2)],["الحالة",row.status]];
  for(const [label,value] of fields){const p=doc.createElement("p");p.textContent=label+": "+String(value??"—");section.appendChild(p);}
  if(kind==="printers"&&row.data.footerText){const custom=doc.createElement("p");custom.textContent=String(row.data.footerText);doc.body.appendChild(custom);}
  const footer=doc.createElement("small");footer.textContent=new Date().toLocaleString("en-GB",{numberingSystem:"latn"});doc.body.appendChild(footer);
