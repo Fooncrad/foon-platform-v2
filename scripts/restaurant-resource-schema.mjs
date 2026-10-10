@@ -1,4 +1,4 @@
-const managers=["owner","manager"];
+const managers=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const field=(key,label,type="text",options={})=>({key,label,type,...options});
 export const resourceModules={
  internalInvoices:{kind:"internal_invoice",label:"الفواتير الداخلية",feature:"internal_invoices",roles:[...managers,"accountant"],statuses:["draft","approved","paid","cancelled"],fields:[field("invoiceNumber","رقم الفاتورة","text",{required:true}),field("supplierId","المورد","ref",{ref:"suppliers"}),field("departmentId","القسم الداخلي","ref",{ref:"departments"}),field("subtotal","المبلغ قبل الضريبة","number",{required:true,min:0,max:100000000}),field("taxAmount","مبلغ الضريبة","number",{min:0,max:100000000}),field("serviceFee","رسوم الخدمة","number",{min:0,max:100000000}),field("description","تفاصيل الفاتورة","textarea")]},
