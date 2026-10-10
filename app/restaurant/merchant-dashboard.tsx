@@ -8,6 +8,7 @@ import ResourceManager,{operationApi} from "./resource-manager";
 import OrderWorkspace from "./order-workspace";
 import PaymentEditor from "./payments/payment-editor";
 import ReportsWorkspace from "./reports-workspace";
+import "./merchant-experience.css";
 
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;enabled:boolean;limit:number|null};

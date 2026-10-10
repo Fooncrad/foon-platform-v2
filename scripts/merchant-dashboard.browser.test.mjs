@@ -186,6 +186,14 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.screenshot({path:'work/merchant-reservations-calendar-mobile.png',fullPage:true});
  await page.getByRole('button',{name:'يوم',exact:true}).click();await expect(page.locator('.calendarGrid-day')).toBeVisible();
  await page.setViewportSize({width:1440,height:1000});
+ await page.getByRole('button',{name:'قائمة الحجوزات',exact:true}).click();
+ const reservationCard=page.locator('.restaurantResourceList article').filter({hasText:'ضيف المعاينة'});await expect(reservationCard).toHaveAttribute('data-status','confirmed');await expect(reservationCard.locator('time')).toBeVisible();await expect(reservationCard).toContainText('صالة العائلات');
+ await page.screenshot({path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
+ await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطلبات',exact:true}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().height>=44))).toBeTruthy();await page.screenshot({path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
+ await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await publicPage.screenshot({path:'work/menu-customer-orders-mobile.png',fullPage:true});
  await publicPage.close();
  await publicContext.close();
  await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'المنيو والأصناف',exact:true}).click();

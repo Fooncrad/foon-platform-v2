@@ -1,0 +1,51 @@
+/* Shared rhythm and clear action hierarchy across restaurant workspaces. */
+.restaurantApp{--rc-accent:#c84f20;--rc-state:#a15c12;--rc-state-bg:#fff5e5}
+.restaurantApp .restaurantPanel{border-radius:22px;box-shadow:0 5px 24px #18223004}
+.restaurantApp .restaurantPanel>header h3{font-size:18px;letter-spacing:-.3px}.restaurantApp .restaurantPanel>header p{line-height:1.8}
+.restaurantApp :is(.restaurantPrimary,.restaurantOutline,.restaurantStatusFilters button,.restaurantOrderActions button,.restaurantResourceList header button,.calendarNavigation button){min-height:44px;border-radius:12px;transition:background .16s,border-color .16s,box-shadow .16s;cursor:pointer}
+.restaurantApp .restaurantPrimary{background:var(--rc-accent);box-shadow:0 3px 8px #c84f2015;padding-inline:20px}
+.restaurantApp .restaurantPrimary:hover:not(:disabled){background:#ad4019;box-shadow:0 5px 14px #c84f2024}
+.restaurantApp .restaurantOutline:hover:not(:disabled),.restaurantApp .restaurantResourceList header button:hover:not(:disabled){background:#f7f8fa;border-color:#bcc6d1}
+.restaurantApp .restaurantStatusFilters{gap:5px;padding:5px;border:1px solid var(--rc-border);border-radius:15px;background:#f7f8fa;width:fit-content;max-width:100%;margin-bottom:20px}
+.restaurantApp .restaurantStatusFilters button{border:0;background:transparent;color:var(--rc-muted);padding:9px 14px;font-weight:650;font-size:12px}
+.restaurantApp .restaurantStatusFilters button[aria-pressed=true]{background:#fff;color:var(--rc-accent);box-shadow:0 2px 8px #18223010}
+.restaurantApp .restaurantStatusFilters button:hover:not([aria-pressed=true]){background:#eef1f5}
+.restaurantApp :is(input,select,textarea):not([type=checkbox]):not([type=color]):not([type=file]){border-radius:12px}
+.restaurantApp :is(input,select,textarea):focus-visible{outline-width:2px;outline-offset:2px}
+.restaurantApp .restaurantResourceForm{background:#f8f9fb;border-radius:18px;padding:22px;gap:18px}
+.restaurantApp .restaurantEmptyMessage{padding:44px 22px;border-radius:18px;line-height:1.8}
+.restaurantApp :is(.restaurantResourceList article,.restaurantOrderCards article){--rc-state:#a15c12;--rc-state-bg:#fff5e5;border-radius:20px;box-shadow:0 4px 18px #18223004}
+.restaurantApp [data-status=confirmed],.restaurantApp [data-status=preparing]{--rc-state:#2e559c;--rc-state-bg:#ebf3ff}
+.restaurantApp [data-status=seated],.restaurantApp [data-status=ready],.restaurantApp [data-status=paid],.restaurantApp [data-status=active]{--rc-state:#236f51;--rc-state-bg:#e6f6ef}
+.restaurantApp [data-status=completed],.restaurantApp [data-status=refunded]{--rc-state:#526078;--rc-state-bg:#edf0f5}
+.restaurantApp [data-status=cancelled],.restaurantApp [data-status=inactive]{--rc-state:#a43c32;--rc-state-bg:#fff0ee}
+.restaurantApp .restaurantStateBadge,.restaurantApp .restaurantPaymentBadge{display:inline-flex;align-items:center;gap:6px;border-radius:30px!important;padding:6px 10px!important;background:var(--rc-state-bg)!important;color:var(--rc-state)!important;font-size:11px!important;font-weight:650;white-space:nowrap}
+.restaurantApp .restaurantStateBadge:before,.restaurantApp .restaurantPaymentBadge:before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.restaurantApp .restaurantOrderCards{gap:18px;align-items:stretch}
+.restaurantApp .restaurantOrderCards article{display:flex;flex-direction:column;padding:20px;border-top:3px solid var(--rc-state);gap:0}
+.restaurantApp .restaurantOrderIdentity{display:flex;align-items:center;gap:10px;min-width:0}.restaurantApp .restaurantOrderIdentity>div{display:grid;gap:2px}
+.restaurantApp .restaurantOrderSymbol{display:grid;place-items:center;width:42px;height:42px;background:#f5f6f8;border-radius:13px;color:var(--rc-muted)}
+.restaurantApp .restaurantOrderIdentity small{font-size:10px;color:var(--rc-muted)}.restaurantApp .restaurantOrderIdentity b{font-size:21px;font-variant-numeric:tabular-nums;direction:ltr}
+.restaurantApp .restaurantOrderGuest{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px}.restaurantApp .restaurantOrderGuest strong{font-size:14px;overflow-wrap:anywhere}.restaurantApp .restaurantOrderGuest>span{font-size:11px;color:var(--rc-muted);white-space:nowrap}
+.restaurantApp .restaurantOrderTime{font-size:11px;color:var(--rc-muted);margin-top:5px}.restaurantApp .restaurantOrderCards .restaurantOrderDining{background:#f7f8fa;padding:9px 11px;border-radius:10px;line-height:1.8}
+.restaurantApp .restaurantOrderCards ul{list-style:none;padding:0;display:grid;gap:8px;margin:18px 0 22px;min-height:0}.restaurantApp .restaurantOrderCards li{display:flex;align-items:baseline;gap:9px;line-height:1.7}.restaurantApp .restaurantOrderCards li>span:last-child{overflow-wrap:anywhere}
+.restaurantApp .restaurantItemQuantity{font-size:11px;font-weight:700;white-space:nowrap;min-width:32px;background:#f3f5f8;border-radius:7px;text-align:center;padding:2px 4px;color:var(--rc-muted)}
+.restaurantApp .restaurantOrderCards footer{margin-top:auto;padding-top:16px;border-top:1px dashed var(--rc-border);gap:12px;flex-wrap:wrap}.restaurantApp .restaurantOrderCards footer>strong{font-size:22px;font-variant-numeric:tabular-nums}.restaurantApp .restaurantOrderCards footer>strong small{font-size:11px;font-weight:400;color:var(--rc-muted)}
+.restaurantApp .restaurantOrderActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px}.restaurantApp .restaurantOrderActions button{padding:10px 8px;background:white;color:var(--rc-text);border:1px solid var(--rc-border);font-size:12px!important;line-height:1.5}
+.restaurantApp .restaurantOrderActions .restaurantOrderAdvance{grid-column:1/-1;background:var(--rc-accent);color:white;border-color:var(--rc-accent)}
+.restaurantApp .restaurantOrderActions :is(.restaurantOrderCancel,.restaurantOrderRefund){background:white;color:#a43c32;border-color:#f0d5d2}
+.restaurantApp .restaurantOrderActions button:hover:not(:disabled){filter:brightness(.97)}
+.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article{padding:20px;border-top:3px solid var(--rc-state)}
+.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article>header{align-items:flex-start;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--rc-border)}
+.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article>header>div:first-child{display:grid;justify-items:start;gap:8px}.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article>header b{font-size:17px}
+.restaurantApp .restaurantResourceList header button{padding:9px 12px;font-weight:600}
+.restaurantApp .restaurantReservationDate{display:flex;align-items:center;gap:12px;margin:18px 0 14px}.restaurantApp .restaurantReservationDate>span{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:#fff2e9;color:var(--rc-accent)}
+.restaurantApp .restaurantReservationDate>div{display:grid;gap:4px}.restaurantApp .restaurantReservationDate small{font-size:12px;color:var(--rc-muted)}.restaurantApp .restaurantReservationDate time{font-size:22px;font-weight:750;font-variant-numeric:tabular-nums}
+.restaurantApp .restaurantReservationChips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.restaurantApp .restaurantReservationChips span{background:#f4f6f8;border-radius:9px;padding:6px 11px;font-size:12px;color:var(--rc-muted)}
+.restaurantApp .restaurantReservationSummary dl{grid-template-columns:1.4fr 1fr;gap:12px;border-top:1px dashed var(--rc-border);padding-top:15px}.restaurantApp .restaurantReservationSummary dt{font-size:11px}.restaurantApp .restaurantReservationSummary dd{font-size:13px;line-height:1.8;font-weight:600;text-align:start}
+.restaurantApp .restaurantReservationNotes{margin:16px 0 0;font-size:12px;line-height:1.8;color:var(--rc-muted);padding:10px 12px;background:#f8f9fb;border-radius:10px;overflow-wrap:anywhere}
+.restaurantApp .calendarSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0;background:transparent}.restaurantApp .calendarSummary>span{display:grid;gap:5px;background:#f8f9fb;border:1px solid var(--rc-border);border-radius:15px;padding:14px;color:var(--rc-muted);font-size:11px}.restaurantApp .calendarSummary b{font-size:25px;margin:0;color:var(--rc-text)}
+.restaurantApp .calendarEvent{border-radius:11px;box-shadow:0 2px 5px #18223004}.restaurantApp .calendarGrid{border-radius:18px}.restaurantApp .calendarNavigation button{border-radius:12px}.restaurantApp .calendarGrid-day .calendarEvent{max-width:none;padding:20px;border-radius:16px;gap:8px}.restaurantApp .calendarGrid-day .calendarEvent>b{font-size:18px}.restaurantApp .calendarGrid-day .calendarEvent>span{align-items:center}.restaurantApp .calendarGrid-day .calendarEvent em{padding:5px 10px;background:#ffffff80;border-radius:30px;font-size:11px}
+@media(max-width:680px){.restaurantApp .restaurantPanel{padding:18px;border-radius:19px}.restaurantApp .restaurantPanel>header{flex-wrap:wrap;align-items:flex-start}.restaurantApp .restaurantStatusFilters{width:100%;gap:3px}.restaurantApp .restaurantStatusFilters button{flex:1 1 auto;padding:8px 10px;min-width:44px}.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList{grid-template-columns:1fr}.restaurantApp .restaurantResourceForm{padding:16px}.restaurantApp .restaurantOrderCards article,.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article{padding:17px}.restaurantApp .calendarSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.restaurantApp .restaurantReservationSummary dl{grid-template-columns:1fr}.restaurantApp .restaurantResourceList article>header>div{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.restaurantApp button{transition:none!important}}
