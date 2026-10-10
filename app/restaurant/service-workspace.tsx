@@ -1,21 +1,24 @@
 "use client";
 import {useEffect,useState} from "react";
+import "./dining.css";
+import DiningBatch from "./dining-batch";
+import ReservationCalendar from "./reservation-calendar";
 import TemplateEditor from "./menu/template-editor";
 import ResourceManager,{operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 const groups:Record<string,{key:string;label:string}[]>={
- tables:[{key:"tables",label:"الطاولات"},{key:"waiterCalls",label:"نداءات النادل"}],
+ tables:[{key:"tables",label:"الطاولات"},{key:"sections",label:"أقسام الصالة"},{key:"diningBatch",label:"الإضافة الجماعية"},{key:"waiterCalls",label:"نداءات النادل"}],
  menu:[{key:"menu",label:"الأصناف"},{key:"categories",label:"التصنيفات"},{key:"menuGroups",label:"الخيارات"},{key:"menuValues",label:"قيم الخيارات"},{key:"menuImages",label:"الصور"},{key:"templates",label:"القوالب والمظهر"}],
  inventory:[{key:"inventory",label:"المخزون"},{key:"suppliers",label:"الموردون"},{key:"purchases",label:"المشتريات"}],
  team:[{key:"team",label:"الموظفون"},{key:"attendance",label:"الحضور"}],
  marketing:[{key:"coupons",label:"الكوبونات"},{key:"marketing",label:"الحملات"}],
- reservations:[{key:"reservations",label:"الحجوزات"},{key:"waitlist",label:"قائمة الانتظار"}],
+ reservations:[{key:"calendar",label:"التقويم"},{key:"reservations",label:"قائمة الحجوزات"},{key:"waitlist",label:"قائمة الانتظار"}],
  remote:[{key:"remote",label:"المهام"},{key:"remoteWorkers",label:"العاملون"},{key:"remoteMessages",label:"التواصل"},{key:"remoteDeliveries",label:"التسليمات"}],
 };
 export default function ServiceWorkspace({tenantId,section,branch,branches,onChanged}:{tenantId:string;section:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void}){
  const [tab,setTab]=useState(groups[section]?.[0].key??section);
  const tabs=groups[section];
- return <>{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="templates"?<TemplateEditor tenantId={tenantId}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged}/>}</>;
+ return <>{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="diningBatch"?<DiningBatch tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="calendar"?<ReservationCalendar tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="templates"?<TemplateEditor tenantId={tenantId}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged}/>}</>;
 }
 type Session={id:string;created_at:string;last_seen_at:string;expires_at:string;current:boolean};
 type Customer={id:string;display_name:string|null;email:string;created_at:string};

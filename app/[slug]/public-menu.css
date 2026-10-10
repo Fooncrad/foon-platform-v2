@@ -38,3 +38,4 @@
 @media(prefers-reduced-motion:reduce){.publicMenu button:active,.publicMenuItem:hover{transform:none}.publicMenu :is(button,a){transition:none}}
 .publicMenuCategoryRail{max-height:calc(100svh - 44px);overflow-y:auto;scrollbar-width:thin}.publicMenuServiceDialog :is(input,select,textarea):focus{border-color:var(--public-brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--public-brand) 15%,transparent)}
 .publicMenuInlineAuth .publicMenuAuthTabs button{font-size:13px;line-height:1.6;padding:10px 8px;min-height:46px}.publicMenuInlineAuth label{font-size:13px}.publicMenuInlineAuth h3{font-size:17px;line-height:1.7}.publicMenuInlineAuth{padding:16px}
+.publicDiningFields{display:grid;gap:14px}.publicDiningFields small{display:block;line-height:1.7;color:var(--menu-muted)}
