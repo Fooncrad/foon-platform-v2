@@ -32,7 +32,12 @@ export async function POST(request:Request){
    const date=typeof body.scheduledAt==='string'?Date.parse(body.scheduledAt):NaN;
    if(!Number.isFinite(date)||date<Date.now()+15*60*1000||date>Date.now()+90*86400000||!Number.isInteger(body.partySize)||body.partySize<1||body.partySize>100||typeof body.phone!=='string'||(!/^\+?[\d ()-]{7,40}$/.test(body.phone)||body.phone.replace(/\D/g,'').length<7))throw new ResourceError("INVALID_INPUT");
   }
-  const data=waiter?{tableId:body.tableId,sectionId:body.sectionId||null,notes}:{tableId:null,sectionId:null,phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),notes};
+  if(!waiter){
+   if(typeof body.sectionId!=="string"||!body.sectionId)throw new ResourceError("SECTION_REQUIRED");
+   const [sections]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,body.sectionId,body.branchId]);
+   if(!sections.length)throw new ResourceError("SECTION_NOT_FOUND");
+  }
+  const data=waiter?{tableId:body.tableId,sectionId:body.sectionId||null,notes}:{tableId:null,sectionId:body.sectionId,phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),notes};
   
   const fingerprint=createHash('sha256').update(JSON.stringify({branchId:body.branchId,data})).digest('hex'),lookup=user+':'+body.requestKey;
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,JSON_UNQUOTE(JSON_EXTRACT(data,'$.requestFingerprint')) AS fingerprint FROM restaurant_resources WHERE tenant_id=? AND kind=? AND lookup_key=? FOR UPDATE",[tenant,kind,lookup]);
