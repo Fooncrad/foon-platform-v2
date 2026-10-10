@@ -1,0 +1,52 @@
+/* Product cards keep one interactive image and a separate cart action. */
+.publicMenu .publicMenuItem{display:flex;flex-direction:column;padding:0;gap:0;align-items:stretch}
+.publicMenu .publicMenuItem .publicMenuItemImage{position:relative;display:block;width:100%;height:auto;aspect-ratio:1;border:0;border-radius:0;background:var(--public-bg);color:var(--public-muted);padding:0;overflow:hidden;flex-shrink:0}
+.publicMenuItem .publicMenuItemImage img{object-fit:cover}
+.publicMenu .publicMenuItem .publicMenuNoImage{display:grid;place-items:center;background:linear-gradient(145deg,#b59c6714,#9da9a814)}
+.publicMenuItemSummary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:3em}
+.publicMenu .publicMenuItem footer.publicMenuItemFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:12px;margin-top:auto}
+.publicMenuProductPrice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;font-variant-numeric:tabular-nums}
+.publicMenuProductPrice del{font-size:12px;color:var(--public-muted);line-height:1.4;white-space:nowrap}
+.publicMenuProductPrice strong{font-size:18px;font-weight:750;line-height:1.4;white-space:nowrap;letter-spacing:0}
+.publicMenuProductPrice small{font-size:.7em;font-weight:400;color:inherit;line-height:inherit;margin:0}
+.publicMenu .publicMenuItem .publicMenuCardCart{display:flex;justify-content:center;align-items:center;gap:6px;border-radius:12px;min-width:44px;min-height:44px;width:auto;height:auto;padding:9px 12px;background:var(--public-brand);color:var(--public-on-brand);flex-shrink:0}
+.publicMenu .publicMenuItem .publicMenuCardCart>span{display:inline;font-size:12px}
+@media(min-width:701px){.publicMenu .publicMenuItem .publicMenuItemImage{order:-1}.publicMenu .publicMenuItem .publicMenuItemBody{padding:12px}.publicMenu .publicMenuItem .publicMenuProductPrice strong{font-size:17px}.publicMenu .publicMenuItem .publicMenuProductPrice small{margin:0;font-size:10px}}
+@media(max-width:700px){
+ .publicMenu{padding-inline:10px!important}
+ .publicMenu .publicMenuItems{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;align-items:stretch;direction:inherit}
+ .publicMenu .publicMenuItem{display:flex!important;flex-direction:column;gap:0!important;padding:0!important;border-radius:12px;min-width:0;box-shadow:0 3px 12px #00000004;transform:none}
+ .publicMenu .publicMenuItem .publicMenuItemBody{padding:7px 5px 5px!important;min-width:0}
+ .publicMenu .publicMenuItem .publicMenuItemCategory{display:none!important}
+ .publicMenu .publicMenuItem h2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:11px!important;line-height:1.5;min-height:3em;max-height:3em;font-weight:750;letter-spacing:0}
+ .publicMenu .publicMenuItem p.publicMenuItemSummary{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:10px!important;line-height:1.5;min-height:3em;max-height:3em;margin-top:3px;overflow:hidden;color:var(--public-muted)}
+ .publicMenu .publicMenuItem .publicMenuItemImage{width:100%!important;height:auto!important;aspect-ratio:1!important;max-height:none;border-radius:0!important;align-self:stretch;margin:0;order:0;min-height:0}
+ .publicMenu .publicMenuItem footer.publicMenuItemFooter{flex-direction:column;align-items:stretch;gap:5px;padding:6px 5px 5px!important;margin-top:auto}
+ .publicMenu .publicMenuItem .publicMenuProductPrice{min-height:34px;justify-content:flex-end;gap:1px}
+ .publicMenu .publicMenuItem .publicMenuProductPrice del{font-size:9px;line-height:1.4}
+ .publicMenu .publicMenuItem .publicMenuProductPrice strong{font-size:11px!important;line-height:1.4;letter-spacing:0}
+ .publicMenu .publicMenuItem .publicMenuProductPrice small{font-size:8px!important;line-height:inherit;margin:0}
+ .publicMenu .publicMenuItem .publicMenuCardCart{width:100%!important;min-height:44px;height:44px;padding:0;border-radius:8px;gap:0}
+ .publicMenu .publicMenuItem .publicMenuCardCart>span{display:none!important}
+ .publicMenu .publicMenuViewToggle{display:none}
+}
+.publicMenuProductDialog{border:1px solid var(--public-line);border-radius:22px;padding:0;width:min(560px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:92dvh;background:var(--public-surface);color:var(--public-text);box-shadow:0 22px 90px #0006;overflow:hidden}
+.publicMenuProductDialog[open]{display:flex;flex-direction:column}
+.publicMenuProductDialog::backdrop{background:#0008;backdrop-filter:blur(5px)}
+.publicMenuProductDialog>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--public-line);flex-shrink:0}
+.publicMenuProductDialog>header>div{min-width:0}.publicMenuProductDialog>header small{color:var(--public-muted);font-size:11px;display:block;margin-bottom:5px}
+.publicMenuProductDialog h2{font-size:22px;line-height:1.5;overflow-wrap:anywhere}
+.publicMenuProductDialog>header button{display:grid;place-items:center;border:1px solid var(--public-line);border-radius:50%;background:var(--public-bg);color:var(--public-text);width:44px;height:44px;flex-shrink:0;padding:0}
+.publicMenuProductScroll{overflow-y:auto;overscroll-behavior:contain;min-height:0;padding:0 20px 20px}
+.publicMenuProductGallery{margin:16px 0 22px}.publicMenuProductPhoto{height:clamp(200px,38vh,310px);position:relative;border-radius:14px;overflow:hidden;background:var(--public-bg)}
+.publicMenuProductPhoto img{object-fit:contain}.publicMenuProductPhoto>span{position:absolute;inset-inline-end:10px;bottom:10px;padding:4px 10px;border-radius:30px;background:#0009;color:white;font-size:11px}
+.publicMenuProductGallery nav{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 2px}
+.publicMenuProductGallery nav button{position:relative;width:64px;height:64px;flex-shrink:0;border:1px solid var(--public-line);border-radius:10px;overflow:hidden;padding:0;background:var(--public-bg)}
+.publicMenuProductGallery nav button[aria-pressed=true]{border:2px solid var(--public-brand)}.publicMenuProductGallery nav img{object-fit:cover}
+.publicMenuProductScroll section{margin-top:18px}.publicMenuProductScroll h3{font-size:14px;margin:0 0 8px}.publicMenuProductScroll p{font-size:14px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--public-muted)}
+.publicMenuProductFacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0 0}.publicMenuProductFacts>div{background:var(--public-bg);border:1px solid var(--public-line);border-radius:12px;padding:12px}.publicMenuProductFacts dt{font-size:11px;color:var(--public-muted)}.publicMenuProductFacts dd{font-size:16px;font-weight:700;margin:5px 0 0}
+.publicMenuProductAllergens{padding:14px;border:1px solid var(--public-line);border-radius:12px;background:var(--public-bg)}
+.publicMenuProductNoPhoto{padding:28px 0;text-align:center}.publicMenuProductHint{margin-top:12px!important}
+.publicMenuProductDialog>footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--public-line);background:var(--public-surface);flex-shrink:0}
+.publicMenuProductDialog>footer>button{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--public-brand);color:var(--public-on-brand);border:0;border-radius:12px;min-height:48px;padding:12px 18px;font-size:14px;font-weight:750}
+@media(max-width:400px){.publicMenuProductDialog>header{padding:14px}.publicMenuProductDialog h2{font-size:18px}.publicMenuProductScroll{padding-inline:14px}.publicMenuProductDialog>footer{padding-inline:14px;gap:10px}.publicMenuProductDialog>footer>button{font-size:12px;padding-inline:12px}.publicMenuProductDialog .publicMenuProductPrice strong{font-size:17px}.publicMenuProductFacts{gap:8px}}

@@ -38,7 +38,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const categoryA=await save(a,"categories","Drinks",{}),categoryB=await save(b,"categories","Private category",{});
   assert.equal((await resource(a,"menu",{name:"Invalid",status:"active",data:{price:10,categoryId:categoryB}})).status,404);
   assert.equal((await resource(a,"menu",{name:"Invalid branch",status:"active",branchId:b.branch,data:{price:10,categoryId:categoryA}})).status,404);
-  const item=await save(a,"menu","Coffee",{price:10,categoryId:categoryA});
+  const item=await save(a,"menu","Coffee",{price:10,oldPrice:15,calories:120,nutrition:"Protein 3g",allergens:"Milk",quantity:18,categoryId:categoryA});
+  const persistedMenu=await resource(a,"menu",undefined,"GET"),persistedCoffee=persistedMenu.body.resources.find(r=>r.id===item);assert.equal(persistedCoffee.data.oldPrice,15);assert.equal(persistedCoffee.data.calories,120);assert.equal(persistedCoffee.data.quantity,18);assert.equal(persistedCoffee.data.nutrition,"Protein 3g");
   const table=await save(a,"tables","Table 1",{capacity:4},"available");
   const family=await save(a,"sections","Families",{}),terrace=await save(a,"sections","Terrace",{});
   const batch=await resource(a,"sections",{branchId:a.branch,sections:[{id:family,name:"Families",start:1,count:2,capacity:4},{id:terrace,name:"Terrace",start:1,count:2,capacity:6}]});assert.equal(batch.status,201,JSON.stringify(batch.body));assert.equal(batch.body.count,4);

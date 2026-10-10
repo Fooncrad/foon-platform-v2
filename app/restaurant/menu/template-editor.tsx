@@ -2,7 +2,6 @@
 import {useEffect,useState} from "react";
 import {menuTemplates,isMenuTemplate,isMenuColorMode,type MenuTemplate,type MenuColorMode} from "@/lib/restaurant/menu-templates";
 import PublicMenu,{type PublicMenuProps} from "@/app/[slug]/public-menu";
-import "@/app/[slug]/public-menu.css";
 import "./template-editor.css";
 const modeLabels={template:"مظهر القالب",light:"نهاري",dark:"ليلي",system:"حسب الجهاز"};
 export default function TemplateEditor({tenantId}:{tenantId:string}){

@@ -10,7 +10,7 @@ function asResource(module:string,row:RowDataPacket):StoredResource{
  const metadata=row.metadata?parseData(row.metadata):{};
  let data:Record<string,string|number|null>;
  if(module==="categories")data={description:metadata.description??null,nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null};
- else if(module==="menu")data={categoryId:String(row.category_id),price:Number(row.price),description:row.description?String(row.description):null,imageUrl:row.image_url?String(row.image_url):null,allergens:metadata.allergens??null,nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,descriptionEn:metadata.descriptionEn??null,descriptionFr:metadata.descriptionFr??null};
+ else if(module==="menu")data={categoryId:String(row.category_id),price:Number(row.price),description:row.description?String(row.description):null,imageUrl:row.image_url?String(row.image_url):null,allergens:metadata.allergens??null,nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,descriptionEn:metadata.descriptionEn??null,descriptionFr:metadata.descriptionFr??null,oldPrice:metadata.oldPrice??null,calories:metadata.calories??null,nutrition:metadata.nutrition??null,quantity:metadata.quantity??null};
  else if(module==="menuGroups")data={nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,itemId:String(row.item_id),selectionType:String(row.selection_type),requiredFlag:row.required?"yes":"no",minSelect:Number(row.min_select),maxSelect:Number(row.max_select)};
  else if(module==="menuValues")data={nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,groupId:String(row.group_id),priceDelta:Number(row.price_delta)};
  else data={itemId:String(row.item_id),imageUrl:String(row.image_url)};
