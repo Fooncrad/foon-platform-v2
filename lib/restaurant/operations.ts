@@ -117,7 +117,6 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const tableId=body.channel==="dine_in"&&body.tableId?String(body.tableId):null;
  if(body.channel==="dine_in"&&(!tableId||!Number.isInteger(body.partySize)||Number(body.partySize)<1))throw new ResourceError("DINING_DETAILS_REQUIRED");
  const dining=tableId?await diningTable(db,tenantId,branchId,tableId,Number(body.partySize)):null;
- if(tableId){const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='dining_table' AND status<>'inactive' AND archived=FALSE LIMIT 1 FOR UPDATE",[tableId,tenantId]);if(!rows.length||rows[0].branch_id&&rows[0].branch_id!==branchId)throw new ResourceError("TABLE_NOT_FOUND");}
  if(tableId){
   // Serialize orders for a table to prevent two concurrent checkouts from taking it.
   const [unfinished]=await db.execute<RowDataPacket[]>(
