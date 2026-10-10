@@ -10,7 +10,7 @@ function printResourceReceipt(row:StoredResource,kind:"customerInvoices"|"printe
  const doc=popup.document;
  doc.title=kind==="printers"?"اختبار الطابعة":"فاتورة العميل";
  const style=doc.createElement("style");
- const width=kind==="printers"&&String(row.data.paperWidth)==="58"?"58":"80";
+ const width=String(kind==="printers"?row.data.paperWidth:row.data.receiptPaperWidth)==="58"?"58":"80";
  style.textContent="@page{size:"+width+"mm auto;margin:3mm}body{font:13px Arial,sans-serif;direction:rtl;max-width:calc("+width+"mm - 6mm);margin:0 auto;color:#111}h2{text-align:center}section{border-top:1px dashed #777;padding:8px 0}p{overflow-wrap:anywhere;margin:7px 0}small{display:block;text-align:center}";
  doc.head.appendChild(style);
  const title=doc.createElement("h2");title.textContent=kind==="printers"?"اختبار إعداد الطابعة":"فاتورة العميل";doc.body.appendChild(title);
