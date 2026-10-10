@@ -25,11 +25,11 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.equal(schema.name,"foon_migration_test");
     successfulRun();
     const [[tables]]=await db.query("SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()");
-    assert.equal(Number(tables.n),44);
+    assert.equal(Number(tables.n),50);
     const [[history]]=await db.query("SELECT COUNT(*) AS n FROM schema_migrations");
-    assert.equal(Number(history.n),30);
+    assert.equal(Number(history.n),31);
     const [contextColumns]=await db.query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='restaurant_orders' AND COLUMN_NAME IN ('dining_section_id','party_size','dining_snapshot')");assert.equal(contextColumns.length,3);
-    await db.execute("DELETE FROM schema_migrations WHERE id='0064_dining_order_context.sql'");successfulRun();
+    await db.execute("DELETE FROM schema_migrations WHERE id='0065_dining_order_context.sql'");successfulRun();
     // New account/profile tables must retain real parent constraints on fresh installs.
     await assert.rejects(db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency) VALUES ('missing-profile-tenant','restaurant','SA','SAR')"),error=>error.code==="ER_NO_REFERENCED_ROW_2");
     await assert.rejects(db.execute("INSERT INTO user_profiles(user_id,phone) VALUES ('missing-profile-user','123456789')"),error=>error.code==="ER_NO_REFERENCED_ROW_2");

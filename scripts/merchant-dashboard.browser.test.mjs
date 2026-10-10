@@ -133,6 +133,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطاولات',exact:true}).click();
  await page.getByRole('button',{name:'نداءات النادل',exact:true}).click();
  await expect(page.getByText('ضيف المعاينة',{exact:true})).toBeVisible();
+ await publicPage.getByRole('button',{name:'إضافة قهوة المعاينة إلى السلة',exact:true}).click();
  await publicPage.getByLabel('نوع الطلب',{exact:true}).selectOption('dine_in');
  await publicPage.getByLabel('قسم الصالة',{exact:true}).selectOption(familySection);
  await publicPage.getByLabel('طاولتك',{exact:true}).selectOption(tableId);
@@ -161,7 +162,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole('button',{name:'القوالب والمظهر',exact:true}).click();
  await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();
  await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-template","sufra");
- await expect(page.locator(".menuPreviewViewport").getByText("معاينة التصميم فقط",{exact:true})).toBeVisible();
+ await expect(page.locator(".menuPreviewViewport").getByText("معاينة",{exact:true})).toBeVisible();
  await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("light");
  await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-color-mode","light");
  const unchanged=await page.request.get(origin+"/api/restaurant/menu/appearance",{headers:{"x-foon-tenant":visualTenant.tenant}});expect((await unchanged.json()).colorMode).toBe("template");
