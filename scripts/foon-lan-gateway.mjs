@@ -27,7 +27,7 @@ function persist(){
  return queue;
 }
 function send(res,status,data){res.writeHead(status,{"content-type":"application/json; charset=utf-8","cache-control":"no-store"});res.end(JSON.stringify(data));}
-function announce(order){for(const client of clients){try{client.write("event: order\\ndata: "+JSON.stringify(order)+"\\n\\n");}catch{clients.delete(client);}}}
+function announce(order){for(const client of clients){try{client.write("event: order\ndata: "+JSON.stringify(order)+"\n\n");}catch{clients.delete(client);}}}
 function authorized(req){
  const given=req.headers.authorization?.replace(/^Bearer /,"")||"";
  const a=Buffer.from(given),b=Buffer.from(token);
@@ -48,7 +48,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="GET"&&url.pathname==="/orders")return send(res,200,{orders:[...orders.values()]});
   if(req.method==="GET"&&url.pathname==="/events"){
    res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-store","connection":"keep-alive"});
-   res.write(": connected\\n\\n");clients.add(res);req.on("close",()=>clients.delete(res));return;
+   res.write(": connected\n\n");clients.add(res);req.on("close",()=>clients.delete(res));return;
   }
   if(req.method==="POST"&&url.pathname==="/orders"){
    const data=await body(req);
@@ -72,4 +72,4 @@ const server=http.createServer(async(req,res)=>{
   return send(res,404,{error:"NOT_FOUND"});
  }catch(error){return send(res,error.message==="BODY_TOO_LARGE"?413:500,{error:error.message==="BODY_TOO_LARGE"?"BODY_TOO_LARGE":"GATEWAY_ERROR"});}
 });
-server.listen(port,host,()=>process.stdout.write("FOON LAN gateway listening on "+host+":"+port+"\\n"));
+server.listen(port,host,()=>process.stdout.write("FOON LAN gateway listening on "+host+":"+port+"\n"));
