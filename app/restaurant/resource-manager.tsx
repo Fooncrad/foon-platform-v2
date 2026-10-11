@@ -88,6 +88,17 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   onChanged?.();}
   catch(error){const detail=error instanceof Error?error.message:"تعذر الحفظ.";if(module==="team"&&!editing&&detail.includes("DUPLICATE_RESOURCE")){await refresh().catch(()=>{});setMessage("هذا البريد مرتبط بموظف موجود في المطعم. ابحث عنه في القائمة وعدّل بياناته بدلاً من إضافته مرة أخرى. ("+detail+")");}else if(module==="team"&&detail.includes("EMPLOYEE_OWNER_ROLE_PROTECTED")){setMessage("هذا البريد مرتبط بمالك المطعم بالفعل. المالك لا يُضاف مرة أخرى كموظف ولا يمكن تغيير دوره من هنا. استخدم بريداً مختلفاً لإضافة مشرف. ("+detail+")");}else setMessage(detail);}finally{setBusy(false);}
  }
+ async function updateReservationStatus(row:StoredResource,status:string){
+  if(busy)return;
+  setBusy(true);setMessage("");
+  try{
+   await operationApi(tenantId,"reservations","PATCH",{id:row.id,version:row.version,name:row.name,status,branchId:row.branch_id,data:row.data});
+   await refresh();
+   setMessage(status==="confirmed"?"تم تأكيد الحجز.":status==="seated"?"تم تسجيل حضور الضيف.":status==="completed"?"تم إكمال الحجز.":"تم إلغاء الحجز.");
+   onChanged?.();
+  }catch(error){setMessage(error instanceof Error?error.message:"تعذر تحديث الحجز.");}
+  finally{setBusy(false);}
+ }
  async function archive(row:StoredResource){if(busy)return;setBusy(true);setMessage("");try{await operationApi(tenantId,module,"DELETE",{id:row.id,version:row.version});await refresh();setMessage("تمت أرشفة العنصر بنجاح.");onChanged?.();}catch(error){setMessage(error instanceof Error?error.message:"تعذر الأرشفة.");}finally{setBusy(false);}}
  function input(f:ResourceField){if(module==="menu"&&f.key==="allergens"){const selected=String(editing?.data.allergens??"").split(",").map(v=>v.trim());return <div role="group" aria-label="مسببات الحساسية" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,180px),1fr))",gap:8}}>{allergenChoices.map(([key,ar,en,fr])=><label key={key} style={{display:"flex",alignItems:"center",gap:8}}><input type="checkbox" name="allergenChoice" value={key} defaultChecked={selected.includes(key)||selected.includes(ar)}/><span>{ar} <small style={{display:"block"}}>{en} · {fr}</small></span></label>)}</div>;} const value=uploads[f.key]??editing?.data[f.key]??(f.key==="scheduledAt"?initialDate:f.key==="durationMinutes"?90:null),defaultValue=value==null?"":f.type==="datetime"?new Date(String(value)).toLocaleString("sv-SE").replace(" ","T").slice(0,16):String(value);
   if(f.type==="ref")return <select key={f.key==="tableId"?formSection:f.key} onChange={f.key==="sectionId"?e=>setFormSection(e.target.value):undefined} aria-label={f.label} name={f.key} required={f.required||f.key==="sectionId"&&["tables","reservations","waiterCalls","waitlist"].includes(module)&&Boolean(refs.sections?.length)} defaultValue={defaultValue}><option value="">اختر {f.label}</option>{(refs[f.ref!]??[]).filter(row=>f.key==="waiterId"?row.status==="active"&&row.data.role==="waiter":f.key==="supervisorId"?row.status==="active"&&["manager","supervisor"].includes(String(row.data.role)):f.key==="tableId"?row.status!=="inactive"&&(!formSection||row.data.sectionId===formSection):true).map(row=><option key={row.id} value={row.id}>{f.key==="tableId"?(refs.sections?.find(s=>s.id===row.data.sectionId)?.name||"الصالة الرئيسية")+" · ":""}{row.name}</option>)}</select>;
