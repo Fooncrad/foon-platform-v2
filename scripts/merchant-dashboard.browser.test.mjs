@@ -23,7 +23,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
  await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
  await expect(page.getByRole("heading",{name:"نظرة عامة",exact:true})).toBeVisible();
- await expect(page.getByRole("heading",{name:"مرحباً بفريق مطعم المعاينة",exact:true})).toBeVisible();
+ await expect(page.getByRole("heading",{name:"لوحة التشغيل المباشر",exact:true})).toBeVisible();
  await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
  await expect(page.getByText("لا توجد طلبات محفوظة بعد",{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
