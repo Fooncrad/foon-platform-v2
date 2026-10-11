@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS employee_invites (id VARCHAR(36) PRIMARY KEY, tenant_id VARCHAR(36) NOT NULL, resource_id VARCHAR(36) NOT NULL, email VARCHAR(254) NOT NULL, token_hash CHAR(64) NOT NULL UNIQUE, expires_at TIMESTAMP NOT NULL, used_at TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY employee_invites_resource (tenant_id,resource_id));
