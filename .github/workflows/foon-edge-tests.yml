@@ -1,0 +1,25 @@
+name: FOON Edge Storage Tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/foon-lan-sqlite.mjs"
+      - "scripts/foon-lan-sqlite.test.mjs"
+      - "scripts/foon-edge-backup.mjs"
+      - "scripts/foon-edge-backup.test.mjs"
+      - ".github/workflows/foon-edge-tests.yml"
+  workflow_dispatch:
+jobs:
+  edge-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node --check scripts/foon-lan-sqlite.mjs
+      - run: node --check scripts/foon-edge-backup.mjs
+      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
