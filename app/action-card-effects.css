@@ -1,0 +1,9 @@
+/* FOON V2 action-required card effects. Apply data-action-state to actionable cards. */
+@keyframes foon-attention { 0%,100% { box-shadow:0 0 0 0 rgba(226,169,59,.08) } 50% { box-shadow:0 0 0 4px rgba(226,169,59,.26) } }
+@keyframes foon-urgent { 0%,100% { box-shadow:0 0 0 0 rgba(220,38,38,.08) } 50% { box-shadow:0 0 0 5px rgba(220,38,38,.28) } }
+@keyframes foon-complete { from { opacity:.75; transform:scale(.99) } to { opacity:1; transform:scale(1) } }
+[data-action-state="pending"] { border-inline-start:4px solid #e2a93b !important; animation:foon-attention 2.4s ease-in-out infinite; }
+[data-action-state="urgent"] { border-inline-start:4px solid #dc2626 !important; animation:foon-urgent 1.5s ease-in-out infinite; }
+[data-action-state="completed"] { border-inline-start:4px solid #16a34a !important; animation:foon-complete .35s ease-out both; }
+[data-action-state] { transition:border-color .2s ease,background-color .2s ease; }
+@media (prefers-reduced-motion:reduce) { [data-action-state] { animation:none !important; transition:none !important; } }
