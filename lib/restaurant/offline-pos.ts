@@ -47,8 +47,6 @@ export async function importPendingPosOrders(json:string,tenantId:string):Promis
   if(typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.tenantId!==tenantId||typeof order.branchId!=="string"||typeof order.createdAt!=="string"||!order.payload||typeof order.payload!=="object"||order.payload.requestKey!==order.id||!["pending","needs_review"].includes(order.status))throw new Error("INVALID_OFFLINE_ORDER");
  }
  for(const order of backup.orders as PendingPosOrder[]){
-  const existing=(await pendingPosOrders()).find(row=>row.id===order.id);
-  if(existing){if(existing.tenantId!==tenantId)throw new Error("OFFLINE_ORDER_CONFLICT");continue;}
   if(await queuePosOrderIfAbsent(order))count++;
  }
  return count;
