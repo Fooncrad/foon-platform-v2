@@ -56,7 +56,8 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   if(previous&&String(parseData(previous.data).email??"").toLowerCase()!==email)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
   if(previous&&parseData(previous.data).userId&&parseData(previous.data).userId!==userId)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
   if(userId){await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status)",[randomUUID(),tenantId,userId,membershipRole,input.status]);input.data.userId=userId;}
-  else {input.data.invitationStatus="pending";}
+  else {input.data.invitationStatus="pending";input.status="suspended";}
+  if(userId)input.data.invitationStatus="linked";
   input.data.email=email;lookup=email;
  }
  if(module==="purchases"){
