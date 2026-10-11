@@ -10,10 +10,10 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
  const dir=await mkdtemp(join(tmpdir(),"foon-edge-"));
  const port=18000+Math.floor(Math.random()*24000);
  const token=randomBytes(32).toString("hex");
- const env={...process.env,FOON_LAN_TOKEN:token,FOON_LAN_PORT:String(port),FOON_LAN_DB:join(dir,"edge.sqlite")};
+ const env={...process.env,FOON_LAN_TOKEN:token,FOON_EDGE_ACK_SECRET:token,FOON_LAN_PORT:String(port),FOON_LAN_DB:join(dir,"edge.sqlite")};
  const base="http://127.0.0.1:"+port;
  let child;
- const request=(path,method="GET",payload,secret=token)=>fetch(base+path,{method,headers:{authorization:"Bearer "+secret,"content-type":"application/json"},body:payload?JSON.stringify(payload):undefined});
+ const request=(path,method="GET",payload,secret=token)=>fetch(base+path,{method,headers:{authorization:"Bearer "+secret,"x-foon-edge-ack-secret":token,"content-type":"application/json"},body:payload?JSON.stringify(payload):undefined});
  async function start(){
   child=spawn(process.execPath,["scripts/foon-lan-sqlite.mjs"],{env,stdio:"ignore"});
   for(let i=0;i<70;i++){try{if((await request("/health")).ok)return;}catch{}await new Promise(resolve=>setTimeout(resolve,100));}
