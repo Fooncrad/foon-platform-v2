@@ -150,7 +150,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
  await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
- await publicPage.getByRole('dialog').getByLabel('قسم الصالة',{exact:true}).selectOption(familySection);
+ await publicPage.getByRole('dialog').getByLabel('القسم المطلوب',{exact:true}).selectOption(familySection);
  const nextDay=new Date(Date.now()+86400000);const localDate=new Date(nextDay.getTime()-nextDay.getTimezoneOffset()*60000).toISOString().slice(0,16);
  await publicPage.getByRole('dialog').getByLabel('موعد الحجز',{exact:true}).fill(localDate);
  await publicPage.getByRole('dialog').getByLabel('رقم التواصل',{exact:true}).fill('0500000000');
