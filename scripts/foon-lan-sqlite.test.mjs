@@ -47,11 +47,11 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   const signed=(event)=>signCloudReceipt({receiptId:"receipt-"+event.seq,deviceId:env.FOON_EDGE_DEVICE_ID,eventSeq:event.seq,orderId:event.order_id,digest:eventDigest({seq:event.seq,order_id:event.order_id,kind:event.kind,payload:event.payload})},env.FOON_EDGE_RECEIPT_SIGNING_KEY);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:randomUUID(),receipt:signed(outbox.events[0])})).status,404);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"short"})).status,400);
-  assert.equal((await request("/outbox/ack","POST",{seq:999999,orderId:id,receipt:"test-cloud-receipt"})).status,404);
+  assert.equal((await request("/outbox/ack","POST",{seq:999999,orderId:id,receipt:signed(outbox.events[0])})).status,404);
   assert.equal((await (await request("/outbox")).json()).events.length,2);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:{...signed(outbox.events[0]),signature:"0".repeat(64)}})).status,403);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:signed(outbox.events[0])})).status,200);
-  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"test-cloud-receipt"})).status,200);
+  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:signed(outbox.events[0])})).status,200);
   await stop();
   await start();
   const saved=await (await request("/orders")).json();
@@ -63,7 +63,7 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   assert.equal(remaining.events.length,1);
   assert.equal(remaining.events[0].kind,"status");
   assert.equal(remaining.events[0].order_id,id);
-  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"test-cloud-receipt"})).status,200);
+  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:signed(outbox.events[0])})).status,200);
   assert.equal((await (await request("/health")).json()).pending,1);
   assert.equal((await request("/outbox/ack","POST",{seq:remaining.events[0].seq,orderId:id,receipt:signed(remaining.events[0])})).status,200);
   assert.equal((await (await request("/health")).json()).pending,0);
