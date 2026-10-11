@@ -18,10 +18,34 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  useEffect(()=>{let alive=true;const load=()=>operationApi(tenantId,module,"GET",undefined,scope).then(data=>{if(alive){setOrders(data.orders);setMenu(data.menu??[]);setTables(data.tables??[]);setOptions(data.options??{});setLoading(false);}}).catch(error=>{if(alive){setLoading(false);setMessage(String(error.message));}});void load();const timer=setInterval(()=>void load(),15000);return()=>{alive=false;clearInterval(timer);};},[tenantId,module,scope]);
  async function update(order:Order,change:{status?:string;paymentStatus?:string}){if(updatingIds.has(order.id))return;setUpdatingIds(ids=>new Set(ids).add(order.id));try{await operationApi(tenantId,module,"PATCH",{id:order.id,version:order.version,...change});await refresh();setMessage("تم تحديث الطلب.");}catch(error){setMessage(error instanceof Error?error.message:"تعذر التحديث.");}finally{setUpdatingIds(ids=>{const next=new Set(ids);next.delete(order.id);return next;});}}
  async function create(event:FormEvent<HTMLFormElement>){event.preventDefault();if(busy)return;const f=new FormData(event.currentTarget);setBusy(true);try{const payload={branchId:f.get("branchId"),channel:f.get("channel"),tableId:channel==="dine_in"?f.get("tableId")||null:null,partySize:channel==="dine_in"?Number(f.get("partySize")):null,customerName:f.get("customerName"),customerPhone:f.get("customerPhone"),couponCode:f.get("couponCode")||null,items:Object.values(cart).filter(line=>line.quantity>0).map(line=>({id:line.itemId,quantity:line.quantity,options:line.options}))};const encoded=JSON.stringify(payload);if(requestRef.current?.payload!==encoded)requestRef.current={payload:encoded,key:crypto.randomUUID()};await operationApi(tenantId,"pos","POST",{...payload,requestKey:requestRef.current.key});requestRef.current=null;setCart({});await refresh();onChanged();setMessage("تم إنشاء الطلب. الأسعار والإجمالي حُسبت من المنيو المحفوظ.");}catch(error){setMessage(error instanceof Error?error.message:"تعذر إنشاء الطلب.");}finally{setBusy(false);}}
+ function printOrder(order:Order,finalInvoice=false){
+  const popup=window.open("","_blank","width=440,height=720");
+  if(!popup){setMessage("اسمح بالنوافذ المنبثقة لطباعة الطلب.");return;}
+  const doc=popup.document;
+  const addText=(tag:string,value:string)=>{const el=doc.createElement(tag);el.textContent=value;doc.body.appendChild(el);};
+  doc.title=(finalInvoice?"فاتورة نهائية":"تذكرة طلب")+" #"+order.order_number;
+  const style=doc.createElement("style");
+  style.textContent="@page{size:80mm auto;margin:3mm}body{font:13px Arial,sans-serif;direction:rtl;color:#111;margin:0 auto;max-width:74mm}h2{text-align:center}p{padding:5px 0;border-bottom:1px dashed #bbb}small{display:block;text-align:center}button{display:none}@media screen{button{display:block;margin:16px auto;padding:10px}}";
+  doc.head.appendChild(style);
+  addText("h2",finalInvoice?"فاتورة نهائية":"تذكرة طلب");
+  addText("p","رقم الطلب: #"+order.order_number);
+  addText("p","الحالة: "+(statuses[order.status]??order.status));
+  addText("p","الدفع: "+(payments[order.payment_status]??order.payment_status));
+  addText("p","التاريخ: "+new Date(order.created_at).toLocaleString("ar-SA-u-nu-latn"));
+  if(order.customer_name)addText("p","العميل: "+order.customer_name);
+  if(order.dining_snapshot?.name)addText("p","الطاولة: "+order.dining_snapshot.name);
+  for(const item of order.items)addText("p",item.name+" × "+item.quantity);
+  addText("p","الإجمالي: "+Number(order.total??0).toFixed(2)+" ر.س");
+  if(!finalInvoice)addText("small","تذكرة تشغيلية وليست فاتورة ضريبية");
+  if(finalInvoice)addText("small","إيصال دفع؛ لا يُعد فاتورة ضريبية نظامية دون بيانات الضريبة والمتطلبات المعتمدة");
+  const button=doc.createElement("button");button.textContent="طباعة";button.onclick=()=>popup.print();doc.body.appendChild(button);
+  popup.focus();
+  popup.setTimeout(()=>popup.print(),300);
+ }
  function actions(order:Order){
   const next:Record<string,string>={new:"preparing",preparing:"ready",ready:"completed"};
   const canAdvance=["owner","manager","cashier"].includes(role)||role==="kitchen"&&["new","preparing"].includes(order.status)||["waiter","driver"].includes(role)&&order.status==="ready";
-  return <div className="restaurantOrderActions">{canAdvance&&next[order.status]&&<button className="restaurantOrderAdvance" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:next[order.status]})}>نقل إلى {statuses[next[order.status]]}</button>}{["owner","manager","cashier"].includes(role)&&order.status!=="cancelled"&&<>{order.payment_status==="unpaid"?<button disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"paid"})}>تسجيل دفع يدوي</button>:order.payment_status==="paid"?<button className="restaurantOrderRefund" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"refunded"})}>تسجيل رد المبلغ</button>:null}{["new","preparing","ready"].includes(order.status)&&order.payment_status!=="paid"&&<button className="restaurantOrderCancel" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:"cancelled"})}>إلغاء الطلب</button>}</>}</div>;
+  return <div className="restaurantOrderActions">{canAdvance&&next[order.status]&&<button className="restaurantOrderAdvance" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:next[order.status]})}>نقل إلى {statuses[next[order.status]]}</button>}{["owner","manager","cashier"].includes(role)&&order.status!=="cancelled"&&<>{order.payment_status==="unpaid"?<button disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"paid"})}>تسجيل دفع يدوي</button>:order.payment_status==="paid"?<button className="restaurantOrderRefund" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"refunded"})}>تسجيل رد المبلغ</button>:null}{["new","preparing","ready"].includes(order.status)&&order.payment_status!=="paid"&&<button className="restaurantOrderCancel" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:"cancelled"})}>إلغاء الطلب</button>}</>}<button type="button" onClick={()=>printOrder(order)}>طباعة الطلب</button>{order.payment_status==="paid"&&<button type="button" onClick={()=>printOrder(order,true)}>طباعة إيصال الدفع النهائي</button>}</div>;
  }
  const [updatingIds,setUpdatingIds]=useState<Set<string>>(()=>new Set());
  useEffect(()=>{if(!message)return;const timer=window.setTimeout(()=>setMessage(""),4500);return()=>window.clearTimeout(timer);},[message]);
