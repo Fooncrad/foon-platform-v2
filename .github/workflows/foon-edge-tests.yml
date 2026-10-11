@@ -25,6 +25,8 @@ on:
       - "lib/platform/edge-sync-pricing.mjs"
       - "lib/platform/edge-sync-create-order.mjs"
       - "scripts/foon-edge-create-order.test.mjs"
+      - "migrations/0073_edge_sync_inbox.sql"
+      - "migrations/0074_menu_item_order_resource_backfill.sql"
       - "scripts/check-edge-catalog.mjs"
       - "scripts/foon-edge-pricing.test.mjs"
       - "scripts/foon-edge-sync-worker.test.mjs"
