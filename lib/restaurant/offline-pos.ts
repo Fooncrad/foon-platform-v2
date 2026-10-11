@@ -35,3 +35,11 @@ function transactionStore<T>(name:string,mode:IDBTransactionMode,operation:(stor
   tx.onabort=()=>{database.close();reject(tx.error??new Error("OFFLINE_TRANSACTION_ABORTED"));};
  }));
 }
+
+export async function getOfflineStorageStatus(){
+ if(typeof navigator==='undefined'||typeof indexedDB==='undefined')return {available:false,persistent:false,used:null as number|null,quota:null as number|null};
+ const storage=navigator.storage;
+ const persistent=storage?.persisted?await storage.persisted().catch(()=>false):false;
+ const estimate=storage?.estimate?await storage.estimate().catch(()=>null):null;
+ return {available:true,persistent,used:estimate?.usage??null,quota:estimate?.quota??null};
+}
