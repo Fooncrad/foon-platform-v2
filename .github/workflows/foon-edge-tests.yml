@@ -8,7 +8,7 @@ on:
       - "scripts/foon-edge-backup.mjs"
       - "scripts/foon-edge-backup.test.mjs"
       - "scripts/foon-edge-sync-contract.mjs"
-      - "scripts/foon-edge-sync-contract.test.mjs scripts/foon-edge-central-validation.test.mjs"
+      - "scripts/foon-edge-sync-contract.test.mjs"
       - "lib/platform/edge-sync-validation.mjs"
       - "scripts/foon-edge-central-validation.test.mjs"
       - ".github/workflows/foon-edge-tests.yml"
@@ -28,4 +28,4 @@ jobs:
       - run: node --check scripts/foon-edge-backup.mjs
       - run: node --check scripts/foon-edge-sync-contract.mjs
       - run: node --check lib/platform/edge-sync-validation.mjs
-      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs
+      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs scripts/foon-edge-central-validation.test.mjs
