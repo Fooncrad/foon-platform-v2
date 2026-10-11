@@ -22,4 +22,6 @@ test("central edge validation enforces authenticated tenant, branch and device",
  assert.equal(validateIncomingEdgeEvent(withDigest({payload:{id:event.orderId,items:[{id:"bad",quantity:1}]}}),identity).error,"INVALID_EDGE_ORDER_ITEMS");
  assert.equal(validateIncomingEdgeEvent(withDigest({payload:{id:event.orderId,items:[{id:event.payload.items[0].id,quantity:1},{id:event.payload.items[0].id,quantity:2}]}}),identity).error,"INVALID_EDGE_ORDER_ITEMS");
  assert.equal(validateIncomingEdgeEvent(withDigest({kind:"status",payload:{id:"11111111-1111-4111-8111-111111111111",status:"invalid"}}),identity).error,"INVALID_EDGE_STATUS");
+ assert.equal(validateIncomingEdgeEvent(withDigest({kind:"status",payload:{id:event.orderId,status:"ready",payment_status:"paid"}}),identity).error,"INVALID_EDGE_STATUS");
+ assert.equal(validateIncomingEdgeEvent(withDigest({kind:"status",payload:{id:event.orderId,status:"ready"}}),identity).ok,true);
 });
