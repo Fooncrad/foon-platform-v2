@@ -35,7 +35,8 @@ async function readBody(req){let raw="";for await(const chunk of req){raw+=chunk
 function emit(event){for(const client of clients){try{client.write(["event: order","data: "+JSON.stringify(event),"",""].join(String.fromCharCode(10)));}catch{clients.delete(client);}}}
 const server=http.createServer(async(req,res)=>{
  if(!allowed(req))return send(res,401,{error:"UNAUTHORIZED"});
- const url=new URL(req.url||"/","http://localhost");
+ let url;
+ try{url=new URL(req.url||"/","http://localhost");}catch{return send(res,400,{error:"INVALID_URL"});}
  try{
   if(req.method==="GET"&&url.pathname==="/health")return send(res,200,{ok:true,storage:"sqlite-wal-full",pending:db.prepare("SELECT count(*) AS n FROM outbox WHERE synced_at IS NULL").get().n});
   if(req.method==="GET"&&url.pathname==="/orders")return send(res,200,{orders:db.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 500").all().map(row=>({...row,payload:JSON.parse(row.payload)}))});
