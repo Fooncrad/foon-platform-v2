@@ -39,9 +39,15 @@ test("real SQLite gateway persists offline order and acknowledges only after clo
   await start();
   assert.equal((await (await req("/health")).json()).pending,1);
   let cloudApplied=0;
+  let cloudAttempts=0;
+  let failAckOnce=true;
   const seen=new Map();
   const onlineFetch=async(url,opts)=>{
-   if(new URL(url).hostname!=="cloud.example")return fetch(url,opts);
+   if(new URL(url).hostname!=="cloud.example"){
+    if(new URL(url).pathname==="/outbox/ack"&&failAckOnce){failAckOnce=false;return new Response(null,{status:503});}
+    return fetch(url,opts);
+   }
+   cloudAttempts++;
    const e=JSON.parse(opts.body),key=e.deviceId+":"+e.eventSeq;
    if(!seen.has(key)){
     cloudApplied++;
@@ -49,8 +55,13 @@ test("real SQLite gateway persists offline order and acknowledges only after clo
    }
    return new Response(JSON.stringify({receipt:seen.get(key)}),{status:seen.size===cloudApplied?201:200,headers:{"content-type":"application/json"}});
   };
+  await assert.rejects(()=>syncLocalOutbox({...config,fetchImpl:onlineFetch}),/LOCAL_ACK_REJECTED/);
+  assert.equal((await (await req("/health")).json()).pending,1);
+  assert.equal(cloudApplied,1);
   const synced=await syncLocalOutbox({...config,fetchImpl:onlineFetch});
   assert.equal(synced.acked,1);
+  assert.equal(cloudAttempts,2);
+  assert.equal(cloudApplied,1);
   assert.equal((await (await req("/health")).json()).pending,0);
   const again=await syncLocalOutbox({...config,fetchImpl:onlineFetch});
   assert.equal(again.acked,0);
