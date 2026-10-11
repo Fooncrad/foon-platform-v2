@@ -68,3 +68,11 @@ test("rejects forged local branch or status metadata",async()=>{
  }
  assert.equal(writes.length,0);
 });
+
+test("rejects primitive and array cart entries before any SQL",async()=>{
+ const {connection,writes}=fake();
+ for(const invalid of ["bad",42,[],null]){
+  await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,items:[invalid]}},context),/EDGE_UNSUPPORTED_ITEM_FIELDS/);
+ }
+ assert.equal(writes.length,0);
+});
