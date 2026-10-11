@@ -64,3 +64,9 @@ test("bridge separates outbox ACK sequence from signed event sequence",async()=>
 test("bridge rejects plaintext cloud URLs",async()=>{
  await assert.rejects(()=>syncLocalOutbox({...config,cloudUrl:"http://cloud.example/edge/sync"}),/CLOUD_HTTPS_REQUIRED/);
 });
+
+test("bridge rejects loopback and local cloud DNS targets",async()=>{
+ for(const cloudUrl of ["https://localhost/edge/sync","https://127.0.0.1/edge/sync","https://pos.local/edge/sync","https://pos.internal/edge/sync","https://cloud.example:8443/edge/sync","https://user:password@cloud.example/edge/sync"]){
+  await assert.rejects(()=>syncLocalOutbox({...config,cloudUrl}),/INVALID_CLOUD_ENDPOINT/);
+ }
+});
