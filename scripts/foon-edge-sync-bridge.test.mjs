@@ -79,3 +79,16 @@ test("bridge rejects malformed local outbox without contacting cloud",async()=>{
   assert.deepEqual(calls,["/outbox"]);
  }
 });
+
+test("bridge forbids HTTP redirects for local reads, cloud sends and local ACKs",async()=>{
+ const paths=[];
+ const base=fakeFetch().fetchImpl;
+ const fetchImpl=async(url,options)=>{
+  paths.push(new URL(url).pathname);
+  assert.equal(options.redirect,"error");
+  return base(url,options);
+ };
+ const result=await syncLocalOutbox({...config,fetchImpl});
+ assert.equal(result.acked,1);
+ assert.deepEqual(paths,["/outbox","/edge/sync","/outbox/ack"]);
+});
