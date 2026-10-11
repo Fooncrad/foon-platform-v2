@@ -54,5 +54,11 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   assert.equal(remaining.events[0].order_id,id);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"test-cloud-receipt"})).status,200);
   assert.equal((await (await request("/health")).json()).pending,1);
+  assert.equal((await request("/outbox/ack","POST",{seq:remaining.events[0].seq,orderId:id,receipt:"test-cloud-receipt-status"})).status,200);
+  assert.equal((await (await request("/health")).json()).pending,0);
+  await stop();
+  await start();
+  assert.equal((await (await request("/outbox")).json()).events.length,0);
+  assert.equal((await (await request("/health")).json()).pending,0);
  }finally{await stop();await rm(dir,{recursive:true,force:true});}
 });
