@@ -18,6 +18,7 @@ on:
       - "scripts/foon-edge-sync-worker.mjs"
       - "scripts/foon-edge-sync-bridge.mjs"
       - "scripts/foon-edge-sync-bridge.test.mjs"
+      - "scripts/foon-edge-end-to-end.test.mjs"
       - "scripts/foon-edge-sync-runner.mjs"
       - "scripts/foon-edge-order-mutation.test.mjs"
       - "lib/platform/edge-sync-order-mutation.mjs"
