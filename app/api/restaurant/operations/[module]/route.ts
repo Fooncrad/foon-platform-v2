@@ -44,7 +44,24 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
   const [pending]=await db.execute<RowDataPacket[]>("SELECT kind,COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND status='pending' AND kind IN ('waiter_call','reservation') GROUP BY kind",params);
   for(const row of pending){const key=row.kind==='waiter_call'?'waiterCalls':'reservations';if((await tenantEntitlement(tenantId,key==='waiterCalls'?'tables':'reservations')).enabled)serviceCounts[key]=Number(row.n);}
  }
- return {summary:{...serviceCounts,sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
+ const attention:Record<string,number>={};
+ const [pendingResources]=await db.execute<RowDataPacket[]>(
+  "SELECT kind,status,data FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND kind IN ('waiter_call','reservation','waitlist','inventory_item','purchase','customer_invoice','internal_invoice','employee','remote_task','split_bill')",params);
+ for(const row of pendingResources){
+  const kind=String(row.kind),status=String(row.status);
+  let section="";
+  if(kind==="waiter_call"&&["pending","in_progress"].includes(status))section="tables";
+  else if(["reservation","waitlist"].includes(kind)&&["pending","waiting","requested"].includes(status))section="reservations";
+  else if(kind==="purchase"&&status==="planned")section="inventory";
+  else if(["customer_invoice","internal_invoice"].includes(kind)&&status==="draft")section="printers";
+  else if(kind==="split_bill"&&status==="requested")section="pos";
+  else if(kind==="employee"&&["pending","invited"].includes(status))section="team";
+  else if(kind==="inventory_item"&&status==="active"){
+   try{const d=typeof row.data==="string"?JSON.parse(row.data):row.data;const qty=Number(d?.quantity),min=Number(d?.minimum);if(d?.minimum!==null&&d?.minimum!==undefined&&Number.isFinite(qty)&&Number.isFinite(min)&&qty<=min)section="inventory";}catch{}
+  }
+  if(section){const allowed=section==="tables"||section==="reservations"?["owner","manager","waiter"]:section==="inventory"?["owner","manager","accountant"]:section==="printers"?["owner","manager","cashier","accountant"]:section==="pos"?["owner","manager","cashier"]:["owner","manager"];if(allowed.includes(role))attention[section]=(attention[section]??0)+1;}
+ }
+ return {attention,summary:{...serviceCounts,sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
 }
 async function availableTables(db:PoolConnection,tenantId:string,branch:string|null){
  const tables=await resourceRows(db,tenantId,"tables",branch);
