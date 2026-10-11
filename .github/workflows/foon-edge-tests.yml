@@ -33,6 +33,8 @@ on:
       - "scripts/foon-edge-accept.test.mjs"
       - "scripts/foon-edge-central-validation.test.mjs"
       - ".github/workflows/foon-edge-tests.yml"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   edge-tests:
