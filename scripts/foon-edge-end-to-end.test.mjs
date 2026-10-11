@@ -55,7 +55,10 @@ test("real SQLite gateway persists offline order and acknowledges only after clo
    }
    return new Response(JSON.stringify({receipt:seen.get(key)}),{status:seen.size===cloudApplied?201:200,headers:{"content-type":"application/json"}});
   };
-  await assert.rejects(()=>syncLocalOutbox({...config,fetchImpl:onlineFetch}),/LOCAL_ACK_REJECTED/);
+  const failedAck=await syncLocalOutbox({...config,fetchImpl:onlineFetch});
+  assert.equal(failedAck.acked,0);
+  assert.equal(failedAck.retry,1);
+  assert.equal(failedAck.errors[0]?.error,"EDGE_SYNC_FAILED");
   assert.equal((await (await req("/health")).json()).pending,1);
   assert.equal(cloudApplied,1);
   const synced=await syncLocalOutbox({...config,fetchImpl:onlineFetch});
