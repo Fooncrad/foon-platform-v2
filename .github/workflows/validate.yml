@@ -32,6 +32,8 @@ jobs:
         run: node --test scripts/registration.test.mjs
       - name: Test operational resource validation
         run: npm run test:resources
+      - name: Test LAN persistence, authentication and backups
+        run: node --test scripts/foon-lan-gateway.test.mjs scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint
@@ -47,6 +49,8 @@ jobs:
         # Docker Official Images mirror; avoid Docker Hub's shared runner pull quota.
         image: public.ecr.aws/docker/library/mariadb:11.8
         env:
+          # Catch pooled-session clock leaks hidden by UTC-only CI hosts.
+          TZ: Asia/Riyadh
           MARIADB_ROOT_PASSWORD: foon-ci-only-password
           MARIADB_DATABASE: foon_migration_test
         ports:

@@ -37,7 +37,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("dialog").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
  await expect(page.getByRole("button",{name:"إضافة الفرع",exact:true})).toBeDisabled();
- const database=await mysql.createConnection(process.env.DATABASE_URL);
+ const database=await mysql.createConnection(process.env.DATABASE_URL);await database.query("SET time_zone='+00:00'");
  await database.execute("UPDATE tenant_subscriptions s JOIN tenants t ON t.id=s.tenant_id SET s.plan_id='operations-enterprise' WHERE t.slug='visual-dashboard'");
  const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug='visual-dashboard' LIMIT 1");
  await database.end();
@@ -61,6 +61,29 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
  await expect(page.locator(".restaurantOrderCards").getByText("مدفوع",{exact:true})).toBeVisible();
+ // Exercise the real browser queue, reconnect, and replay the same request key.
+ const queuedOrders=()=>page.evaluate(()=>new Promise((resolve,reject)=>{
+  const open=indexedDB.open('foon-pos-offline-v1',2);
+  open.onerror=()=>reject(open.error);
+  open.onsuccess=()=>{const db=open.result,tx=db.transaction('orders','readonly'),read=tx.objectStore('orders').getAll();read.onsuccess=()=>resolve(read.result);read.onerror=()=>reject(read.error);tx.oncomplete=()=>db.close();};
+ }));
+ await page.locator('.restaurantPosMenu article').filter({hasText:'قهوة المعاينة'}).getByRole('button').click();
+ await page.context().setOffline(true);
+ let offlinePayload;
+ try{
+  await expect.poll(()=>page.evaluate(()=>navigator.onLine)).toBe(false);
+  await page.getByRole('button',{name:'إنشاء الطلب',exact:true}).click();
+  await expect(page.getByText('حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.',{exact:true})).toBeVisible();
+  await expect.poll(async()=>(await queuedOrders()).length).toBe(1);
+  offlinePayload=(await queuedOrders())[0].payload;
+ }finally{await page.context().setOffline(false);}
+ await expect.poll(async()=>(await queuedOrders()).length,{timeout:15000}).toBe(0);
+ const posHeaders={origin,'x-foon-tenant':visualTenant.tenant};
+ const synced=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});
+ const syncedOrders=(await synced.json()).orders;expect(syncedOrders).toHaveLength(2);
+ const offlineOrder=syncedOrders.find(order=>order.payment_status==='unpaid');expect(offlineOrder.total).toBe(10);
+ const replay=await page.request.post(origin+'/api/restaurant/operations/pos',{headers:posHeaders,data:offlinePayload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(offlineOrder.id);
+ const afterReplay=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});expect((await afterReplay.json()).orders).toHaveLength(2);
  await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 ر.س",{exact:true})).toBeVisible();
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
@@ -150,7 +173,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
  await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
- await publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).locator('select[name="sectionId"]').selectOption(familySection);
+ const bookingDialog=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
+ await expect(bookingDialog).toBeVisible();
+ await expect(bookingDialog.getByRole('button',{name:'متابعة كعميل لهذا المطعم',exact:true})).toHaveCount(0);
+ await bookingDialog.getByLabel('القسم المطلوب',{exact:true}).selectOption(familySection);
  const nextDay=new Date(Date.now()+86400000);const localDate=new Date(nextDay.getTime()-nextDay.getTimezoneOffset()*60000).toISOString().slice(0,16);
  const bookingCalendar=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).locator('.foonBookingCalendar');
  if(nextDay.getMonth()!==new Date().getMonth())await bookingCalendar.getByRole('button',{name:'Next month',exact:true}).click();
@@ -201,6 +227,29 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await publicPage.screenshot({path:'work/menu-customer-orders-mobile.png',fullPage:true});
  await publicPage.close();
  await publicContext.close();
+ // An existing customer from another store must join before accessing booking fields.
+ // Joining on mobile must also unlock the separate desktop service instance.
+ const unlinkedContext=await browser.newContext({viewport:{width:390,height:844}});
+ try{
+  const registered=await unlinkedContext.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'operations-owner-b',name:'عميل متجر آخر',email:'booking-unlinked@test.example',password:'a-strong-test-password'}});
+  expect(registered.status()).toBe(201);
+  const customerPage=await unlinkedContext.newPage();
+  await customerPage.goto(origin+'/visual-dashboard');
+  await customerPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
+  const joinDialog=customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
+  await expect(joinDialog).toBeVisible();
+  await expect(joinDialog.getByLabel('القسم المطلوب',{exact:true})).toHaveCount(0);
+  await joinDialog.getByRole('button',{name:'متابعة كعميل لهذا المطعم',exact:true}).click();
+  await expect(joinDialog.getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
+  await joinDialog.getByLabel('القسم المطلوب',{exact:true}).selectOption(familySection);
+  await joinDialog.getByRole('button',{name:'إغلاق',exact:true}).click();
+  await customerPage.setViewportSize({width:1440,height:1000});
+  await customerPage.locator('.publicMenuInfoBar').getByRole('button',{name:'حجز طاولة',exact:true}).click();
+  await expect(customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
+  await customerPage.reload();
+  await customerPage.locator('.publicMenuInfoBar').getByRole('button',{name:'حجز طاولة',exact:true}).click();
+  await expect(customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
+ }finally{await unlinkedContext.close();}
  await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'المنيو والأصناف',exact:true}).click();
  await page.getByRole('button',{name:'القوالب والمظهر',exact:true}).click();
  await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();

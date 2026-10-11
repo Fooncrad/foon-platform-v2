@@ -6,7 +6,7 @@ import mysql from "mysql2/promise";
 test("production registration routes activate owners and isolate store customers",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");
  assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
- const db=await mysql.createConnection(url.href);
+ const db=await mysql.createConnection(url.href);await db.query("SET time_zone='+00:00'");
  const origin="http://127.0.0.1:3101";
  const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3101"],{env:{...process.env,APP_URL:origin},stdio:["ignore","pipe","pipe"]});
  let output="";server.stdout.on("data",chunk=>{output+=chunk;});server.stderr.on("data",chunk=>{output+=chunk;});
@@ -23,6 +23,8 @@ test("production registration routes activate owners and isolate store customers
   const created=await post("/api/auth/register",owner);assert.equal(created.status,201,await created.clone().text());
   assert.match(created.headers.get("set-cookie")||"",/foon_session=/);
   const result=await created.json();assert.equal(result.plan,"free");assert.equal(result.tenant.status,"active");
+  const [[clock]]=await db.execute("SELECT ABS(TIMESTAMPDIFF(SECOND,starts_at,UTC_TIMESTAMP())) AS drift FROM tenant_subscriptions WHERE tenant_id=?",[result.tenant.id]);
+  assert.ok(Number(clock.drift)<30,"New subscription must start on the UTC clock even when the database server uses a different timezone");
   const [[business]]=await db.execute("SELECT activity_code,country_code,currency,region FROM tenant_business_profiles WHERE tenant_id=?",[result.tenant.id]);
   assert.equal(business.activity_code,"grocery");assert.equal(business.country_code,"SA");assert.equal(business.currency,"SAR");assert.equal(business.region,"الرياض");
   assert.equal((await post("/api/auth/register",{...owner,email:"invalid-activity@test.example",slug:"invalid-activity",activity:"unknown"})).status,400);

@@ -7,7 +7,7 @@ import {randomUUID} from "node:crypto";
 const origin="http://localhost:3103";
 test("restaurant operations preserve tenant, role, plan, pricing and transactional integrity",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
- const db=await mysql.createConnection(url.href);
+ const db=await mysql.createConnection(url.href);await db.query("SET time_zone='+00:00'");
  const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:"ignore"});
  const password="a-strong-test-password";
  const call=async(path,method,body,cookie,tenant)=>{
