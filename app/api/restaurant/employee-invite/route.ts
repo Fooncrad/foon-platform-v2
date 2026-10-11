@@ -28,7 +28,12 @@ export async function POST(request:Request){
  const url="https://nfoodz.com/employee-invite?token="+encodeURIComponent(token);
  let mail;
  try{mail=await createMailProvider();await mail.send({id,to:email,subject:"FOON | دعوة الانضمام لفريق المطعم",text:"تمت دعوتك للانضمام إلى فريق "+String(rows[0].name)+".\nالرابط صالح لمدة 48 ساعة:\n"+url+"\nإذا لم تطلب الانضمام فتجاهل الرسالة.",html:"<p>لديك دعوة للانضمام إلى فريق FOON.</p><p>الرابط صالح لمدة 48 ساعة.</p><p><a href=\""+url+"\">فتح الدعوة</a></p>"});}
- catch{await db.execute("DELETE FROM employee_invites WHERE id=?",[id]).catch(()=>{});return NextResponse.json({ok:false,code:"MAIL_SEND_FAILED"},{status:503});}
+ catch(error){await db.execute("DELETE FROM employee_invites WHERE id=?",[id]).catch(()=>{});
+  const raw=error as {code?:string;responseCode?:number;message?:string};
+  const code=raw?.message==="MAIL_PROVIDER_NOT_CONFIGURED"?"MAIL_PROVIDER_NOT_CONFIGURED":raw?.message==="MAIL_IDENTITY_INVALID"?"MAIL_IDENTITY_INVALID":raw?.code==="EAUTH"||raw?.responseCode===535?"SMTP_AUTH_FAILED":raw?.code==="ETIMEDOUT"||raw?.code==="ESOCKET"||raw?.code==="ECONNECTION"?"SMTP_CONNECTION_FAILED":raw?.message==="MAIL_RECIPIENT_NOT_ACCEPTED"?"MAIL_RECIPIENT_NOT_ACCEPTED":"MAIL_SEND_FAILED";
+  console.error("[FOON employee invite mail]",{code,providerCode:raw?.code??null,responseCode:raw?.responseCode??null});
+  return NextResponse.json({ok:false,code},{status:503});
+ }
  finally{mail?.close();}
  return NextResponse.json({ok:true,expiresInHours:48});
 }
