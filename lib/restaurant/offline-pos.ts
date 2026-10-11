@@ -46,6 +46,7 @@ export async function importPendingPosOrders(json:string,tenantId:string):Promis
   const order=item as PendingPosOrder;
   if(typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.tenantId!==tenantId||typeof order.branchId!=="string"||typeof order.createdAt!=="string"||!order.payload||typeof order.payload!=="object"||order.payload.requestKey!==order.id||!["pending","needs_review"].includes(order.status))throw new Error("INVALID_OFFLINE_ORDER");
  }
+ if(new Set((backup.orders as PendingPosOrder[]).map(order=>order.id)).size!==backup.orders.length)throw new Error("DUPLICATE_OFFLINE_BACKUP_ORDER");
  for(const order of backup.orders as PendingPosOrder[]){
   if(await queuePosOrderIfAbsent(order))count++;
  }
