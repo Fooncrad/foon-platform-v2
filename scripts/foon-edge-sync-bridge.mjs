@@ -14,7 +14,10 @@ export async function syncLocalOutbox({localUrl,localToken,ackSecret,cloudUrl,cl
  const list=await fetchImpl(new URL("/outbox",local),{headers});
  if(!list.ok)throw Error("LOCAL_OUTBOX_UNAVAILABLE");
  const data=await list.json();
- if(!Array.isArray(data.events))throw Error("INVALID_LOCAL_OUTBOX");
+ if(!Array.isArray(data.events)||data.events.length>1000)throw Error("INVALID_LOCAL_OUTBOX");
+ for(const e of data.events){
+  if(!e||!Number.isSafeInteger(e.seq)||e.seq<1||!Number.isSafeInteger(e.event_seq)||e.event_seq<1||typeof e.order_id!=="string"||!e.order_id||!["created","status"].includes(e.kind)||!e.payload||typeof e.payload!=="object"||Array.isArray(e.payload))throw Error("INVALID_LOCAL_OUTBOX");
+ }
  return syncEdgeBatch({
   events:data.events.map(e=>({...e,outboxSeq:e.seq,seq:e.event_seq})),deviceId,signingSecret,
   async send(event){
