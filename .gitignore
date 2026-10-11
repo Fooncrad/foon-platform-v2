@@ -6,3 +6,13 @@ node_modules/
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# FOON offline edge: never commit local customer/order databases or backups
+/data/
+/backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
