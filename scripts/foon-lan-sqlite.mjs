@@ -13,6 +13,8 @@ if(!Number.isInteger(port)||port<1||port>65535)throw new Error("Invalid port");
 const file=resolve(process.env.FOON_LAN_DB||"./data/foon-lan.sqlite");
 mkdirSync(dirname(file),{recursive:true});
 const db=new DatabaseSync(file);
+const integrityResult=db.prepare("PRAGMA quick_check").get();
+if(Object.values(integrityResult)[0]!=="ok")throw Error("Database integrity verification failed");
 db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
 CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY, branch_id TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL REFERENCES orders(id), kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL);
