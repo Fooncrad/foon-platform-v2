@@ -28,6 +28,7 @@ const insertEvent=db.prepare("INSERT INTO events(order_id,kind,payload,created_a
 const insertOutbox=db.prepare("INSERT INTO outbox(event_seq) VALUES(?)");
 const updateStatus=db.prepare("UPDATE orders SET status=?,updated_at=? WHERE id=?");
 const clients=new Set();
+const allowedStatusTransitions={new:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["completed","cancelled"],completed:[],cancelled:[]};
 const edgeReceiptSecret=process.env.FOON_EDGE_ACK_SECRET||"";
 const cloudReceiptKey=process.env.FOON_EDGE_RECEIPT_SIGNING_KEY||"";
 const edgeDeviceId=process.env.FOON_EDGE_DEVICE_ID||"";
@@ -64,6 +65,7 @@ const server=http.createServer(async(req,res)=>{
    if(!["new","preparing","ready","completed","cancelled"].includes(input.status))return send(res,400,{error:"INVALID_STATUS"});
    const old=getOrder.get(match[1]);if(!old)return send(res,404,{error:"ORDER_NOT_FOUND"});
    if(old.status===input.status)return send(res,200,{ok:true,unchanged:true});
+   if(!allowedStatusTransitions[old.status]?.includes(input.status))return send(res,409,{error:"INVALID_STATUS_TRANSITION"});
    const now=new Date().toISOString(),event={id:old.id,status:input.status,updatedAt:now};
    transact(()=>{updateStatus.run(input.status,now,old.id);const e=insertEvent.run(old.id,"status",JSON.stringify(event),now);insertOutbox.run(e.lastInsertRowid);});
    emit(event);return send(res,200,{ok:true,order:event});
