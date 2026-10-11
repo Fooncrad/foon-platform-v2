@@ -7,3 +7,8 @@
 [data-action-state="completed"] { border-inline-start:4px solid #16a34a !important; animation:foon-complete .35s ease-out both; }
 [data-action-state] { transition:border-color .2s ease,background-color .2s ease; }
 @media (prefers-reduced-motion:reduce) { [data-action-state] { animation:none !important; transition:none !important; } }
+
+/* Sidebar attention is visible in both desktop navigation and the mobile drawer. */
+.restaurantSidebar nav button[data-action-state="pending"],.restaurantDrawer nav button[data-action-state="pending"]{position:relative;border-inline-start:3px solid #e2a93b!important;background:rgba(226,169,59,.10);animation:foon-attention 2.4s ease-in-out infinite}
+.restaurantNavAttentionCount{display:inline-flex;align-items:center;justify-content:center;min-width:22px;min-height:22px;padding:0 5px;border-radius:99px;background:#e2a93b;color:#171613;font-weight:800;font-variant-numeric:tabular-nums;margin-inline-start:auto}
+@media(prefers-reduced-motion:reduce){.restaurantSidebar nav button[data-action-state],.restaurantDrawer nav button[data-action-state]{animation:none!important}}
