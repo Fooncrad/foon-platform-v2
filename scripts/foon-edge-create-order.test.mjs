@@ -5,7 +5,7 @@ const orderId="11111111-1111-4111-8111-111111111111";
 const itemId="22222222-2222-4222-8222-222222222222";
 const actorUserId="33333333-3333-4333-8333-333333333333";
 const event={kind:"created",orderId,tenantId:"tenant-1",branchId:"branch-1",payload:{id:orderId,items:[{id:itemId,quantity:2}]}};
-const context={actorUserId,taxPolicyResolved:true,discountPolicyResolved:true,optionsPolicyResolved:true,taxCents:0,discountCents:0,channel:"takeaway"};
+const context={source:"trusted_server_policy",actorUserId,taxPolicyResolved:true,discountPolicyResolved:true,optionsPolicyResolved:true,taxCents:0,discountCents:0,channel:"takeaway"};
 function fake(){
  const writes=[];
  const connection={async execute(sql,params){
@@ -51,5 +51,12 @@ test("rejects unimplemented payment, coupon and item option fields",async()=>{
   await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,[field]:"untrusted"}},context),/EDGE_UNSUPPORTED_ORDER_FIELDS/);
  }
  await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,items:[{id:itemId,quantity:2,options:[{id:"extra"}]}]}},context),/EDGE_UNSUPPORTED_ITEM_FIELDS/);
+ assert.equal(writes.length,0);
+});
+
+test("caller must explicitly supply trusted server policy context",async()=>{
+ const {connection,writes}=fake();
+ await assert.rejects(()=>insertPricedEdgeOrder(connection,event,{...context,source:"device"}),/EDGE_ORDER_POLICY_UNRESOLVED/);
+ await assert.rejects(()=>insertPricedEdgeOrder(connection,event,{...context,source:undefined}),/EDGE_ORDER_POLICY_UNRESOLVED/);
  assert.equal(writes.length,0);
 });
