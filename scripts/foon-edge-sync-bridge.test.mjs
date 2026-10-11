@@ -80,6 +80,23 @@ test("bridge rejects malformed local outbox without contacting cloud",async()=>{
  }
 });
 
+test("bridge rejects private and reserved cloud literals before any request",async()=>{
+ const hosts=["0.0.0.0","10.0.0.1","100.64.0.1","127.0.0.2","169.254.169.254","172.16.0.1","172.31.255.255","192.168.1.1","198.18.0.1","224.0.0.1","255.255.255.255","[::]","[::1]","[fc00::1]","[fd12::1]","[fe80::1]","[ff02::1]","[2001:db8::1]","[::ffff:127.0.0.1]","[::ffff:10.0.0.1]","[::ffff:192.168.1.1]","2130706433","0x7f000001","127.1","localhost.","pos.local.","pos.internal."];
+ for(const host of hosts){
+  let calls=0;
+  await assert.rejects(()=>syncLocalOutbox({...config,cloudUrl:`https://${host}/edge/sync`,fetchImpl:async()=>{calls++;throw Error("UNEXPECTED_REQUEST");}}),/INVALID_CLOUD_ENDPOINT/,host);
+  assert.equal(calls,0,host);
+ }
+});
+
+test("bridge keeps public cloud addresses and local IPv6 loopback usable",async()=>{
+ for(const cloudUrl of ["https://8.8.8.8/edge/sync","https://172.15.255.255/edge/sync","https://172.32.0.1/edge/sync","https://[2606:4700:4700::1111]/edge/sync","https://[::ffff:8.8.8.8]/edge/sync",config.cloudUrl]){
+  const {fetchImpl}=fakeFetch();
+  const result=await syncLocalOutbox({...config,localUrl:"http://[::1]:8787",cloudUrl,fetchImpl});
+  assert.equal(result.acked,1);
+ }
+});
+
 test("bridge forbids HTTP redirects for local reads, cloud sends and local ACKs",async()=>{
  const paths=[];
  const base=fakeFetch().fetchImpl;
