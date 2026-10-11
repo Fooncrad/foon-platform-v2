@@ -15,6 +15,9 @@ test("central edge validation enforces authenticated tenant, branch and device",
  assert.equal(validateIncomingEdgeEvent({...event,payload:changedPayload},identity).error,"EDGE_DIGEST_MISMATCH");
  const withDigest=(overrides)=>{const candidate={...event,...overrides};return {...candidate,digest:eventDigest({seq:candidate.eventSeq,order_id:candidate.orderId,kind:candidate.kind,payload:candidate.payload})};};
  assert.equal(validateIncomingEdgeEvent(withDigest({payload:changedPayload}),identity).error,"EDGE_ORDER_MISMATCH");
+ assert.equal(validateIncomingEdgeEvent(withDigest({payload:{...event.payload,branchId:"other-branch"}}),identity).error,"EDGE_PAYLOAD_SCOPE_MISMATCH");
+ assert.equal(validateIncomingEdgeEvent(withDigest({payload:{...event.payload,tenantId:"other-tenant"}}),identity).error,"EDGE_PAYLOAD_SCOPE_MISMATCH");
+ assert.equal(validateIncomingEdgeEvent(withDigest({payload:{...event.payload,branchId:identity.branchId,tenantId:identity.tenantId}}),identity).ok,true);
  assert.equal(validateIncomingEdgeEvent(withDigest({payload:{id:"order-1",items:[]}}),identity).error,"INVALID_EDGE_ORDER");
  assert.equal(validateIncomingEdgeEvent(withDigest({kind:"status",payload:{id:"order-1",status:"invalid"}}),identity).error,"INVALID_EDGE_STATUS");
 });
