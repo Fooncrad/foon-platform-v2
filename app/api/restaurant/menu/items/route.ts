@@ -39,7 +39,13 @@ export async function POST(request:Request){
  const [categories]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_menu_categories WHERE id=? AND tenant_id=? AND enabled=1 LIMIT 1",[categoryId,auth.tenantId]);
  if(!categories.length)return NextResponse.json({ok:false,code:"CATEGORY_NOT_FOUND"},{status:404});
  const id=randomUUID();
- await database().execute("INSERT INTO restaurant_menu_items(id,tenant_id,category_id,name,description,price,currency) VALUES (?,?,?,?,?,?,'SAR')",[id,auth.tenantId,categoryId,name,description||null,priceText]);
+ const connection=await database().getConnection();
+ try{
+  await connection.beginTransaction();
+  await connection.execute("INSERT INTO restaurant_menu_items(id,tenant_id,category_id,name,description,price,currency) VALUES (?,?,?,?,?,?,'SAR')",[id,auth.tenantId,categoryId,name,description||null,priceText]);
+  await connection.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,NULL,'menu_item',?,'active',JSON_OBJECT('categoryId',?))",[id,auth.tenantId,name,categoryId]);
+  await connection.commit();
+ }catch(error){await connection.rollback();throw error}finally{connection.release()}
  return NextResponse.json({ok:true,item:{id,name,categoryId,price:priceText}},{status:201});
  }catch{return NextResponse.json({ok:false,code:"MENU_SAVE_FAILED"},{status:503})}
 }
