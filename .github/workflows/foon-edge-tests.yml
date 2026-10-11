@@ -24,7 +24,7 @@ on:
       - "lib/platform/edge-sync-pricing.mjs"
       - "lib/platform/edge-sync-create-order.mjs"
       - "scripts/foon-edge-create-order.test.mjs"
-      - "scripts/foon-edge-pricing.test.mjs scripts/foon-edge-create-order.test.mjs"
+      - "scripts/foon-edge-pricing.test.mjs"
       - "scripts/foon-edge-sync-worker.test.mjs"
       - "scripts/foon-edge-receipt-signature.test.mjs"
       - "scripts/foon-edge-mysql-adapter.test.mjs"
@@ -56,4 +56,5 @@ jobs:
       - run: node --check scripts/foon-edge-sync-runner.mjs
       - run: node --check lib/platform/edge-sync-order-mutation.mjs
       - run: node --check lib/platform/edge-sync-pricing.mjs
-      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs scripts/foon-edge-central-validation.test.mjs scripts/foon-edge-sync-bridge.test.mjs scripts/foon-edge-sync-worker.test.mjs scripts/foon-edge-end-to-end.test.mjs scripts/foon-edge-order-mutation.test.mjs scripts/foon-edge-mysql-adapter.test.mjs scripts/foon-edge-accept.test.mjs scripts/foon-edge-receipt-signature.test.mjs scripts/foon-edge-service.test.mjs scripts/foon-edge-pricing.test.mjs
+      - run: node --check lib/platform/edge-sync-create-order.mjs
+      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs scripts/foon-edge-central-validation.test.mjs scripts/foon-edge-sync-bridge.test.mjs scripts/foon-edge-sync-worker.test.mjs scripts/foon-edge-end-to-end.test.mjs scripts/foon-edge-order-mutation.test.mjs scripts/foon-edge-mysql-adapter.test.mjs scripts/foon-edge-accept.test.mjs scripts/foon-edge-receipt-signature.test.mjs scripts/foon-edge-service.test.mjs scripts/foon-edge-pricing.test.mjs scripts/foon-edge-create-order.test.mjs
