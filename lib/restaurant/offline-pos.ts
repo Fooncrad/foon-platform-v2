@@ -23,6 +23,8 @@ export async function queuePosOrder(order:PendingPosOrder):Promise<void>{
   read.onsuccess=()=>{
    const prior=read.result as PendingPosOrder|undefined;
    if(prior&&(prior.tenantId!==order.tenantId||prior.branchId!==order.branchId||JSON.stringify(prior.payload)!==JSON.stringify(order.payload))){tx.abort();return;}
+   // A retry must never downgrade a reviewed order or overwrite its diagnostic state.
+   if(prior?.status==="needs_review"&&order.status==="pending")return;
    store.put(order);
   };
   tx.oncomplete=()=>{database.close();resolve();};
