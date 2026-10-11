@@ -48,7 +48,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   setBusy(true);
   try{
    if(!navigator.onLine){await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});await updateQueueCounts();setMessage("حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.");return;}
-   await operationApi(tenantId,"pos","POST",body);requestRef.current=null;setCart({});await refresh();onChanged();setMessage(ui.created);
+   await operationApi(tenantId,"pos","POST",body);requestRef.current=null;setCart({});setMessage(ui.created);void refresh().then(()=>onChanged()).catch(()=>setMessage("تم تأكيد الطلب من الخادم، لكن تعذر تحديث القائمة. أعد تحميل الطلبات عند عودة الاتصال."));
   }catch(error){
    if(isNetworkFailure(error)){
     try{await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});await updateQueueCounts();setMessage("الاتصال انقطع؛ حُفظ الطلب محلياً بانتظار التحقق والمزامنة.");}
