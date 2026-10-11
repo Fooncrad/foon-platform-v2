@@ -1,5 +1,5 @@
-import {DatabaseSync} from "node:sqlite";
-import {copyFile,mkdir,rename,stat} from "node:fs/promises";
+import {DatabaseSync,backup} from "node:sqlite";
+import {mkdir,rename,stat} from "node:fs/promises";
 import {dirname,resolve} from "node:path";
 
 const source=resolve(process.env.FOON_LAN_DB||"./data/foon-lan.sqlite");
@@ -11,7 +11,7 @@ try{
  if(Object.values(check)[0]!=="ok")throw new Error("Source database failed integrity check");
  await mkdir(dirname(target),{recursive:true});
  const temporary=target+"."+process.pid+".tmp";
- await db.backup(temporary);
+ await backup(db,temporary);
  const verification=new DatabaseSync(temporary,{readOnly:true});
  try{
   const result=verification.prepare("PRAGMA integrity_check").get();
