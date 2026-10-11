@@ -18,6 +18,7 @@ on:
       - "scripts/foon-edge-sync-worker.mjs"
       - "scripts/foon-edge-sync-bridge.mjs"
       - "scripts/foon-edge-sync-bridge.test.mjs"
+      - "scripts/foon-edge-sync-runner.mjs"
       - "scripts/foon-edge-sync-worker.test.mjs"
       - "scripts/foon-edge-receipt-signature.test.mjs"
       - "scripts/foon-edge-mysql-adapter.test.mjs"
@@ -46,4 +47,5 @@ jobs:
       - run: node --check lib/platform/edge-sync-service.mjs
       - run: node --check scripts/foon-edge-sync-worker.mjs
       - run: node --check scripts/foon-edge-sync-bridge.mjs
+      - run: node --check scripts/foon-edge-sync-runner.mjs
       - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs scripts/foon-edge-central-validation.test.mjs scripts/foon-edge-sync-bridge.test.mjs scripts/foon-edge-sync-worker.test.mjs
