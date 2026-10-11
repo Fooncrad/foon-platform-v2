@@ -37,6 +37,12 @@ export async function prepareDiningResource(db:PoolConnection,tenant:string,modu
   if(others.some(row=>{const other=json(row.data),old=other.number??(canonical(row.name).match(/(?:^|\s)(\d+)$/)?.[1]?Number(canonical(row.name).match(/(?:^|\s)(\d+)$/)![1]):canonical(row.name));return String(other.sectionId??row.branch_id??'main')===String(d.sectionId??input.branchId??'main')&&String(old)===String(number);}))throw new ResourceError('TABLE_NUMBER_EXISTS');
   return 'table:'+String(d.sectionId??input.branchId??'main')+':'+createHash('sha256').update(String(number)).digest('hex');
  }
+ if(module==='reservations'&&d.tableId){
+  // Legacy reservations may reference an archived or deleted table. Do not block
+  // a status-only decision; clear the stale assignment for later reassignment.
+  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status<>'inactive' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,d.tableId,input.branchId]);
+  if(!linked.length){d.tableId=null;d.sectionId=null;}
+ }
  if(['waiterCalls','reservations'].includes(module)&&d.tableId){
   const table=await diningTable(db,tenant,String(input.branchId??''),String(d.tableId),module==='reservations'?Number(d.partySize):undefined);
   if(d.sectionId&&d.sectionId!==table.sectionId)throw new ResourceError('SECTION_TABLE_MISMATCH');
