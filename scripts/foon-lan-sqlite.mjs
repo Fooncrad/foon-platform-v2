@@ -27,7 +27,7 @@ function transact(fn){db.exec("BEGIN IMMEDIATE");try{const result=fn();db.exec("
 function send(res,status,data){res.writeHead(status,{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"});res.end(JSON.stringify(data));}
 function allowed(req){const given=Buffer.from((req.headers.authorization||"").replace(/^Bearer /,""));const expected=Buffer.from(token);return given.length===expected.length&&timingSafeEqual(given,expected);}
 async function readBody(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>131072)throw new Error("BODY_TOO_LARGE");}try{return JSON.parse(raw||"{}");}catch{throw new Error("INVALID_JSON");}}
-function emit(event){for(const client of clients){try{client.write("event: order\\ndata: "+JSON.stringify(event)+"\\n\\n");}catch{clients.delete(client);}}}
+function emit(event){for(const client of clients){try{client.write(["event: order","data: "+JSON.stringify(event),"",""].join(String.fromCharCode(10)));}catch{clients.delete(client);}}}
 const server=http.createServer(async(req,res)=>{
  if(!allowed(req))return send(res,401,{error:"UNAUTHORIZED"});
  const url=new URL(req.url||"/","http://localhost");
