@@ -25,7 +25,7 @@ test("real SQLite gateway persists offline order and acknowledges only after clo
  try{
   await start();
   const id=randomUUID();
-  assert.equal((await req("/orders","POST",{id,branchId:"branch-1",items:[{id:"pizza",quantity:2}]})).status,201);
+  assert.equal((await req("/orders","POST",{id,branchId:"branch-1",items:[{id:"22222222-2222-4222-8222-222222222222",quantity:2}]})).status,201);
   assert.equal((await (await req("/health")).json()).pending,1);
   assert.equal((await req("/orders/"+id+"/status","PATCH",{status:"completed"})).status,409);
   assert.equal((await (await req("/health")).json()).pending,1);
