@@ -7,6 +7,7 @@ export async function syncLocalOutbox({localUrl,localToken,ackSecret,cloudUrl,cl
  const local=new URL(localUrl),cloud=new URL(cloudUrl);
  if(!["127.0.0.1","localhost","::1"].includes(local.hostname)||!["http:","https:"].includes(local.protocol))throw Error("INVALID_LOCAL_ENDPOINT");
  if(cloud.protocol!=="https:")throw Error("CLOUD_HTTPS_REQUIRED");
+ if(cloud.username||cloud.password||cloud.hash||cloud.search||cloud.hostname==="localhost"||cloud.hostname==="127.0.0.1"||cloud.hostname==="::1")throw Error("INVALID_CLOUD_ENDPOINT");
  if([localToken,ackSecret,cloudToken,signingSecret].some(v=>typeof v!=="string"||v.length<32)||[deviceId,tenantId,branchId].some(v=>typeof v!=="string"||!v))throw Error("EDGE_SYNC_CONFIGURATION_REQUIRED");
  const headers={authorization:"Bearer "+localToken};
  const list=await fetchImpl(new URL("/outbox",local),{headers});
