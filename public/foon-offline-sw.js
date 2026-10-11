@@ -9,7 +9,7 @@ self.addEventListener("fetch",event=>{
  if(url.origin!==self.location.origin||url.pathname.startsWith("/api/")||url.pathname.startsWith("/admin")||url.pathname.startsWith("/auth"))return;
  if(!url.pathname.startsWith("/restaurant")&&url.pathname!=="/offline")return;
  event.respondWith((async()=>{
-  try{const response=await fetch(request);if(response.ok&&response.headers.get("content-type")?.includes("text/html")){const cache=await caches.open(CACHE);await cache.put(request,response.clone());}return response;}
-  catch{const cached=await caches.match(request);return cached??await caches.match("/offline")??Response.error();}
+  try{const response=await fetch(request);if(response.ok&&url.pathname==="/offline"&&response.headers.get("content-type")?.includes("text/html")){const cache=await caches.open(CACHE);await cache.put(request,response.clone());}return response;}
+  catch{return await caches.match("/offline")??Response.error();}
  })());
 });
