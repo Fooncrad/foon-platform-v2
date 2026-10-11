@@ -3,6 +3,8 @@ import {DatabaseSync} from "node:sqlite";
 import {mkdirSync} from "node:fs";
 import {dirname,resolve} from "node:path";
 import {timingSafeEqual} from "node:crypto";
+import {validateCloudReceipt} from "./foon-edge-sync-contract.mjs";
+import {verifyCloudReceiptSignature} from "../lib/platform/edge-sync-receipt-signature.mjs";
 
 const host=process.env.FOON_LAN_HOST||"127.0.0.1";
 if(!["127.0.0.1","::1","localhost"].includes(host))throw new Error("LAN gateway requires a secured local reverse proxy; direct network binding is disabled");
@@ -27,6 +29,8 @@ const insertOutbox=db.prepare("INSERT INTO outbox(event_seq) VALUES(?)");
 const updateStatus=db.prepare("UPDATE orders SET status=?,updated_at=? WHERE id=?");
 const clients=new Set();
 const edgeReceiptSecret=process.env.FOON_EDGE_ACK_SECRET||"";
+const cloudReceiptKey=process.env.FOON_EDGE_RECEIPT_SIGNING_KEY||"";
+const edgeDeviceId=process.env.FOON_EDGE_DEVICE_ID||"";
 if(edgeReceiptSecret&&edgeReceiptSecret.length<32)throw Error("FOON_EDGE_ACK_SECRET must be at least 32 characters");
 function transact(fn){db.exec("BEGIN IMMEDIATE");try{const result=fn();db.exec("COMMIT");return result;}catch(e){db.exec("ROLLBACK");throw e;}}
 function send(res,status,data){res.writeHead(status,{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"});res.end(JSON.stringify(data));}
@@ -41,7 +45,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="GET"&&url.pathname==="/health")return send(res,200,{ok:true,storage:"sqlite-wal-full",pending:db.prepare("SELECT count(*) AS n FROM outbox WHERE synced_at IS NULL").get().n});
   if(req.method==="GET"&&url.pathname==="/orders")return send(res,200,{orders:db.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 500").all().map(row=>({...row,payload:JSON.parse(row.payload)}))});
   if(req.method==="GET"&&url.pathname==="/outbox")return send(res,200,{events:db.prepare("SELECT o.seq,e.order_id,e.kind,e.payload,e.created_at FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE o.synced_at IS NULL ORDER BY o.seq LIMIT 200").all().map(row=>({...row,payload:JSON.parse(row.payload)}))});
-  if(req.method==="POST"&&url.pathname==="/outbox/ack"){if(!edgeReceiptSecret)return send(res,503,{error:"ACK_NOT_CONFIGURED"});const provided=Buffer.from(req.headers["x-foon-edge-ack-secret"]||"");const expected=Buffer.from(edgeReceiptSecret);if(provided.length!==expected.length||!timingSafeEqual(provided,expected))return send(res,403,{error:"ACK_FORBIDDEN"});const input=await readBody(req);if(!Number.isSafeInteger(input.seq)||input.seq<1||typeof input.orderId!=="string"||!input.orderId||typeof input.receipt!=="string"||input.receipt.length<8||input.receipt.length>256)return send(res,400,{error:"INVALID_ACK"});const pending=db.prepare("SELECT o.seq,e.order_id,o.synced_at FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE o.seq=?").get(input.seq);if(!pending||pending.order_id!==input.orderId)return send(res,404,{error:"OUTBOX_EVENT_NOT_FOUND"});if(pending.synced_at)return send(res,200,{ok:true,alreadyAcknowledged:true});db.prepare("UPDATE outbox SET synced_at=? WHERE seq=? AND synced_at IS NULL").run(new Date().toISOString(),input.seq);return send(res,200,{ok:true});}
+  if(req.method==="POST"&&url.pathname==="/outbox/ack"){if(!edgeReceiptSecret||cloudReceiptKey.length<32||!edgeDeviceId)return send(res,503,{error:"ACK_NOT_CONFIGURED"});const provided=Buffer.from(req.headers["x-foon-edge-ack-secret"]||"");const expected=Buffer.from(edgeReceiptSecret);if(provided.length!==expected.length||!timingSafeEqual(provided,expected))return send(res,403,{error:"ACK_FORBIDDEN"});const input=await readBody(req);if(!Number.isSafeInteger(input.seq)||input.seq<1||typeof input.orderId!=="string"||!input.orderId||!input.receipt||typeof input.receipt!=="object"||Array.isArray(input.receipt))return send(res,400,{error:"INVALID_ACK"});const pending=db.prepare("SELECT o.seq,e.seq AS event_seq,e.order_id,e.kind,e.payload,o.synced_at FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE o.seq=?").get(input.seq);if(!pending||pending.order_id!==input.orderId)return send(res,404,{error:"OUTBOX_EVENT_NOT_FOUND"});const originalEvent={seq:Number(pending.event_seq),order_id:pending.order_id,kind:pending.kind,payload:JSON.parse(pending.payload)};if(!verifyCloudReceiptSignature(input.receipt,cloudReceiptKey)||!validateCloudReceipt(originalEvent,input.receipt,edgeDeviceId))return send(res,403,{error:"UNVERIFIED_CLOUD_RECEIPT"});if(pending.synced_at)return send(res,200,{ok:true,alreadyAcknowledged:true});db.prepare("UPDATE outbox SET synced_at=? WHERE seq=? AND synced_at IS NULL").run(new Date().toISOString(),input.seq);return send(res,200,{ok:true});}
   if(req.method==="GET"&&url.pathname==="/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-store","connection":"keep-alive"});res.write([": connected","",""].join(String.fromCharCode(10)));clients.add(res);req.on("close",()=>clients.delete(res));return;}
   if(req.method==="POST"&&url.pathname==="/orders"){
    const input=await readBody(req);
