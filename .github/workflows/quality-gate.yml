@@ -31,6 +31,10 @@ jobs:
         run: npm run test:mail
       - name: Validate admin permissions
         run: npm run test:admin-policy
+      - name: Validate LAN persistence, authentication and backups
+        run: node --test scripts/foon-lan-gateway.test.mjs scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
+      - name: Validate lint
+        run: npm run lint
       - name: Validate TypeScript
         run: npm run typecheck
       - name: Build Next.js
