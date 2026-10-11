@@ -44,3 +44,12 @@ test("untrusted actor identity is rejected",async()=>{
  await assert.rejects(()=>insertPricedEdgeOrder(connection,event,{...context,actorUserId:"bad"}),/EDGE_AUTHENTICATED_ACTOR_REQUIRED/);
  assert.equal(writes.length,0);
 });
+
+test("rejects unimplemented payment, coupon and item option fields",async()=>{
+ const {connection,writes}=fake();
+ for(const field of ["payment_status","coupon_id","total","customer_phone"]){
+  await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,[field]:"untrusted"}},context),/EDGE_UNSUPPORTED_ORDER_FIELDS/);
+ }
+ await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,items:[{id:itemId,quantity:2,options:[{id:"extra"}]}]}},context),/EDGE_UNSUPPORTED_ITEM_FIELDS/);
+ assert.equal(writes.length,0);
+});
