@@ -34,7 +34,7 @@ test("unterminated syntax and unsupported executable constructs fail closed", ()
   }
 });
 test("all repository migrations parse with expected statement counts", async () => {
-  const counts = [3,4,3,1,4,1,1,1,1,1,1,1,1,8,1,1,2,5,1,2,2,1,5,5,1,1,1,1,3,6,1,6,1,1,2,2];
+  const counts = [3,4,3,1,4,1,1,1,1,1,1,1,1,8,1,1,2,5,1,2,2,1,5,5,1,1,1,1,3,6,1,6,1,1,2,2,1];
   const files = (await readdir("migrations")).filter(file => file.endsWith(".sql")).sort();
   assert.equal(files.length, counts.length);
   for (const [i,file] of files.entries()) {
