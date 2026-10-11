@@ -9,7 +9,7 @@ export async function GET(_request:Request,context:Context){
  const actor=await currentActiveAdminUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{await requirePlatformRole(actor,["super_admin","admin","support"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const {id}=await context.params;
- try{const [features]=await database().execute<RowDataPacket[]>("SELECT f.feature_key,f.name_ar,f.category,f.value_type,COALESCE(pf.enabled,0) AS enabled,pf.limit_value FROM package_features f LEFT JOIN package_plan_features pf ON pf.feature_key=f.feature_key AND pf.plan_id=? ORDER BY f.category,f.feature_key",[id]);return NextResponse.json({ok:true,features});}
+ try{const [features]=await database().execute<RowDataPacket[]>("SELECT f.feature_key,f.name_ar,f.category,f.value_type,COALESCE(pf.enabled,CASE WHEN p.code='enterprise' THEN 1 ELSE 0 END) AS enabled,pf.limit_value FROM package_features f JOIN package_plans p ON p.id=? LEFT JOIN package_plan_features pf ON pf.feature_key=f.feature_key AND pf.plan_id=p.id ORDER BY f.category,f.feature_key",[id]);return NextResponse.json({ok:true,features});}
  catch{return NextResponse.json({ok:false,code:"FEATURES_UNAVAILABLE"},{status:503});}
 }
 export async function PUT(request:Request,context:Context){
