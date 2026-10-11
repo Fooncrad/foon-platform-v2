@@ -35,6 +35,9 @@ test("real SQLite gateway persists offline order and acknowledges only after clo
   const offline=await syncLocalOutbox({...config,fetchImpl:async(url,opts)=>new URL(url).hostname==="cloud.example"?Promise.reject(Error("offline")):fetch(url,opts)});
   assert.equal(offline.acked,0);
   assert.equal((await (await req("/health")).json()).pending,1);
+  await stop();
+  await start();
+  assert.equal((await (await req("/health")).json()).pending,1);
   let cloudApplied=0;
   const seen=new Map();
   const onlineFetch=async(url,opts)=>{
