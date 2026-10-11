@@ -26,6 +26,7 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   const id=randomUUID(),payload={id,branchId:"branch-1",items:[{id:"item-1",quantity:2}]};
   assert.equal((await request("/orders","POST",payload)).status,201);
   assert.equal((await request("/orders","POST",payload)).status,200);
+  assert.equal((await request("/orders","POST",{...payload,items:[{id:"different-item",quantity:1}]})).status,409);
   assert.equal((await request("/orders/"+id+"/status","PATCH",{status:"preparing"})).status,200);
   const outbox=await (await request("/outbox")).json();
   assert.equal(outbox.events.length,2);
