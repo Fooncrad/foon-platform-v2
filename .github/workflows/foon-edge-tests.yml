@@ -12,6 +12,8 @@ on:
       - "lib/platform/edge-sync-validation.mjs"
       - "lib/platform/edge-sync-accept.mjs"
       - "lib/platform/edge-sync-mysql-adapter.mjs"
+      - "lib/platform/edge-sync-receipt-signature.mjs"
+      - "scripts/foon-edge-receipt-signature.test.mjs"
       - "scripts/foon-edge-mysql-adapter.test.mjs"
       - "scripts/foon-edge-accept.test.mjs"
       - "scripts/foon-edge-central-validation.test.mjs"
@@ -34,4 +36,5 @@ jobs:
       - run: node --check lib/platform/edge-sync-validation.mjs
       - run: node --check lib/platform/edge-sync-accept.mjs
       - run: node --check lib/platform/edge-sync-mysql-adapter.mjs
+      - run: node --check lib/platform/edge-sync-receipt-signature.mjs
       - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs scripts/foon-edge-central-validation.test.mjs
