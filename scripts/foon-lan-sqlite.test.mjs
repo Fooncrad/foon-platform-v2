@@ -5,12 +5,14 @@ import {mkdtemp,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {randomBytes,randomUUID} from "node:crypto";
+import {eventDigest} from "./foon-edge-sync-contract.mjs";
+import {signCloudReceipt} from "../lib/platform/edge-sync-receipt-signature.mjs";
 
 test("SQLite edge stores orders, outbox, and survives restart",async()=>{
  const dir=await mkdtemp(join(tmpdir(),"foon-edge-"));
  const port=18000+Math.floor(Math.random()*24000);
  const token=randomBytes(32).toString("hex");
- const env={...process.env,FOON_LAN_TOKEN:token,FOON_EDGE_ACK_SECRET:randomBytes(32).toString("hex"),FOON_LAN_PORT:String(port),FOON_LAN_DB:join(dir,"edge.sqlite")};
+ const env={...process.env,FOON_LAN_TOKEN:token,FOON_EDGE_ACK_SECRET:randomBytes(32).toString("hex"),FOON_EDGE_RECEIPT_SIGNING_KEY:randomBytes(32).toString("hex"),FOON_EDGE_DEVICE_ID:"device-test",FOON_LAN_PORT:String(port),FOON_LAN_DB:join(dir,"edge.sqlite")};
  const base="http://127.0.0.1:"+port;
  let child;
  const request=(path,method="GET",payload,secret=token)=>fetch(base+path,{method,headers:{authorization:"Bearer "+secret,"x-foon-edge-ack-secret":env.FOON_EDGE_ACK_SECRET,"content-type":"application/json"},body:payload?JSON.stringify(payload):undefined});
@@ -42,11 +44,13 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   assert.equal((await fetch(base+"/outbox/ack",{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({seq:1,orderId:id,receipt:"test-cloud-receipt"})})).status,403);
   const outbox=await (await request("/outbox")).json();
   assert.equal(outbox.events.length,2);
-  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:randomUUID(),receipt:"test-cloud-receipt"})).status,404);
+  const signed=(event)=>signCloudReceipt({receiptId:"receipt-"+event.seq,deviceId:env.FOON_EDGE_DEVICE_ID,eventSeq:event.seq,orderId:event.order_id,digest:eventDigest({seq:event.seq,order_id:event.order_id,kind:event.kind,payload:event.payload})},env.FOON_EDGE_RECEIPT_SIGNING_KEY);
+  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:randomUUID(),receipt:signed(outbox.events[0])})).status,404);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"short"})).status,400);
   assert.equal((await request("/outbox/ack","POST",{seq:999999,orderId:id,receipt:"test-cloud-receipt"})).status,404);
   assert.equal((await (await request("/outbox")).json()).events.length,2);
-  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"test-cloud-receipt"})).status,200);
+  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:{...signed(outbox.events[0]),signature:"0".repeat(64)}})).status,403);
+  assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:signed(outbox.events[0])})).status,200);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"test-cloud-receipt"})).status,200);
   await stop();
   await start();
@@ -61,7 +65,7 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   assert.equal(remaining.events[0].order_id,id);
   assert.equal((await request("/outbox/ack","POST",{seq:outbox.events[0].seq,orderId:id,receipt:"test-cloud-receipt"})).status,200);
   assert.equal((await (await request("/health")).json()).pending,1);
-  assert.equal((await request("/outbox/ack","POST",{seq:remaining.events[0].seq,orderId:id,receipt:"test-cloud-receipt-status"})).status,200);
+  assert.equal((await request("/outbox/ack","POST",{seq:remaining.events[0].seq,orderId:id,receipt:signed(remaining.events[0])})).status,200);
   assert.equal((await (await request("/health")).json()).pending,0);
   await stop();
   await start();
