@@ -82,7 +82,7 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   setBusy(true);setMessage("");
   try{const saved=await operationApi(tenantId,module,editing?"PATCH":"POST",{...(editing?{id:editing.id,version:editing.version}:{}),name:form.get("name"),status:form.get("status"),branchId:(()=>{const selected=String(form.get("branchId")??"").trim();return selected&&branches.some(b=>b.id===selected)?selected:null;})(),data});await refresh();setShowForm(false);setEditing(null);
   if(module==="team"&&!editing){
-   try{await operationApi(tenantId,"employee-invite","POST",{tenantId,resourceId:saved.id});setMessage("تم حفظ الموظف وإرسال دعوة إلى بريده الإلكتروني. الرابط صالح لمدة 48 ساعة.");}
+   try{const response=await fetch("/api/restaurant/employee-invite",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tenantId,resourceId:saved.id})});if(!response.ok){const result=await response.json().catch(()=>({}));throw Error(String(result.code??"MAIL_SEND_FAILED"));}setMessage("تم حفظ الموظف وإرسال دعوة إلى بريده الإلكتروني. الرابط صالح لمدة 48 ساعة.");}
    catch(error){const detail=error instanceof Error?error.message:"";setMessage(detail.includes("INVITATION_NOT_REQUIRED")?"تم حفظ الموظف وربطه بحساب FOON النشط.":"تم حفظ الموظف، لكن تعذر إرسال دعوة البريد. يمكنك إعادة المحاولة من بطاقة الموظف. ("+detail+")");}
   }else setMessage(module==="team"?"تم حفظ بيانات الموظف.":"تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.");
   onChanged?.();}
