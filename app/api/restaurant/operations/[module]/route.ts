@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
@@ -129,6 +130,26 @@ async function mutate(request:Request,module:string,method:string){
    if(method==="POST"&&resourceModules[module].feature){const grant=await tenantEntitlement(ctx.tenantId,resourceModules[module].feature!);if(grant.limit!==null){await db.execute("SELECT tenant_id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[ctx.tenantId]);const [[used]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE",[ctx.tenantId,resourceModules[module].kind]);if((canonicalMenuModules.includes(module)?(await resourceRows(db,ctx.tenantId,module)).length:Number(used.n))>=grant.limit)throw new ResourceError("PLAN_LIMIT_REACHED");}}
    if(module==="purchases"&&!(await tenantEntitlement(ctx.tenantId,"inventory")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
    result=await saveResource(db,ctx.tenantId,ctx.user,ctx.role,module,body,method==="DELETE");
+   if(module==="reservations"&&method==="PATCH"&&body.status&&typeof body.id==="string"){
+    const [previous]=await db.execute<RowDataPacket[]>("SELECT status,data,name FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='reservation' LIMIT 1",[body.id,ctx.tenantId]);
+    const item=previous[0];
+    const data=body.data&&typeof body.data==="object"?body.data:{};
+    const userId=String(data.customerUserId??"");
+    if(item&&userId&&["confirmed","cancelled","seated","completed"].includes(String(body.status))){
+     const [users]=await db.execute<RowDataPacket[]>("SELECT email FROM users WHERE id=? AND status='active' AND email_verified_at IS NOT NULL LIMIT 1",[userId]);
+     const email=String(users[0]?.email??"");
+     if(email){
+      const statusText:Record<string,string>={confirmed:"تم تأكيد حجزك",cancelled:"تم إلغاء حجزك",seated:"تم تسجيل حضورك",completed:"اكتمل حجزك"};
+      const label=statusText[String(body.status)];
+      const [tenantRows]=await db.execute<RowDataPacket[]>("SELECT name FROM tenants WHERE id=? LIMIT 1",[ctx.tenantId]);
+      const store=String(tenantRows[0]?.name??"المتجر");
+      const reason=String(data.notes??"").slice(0,500);
+      const subject=label+" — "+store;
+      const bodyText=label+" لدى "+store+".\\nالحجز: "+String(body.name??item.name??"")+"\\n"+(body.status==="cancelled"&&reason?"الملاحظات: "+reason+"\\n":"")+"راجع التفاصيل من حسابك في FOON.";
+      await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,?,?,?,?,?)",[randomUUID(),"reservation_"+String(body.status),ctx.tenantId,email,subject,bodyText]);
+     }
+    }
+   }
   }else if(["orders","pos","kds"].includes(module)){
    if(method==="POST"){if(!["owner","manager","cashier","waiter"].includes(ctx.role)||module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
    else if(method==="PATCH")result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
