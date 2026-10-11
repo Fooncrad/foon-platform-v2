@@ -4,8 +4,9 @@ import {operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import MenuChoices,{cartKey,choicePrice,choicesValid,type CartLine} from "./menu-choices";
-type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;version:number;channel:string;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;created_at:string;items:{name:string;quantity:number}[]};
+type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;version:number;channel:string;table_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;created_at:string;items:{name:string;quantity:number}[]};
 const statuses:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي"};
+const channels:Record<string,string>={dine_in:"داخل المطعم",takeaway:"سفري",delivery:"توصيل",pickup:"نقطة استلام",room_service:"خدمة الغرف",hotel_service:"خدمة الفندق",reservation:"حجز مع طلب",preorder:"طلب مسبق"};
 const payments:Record<string,string>={paid:"مدفوع",unpaid:"غير مدفوع",refunded:"تم رد المبلغ"};
 export default function OrderWorkspace({tenantId,module,branch,branches,role,onChanged}:{tenantId:string;module:string;branch:string;branches:{id:string;name:string}[];role:string;onChanged:()=>void}){
  const [orders,setOrders]=useState<Order[]>([]),[menu,setMenu]=useState<{id:string;name:string;status:string;data:{price:number}}[]>([]),[tables,setTables]=useState<{id:string;name:string;status:string;data:{capacity:number;sectionId?:string}}[]>([]),[cart,setCart]=useState<Record<string,CartLine>>({}),[filter,setFilter]=useState("all"),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[orderBranch,setOrderBranch]=useState(branch||branches[0]?.id||"");
@@ -29,13 +30,18 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   doc.head.appendChild(style);
   addText("h2",finalInvoice?"فاتورة نهائية":"تذكرة طلب");
   addText("p","رقم الطلب: #"+order.order_number);
+  addText("p","نوع الطلب: "+(channels[order.channel]??order.channel));
+  if(order.channel==="dine_in"||order.table_id){
+   addText("p","الطاولة: "+(order.dining_snapshot?.name??order.table_id??"غير محددة"));
+   if(order.dining_snapshot?.sectionName)addText("p","القسم: "+order.dining_snapshot.sectionName);
+  }
+  if(order.party_size)addText("p","عدد الضيوف: "+order.party_size);
   addText("p","الحالة: "+(statuses[order.status]??order.status));
   addText("p","الدفع: "+(payments[order.payment_status]??order.payment_status));
   addText("p","التاريخ: "+new Date(order.created_at).toLocaleString("ar-SA-u-nu-latn"));
   if(order.customer_name)addText("p","العميل: "+order.customer_name);
-  if(order.dining_snapshot?.name)addText("p","الطاولة: "+order.dining_snapshot.name);
   for(const item of order.items)addText("p",item.name+" × "+item.quantity);
-  addText("p","الإجمالي: "+Number(order.total??0).toFixed(2)+" ر.س");
+  addText("p","الإجمالي: "+Number(order.total??0).toFixed(2)+" "+(order.currency??"ر.س"));
   if(!finalInvoice)addText("small","تذكرة تشغيلية وليست فاتورة ضريبية");
   if(finalInvoice)addText("small","إيصال دفع؛ لا يُعد فاتورة ضريبية نظامية دون بيانات الضريبة والمتطلبات المعتمدة");
   const button=doc.createElement("button");button.textContent="طباعة";button.onclick=()=>popup.print();doc.body.appendChild(button);
