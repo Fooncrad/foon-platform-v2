@@ -152,7 +152,23 @@ async function mutate(request:Request,module:string,method:string){
    }
   }else if(["orders","pos","kds"].includes(module)){
    if(method==="POST"){if(!["owner","manager","cashier","waiter"].includes(ctx.role)||module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
-   else if(method==="PATCH")result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
+   else if(method==="PATCH"){
+    const [before]=await db.execute<RowDataPacket[]>("SELECT status,payment_status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
+    result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
+    const changedStatus=body.status!==undefined&&String(body.status)!==String(before[0]?.status);
+    const changedPayment=body.paymentStatus!==undefined&&String(body.paymentStatus)!==String(before[0]?.payment_status);
+    if(changedStatus||changedPayment){
+     const [details]=await db.execute<RowDataPacket[]>("SELECT o.order_number,u.email,t.name AS store_name FROM restaurant_orders o JOIN users u ON u.id=o.customer_user_id AND u.status='active' AND u.email_verified_at IS NOT NULL JOIN tenants t ON t.id=o.tenant_id WHERE o.id=? AND o.tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
+     if(details.length){
+      const row=details[0];const names:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي",paid:"مدفوع",refunded:"تم رد المبلغ"};
+      const event=changedStatus?"order_"+String(body.status):"order_payment_"+String(body.paymentStatus);
+      const description=changedStatus?"حالة الطلب: "+(names[String(body.status)]??String(body.status)):"حالة الدفع: "+(names[String(body.paymentStatus)]??String(body.paymentStatus));
+      const subject="تحديث طلب #"+String(row.order_number)+" — "+String(row.store_name);
+      const message="مرحبًا،\\n"+description+"\\nرقم الطلب: #"+String(row.order_number)+"\\nالمتجر: "+String(row.store_name)+"\\nراجع التفاصيل من حسابك في FOON.";
+      await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,?,?,?,?,?)",[randomUUID(),event,ctx.tenantId,row.email,subject,message]);
+     }
+    }
+   }
    else throw new ResourceError("METHOD_NOT_ALLOWED");
   }else if(module==="security"&&method==="DELETE"){
    if(typeof body.id!=="string"||body.id===await currentSessionId())throw new ResourceError("CURRENT_SESSION_PROTECTED");
