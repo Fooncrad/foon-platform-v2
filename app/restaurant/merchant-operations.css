@@ -43,3 +43,11 @@
 .restaurantOfflineBackup p{flex-basis:100%;margin:0;font-size:12px;color:#475569}
 .restaurantOfflineBackup button,.restaurantOfflineBackup label{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:700;color:#24334a;cursor:pointer}
 .restaurantOfflineBackup input{display:block;max-width:100%;font-size:11px;margin-top:6px}
+
+.restaurantPosSyncBar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-width:0;padding:14px 16px;border:1px solid #dce5ee;border-radius:16px;background:#f8fafc;color:#334155;font-size:13px;line-height:1.9;overflow-wrap:anywhere}
+.restaurantPosSyncBar strong{color:#0f766e;font-size:14px}
+.restaurantPosSyncBar button{margin-inline-start:auto;flex-shrink:0;padding:9px 16px;border:1px solid #0f766e;border-radius:10px;background:#0f766e;color:#fff;font-weight:700;cursor:pointer}
+.restaurantPosSyncBar button:disabled{opacity:.5;cursor:not-allowed}
+.restaurantOfflineBackup{align-items:center;gap:12px}
+.restaurantOfflineBackup>p{font-size:12px;line-height:1.8}
+@media(max-width:600px){.restaurantPosSyncBar{padding:12px;font-size:12px}.restaurantPosSyncBar button{width:100%;margin-inline-start:0}.restaurantOfflineBackup button,.restaurantOfflineBackup label{width:100%}}
