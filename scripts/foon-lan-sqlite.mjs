@@ -45,7 +45,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="POST"&&url.pathname==="/orders"){
    const input=await readBody(req);
    if(typeof input.id!=="string"||!/^[a-f0-9-]{36}$/i.test(input.id)||typeof input.branchId!=="string"||!input.branchId||!Array.isArray(input.items)||input.items.length<1||input.items.length>100)return send(res,400,{error:"INVALID_ORDER"});
-   if(input.items.some(item=>!item||typeof item.id!=="string"||item.id.length>128||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>1000))return send(res,400,{error:"INVALID_ITEMS"});
+   if(input.items.some(item=>!item||typeof item.id!=="string"||!item.id.trim()||item.id.length>128||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>1000))return send(res,400,{error:"INVALID_ITEMS"});
    const existing=getOrder.get(input.id);
    if(existing){const saved=JSON.parse(existing.payload);if(saved.branchId!==input.branchId||JSON.stringify(saved.items)!==JSON.stringify(input.items))return send(res,409,{error:"IDEMPOTENCY_CONFLICT"});return send(res,200,{ok:true,duplicate:true,order:existing});}
    const now=new Date().toISOString();
