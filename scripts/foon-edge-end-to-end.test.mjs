@@ -49,11 +49,12 @@ test("real SQLite gateway persists offline order and acknowledges only after clo
    }
    cloudAttempts++;
    const e=JSON.parse(opts.body),key=e.deviceId+":"+e.eventSeq;
-   if(!seen.has(key)){
+   const wasSeen=seen.has(key);
+   if(!wasSeen){
     cloudApplied++;
     seen.set(key,signCloudReceipt({receiptId:randomUUID(),deviceId:e.deviceId,eventSeq:e.eventSeq,orderId:e.orderId,digest:e.digest},signingSecret));
    }
-   return new Response(JSON.stringify({receipt:seen.get(key)}),{status:seen.size===cloudApplied?201:200,headers:{"content-type":"application/json"}});
+   return new Response(JSON.stringify({receipt:seen.get(key)}),{status:wasSeen?200:201,headers:{"content-type":"application/json"}});
   };
   const failedAck=await syncLocalOutbox({...config,fetchImpl:onlineFetch});
   assert.equal(failedAck.acked,0);
