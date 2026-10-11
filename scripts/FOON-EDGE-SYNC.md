@@ -39,3 +39,8 @@ node --test scripts/foon-lan-sqlite.test.mjs
 4. Attempt a different tenant, branch, device, or revoked credential: reject without writing business data.
 5. Exercise simultaneous status changes on two devices and resolve conflicts deterministically.
 6. Restore an encrypted backup and verify SQLite integrity, outbox count, and cloud reconciliation.
+
+### Cloud destination restrictions
+The Node bridge rejects private, loopback, link-local, shared, multicast and reserved literal cloud addresses, including IPv4-mapped IPv6 and alternative IPv4 URL notation. Local DNS suffixes are rejected even with a trailing dot. Public literal addresses and configured HTTPS DNS names remain supported; local IPv6 loopback is supported for the gateway.
+
+This is URL validation only. It does not resolve or pin DNS addresses and does not prevent a configured DNS name from resolving to a private network or changing its answer. Only configure a trusted cloud hostname and enforce destination restrictions at the network boundary before enabling the bridge for stores.
