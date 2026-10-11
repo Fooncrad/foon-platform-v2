@@ -150,9 +150,14 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
  await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
- await publicPage.getByRole('dialog').getByLabel('القسم المطلوب',{exact:true}).selectOption(familySection);
+ await publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).locator('select[name="sectionId"]').selectOption(familySection);
  const nextDay=new Date(Date.now()+86400000);const localDate=new Date(nextDay.getTime()-nextDay.getTimezoneOffset()*60000).toISOString().slice(0,16);
- await publicPage.getByRole('dialog').getByLabel('موعد الحجز',{exact:true}).fill(localDate);
+ const bookingCalendar=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).locator('.foonBookingCalendar');
+ if(nextDay.getMonth()!==new Date().getMonth())await bookingCalendar.getByRole('button',{name:'Next month',exact:true}).click();
+ await bookingCalendar.getByRole('button',{name:String(nextDay.getDate()),exact:true}).click();
+ await bookingCalendar.locator('select').nth(0).selectOption(localDate.slice(11,13));
+ await bookingCalendar.locator('select').nth(1).selectOption(localDate.slice(14,16));
+ await expect(bookingCalendar.locator('input[name="scheduledAt"]')).toHaveValue(localDate);
  await publicPage.getByRole('dialog').getByLabel('رقم التواصل',{exact:true}).fill('0500000000');
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('ينتظر التأكيد');
@@ -191,7 +196,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.screenshot({path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
  await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
- await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطلبات',exact:true}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
+ await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().height>=44))).toBeTruthy();await page.screenshot({path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
  await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await publicPage.screenshot({path:'work/menu-customer-orders-mobile.png',fullPage:true});
  await publicPage.close();
