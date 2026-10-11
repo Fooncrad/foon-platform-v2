@@ -46,7 +46,7 @@ const server=http.createServer(async(req,res)=>{
    const result=transact(()=>{insertOrder.run(input.id,input.branchId,JSON.stringify(event),"new",now,now);const e=insertEvent.run(input.id,"created",JSON.stringify(event),now);insertOutbox.run(e.lastInsertRowid);return event;});
    emit(result);return send(res,201,{ok:true,order:result});
   }
-  const match=url.pathname.match(/^\\/orders\\/([a-f0-9-]{36})\\/status$/i);
+  const match=url.pathname.match(new RegExp("^/orders/([a-f0-9-]{36})/status$","i"));
   if(req.method==="PATCH"&&match){
    const input=await readBody(req);
    if(!["new","preparing","ready","completed","cancelled"].includes(input.status))return send(res,400,{error:"INVALID_STATUS"});
