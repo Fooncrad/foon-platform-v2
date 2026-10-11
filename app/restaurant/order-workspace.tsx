@@ -42,15 +42,18 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   event.preventDefault();if(busy)return;
   const f=new FormData(event.currentTarget);
   const payload={branchId:f.get("branchId"),channel:f.get("channel"),tableId:channel==="dine_in"?f.get("tableId")||null:null,partySize:channel==="dine_in"?Number(f.get("partySize")):null,customerName:f.get("customerName"),customerPhone:f.get("customerPhone"),couponCode:f.get("couponCode")||null,items:Object.values(cart).filter(line=>line.quantity>0).map(line=>({id:line.itemId,quantity:line.quantity,options:line.options}))};
+  if(payload.items.length===0){setMessage("أضف منتجاً واحداً على الأقل قبل إنشاء الطلب.");return;}
+  if(!payload.branchId){setMessage("حدد الفرع قبل إنشاء الطلب.");return;}
   const encoded=JSON.stringify(payload);
   if(requestRef.current?.payload!==encoded)requestRef.current={payload:encoded,key:crypto.randomUUID()};
   const id=requestRef.current.key,body={...payload,requestKey:id};
   setBusy(true);
   try{
-   if(!navigator.onLine){await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});await updateQueueCounts();setMessage("حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.");return;}
+   if(!navigator.onLine){if(channel==="dine_in"){setMessage("طلبات الطاولات تتطلب اتصالاً للتحقق من إشغال الطاولة. لم يُحفظ الطلب أو يُرسل.");return;}await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});await updateQueueCounts();setMessage("حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.");return;}
    await operationApi(tenantId,"pos","POST",body);requestRef.current=null;setCart({});setMessage(ui.created);void refresh().then(()=>onChanged()).catch(()=>setMessage("تم تأكيد الطلب من الخادم، لكن تعذر تحديث القائمة. أعد تحميل الطلبات عند عودة الاتصال."));
   }catch(error){
    if(isNetworkFailure(error)){
+    if(channel==="dine_in"){setMessage("تعذر التحقق من حالة الطاولة بعد انقطاع الاتصال. راجع سجل الطلبات قبل إعادة المحاولة.");return;}
     try{await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});await updateQueueCounts();setMessage("الاتصال انقطع؛ حُفظ الطلب محلياً بانتظار التحقق والمزامنة.");}
     catch(storageError){setMessage("تعذر حفظ الطلب محلياً. لا تغلق الصفحة: "+String(storageError));}
    }else setMessage(error instanceof Error?error.message:"تعذر إنشاء الطلب.");
