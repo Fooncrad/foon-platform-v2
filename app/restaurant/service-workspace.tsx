@@ -8,7 +8,7 @@ import ResourceManager,{operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 const groups:Record<string,{key:string;label:string}[]>={
  printers:[{key:"printers",label:"الطابعات"},{key:"printerIntegrations",label:"إعدادات التكامل"},{key:"departments",label:"أقسام التشغيل"},{key:"departmentAssignments",label:"توجيه الأصناف"},{key:"customerInvoices",label:"فواتير العملاء"}],
- tables:[{key:"tables",label:"الطاولات"},{key:"sections",label:"أقسام الصالة"},{key:"diningBatch",label:"الإضافة الجماعية"},{key:"waiterCalls",label:"نداءات النادل"}],
+ tables:[{key:"sections",label:"إضافة قسم صالة"},{key:"tables",label:"الطاولات وربطها بالقسم"},{key:"diningBatch",label:"الإضافة الجماعية"},{key:"waiterCalls",label:"نداءات النادل"}],
  menu:[{key:"menu",label:"الأصناف"},{key:"categories",label:"التصنيفات"},{key:"menuGroups",label:"الخيارات"},{key:"menuValues",label:"قيم الخيارات"},{key:"menuImages",label:"الصور"},{key:"templates",label:"القوالب والمظهر"}],
  inventory:[{key:"inventory",label:"المخزون"},{key:"suppliers",label:"الموردون"},{key:"purchases",label:"المشتريات"}],
  team:[{key:"team",label:"إدارة الموظفين وإضافتهم"},{key:"attendance",label:"الحضور"}],
@@ -19,7 +19,7 @@ const groups:Record<string,{key:string;label:string}[]>={
 export default function ServiceWorkspace({tenantId,section,branch,branches,onChanged}:{tenantId:string;section:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void}){
  const [tab,setTab]=useState(groups[section]?.[0].key??section);
  const tabs=groups[section];
- return <>{section==="team"&&<p className="restaurantFinePrint">إدارة الموظفين: افتح تبويب إدارة الموظفين وإضافتهم ثم اضغط «إضافة موظف» لتحديد الاسم والبريد والجوال والدور والفرع. الحسابات غير المسجلة تحتاج تفعيلًا قبل منحها صلاحيات.</p>}{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="diningBatch"?<DiningBatch tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="calendar"?<ReservationCalendar tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="templates"?<TemplateEditor tenantId={tenantId}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged}/>}</>;
+ return <>{section==="team"&&<p className="restaurantFinePrint">إدارة الموظفين: افتح تبويب إدارة الموظفين وإضافتهم ثم اضغط «إضافة موظف» لتحديد الاسم والبريد والجوال والدور والفرع. الحسابات غير المسجلة تحتاج تفعيلًا قبل منحها صلاحيات.</p>}{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="diningBatch"?<DiningBatch tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="calendar"?<ReservationCalendar tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="templates"?<TemplateEditor tenantId={tenantId}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged} createOnly={section==="tables"&&tab==="sections"}/>}</>;
 }
 type Session={id:string;created_at:string;last_seen_at:string;expires_at:string;current:boolean};
 type Customer={id:string;display_name:string|null;created_at:string};
