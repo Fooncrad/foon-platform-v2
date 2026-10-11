@@ -32,3 +32,9 @@
 .restaurantPanel[data-module="tables"] .restaurantResourceList article dd{font-size:16px;font-weight:750;color:#24334a;overflow-wrap:anywhere}
 @media(max-width:420px){.restaurantPanel[data-module="tables"] .restaurantResourceList{grid-template-columns:minmax(0,1fr)}.restaurantPanel[data-module="tables"] .restaurantResourceList article{padding:14px}.restaurantPanel[data-module="tables"] .restaurantResourceList article>header b{font-size:19px}}
 @media(prefers-reduced-motion:reduce){.restaurantPanel[data-module="tables"] .restaurantResourceList article{transition:none}.restaurantPanel[data-module="tables"] .restaurantResourceList article:hover{transform:none}}
+
+.restaurantPanel[data-module="tables"] .restaurantTableQuickActions{display:grid;gap:10px;border-top:1px solid #e9eef4;padding-top:12px}
+.restaurantPanel[data-module="tables"] .restaurantTableQuickActions label{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;font-weight:700;color:#475569}
+.restaurantPanel[data-module="tables"] .restaurantTableQuickActions select{width:auto;max-width:65%;min-width:130px;border:1px solid #dbe4ef;border-radius:10px;padding:9px 12px;background:#fff;color:#17243b;font:inherit}
+.restaurantPanel[data-module="tables"] .restaurantTableLinkedInfo{display:grid;gap:5px;font-size:12px;color:#64748b}
+.restaurantPanel[data-module="tables"] .restaurantTableLinkedInfo span{overflow-wrap:anywhere}
