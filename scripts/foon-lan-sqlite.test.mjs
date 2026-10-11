@@ -27,6 +27,10 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   assert.equal((await request("/orders","POST",payload)).status,201);
   assert.equal((await request("/orders","POST",payload)).status,200);
   assert.equal((await request("/orders","POST",{...payload,items:[{id:"different-item",quantity:1}]})).status,409);
+  assert.equal((await request("/orders","POST",{...payload,branchId:"branch-2"})).status,409);
+  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"item-1",quantity:0}]})).status,400);
+  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"item-1",quantity:1001}]})).status,400);
+  assert.equal((await (await request("/outbox")).json()).events.length,1);
   assert.equal((await request("/orders/"+id+"/status","PATCH",{status:"preparing"})).status,200);
   assert.equal((await fetch(base+"/outbox/ack",{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({seq:1,orderId:id,receipt:"test-cloud-receipt"})})).status,403);
   const outbox=await (await request("/outbox")).json();
