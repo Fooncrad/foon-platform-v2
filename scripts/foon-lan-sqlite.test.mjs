@@ -27,14 +27,14 @@ test("SQLite edge stores orders, outbox, and survives restart",async()=>{
   assert.equal((await request("/orders","GET",undefined,"wrong")).status,401);
   assert.equal((await request("/%ZZ")).status,404);
   assert.equal((await request("/health")).status,200);
-  const id=randomUUID(),payload={id,branchId:"branch-1",items:[{id:"item-1",quantity:2}]};
+  const id=randomUUID(),payload={id,branchId:"branch-1",items:[{id:"22222222-2222-4222-8222-222222222222",quantity:2}]};
   assert.equal((await request("/orders","POST",payload)).status,201);
   assert.equal((await request("/orders","POST",payload)).status,200);
-  assert.equal((await request("/orders","POST",{...payload,items:[{id:"different-item",quantity:1}]})).status,409);
+  assert.equal((await request("/orders","POST",{...payload,items:[{id:"33333333-3333-4333-8333-333333333333",quantity:1}]})).status,409);
   assert.equal((await request("/orders","POST",{...payload,branchId:"branch-2"})).status,409);
-  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"item-1",quantity:0}]})).status,400);
+  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"22222222-2222-4222-8222-222222222222",quantity:0}]})).status,400);
   assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"  ",quantity:1}]})).status,400);
-  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"item-1",quantity:1001}]})).status,400);
+  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"22222222-2222-4222-8222-222222222222",quantity:1001}]})).status,400);
   assert.equal((await (await request("/outbox")).json()).events.length,1);
   assert.equal((await request("/orders/"+id+"/status","PATCH",{status:"preparing"})).status,200);
   assert.equal((await request("/orders/"+id+"/status","PATCH",{status:"preparing"})).status,200);
