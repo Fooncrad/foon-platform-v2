@@ -26,6 +26,8 @@ const insertEvent=db.prepare("INSERT INTO events(order_id,kind,payload,created_a
 const insertOutbox=db.prepare("INSERT INTO outbox(event_seq) VALUES(?)");
 const updateStatus=db.prepare("UPDATE orders SET status=?,updated_at=? WHERE id=?");
 const clients=new Set();
+const edgeReceiptSecret=process.env.FOON_EDGE_ACK_SECRET||"";
+if(edgeReceiptSecret&&edgeReceiptSecret.length<32)throw Error("FOON_EDGE_ACK_SECRET must be at least 32 characters");
 function transact(fn){db.exec("BEGIN IMMEDIATE");try{const result=fn();db.exec("COMMIT");return result;}catch(e){db.exec("ROLLBACK");throw e;}}
 function send(res,status,data){res.writeHead(status,{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"});res.end(JSON.stringify(data));}
 function allowed(req){const given=Buffer.from((req.headers.authorization||"").replace(/^Bearer /,""));const expected=Buffer.from(token);return given.length===expected.length&&timingSafeEqual(given,expected);}
