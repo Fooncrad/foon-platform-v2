@@ -147,6 +147,7 @@ async function mutate(request:Request,module:string,method:string){
       const subject=label+" — "+store;
       const bodyText=label+" لدى "+store+".\\nالحجز: "+String(body.name??item.name??"")+"\\n"+(body.status==="cancelled"&&reason?"الملاحظات: "+reason+"\\n":"")+"راجع التفاصيل من حسابك في FOON.";
       await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,?,?,?,?,?)",[randomUUID(),"reservation_"+String(body.status),ctx.tenantId,email,subject,bodyText]);
+      await db.execute("INSERT INTO customer_notifications(id,user_id,tenant_id,event_key,subject,body_text,resource_id) VALUES (?,?,?,?,?,?,?)",[randomUUID(),userId,ctx.tenantId,"reservation_"+String(body.status),subject,bodyText,body.id]);
      }
     }
    }
@@ -166,6 +167,8 @@ async function mutate(request:Request,module:string,method:string){
       const subject="تحديث طلب #"+String(row.order_number)+" — "+String(row.store_name);
       const message="مرحبًا،\\n"+description+"\\nرقم الطلب: #"+String(row.order_number)+"\\nالمتجر: "+String(row.store_name)+"\\nراجع التفاصيل من حسابك في FOON.";
       await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,?,?,?,?,?)",[randomUUID(),event,ctx.tenantId,row.email,subject,message]);
+      const [recipient]=await db.execute<RowDataPacket[]>("SELECT customer_user_id FROM restaurant_orders WHERE id=? AND tenant_id=?",[body.id,ctx.tenantId]);
+      if(recipient[0]?.customer_user_id)await db.execute("INSERT INTO customer_notifications(id,user_id,tenant_id,event_key,subject,body_text,resource_id) VALUES (?,?,?,?,?,?,?)",[randomUUID(),recipient[0].customer_user_id,ctx.tenantId,event,subject,message,body.id]);
      }
     }
    }
