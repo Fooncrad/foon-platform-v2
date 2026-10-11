@@ -23,5 +23,11 @@ test("LAN gateway authentication, idempotency and status",async()=>{
   const duplicate=await request("/orders","POST",payload);assert.equal(duplicate.status,200);assert.equal((await duplicate.json()).duplicate,true);
   const status=await request("/orders/"+id+"/status","PATCH",{status:"preparing"});assert.equal(status.status,200);
   const list=await (await request("/orders")).json();assert.equal(list.orders.length,1);assert.equal(list.orders[0].status,"preparing");
+  assert.equal((await request("/orders/"+randomUUID()+"/status","PATCH",{status:"ready"})).status,404);
+  assert.equal((await request("/orders/"+id+"/status","PATCH",{status:"invalid"})).status,400);
+  const afterInvalid=await (await request("/orders")).json();assert.equal(afterInvalid.orders[0].status,"preparing");
+  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[]})).status,400);
+  assert.equal((await request("/orders","POST",{...payload,id:randomUUID(),items:[{id:"x"}]},false)).status,401);
+  const afterRejected=await (await request("/orders")).json();assert.equal(afterRejected.orders.length,1);
  }finally{proc.kill();await rm(dir,{recursive:true,force:true});}
 });
