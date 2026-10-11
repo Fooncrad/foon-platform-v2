@@ -23,30 +23,41 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   const popup=window.open("","_blank","width=440,height=720");
   if(!popup){setMessage("اسمح بالنوافذ المنبثقة لطباعة الطلب.");return;}
   const doc=popup.document;
-  const addText=(tag:string,value:string)=>{const el=doc.createElement(tag);el.textContent=value;doc.body.appendChild(el);};
-  doc.title=(finalInvoice?"فاتورة نهائية":"تذكرة طلب")+" #"+order.order_number;
+  const el=(tag:string,value:string,className?:string)=>{
+   const node=doc.createElement(tag);node.textContent=value;
+   if(className)node.className=className;
+   doc.body.appendChild(node);return node;
+  };
+  doc.title=(finalInvoice?"إيصال دفع":"تذكرة تحضير")+" #"+order.order_number;
   const style=doc.createElement("style");
-  style.textContent="@page{size:80mm auto;margin:3mm}body{font:13px Arial,sans-serif;direction:rtl;color:#111;margin:0 auto;max-width:74mm}h2{text-align:center}p{padding:5px 0;border-bottom:1px dashed #bbb}small{display:block;text-align:center}button{display:none}@media screen{button{display:block;margin:16px auto;padding:10px}}";
+  style.textContent=`@page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{direction:rtl;color:#111;font:12px Arial,Tahoma,sans-serif;width:74mm;margin:0 auto}h1{text-align:center;font-size:21px;margin:8px 0 2px}h2{text-align:center;font-size:15px;margin:4px 0 12px}.hero{font-size:18px;font-weight:800;text-align:center;border:2px solid #111;padding:9px;margin:8px 0}.line{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #bbb}.line span:first-child{flex:1}.line strong{text-align:left;white-space:nowrap}.total{font-size:17px;font-weight:800;border-top:2px solid #111;margin-top:10px}.note{text-align:center;font-size:10px;margin:12px 0;line-height:1.6}.controls{margin:18px auto;text-align:center}@media print{.controls{display:none}}`;
   doc.head.appendChild(style);
-  addText("h2",finalInvoice?"فاتورة نهائية":"تذكرة طلب");
-  addText("p","رقم الطلب: #"+order.order_number);
-  addText("p","نوع الطلب: "+(channels[order.channel]??order.channel));
-  if(order.channel==="dine_in"||order.table_id){
-   addText("p","الطاولة: "+(order.dining_snapshot?.name??order.table_id??"غير محددة"));
-   if(order.dining_snapshot?.sectionName)addText("p","القسم: "+order.dining_snapshot.sectionName);
-  }
-  if(order.party_size)addText("p","عدد الضيوف: "+order.party_size);
-  addText("p","الحالة: "+(statuses[order.status]??order.status));
-  addText("p","الدفع: "+(payments[order.payment_status]??order.payment_status));
-  addText("p","التاريخ: "+new Date(order.created_at).toLocaleString("ar-SA-u-nu-latn"));
-  if(order.customer_name)addText("p","العميل: "+order.customer_name);
-  for(const item of order.items)addText("p",item.name+" × "+item.quantity);
-  addText("p","الإجمالي: "+Number(order.total??0).toFixed(2)+" "+(order.currency??"ر.س"));
-  if(!finalInvoice)addText("small","تذكرة تشغيلية وليست فاتورة ضريبية");
-  if(finalInvoice)addText("small","إيصال دفع؛ لا يُعد فاتورة ضريبية نظامية دون بيانات الضريبة والمتطلبات المعتمدة");
-  const button=doc.createElement("button");button.textContent="طباعة";button.onclick=()=>popup.print();doc.body.appendChild(button);
-  popup.focus();
-  popup.setTimeout(()=>popup.print(),300);
+  el("h1","FOON");
+  el("h2",finalInvoice?"إيصال دفع نهائي":"تذكرة تحضير");
+  const type=channels[order.channel]??order.channel;
+  const location=order.channel==="dine_in"?" — طاولة "+(order.dining_snapshot?.name??order.table_id??"غير محددة"):"";
+  el("div",type+location,"hero");
+  const line=(label:string,value:string,cls?:string)=>{
+   const row=doc.createElement("div");row.className="line"+(cls?" "+cls:"");
+   const left=doc.createElement("span");left.textContent=label;
+   const right=doc.createElement("strong");right.textContent=value;
+   row.append(left,right);doc.body.appendChild(row);
+  };
+  line("رقم الطلب","#"+order.order_number);
+  line("حالة الطلب",statuses[order.status]??order.status);
+  line("الدفع",payments[order.payment_status]??order.payment_status);
+  line("التاريخ",new Date(order.created_at).toLocaleString("ar-SA-u-nu-latn"));
+  if(order.dining_snapshot?.sectionName)line("القسم",order.dining_snapshot.sectionName);
+  if(order.party_size)line("الضيوف",String(order.party_size));
+  if(finalInvoice&&order.customer_name)line("العميل",order.customer_name);
+  el("h2","الأصناف");
+  for(const item of order.items)line(item.name,"× "+item.quantity);
+  if(finalInvoice)line("المبلغ المدفوع",Number(order.total??0).toFixed(2)+" "+(order.currency??"SAR"),"total");
+  el("div",finalInvoice?"إيصال دفع وليس فاتورة ضريبية معتمدة.":"تذكرة تشغيلية وليست فاتورة ضريبية.","note");
+  const controls=doc.createElement("div");controls.className="controls";
+  const button=doc.createElement("button");button.textContent="طباعة";button.onclick=()=>popup.print();
+  controls.appendChild(button);doc.body.appendChild(controls);
+  popup.focus();popup.setTimeout(()=>popup.print(),300);
  }
  function actions(order:Order){
   const next:Record<string,string>={new:"preparing",preparing:"ready",ready:"completed"};
