@@ -70,3 +70,12 @@ test("bridge rejects loopback and local cloud DNS targets",async()=>{
   await assert.rejects(()=>syncLocalOutbox({...config,cloudUrl}),/INVALID_CLOUD_ENDPOINT/);
  }
 });
+
+test("bridge rejects malformed local outbox without contacting cloud",async()=>{
+ for(const events of [[{...event,event_seq:0}],[{...event,payload:null}],[{...event,kind:"unknown"}],Array.from({length:1001},()=>event)]){
+  const calls=[];
+  const fetchImpl=async(url)=>{calls.push(new URL(url).pathname);return new Response(JSON.stringify({events}),{status:200});};
+  await assert.rejects(()=>syncLocalOutbox({...config,fetchImpl}),/INVALID_LOCAL_OUTBOX/);
+  assert.deepEqual(calls,["/outbox"]);
+ }
+});
