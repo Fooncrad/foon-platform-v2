@@ -40,7 +40,7 @@ const server=http.createServer(async(req,res)=>{
    const input=await readBody(req);
    if(typeof input.id!=="string"||!/^[a-f0-9-]{36}$/i.test(input.id)||typeof input.branchId!=="string"||!input.branchId||!Array.isArray(input.items)||input.items.length<1||input.items.length>100)return send(res,400,{error:"INVALID_ORDER"});
    const existing=getOrder.get(input.id);
-   if(existing)return send(res,200,{ok:true,duplicate:true,order:existing});
+   if(existing){const saved=JSON.parse(existing.payload);if(saved.branchId!==input.branchId||JSON.stringify(saved.items)!==JSON.stringify(input.items))return send(res,409,{error:"IDEMPOTENCY_CONFLICT"});return send(res,200,{ok:true,duplicate:true,order:existing});}
    const now=new Date().toISOString();
    const event={id:input.id,branchId:input.branchId,items:input.items,status:"new",createdAt:now};
    const result=transact(()=>{insertOrder.run(input.id,input.branchId,JSON.stringify(event),"new",now,now);const e=insertEvent.run(input.id,"created",JSON.stringify(event),now);insertOutbox.run(e.lastInsertRowid);return event;});
