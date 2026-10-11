@@ -5,8 +5,8 @@ import {acceptEdgeEvent} from "../lib/platform/edge-sync-accept.mjs";
 import {eventDigest} from "./foon-edge-sync-contract.mjs";
 
 const identity={tenantId:"t",branchId:"b",deviceId:"d"};
-const event={tenantId:"t",branchId:"b",deviceId:"d",eventSeq:1,kind:"created",orderId:"o",payload:{id:"o",branchId:"b",items:[{id:"x",quantity:1}]}};
-event.digest=eventDigest({seq:1,order_id:"o",kind:"created",payload:event.payload});
+const event={tenantId:"t",branchId:"b",deviceId:"d",eventSeq:1,kind:"created",orderId:"11111111-1111-4111-8111-111111111111",payload:{id:"11111111-1111-4111-8111-111111111111",branchId:"b",items:[{id:"22222222-2222-4222-8222-222222222222",quantity:1}]}};
+event.digest=eventDigest({seq:1,order_id:"11111111-1111-4111-8111-111111111111",kind:"created",payload:event.payload});
 
 function fakePool(){
  const state={inbox:new Map(),mutations:0,commits:0,rollbacks:0};
@@ -38,8 +38,8 @@ test("MySQL adapter returns original receipt and never reapplies replay",async()
  assert.equal(first.status,201);assert.equal(replay.status,200);
  assert.equal(first.receipt.receiptId,replay.receipt.receiptId);
  assert.equal(pool.state.mutations,1);assert.equal(pool.state.inbox.size,1);
- const changed={...event,payload:{...event.payload,items:[{id:"x",quantity:2}]}};
- changed.digest=eventDigest({seq:1,order_id:"o",kind:"created",payload:changed.payload});
+ const changed={...event,payload:{...event.payload,items:[{id:"22222222-2222-4222-8222-222222222222",quantity:2}]}};
+ changed.digest=eventDigest({seq:1,order_id:"11111111-1111-4111-8111-111111111111",kind:"created",payload:changed.payload});
  assert.equal((await acceptEdgeEvent(changed,identity,adapter)).status,409);
  assert.equal(pool.state.mutations,1);
 });
