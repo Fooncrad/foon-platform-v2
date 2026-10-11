@@ -39,6 +39,28 @@ test("bridge rejects tampered receipt without local ACK",async()=>{
  const result=await syncLocalOutbox({...config,fetchImpl});
  assert.equal(result.acked,0);assert.equal(result.retry,1);assert.ok(!calls.includes("/outbox/ack"));
 });
+test("bridge separates outbox ACK sequence from signed event sequence",async()=>{
+ const outbox={...event,seq:9,event_seq:1};
+ let acknowledged;
+ const fetchImpl=async(url,options)=>{
+  const path=new URL(url).pathname;
+  if(path==="/outbox")return new Response(JSON.stringify({events:[outbox]}),{status:200});
+  if(path==="/edge/sync"){
+   const input=JSON.parse(options.body);
+   assert.equal(input.eventSeq,1);
+   assert.equal(input.digest,eventDigest({...outbox,seq:1}));
+   return new Response(JSON.stringify({receipt:signCloudReceipt({receiptId:"receipt-9",deviceId:"device-1",eventSeq:1,orderId:"order-1",digest:input.digest},secret)}),{status:201});
+  }
+  if(path==="/outbox/ack"){
+   acknowledged=JSON.parse(options.body);
+   return new Response(JSON.stringify({ok:true}),{status:200});
+  }
+  throw Error("unexpected path");
+ };
+ const result=await syncLocalOutbox({...config,fetchImpl});
+ assert.equal(result.acked,1);
+ assert.equal(acknowledged.seq,9);
+});
 test("bridge rejects plaintext cloud URLs",async()=>{
  await assert.rejects(()=>syncLocalOutbox({...config,cloudUrl:"http://cloud.example/edge/sync"}),/CLOUD_HTTPS_REQUIRED/);
 });
