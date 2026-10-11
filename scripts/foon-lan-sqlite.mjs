@@ -5,6 +5,7 @@ import {dirname,resolve} from "node:path";
 import {timingSafeEqual} from "node:crypto";
 
 const host=process.env.FOON_LAN_HOST||"127.0.0.1";
+if(!["127.0.0.1","::1","localhost"].includes(host))throw new Error("LAN gateway requires a secured local reverse proxy; direct network binding is disabled");
 const port=Number(process.env.FOON_LAN_PORT||8787);
 const token=process.env.FOON_LAN_TOKEN||"";
 if(token.length<32)throw new Error("FOON_LAN_TOKEN must be at least 32 characters");
