@@ -72,6 +72,7 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
  const [rows,setRows]=useState<StoredResource[]>([]),[refs,setRefs]=useState<Record<string,StoredResource[]>>({}),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[editing,setEditing]=useState<StoredResource|null>(null),[showForm,setShowForm]=useState(false),[filter,setFilter]=useState("");
  const [sectionFilter,setSectionFilter]=useState(""),[formSection,setFormSection]=useState(String(initialResource?.data.sectionId||""));
  const [uploads,setUploads]=useState<Record<string,string>>({});
+ const [bulkOpen,setBulkOpen]=useState(false),[bulkStart,setBulkStart]=useState(1),[bulkCount,setBulkCount]=useState(10),[bulkCapacity,setBulkCapacity]=useState(4),[bulkSection,setBulkSection]=useState(""),[bulkBranch,setBulkBranch]=useState(branch);
  async function upload(key:string,file?:File){if(!file)return;if(file.size>2*1024*1024){setMessage("الحد الأقصى للصورة 2 ميجابايت.");return;}setBusy(true);setMessage("");try{const form=new FormData();form.set("file",file);const r=await fetch("/api/restaurant/assets",{method:"POST",headers:{"x-foon-tenant":tenantId},body:form});const result=await r.json();if(!r.ok)throw Error();setUploads(values=>({...values,[key]:result.url}));setMessage("تم رفع الصورة بنجاح. اضغط حفظ التغييرات لنشر الشعار أو الغلاف في المنيو.");}catch{setMessage("تعذر رفع الصورة. استخدم PNG أو JPEG أو WebP بحجم أقل من 2 ميجابايت.");}finally{setBusy(false);}}
  async function refresh(){const result=await operationApi(tenantId,module,"GET",undefined,branch);setRows(result.resources);setRefs(result.references??{});}
  useEffect(()=>{if(!['waiterCalls','reservations'].includes(module))return;let alive=true;const timer=setInterval(()=>{operationApi(tenantId,module,'GET',undefined,branch).then(result=>{if(alive){setRows(result.resources);setRefs(result.references??{});}}).catch(()=>{});},15000);return()=>{alive=false;clearInterval(timer);};},[tenantId,module,branch]);
@@ -89,6 +90,28 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   }else setMessage(module==="team"?"تم حفظ بيانات الموظف.":"تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.");
   onChanged?.();}
   catch(error){const detail=error instanceof Error?error.message:"تعذر الحفظ.";if(module==="team"&&!editing&&detail.includes("DUPLICATE_RESOURCE")){await refresh().catch(()=>{});setMessage("هذا البريد مرتبط بموظف موجود في المطعم. ابحث عنه في القائمة وعدّل بياناته بدلاً من إضافته مرة أخرى. ("+detail+")");}else if(module==="team"&&detail.includes("EMPLOYEE_OWNER_ROLE_PROTECTED")){setMessage("هذا البريد مرتبط بمالك المطعم بالفعل. المالك لا يُضاف مرة أخرى كموظف ولا يمكن تغيير دوره من هنا. استخدم بريداً مختلفاً لإضافة مشرف. ("+detail+")");}else setMessage(detail);}finally{setBusy(false);}
+ }
+ async function addTablesBulk(){
+  if(busy)return;
+  if(!Number.isInteger(bulkStart)||bulkStart<1||!Number.isInteger(bulkCount)||bulkCount<1||bulkCount>50||!Number.isInteger(bulkCapacity)||bulkCapacity<1||bulkCapacity>100){setMessage("تحقق من الأرقام: حتى 50 طاولة في الدفعة، وسعة من 1 إلى 100.");return;}
+  if(!bulkSection){setMessage("اختر قسم الصالة قبل إضافة الطاولات.");return;}
+  const selectedBranch=bulkBranch||branch||null;
+  if(selectedBranch&&!branches.some(b=>b.id===selectedBranch)){setMessage("الفرع غير صالح.");return;}
+  setBusy(true);setMessage("");
+  let created=0;let failure="";
+  try{
+   for(let index=0;index<bulkCount;index++){
+    const number=bulkStart+index;
+    try{
+     await operationApi(tenantId,"tables","POST",{name:String(number),status:"available",branchId:selectedBranch,data:{sectionId:bulkSection,number,capacity:bulkCapacity}});
+     created++;
+    }catch(error){failure=error instanceof Error?error.message:"تعذر إضافة الطاولة "+number;break;}
+   }
+   await refresh();onChanged?.();
+   if(created===bulkCount){setBulkOpen(false);setMessage("تمت إضافة "+created+" طاولة بنجاح.");}
+   else setMessage("تمت إضافة "+created+" من "+bulkCount+" طاولة. توقف الإجراء عند الخطأ: "+failure+" — تحقق من الأرقام الموجودة ثم أعد المحاولة.");
+  }catch(error){setMessage("تعذر تحديث القائمة: "+String(error));}
+  finally{setBusy(false);}
  }
  async function updateReservationStatus(row:StoredResource,status:string){
   if(busy)return;
@@ -116,6 +139,7 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
  }
  const visible=rows.filter(row=>(!sectionFilter||row.data.sectionId===sectionFilter)&&(row.name+" "+JSON.stringify(row.data)).toLowerCase().includes(filter.toLowerCase()));
  return <section className="restaurantPanel" data-module={module}>{!onlyForm&&<header><div><h3>{config.label}</h3><p>{action.help} · {rows.length} عنصر</p></div><button className="restaurantPrimary" onClick={()=>{setUploads({});setEditing(config.singleton?rows[0]??null:null);setFormSection("");setShowForm(true);setMessage("");}}>{config.singleton?(rows.length?"تعديل الهوية":"إعداد الهوية") :action.add}</button></header>}
+ {module==="tables"&&!onlyForm&&<div style={{marginBlock:12}}><button type="button" className="restaurantOutline" disabled={busy} onClick={()=>setBulkOpen(value=>!value)}>{bulkOpen?"إغلاق الإضافة الجماعية":"إضافة طاولات دفعة واحدة"}</button>{bulkOpen&&<div className="restaurantResourceForm" style={{marginTop:12,display:"grid",gap:12}}><h3>إضافة طاولات متعددة</h3><label>قسم الصالة<select value={bulkSection} onChange={e=>setBulkSection(e.target.value)}><option value="">اختر القسم</option>{(refs.sections??[]).filter(x=>x.status==="active").map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>الفرع<select value={bulkBranch} onChange={e=>setBulkBranch(e.target.value)}><option value="">المطعم بالكامل</option>{branches.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>أول رقم طاولة<input type="number" min={1} max={100000} value={bulkStart} onChange={e=>setBulkStart(Number(e.target.value))}/></label><label>عدد الطاولات (حتى 50)<input type="number" min={1} max={50} value={bulkCount} onChange={e=>setBulkCount(Number(e.target.value))}/></label><label>عدد المقاعد لكل طاولة<input type="number" min={1} max={100} value={bulkCapacity} onChange={e=>setBulkCapacity(Number(e.target.value))}/></label><button type="button" className="restaurantPrimary" disabled={busy||!bulkSection} onClick={()=>void addTablesBulk()}>{busy?"جارٍ إضافة الطاولات…":"إضافة "+bulkCount+" طاولة"}</button><p className="restaurantFinePrint">يُنشأ لكل طاولة رقم متسلسل. عند حدوث خطأ يتوقف الإجراء ويعرض عدد الطاولات التي أُضيفت بالفعل.</p></div>}</div>}
  {module==="marketing"&&<p className="restaurantNotice">يمكن حفظ الحملات وجدولتها. الإرسال الخارجي ينتظر ربط مزود القناة وتشغيل عامل الإرسال.</p>}
  {module==="remote"&&<p className="restaurantNotice">ميزانية المهمة للتخطيط فقط. تسجيل المهمة لا ينفّذ تحويلاً مالياً.</p>}
  {module==="team"&&<p className="restaurantFinePrint">يمكن للمالك إضافة موظف حتى لو لم يكن مسجلاً في FOON. يُحفظ الموظف غير المسجل بانتظار التفعيل، ولا يحصل على صلاحية الدخول حتى يكتمل ربط حسابه.</p>}
