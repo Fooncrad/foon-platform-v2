@@ -15,6 +15,19 @@ async function transaction<T>(mode:IDBTransactionMode,fn:(store:IDBObjectStore)=
  });
 }
 export async function queuePosOrder(order:PendingPosOrder){await transaction<IDBValidKey>("readwrite",store=>store.put(order));}
+export async function queuePosOrderIfAbsent(order:PendingPosOrder):Promise<boolean>{
+ const database=await db();
+ return new Promise<boolean>((resolve,reject)=>{
+  const tx=database.transaction(STORE,"readwrite");
+  const store=tx.objectStore(STORE);
+  const get=store.get(order.id);
+  let added=false;
+  get.onsuccess=()=>{if(get.result===undefined){store.add(order);added=true;}else if(get.result.tenantId!==order.tenantId){tx.abort();}};
+  tx.oncomplete=()=>{database.close();resolve(added);};
+  tx.onerror=()=>{database.close();reject(tx.error??new Error("OFFLINE_QUEUE_FAILED"));};
+  tx.onabort=()=>{database.close();reject(tx.error??new Error("OFFLINE_ORDER_CONFLICT"));};
+ });
+}
 export async function pendingPosOrders():Promise<PendingPosOrder[]>{return (await transaction<PendingPosOrder[]>("readonly",store=>store.getAll())).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));}
 export async function removePosOrder(id:string){await transaction<undefined>("readwrite",store=>store.delete(id));}
 export async function markPosOrder(order:PendingPosOrder,error:string){await queuePosOrder({...order,status:"needs_review",lastError:error});}
@@ -36,7 +49,7 @@ export async function importPendingPosOrders(json:string,tenantId:string):Promis
  for(const order of backup.orders as PendingPosOrder[]){
   const existing=(await pendingPosOrders()).find(row=>row.id===order.id);
   if(existing){if(existing.tenantId!==tenantId)throw new Error("OFFLINE_ORDER_CONFLICT");continue;}
-  await queuePosOrder(order);count++;
+  if(await queuePosOrderIfAbsent(order))count++;
  }
  return count;
 }
