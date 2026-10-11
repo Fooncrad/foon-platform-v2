@@ -14,7 +14,7 @@ export async function syncLocalOutbox({localUrl,localToken,ackSecret,cloudUrl,cl
  const data=await list.json();
  if(!Array.isArray(data.events))throw Error("INVALID_LOCAL_OUTBOX");
  return syncEdgeBatch({
-  events:data.events,deviceId,signingSecret,
+  events:data.events.map(e=>({...e,outboxSeq:e.seq,seq:e.event_seq})),deviceId,signingSecret,
   async send(event){
    const input={tenantId,branchId,deviceId,eventSeq:event.seq,orderId:event.order_id,kind:event.kind,payload:event.payload,digest:eventDigest(event)};
    const response=await fetchImpl(cloud,{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+cloudToken},body:JSON.stringify(input)});
@@ -23,7 +23,7 @@ export async function syncLocalOutbox({localUrl,localToken,ackSecret,cloudUrl,cl
    return {status:response.status,receipt:body.receipt};
   },
   async ack(event,receipt){
-   const response=await fetchImpl(new URL("/outbox/ack",local),{method:"POST",headers:{...headers,"x-foon-edge-ack-secret":ackSecret,"content-type":"application/json"},body:JSON.stringify({seq:event.seq,orderId:event.order_id,receipt})});
+   const response=await fetchImpl(new URL("/outbox/ack",local),{method:"POST",headers:{...headers,"x-foon-edge-ack-secret":ackSecret,"content-type":"application/json"},body:JSON.stringify({seq:event.outboxSeq,orderId:event.order_id,receipt})});
    if(!response.ok)throw Error("LOCAL_ACK_REJECTED");
   }
  });
