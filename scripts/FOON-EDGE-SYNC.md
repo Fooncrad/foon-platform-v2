@@ -5,12 +5,12 @@ The SQLite gateway is an experimental component, not a deployed or certified off
 ## Local event lifecycle
 1. An order or status change is committed atomically to orders, events and outbox.
 2. GET /outbox lists unsynchronized events in sequence order.
-3. A future trusted cloud sync worker must submit each event with an immutable idempotency key and verify the cloud response.
-4. Only then should the worker acknowledge that event. The current POST /outbox/ack endpoint **does not cryptographically verify cloud receipts** and must not be exposed to untrusted clients or treated as proof of cloud delivery.
+3. The trusted Node sync bridge submits each event with an immutable idempotency key and verifies a signed cloud receipt; the cloud API integration remains experimental.
+4. Only then should the worker acknowledge that event. The local POST /outbox/ack endpoint validates signed receipts and requires its separate acknowledgement secret; neither secret nor the endpoint may be exposed to untrusted browser clients. A signed receipt is not proof of delivery until the central API and database transaction are deployed and independently tested.
 5. Unacknowledged events survive process restart.
 
 ## Required before production
-- Implement server-verified acknowledgements and persist cloud receipt IDs.
+- Verify the deployed central API issues receipts only after a committed business mutation; independently test durable receipt storage and local acknowledgement.
 - Use HTTPS/mTLS and per-device authorization on the local network; never expose the shared bearer token in a browser.
 - Add transactional migration/version management, backup/restore, SQLite integrity checks, and WAL checkpoint policy.
 - Add disk-full, sudden power loss, process crash, duplicate delivery, network partition and concurrency tests.
