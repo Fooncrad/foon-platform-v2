@@ -11,7 +11,10 @@ test("central edge validation enforces authenticated tenant, branch and device",
  for(const field of ["tenantId","branchId","deviceId"])assert.equal(validateIncomingEdgeEvent({...event,[field]:"other"},identity).error,"EDGE_SCOPE_MISMATCH");
  assert.equal(validateIncomingEdgeEvent(event,null).error,"DEVICE_UNAUTHORIZED");
  assert.equal(validateIncomingEdgeEvent({...event,eventSeq:0},identity).error,"INVALID_EDGE_EVENT");
- assert.equal(validateIncomingEdgeEvent({...event,payload:{...event.payload,id:"other"}},identity).error,"EDGE_ORDER_MISMATCH");
- assert.equal(validateIncomingEdgeEvent({...event,payload:{id:"order-1",items:[]}},identity).error,"INVALID_EDGE_ORDER");
- assert.equal(validateIncomingEdgeEvent({...event,kind:"status",payload:{id:"order-1",status:"invalid"}},identity).error,"INVALID_EDGE_STATUS");
+ const changedPayload={...event.payload,id:"other"};
+ assert.equal(validateIncomingEdgeEvent({...event,payload:changedPayload},identity).error,"EDGE_DIGEST_MISMATCH");
+ const withDigest=(overrides)=>{const candidate={...event,...overrides};return {...candidate,digest:eventDigest({seq:candidate.eventSeq,order_id:candidate.orderId,kind:candidate.kind,payload:candidate.payload})};};
+ assert.equal(validateIncomingEdgeEvent(withDigest({payload:changedPayload}),identity).error,"EDGE_ORDER_MISMATCH");
+ assert.equal(validateIncomingEdgeEvent(withDigest({payload:{id:"order-1",items:[]}}),identity).error,"INVALID_EDGE_ORDER");
+ assert.equal(validateIncomingEdgeEvent(withDigest({kind:"status",payload:{id:"order-1",status:"invalid"}}),identity).error,"INVALID_EDGE_STATUS");
 });
