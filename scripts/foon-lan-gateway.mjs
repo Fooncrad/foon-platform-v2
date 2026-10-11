@@ -18,7 +18,7 @@ try{
 }catch(error){if(error.code!=="ENOENT")throw error;}
 let queue=Promise.resolve();
 function persist(){
- queue=queue.then(async()=>{
+ queue=queue.catch(()=>{}).then(async()=>{
   await mkdir(dirname(file),{recursive:true});
   const tmp=file+"."+process.pid+".tmp";
   await writeFile(tmp,JSON.stringify([...orders.values()]),{mode:0o600});
@@ -59,7 +59,7 @@ const server=http.createServer(async(req,res)=>{
    try{await persist();}catch(error){orders.delete(order.id);throw error;}
    announce(order);return send(res,201,{ok:true,order});
   }
-  const match=url.pathname.match(/^\\/orders\\/([a-f0-9-]{36})\\/status$/i);
+  const match=url.pathname.match(/^\/orders\/([a-f0-9-]{36})\/status$/i);
   if(req.method==="PATCH"&&match){
    const order=orders.get(match[1]);if(!order)return send(res,404,{error:"ORDER_NOT_FOUND"});
    const data=await body(req);
