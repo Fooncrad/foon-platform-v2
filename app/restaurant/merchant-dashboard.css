@@ -30,3 +30,15 @@
 .restaurantMetrics{gap:12px;margin-bottom:16px}
 .restaurantMetrics>article{min-height:142px;padding:18px}
 @media(max-width:767px){.restaurantContent{padding-top:10px}.restaurantPageHeading{margin-bottom:10px}.restaurantHero{padding:16px;margin-bottom:12px}.restaurantHeroTop{margin-bottom:12px}.restaurantHeroStats>div{min-height:90px;padding:12px}.restaurantMetrics>article{min-height:120px;padding:14px}}
+
+/* Tighten the dashboard to the topbar boundary; preserve a small breathing gap. */
+.restaurantApp .restaurantContent{padding-top:6px}
+.restaurantApp .restaurantPageHeading{margin-bottom:6px;gap:8px}
+.restaurantApp .restaurantPageHeading p{margin-bottom:0}
+.restaurantApp .restaurantHero{padding-block:16px;margin-bottom:12px}
+.restaurantApp .restaurantHeroTop{margin-bottom:0;gap:8px}
+.restaurantApp .restaurantHeroTop small{margin-bottom:2px}
+.restaurantApp .restaurantHeroTop h2{line-height:1.2}
+.restaurantApp .restaurantHeroTop p{margin-top:2px}
+.restaurantApp .restaurantHeroStats{margin-top:12px}
+@media(max-width:767px){.restaurantApp .restaurantContent{padding-top:6px}.restaurantApp .restaurantPageHeading{margin-bottom:6px}.restaurantApp .restaurantHero{padding-block:12px}.restaurantApp .restaurantHeroStats{margin-top:10px}}
