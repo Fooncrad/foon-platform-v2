@@ -15,3 +15,20 @@
 @media(max-width:680px){.restaurantTenantSelector{flex:1;min-width:0}.restaurantTenantSelector select{width:100%;max-width:100%}.restaurantTopActions .restaurantBranchSelector{flex:1;min-width:0}.restaurantSearchButton{flex-shrink:0}}
 .restaurantBranchActions{display:flex;flex-wrap:wrap;gap:6px}.restaurantBranchActions button{border:1px solid var(--rc-border);background:#fff;border-radius:7px;padding:6px 9px;font-size:11px!important;color:#475569}.restaurantBranchList>div{flex-wrap:wrap}
 .restaurantPosMenu article{padding:16px;border:1px solid var(--rc-border);border-radius:12px;display:grid;gap:10px;align-content:start;background:#fff}.restaurantPosMenu article>b{font-size:14px}.restaurantPosMenu article>span{color:#b34b20;font-size:13px}.menuChoicePicker{display:grid;gap:10px;margin:12px 0}.menuChoicePicker fieldset{margin:0;padding:10px;border:1px solid #cbd5e180;border-radius:8px;min-width:0}.menuChoicePicker legend{font-size:11px}.menuChoicePicker select{width:100%;min-width:0;padding:7px;background:#fff;border:1px solid #cbd5e1;border-radius:6px;font-size:12px}.menuChoicePicker label{display:flex;align-items:center;gap:8px;font-size:12px;margin:7px 0}.menuChoicePicker input[type="checkbox"]{width:16px;height:16px;min-height:0;margin:0}
+
+/* Compact, modern table cards: section / number / capacity are legible at a glance. */
+.restaurantPanel[data-module="tables"] .restaurantResourceList{grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article{display:flex;flex-direction:column;gap:16px;min-height:190px;padding:18px;border:1px solid #e2e8f0;border-radius:20px;background:linear-gradient(155deg,#fff 55%,#f8fafc);box-shadow:0 5px 18px rgba(15,23,42,.045);transition:box-shadow .2s,border-color .2s,transform .2s}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article:hover{border-color:#cbd5e1;box-shadow:0 12px 30px rgba(15,23,42,.09);transform:translateY(-2px)}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header{align-items:flex-start;margin:0;gap:10px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header>div:first-child{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header b{font-size:21px;font-weight:800;letter-spacing:-.02em;color:#17243b}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article header .restaurantStateBadge{font-size:11px;border-radius:99px;padding:6px 11px;background:#edf8f1;color:#187448;font-weight:700}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header>div:last-child{display:flex;gap:6px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header button{padding:7px 11px;border-radius:10px;font-weight:650}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dl>div{min-width:0;border:1px solid #edf1f5;border-radius:12px;background:#f8fafc;padding:11px 9px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dt{font-size:11px;color:#64748b;margin-bottom:6px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dd{font-size:16px;font-weight:750;color:#24334a;overflow-wrap:anywhere}
+@media(max-width:420px){.restaurantPanel[data-module="tables"] .restaurantResourceList{grid-template-columns:minmax(0,1fr)}.restaurantPanel[data-module="tables"] .restaurantResourceList article{padding:14px}.restaurantPanel[data-module="tables"] .restaurantResourceList article>header b{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.restaurantPanel[data-module="tables"] .restaurantResourceList article{transition:none}.restaurantPanel[data-module="tables"] .restaurantResourceList article:hover{transform:none}}
