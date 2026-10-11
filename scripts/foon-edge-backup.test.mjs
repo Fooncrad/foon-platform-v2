@@ -1,0 +1,24 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {DatabaseSync} from "node:sqlite";
+import {spawnSync} from "node:child_process";
+import {mkdtempSync,rmSync,existsSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+
+test("Edge backup preserves committed data and passes integrity check",()=>{
+ const dir=mkdtempSync(join(tmpdir(),"foon-edge-backup-"));
+ try{
+  const source=join(dir,"source.sqlite"),target=join(dir,"backup.sqlite");
+  const db=new DatabaseSync(source);
+  db.exec("PRAGMA journal_mode=WAL; CREATE TABLE orders(id TEXT PRIMARY KEY,status TEXT); INSERT INTO orders VALUES('order-1','new');");
+  const result=spawnSync(process.execPath,["scripts/foon-edge-backup.mjs",target],{env:{...process.env,FOON_LAN_DB:source},encoding:"utf8"});
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(existsSync(target),true);
+  const restored=new DatabaseSync(target,{readOnly:true});
+  try{
+   assert.equal(restored.prepare("SELECT status FROM orders WHERE id=?").get("order-1").status,"new");
+   assert.equal(Object.values(restored.prepare("PRAGMA integrity_check").get())[0],"ok");
+  }finally{restored.close();db.close();}
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
