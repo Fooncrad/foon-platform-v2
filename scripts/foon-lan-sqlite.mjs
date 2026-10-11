@@ -35,7 +35,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="GET"&&url.pathname==="/health")return send(res,200,{ok:true,storage:"sqlite-wal-full",pending:db.prepare("SELECT count(*) AS n FROM outbox WHERE synced_at IS NULL").get().n});
   if(req.method==="GET"&&url.pathname==="/orders")return send(res,200,{orders:db.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 500").all().map(row=>({...row,payload:JSON.parse(row.payload)}))});
   if(req.method==="GET"&&url.pathname==="/outbox")return send(res,200,{events:db.prepare("SELECT o.seq,e.order_id,e.kind,e.payload,e.created_at FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE o.synced_at IS NULL ORDER BY o.seq LIMIT 200").all().map(row=>({...row,payload:JSON.parse(row.payload)}))});
-  if(req.method==="GET"&&url.pathname==="/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-store","connection":"keep-alive"});res.write(": connected\\n\\n");clients.add(res);req.on("close",()=>clients.delete(res));return;}
+  if(req.method==="GET"&&url.pathname==="/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-store","connection":"keep-alive"});res.write([": connected","",""].join(String.fromCharCode(10)));clients.add(res);req.on("close",()=>clients.delete(res));return;}
   if(req.method==="POST"&&url.pathname==="/orders"){
    const input=await readBody(req);
    if(typeof input.id!=="string"||!/^[a-f0-9-]{36}$/i.test(input.id)||typeof input.branchId!=="string"||!input.branchId||!Array.isArray(input.items)||input.items.length<1||input.items.length>100)return send(res,400,{error:"INVALID_ORDER"});
