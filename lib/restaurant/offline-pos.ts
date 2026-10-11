@@ -22,7 +22,7 @@ export async function queuePosOrderIfAbsent(order:PendingPosOrder):Promise<boole
   const store=tx.objectStore(STORE);
   const get=store.get(order.id);
   let added=false;
-  get.onsuccess=()=>{if(get.result===undefined){store.add(order);added=true;}else if(get.result.tenantId!==order.tenantId){tx.abort();}};
+  get.onsuccess=()=>{if(get.result===undefined){store.add(order);added=true;}else if(JSON.stringify(get.result)!==JSON.stringify(order)){tx.abort();}};
   tx.oncomplete=()=>{database.close();resolve(added);};
   tx.onerror=()=>{database.close();reject(tx.error??new Error("OFFLINE_QUEUE_FAILED"));};
   tx.onabort=()=>{database.close();reject(tx.error??new Error("OFFLINE_ORDER_CONFLICT"));};
