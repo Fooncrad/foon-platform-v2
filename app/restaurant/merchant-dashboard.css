@@ -19,3 +19,14 @@
 
 /* In-place action feedback, visible at any scroll position */
 .restaurantActionToast{position:fixed;inset-block-end:max(20px,env(safe-area-inset-bottom));inset-inline-end:20px;z-index:10000;display:flex;align-items:center;gap:14px;justify-content:space-between;width:max-content;max-width:min(420px,calc(100vw - 32px));padding:13px 16px;background:#24221e;color:#f8f3e9;border:1px solid #e2a93b;border-radius:12px;box-shadow:0 12px 32px #0003;font-size:14px;line-height:1.5;overflow-wrap:anywhere}.restaurantActionToast button{flex-shrink:0;border:0;background:transparent;color:inherit;font-size:24px;cursor:pointer;line-height:1;padding:0 3px}@media(max-width:600px){.restaurantActionToast{inset-inline:16px;max-width:none;width:auto}}
+
+/* Compact overview: keep operational cards above the fold without horizontal overflow. */
+.restaurantContent{padding-top:16px}
+.restaurantPageHeading{margin-bottom:12px;min-height:0}
+.restaurantHero{padding:22px 28px;margin-bottom:16px}
+.restaurantHeroTop{margin-bottom:18px}
+.restaurantHeroStats{gap:12px}
+.restaurantHeroStats>div{min-height:105px;padding:14px 18px}
+.restaurantMetrics{gap:12px;margin-bottom:16px}
+.restaurantMetrics>article{min-height:142px;padding:18px}
+@media(max-width:767px){.restaurantContent{padding-top:10px}.restaurantPageHeading{margin-bottom:10px}.restaurantHero{padding:16px;margin-bottom:12px}.restaurantHeroTop{margin-bottom:12px}.restaurantHeroStats>div{min-height:90px;padding:12px}.restaurantMetrics>article{min-height:120px;padding:14px}}
