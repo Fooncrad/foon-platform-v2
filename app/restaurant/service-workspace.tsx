@@ -23,23 +23,23 @@ export default function ServiceWorkspace({tenantId,section,branch,branches,onCha
 }
 type SimpleSection={id:string;name:string;version:string;branch_id:string|null;status:string;data:Record<string,unknown>};
 function DiningSectionSimple({tenantId,branch,branches,onChanged}:{tenantId:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void}){
- const [sections,setSections]=useState<SimpleSection[]>([]),[name,setName]=useState(""),[editing,setEditing]=useState<SimpleSection|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [sections,setSections]=useState<SimpleSection[]>([]),[name,setName]=useState(""),[sectionBranch,setSectionBranch]=useState(branch),[editing,setEditing]=useState<SimpleSection|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState("");
  async function load(){const response=await operationApi(tenantId,"sections","GET",undefined,branch);setSections(response.resources??[]);}
  useEffect(()=>{let alive=true;operationApi(tenantId,"sections","GET",undefined,branch).then(r=>{if(alive)setSections(r.resources??[]);}).catch(e=>{if(alive)setError(String(e));});return()=>{alive=false;};},[tenantId,branch]);
  async function save(e:import("react").FormEvent<HTMLFormElement>){e.preventDefault();if(busy||!name.trim())return;setBusy(true);setError("");try{
-  await operationApi(tenantId,"sections",editing?"PATCH":"POST",{...(editing?{id:editing.id,version:editing.version}:{}),name:name.trim(),status:editing?.status??"active",branchId:editing?.branch_id??branch??null,data:editing?.data??{}});
-  setName("");setEditing(null);await load();onChanged();
+  await operationApi(tenantId,"sections",editing?"PATCH":"POST",{...(editing?{id:editing.id,version:editing.version}:{}),name:name.trim(),status:editing?.status??"active",branchId:sectionBranch||null,data:editing?.data??{}});
+  setName("");setEditing(null);setSectionBranch(branch);await load();onChanged();
  }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ القسم.");}finally{setBusy(false);}}
  async function remove(item:SimpleSection){if(!confirm("هل تريد حذف القسم؟ قد تمنع الطاولات المرتبطة به الحذف."))return;setBusy(true);setError("");try{await operationApi(tenantId,"sections","DELETE",{id:item.id,version:item.version});await load();onChanged();}catch(e){setError(e instanceof Error?e.message:"تعذر حذف القسم.");}finally{setBusy(false);}}
  return <div style={{display:"grid",gap:18}}>
   <section className="restaurantPanel"><header><h3>{editing?"تعديل القسم":"إضافة قسم جديد"}</h3></header>
-   <form onSubmit={save} style={{display:"grid",gap:14,padding:16}}>
-    <label style={{display:"grid",gap:8}}>اسم القسم<input autoFocus required maxLength={180} value={name} onChange={e=>setName(e.target.value)} placeholder="مثال: العائلات، الأفراد، VIP، التراس"/></label>
-    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="submit" className="restaurantPrimary" disabled={busy||!name.trim()}>{busy?"جارٍ الحفظ…":editing?"حفظ التعديل":"إضافة القسم"}</button>{editing&&<button type="button" className="restaurantOutline" onClick={()=>{setEditing(null);setName("");}}>إلغاء</button>}</div>
+   <form onSubmit={save} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,240px),1fr))",gap:12,padding:"8px 12px",alignItems:"end"}}>
+    <label style={{display:"grid",gap:6}}>اسم القسم<input autoFocus required maxLength={180} value={name} onChange={e=>setName(e.target.value)} placeholder="مثال: العائلات، الأفراد، VIP"/></label><label style={{display:"grid",gap:6}}>الفرع<select value={sectionBranch} onChange={e=>setSectionBranch(e.target.value)}><option value="">المطعم بالكامل</option>{branches.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="submit" className="restaurantPrimary" disabled={busy||!name.trim()}>{busy?"جارٍ الحفظ…":editing?"حفظ التعديل":"إضافة القسم"}</button>{editing&&<button type="button" className="restaurantOutline" onClick={()=>{setEditing(null);setName("");setSectionBranch(branch);}}>إلغاء</button>}</div>
    </form>
   </section>
   <section className="restaurantPanel"><header><h3>الأقسام المضافة</h3></header>{error&&<p role="alert" className="restaurantNotice">{error}</p>}
-   {sections.length?<div className="restaurantResourceList">{sections.map(item=><article key={item.id}><header><strong>{item.name}</strong><div style={{display:"flex",gap:8}}><button type="button" disabled={busy} onClick={()=>{setEditing(item);setName(item.name);}}>تعديل</button><button type="button" disabled={busy} onClick={()=>void remove(item)}>حذف</button></div></header></article>)}</div>:<p className="restaurantFinePrint">لا توجد أقسام بعد. أضف القسم أولاً، ثم انتقل إلى الطاولات واربطها به.</p>}
+   {sections.length?<div className="restaurantResourceList">{sections.map(item=><article key={item.id}><header><strong>{item.name}</strong><div style={{display:"flex",gap:8}}><button type="button" disabled={busy} onClick={()=>{setEditing(item);setName(item.name);setSectionBranch(item.branch_id??"");}}>تعديل</button><button type="button" disabled={busy} onClick={()=>void remove(item)}>حذف</button></div></header></article>)}</div>:<p className="restaurantFinePrint">لا توجد أقسام بعد. أضف القسم أولاً، ثم انتقل إلى الطاولات واربطها به.</p>}
   </section>
  </div>;
 }
