@@ -14,7 +14,11 @@ async function transaction<T>(mode:IDBTransactionMode,fn:(store:IDBObjectStore)=
   tx.onabort=()=>{database.close();reject(tx.error??new Error("OFFLINE_TRANSACTION_ABORTED"));};
  });
 }
-export async function queuePosOrder(order:PendingPosOrder){await transaction<IDBValidKey>("readwrite",store=>store.put(order));}
+export async function queuePosOrder(order:PendingPosOrder){
+ const existing=(await pendingPosOrders()).find(item=>item.id===order.id);
+ if(existing&&(existing.tenantId!==order.tenantId||existing.branchId!==order.branchId||JSON.stringify(existing.payload)!==JSON.stringify(order.payload)))throw new Error("OFFLINE_ORDER_CONFLICT");
+ await transaction<IDBValidKey>("readwrite",store=>store.put(order));
+}
 export async function queuePosOrderIfAbsent(order:PendingPosOrder):Promise<boolean>{
  const database=await db();
  return new Promise<boolean>((resolve,reject)=>{
