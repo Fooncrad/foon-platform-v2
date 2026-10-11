@@ -5,7 +5,7 @@ const a="11111111-1111-4111-8111-111111111111",b="22222222-2222-4222-8222-222222
 const item=(id,quantity)=>({id,quantity});
 test("authoritative catalog prices and integer cents are used",async()=>{
  const connection={async execute(sql,args){
-  assert.match(sql,/tenant_id=\?/);assert.match(sql,/FOR UPDATE/);
+  assert.match(sql,/tenant_id=\?/);assert.match(sql,/FOR UPDATE/);assert.match(sql,/JOIN restaurant_resources/);assert.match(sql,/rr\.archived=0/);
   assert.deepEqual(args,["tenant-1",a,b]);
   return [[{id:a,name:"Coffee",price:"9.95",currency:"SAR"},{id:b,name:"Tea",price:"4.50",currency:"SAR"}]];
  }};
