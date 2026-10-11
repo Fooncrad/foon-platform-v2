@@ -7,6 +7,8 @@ on:
       - "scripts/foon-lan-sqlite.test.mjs"
       - "scripts/foon-edge-backup.mjs"
       - "scripts/foon-edge-backup.test.mjs"
+      - "scripts/foon-edge-sync-contract.mjs"
+      - "scripts/foon-edge-sync-contract.test.mjs"
       - ".github/workflows/foon-edge-tests.yml"
   workflow_dispatch:
 jobs:
@@ -22,4 +24,5 @@ jobs:
           node-version: "24"
       - run: node --check scripts/foon-lan-sqlite.mjs
       - run: node --check scripts/foon-edge-backup.mjs
-      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
+      - run: node --check scripts/foon-edge-sync-contract.mjs
+      - run: node --test scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs scripts/foon-edge-sync-contract.test.mjs
