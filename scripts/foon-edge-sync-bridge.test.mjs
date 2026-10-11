@@ -5,7 +5,7 @@ import {signCloudReceipt} from "../lib/platform/edge-sync-receipt-signature.mjs"
 import {eventDigest} from "./foon-edge-sync-contract.mjs";
 
 const secret="s".repeat(40),token="t".repeat(40);
-const event={seq:1,order_id:"order-1",kind:"created",payload:{id:"order-1",branchId:"branch-1",items:[{id:"food",quantity:1}]}};
+const event={seq:1,event_seq:1,order_id:"order-1",kind:"created",payload:{id:"order-1",branchId:"branch-1",items:[{id:"food",quantity:1}]}};
 function fakeFetch({tamper=false,offline=false}={}){
  const calls=[],fetchImpl=async(url,options)=>{
   const path=new URL(url).pathname;calls.push(path);
