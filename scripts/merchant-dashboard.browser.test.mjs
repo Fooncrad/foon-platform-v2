@@ -226,6 +226,18 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().height>=44))).toBeTruthy();await page.screenshot({path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
  await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await publicPage.screenshot({path:'work/menu-customer-orders-mobile.png',fullPage:true});
+ await publicPage.goto(origin+'/visual-dashboard');
+ await expect(publicPage.getByText(/المنيو محفوظ للتصفح دون اتصال/)).toBeVisible();
+ await publicContext.setOffline(true);
+ const offlineFrame=publicPage.frameLocator('iframe[title="المنيو — تصفح دون اتصال"]');
+ await expect(offlineFrame.locator('#notice')).toContainText('للتصفح فقط');
+ await expect(offlineFrame.locator('form')).toHaveCount(0);
+ await publicPage.reload();
+ await expect(publicPage.locator('#notice')).toContainText('للتصفح فقط');
+ await expect(publicPage.locator('article').first()).toBeVisible();
+ expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await publicPage.screenshot({path:'work/menu-offline-mobile.png',fullPage:true});
+ await publicContext.setOffline(false);
  await publicPage.close();
  await publicContext.close();
  // An existing customer from another store must join before accessing booking fields.
