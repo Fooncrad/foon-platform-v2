@@ -23,11 +23,18 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  ]);
  let customerCount:number|null=null;
  if(canManage){const [rows]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM tenant_customers WHERE tenant_id=?",[tenantId]);customerCount=Number(rows[0]?.total??0);}
+ const staffPermissions:string[]=[];
+ if(!canManage){
+  const [grants]=await db.execute<RowDataPacket[]>("SELECT permission_key,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND allowed=TRUE",[tenantId,userId]);
+  const [assignments]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE",[tenantId,userId]);
+  const assigned=new Set(assignments.map(row=>String(row.branch_id)));
+  for(const grant of grants)if(grant.branch_id==null||assigned.has(String(grant.branch_id)))staffPermissions.push(String(grant.permission_key));
+ }
  const subscription=subscriptions[0];
  const now=new Date();
  const data:MerchantData={
   tenantId,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
-  tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
+  staffPermissions,tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),
   branches:branches.map(b=>({id:String(b.id),name:String(b.name),slug:String(b.slug),enabled:Boolean(b.enabled),version:branchVersion({name:b.name,slug:b.slug,enabled:b.enabled})})),
