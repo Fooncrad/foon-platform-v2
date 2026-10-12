@@ -53,7 +53,7 @@ function formatOperationError(code:unknown,module:string,status:number){
  const messages=translatedErrors[key];
  const fallback: [string,string,string]=key.startsWith("REQUIRED_")?["حقل مطلوب","Required field","Champ obligatoire"]:key.startsWith("INVALID_")?["قيمة غير صحيحة","Invalid value","Valeur invalide"]:["تعذر إتمام العملية","Operation failed","Échec de l’opération"];
  const fieldName=field?.label?field.label+": ":"";
- return (messages?.[index]??(operationLabels[key]&&index===0?operationLabels[key]:fieldName+fallback[index]))+" ("+key+" · HTTP "+status+")";
+ return (messages?.[index]??(operationLabels[key]&&index===0?operationLabels[key]:fieldName+fallback[index]));
 }
 export async function operationApi(tenantId:string,module:string,method="GET",body?:unknown,branch?:string,extra?:Record<string,string>){
  const query=new URLSearchParams({...extra,...(branch?{branch}:{})}).toString();
