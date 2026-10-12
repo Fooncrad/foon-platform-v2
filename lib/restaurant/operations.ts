@@ -142,6 +142,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if((customerName?.length??0)>180||(phone?.length??0)>40)throw new ResourceError("INVALID_INPUT");
  const id=randomUUID();
  await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,dining?.sectionId??null,dining?Number(body.partySize):null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,(subtotal-discount)/100]);
+ if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
  await audit(db,tenantId,actor,"order.create",id,{total:(subtotal-discount)/100});
  return {id,total:(subtotal-discount)/100};
