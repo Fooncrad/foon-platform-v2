@@ -82,6 +82,8 @@ jobs:
         run: npm run test:operations
       - name: Install Chromium for visual checks
         run: npx playwright install --with-deps chromium
+      - name: Verify public menu browsing without internet
+        run: node --test scripts/public-menu-offline.test.mjs
       - name: Verify merchant dashboard desktop and mobile journeys
         run: npm run test:browser
       - name: Save merchant dashboard screenshots
