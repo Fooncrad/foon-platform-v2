@@ -7,14 +7,16 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
 export const runtime="nodejs";
-const actions=["view","create","edit","accept","reject","cancel"] as const;
+const modules=["orders","pos","kitchen","menu","categories","tables","sections","reservations","waitlist","waiterCalls","team","attendance","inventory","coupons","marketing","customerInvoices","internalInvoices","printers","reports","storefront","notifications","loyalty","delivery"] as const;
+const actions=["view","create","edit","accept","reject","cancel","delete","manage"] as const;
+const validPermissions=new Set(modules.flatMap(module=>actions.map(action=>module+"."+action)));
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null);
  const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??""),password=String(body?.password??"");
  const permissions=Array.isArray(body?.permissions)?body.permissions:[];
- if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||password.length<9||password.length>128||permissions.some((p:unknown)=>!actions.includes(p as typeof actions[number])))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||password.length<9||password.length>128||permissions.length>validPermissions.size||permissions.some((p:unknown)=>typeof p!=="string"||!validPermissions.has(p)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(actor,tenantId,["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const passwordHash=await hashPassword(password),db=await database().getConnection();
  try{
@@ -30,7 +32,7 @@ export async function POST(request:Request){
   await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?, 'active')",[userId,email,passwordHash,String(employee.name)]);
   await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?, 'active')",[randomUUID(),tenantId,userId,membershipRole]);
   if(employee.branch_id)await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,String(employee.branch_id),membershipRole]);
-  for(const action of actions)await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,?)",[randomUUID(),tenantId,userId,employee.branch_id??null,"orders."+action,permissions.includes(action)?1:0]);
+  for(const permission of permissions)await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,employee.branch_id??null,permission]);
   data.userId=userId;data.invitationStatus="accepted";
   await db.execute("UPDATE restaurant_resources SET data=?,version=version+1 WHERE id=? AND tenant_id=?",[JSON.stringify(data),resourceId,tenantId]);
   await db.commit();
