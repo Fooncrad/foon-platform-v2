@@ -40,3 +40,28 @@ export async function GET(request:Request){
    return mine.some(t=>String(t.branch_id)===branch&&(String(parse(t.data).number??"")===String(d.tableNumber??d.table_number??"")&&Boolean(d.tableNumber??d.table_number)||String(t.name).trim()===String(d.tableName??"").trim()&&Boolean(d.tableName)));}).map(c=>({id:c.id,name:c.name,status:c.status}))});
  }catch(error){console.error("[FOON assigned service]",error);return NextResponse.json({ok:false,code:"ASSIGNED_SERVICE_UNAVAILABLE"},{status:503});}
 }
+
+export async function POST(request:Request){
+ const user=await currentUserId();
+ if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
+ const body=await request.json().catch(()=>null) as {tenantId?:string;callId?:string;action?:string}|null;
+ if(!body||!body.tenantId||!body.callId||!["accept","complete"].includes(body.action??""))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ try{
+  const url=new URL(request.url);
+  url.searchParams.set("tenantId",body.tenantId);
+  const scoped=await GET(new Request(url));
+  if(!scoped.ok)return scoped;
+  const visible=await scoped.json() as {calls:{id:string;status:string}[]};
+  const call=visible.calls.find(item=>item.id===body.callId);
+  if(!call)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});
+  const allowed=body.action==="accept"?["pending","new","requested","open"]:["in_progress"];
+  if(!allowed.includes(call.status))return NextResponse.json({ok:false,code:"INVALID_STATE"},{status:409});
+  const next=body.action==="accept"?"in_progress":"completed";
+  const [result]=await database().execute<import("mysql2/promise").ResultSetHeader>(
+   "UPDATE restaurant_resources SET status=?,updated_at=NOW() WHERE tenant_id=? AND id=? AND kind='waiter_call' AND archived=FALSE AND status=?",
+   [next,body.tenantId,body.callId,call.status]
+  );
+  if(result.affectedRows!==1)return NextResponse.json({ok:false,code:"INVALID_STATE"},{status:409});
+  return NextResponse.json({ok:true,status:next});
+ }catch{return NextResponse.json({ok:false,code:"CALL_UPDATE_FAILED"},{status:503});}
+}
