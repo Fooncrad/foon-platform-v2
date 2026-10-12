@@ -41,6 +41,12 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE LIMIT 1 LOCK IN SHARE MODE",[value,tenantId,resourceModules[field.ref!].kind]);
   if(!rows.length||input.branchId&&rows[0].branch_id&&rows[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
  }
+ if(module==="tables"&&input.status==="available"&&previous?.status!=="available"){
+  const [active]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND table_id=? AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected')) LIMIT 1",[tenantId,id]);
+  if(active.length)throw new ResourceError("TABLE_HAS_UNFINISHED_ORDER");
+  const [reservations]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=?",[tenantId,id]);
+  if(reservations.some(row=>{const data=parseData(row.data);const start=Date.parse(String(data.scheduledAt??""));const duration=Number(data.durationMinutes??90);return Number.isFinite(start)&&start<=Date.now()&&Date.now()<start+duration*60000;}))throw new ResourceError("TABLE_HAS_ACTIVE_RESERVATION");
+ }
  const diningLookup=await prepareDiningResource(db,tenantId,module,input,id);
  let lookup:string|null=diningLookup??(config.singleton?"config":module==="coupons"?String(input.data.code):null);
  if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
