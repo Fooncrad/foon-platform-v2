@@ -2,6 +2,7 @@
 import {useEffect,useState} from "react";
 import "./dining.css";
 import DiningBatch from "./dining-batch";
+import MerchantMailSettings from "./merchant-mail-settings";
 import ReservationCalendar from "./reservation-calendar";
 import TemplateEditor from "./menu/template-editor";
 import ResourceManager,{operationApi} from "./resource-manager";
@@ -11,7 +12,7 @@ const groups:Record<string,{key:string;label:string}[]>={
  tables:[{key:"sections",label:"إضافة قسم صالة"},{key:"tables",label:"الطاولات وربطها بالقسم"},{key:"diningBatch",label:"الإضافة الجماعية"},{key:"waiterCalls",label:"نداءات النادل"}],
  menu:[{key:"menu",label:"الأصناف"},{key:"categories",label:"التصنيفات"},{key:"menuGroups",label:"الخيارات"},{key:"menuValues",label:"قيم الخيارات"},{key:"menuImages",label:"الصور"},{key:"templates",label:"القوالب والمظهر"}],
  inventory:[{key:"inventory",label:"المخزون"},{key:"suppliers",label:"الموردون"},{key:"purchases",label:"المشتريات"}],
- team:[{key:"team",label:"إدارة الموظفين وإضافتهم"},{key:"attendance",label:"الحضور"}],
+ team:[{key:"team",label:"إدارة الموظفين وإضافتهم"},{key:"attendance",label:"الحضور"},{key:"mailSettings",label:"بريد الموظفين والإشعارات"}],
  marketing:[{key:"coupons",label:"الكوبونات"},{key:"marketing",label:"الحملات"}],
  reservations:[{key:"calendar",label:"التقويم"},{key:"reservations",label:"قائمة الحجوزات"},{key:"waitlist",label:"قائمة الانتظار"}],
  remote:[{key:"remote",label:"المهام"},{key:"remoteWorkers",label:"العاملون"},{key:"remoteMessages",label:"التواصل"},{key:"remoteDeliveries",label:"التسليمات"}],
@@ -19,7 +20,7 @@ const groups:Record<string,{key:string;label:string}[]>={
 export default function ServiceWorkspace({tenantId,section,branch,branches,onChanged}:{tenantId:string;section:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void}){
  const [tab,setTab]=useState(groups[section]?.[0].key??section);
  const tabs=groups[section];
- return <>{section==="team"&&<p className="restaurantFinePrint">إدارة الموظفين: افتح تبويب إدارة الموظفين وإضافتهم ثم اضغط «إضافة موظف» لتحديد الاسم والبريد والجوال والدور والفرع. الحسابات غير المسجلة تحتاج تفعيلًا قبل منحها صلاحيات.</p>}{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="diningBatch"?<DiningBatch tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="calendar"?<ReservationCalendar tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="templates"?<TemplateEditor tenantId={tenantId}/>:tab==="sections"&&section==="tables"?<DiningSectionSimple tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged} createOnly={section==="tables"&&tab==="sections"}/>}</>;
+ return <>{section==="team"&&<p className="restaurantFinePrint">إدارة الموظفين: افتح تبويب إدارة الموظفين وإضافتهم ثم اضغط «إضافة موظف» لتحديد الاسم والبريد والجوال والدور والفرع. الحسابات غير المسجلة تحتاج تفعيلًا قبل منحها صلاحيات.</p>}{tabs&&<div className="restaurantStatusFilters">{tabs.map(t=><button key={t.key} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</div>}{tab==="diningBatch"?<DiningBatch tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="calendar"?<ReservationCalendar tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:tab==="templates"?<TemplateEditor tenantId={tenantId}/>:tab==="mailSettings"?<MerchantMailSettings tenantId={tenantId}/>:tab==="sections"&&section==="tables"?<DiningSectionSimple tenantId={tenantId} branch={branch} branches={branches} onChanged={onChanged}/>:<ResourceManager key={tab+"-"+branch} tenantId={tenantId} module={tab} branch={branch} branches={branches} onChanged={onChanged} createOnly={section==="tables"&&tab==="sections"}/>}</>;
 }
 type SimpleSection={id:string;name:string;version:string;branch_id:string|null;status:string;data:Record<string,unknown>};
 function DiningSectionSimple({tenantId,branch,branches,onChanged}:{tenantId:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void}){
