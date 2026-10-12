@@ -172,12 +172,7 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  }
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
  await db.execute("UPDATE restaurant_orders SET status=?,payment_status=?,version=version+1 WHERE id=? AND tenant_id=?",[status,payment,order.id,tenantId]);
- if(order.table_id&&["completed","cancelled"].includes(status)&&status!==order.status){
-  const tableId=String(order.table_id);
-  const [otherOrders]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND table_id=? AND id<>? AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected')) LIMIT 1",[tenantId,tableId,order.id]);
-  const [bookings]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=?",[tenantId,tableId]);
-  const hasActiveBooking=bookings.some(row=>{const data=parseData(row.data);const start=Date.parse(String(data.scheduledAt??""));return Number.isFinite(start)&&start<=Date.now()&&Date.now()<start+Number(data.durationMinutes??90)*60000;});
-  if(!otherOrders.length&&!hasActiveBooking)await db.execute("UPDATE restaurant_resources SET status='available',version=version+1 WHERE tenant_id=? AND id=? AND kind='dining_table' AND status='occupied'",[tenantId,tableId]);
- }
+ // A completed order does not prove that the guest has left.
+ // Keep the table occupied until staff explicitly confirms departure.
  await audit(db,tenantId,actor,"order.update",String(order.id),{status,paymentStatus:payment});return {id:order.id};
 }
