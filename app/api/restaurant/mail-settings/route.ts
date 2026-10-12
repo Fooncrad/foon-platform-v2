@@ -25,7 +25,7 @@ export async function PUT(request:Request){
   return NextResponse.json({ok:true,mode:"platform"});
  }
  const host=String(body.host??"").trim().toLowerCase(),user=String(body.user??"").trim().toLowerCase(),fromName=String(body.fromName??"").trim(),password=String(body.password??"");
- if(!/^[a-z0-9.-]{4,253}$/.test(host)||!host.includes(".")||!/^\S+@\S+\.\S+$/.test(user)||fromName.length>160||password.length>256||Number(body.port)!==465)return NextResponse.json({ok:false,code:"INVALID_SMTP_SETTINGS"},{status:400});
+ if(!/^[a-z0-9.-]{4,253}$/.test(host)||!host.includes(".")||host.endsWith(".local")||host.endsWith(".internal")||host.endsWith(".localhost")||host==="localhost"||/^[0-9.]+$/.test(host)||!/^\S+@\S+\.\S+$/.test(user)||fromName.length>160||password.length>256||Number(body.port)!==465)return NextResponse.json({ok:false,code:"INVALID_SMTP_SETTINGS"},{status:400});
  const previous=await tenantMailSettings(tenantId);
  if(!password&&(!previous?.smtp_secret||previous.smtp_user!==user))return NextResponse.json({ok:false,code:"SMTP_PASSWORD_REQUIRED"},{status:400});
  const secret=password?encryptSmtpPassword(password):String(previous.smtp_secret);
