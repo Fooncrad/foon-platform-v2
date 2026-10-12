@@ -45,7 +45,10 @@ async function authorize(request:Request,module:string,write:boolean){
    verifiedBranch=activeBranch;
   }
   const scoped=grants.filter(g=>g.branch_id===null||(verifiedBranch!==null&&String(g.branch_id)===verifiedBranch));
-  if(!scoped.some(g=>(g.permission_key===permissionModule+"."+action||g.permission_key===permissionModule+".manage")&&Number(g.allowed)===1))throw new ResourceError("FORBIDDEN");
+  const exact=scoped.filter(g=>g.permission_key===permissionModule+"."+action);
+  // A deliberately unchecked action must not be reopened by the broad "manage" grant.
+  if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
+  if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
  }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature&&!(await tenantEntitlement(access.tenantId,feature)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
