@@ -12,7 +12,7 @@ import "./merchant-experience.css";
 
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;enabled:boolean;limit:number|null};
-export type MerchantData={tenantId:string;name:string;slug:string;role:string;adminAccess:boolean;date:string;reportDay:string;branches:Branch[];features:Feature[];subscription:{name:string;status:string;endsAt:string|null}|null;customerCount:number|null;tenantChoices:{id:string;name:string}[]};
+export type MerchantData={staffPermissions:string[];tenantId:string;name:string;slug:string;role:string;adminAccess:boolean;date:string;reportDay:string;branches:Branch[];features:Feature[];subscription:{name:string;status:string;endsAt:string|null}|null;customerCount:number|null;tenantChoices:{id:string;name:string}[]};
 type Section="overview"|"branches"|"orders"|"pos"|"kds"|"menu"|"tables"|"inventory"|"team"|"marketing"|"reservations"|"subscription"|"customers"|"storefront"|"remote"|"security"|"health"|"payments"|"reports"|"printers";
 const modules:{key:Section;label:string;icon:string;feature?:string;roles:string[]}[]=[
  {key:"overview",label:"نظرة عامة",icon:"dashboard",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
@@ -53,15 +53,21 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  async function toggleSound(){if(soundEnabled){setSoundEnabled(false);lastAlertRef.current=null;await audioRef.current?.suspend();return;}try{const ctx=audioRef.current??new AudioContext();audioRef.current=ctx;await ctx.resume();lastAlertRef.current=live?(live.summary.newOrders+live.summary.waiterCalls+live.summary.reservations):null;setSoundEnabled(true);playAlert();}catch{setLiveError("تعذر تشغيل الصوت. تأكد من سماح المتصفح بتشغيل الصوت.");}}
  useEffect(()=>{if(!soundEnabled||!live)return;const count=live.summary.newOrders+live.summary.waiterCalls+live.summary.reservations;lastAlertRef.current=count;if(count<=0)return;const timer=setInterval(()=>{if(audioRef.current?.state==="running")playAlert();},12000);return()=>clearInterval(timer);},[live,soundEnabled]);
  useEffect(()=>()=>{void audioRef.current?.close();},[]);
- useEffect(()=>{let alive=true;const load=()=>operationApi(data.tenantId,"overview","GET",undefined,branch).then(result=>{if(alive){setLive(result);setLiveError("");}}).catch(error=>{if(alive)setLiveError(String(error.message));});void load();const timer=setInterval(()=>void load(),15000);return()=>{alive=false;clearInterval(timer);};},[data.tenantId,branch,revision]);
+ useEffect(()=>{if(!canManage&&!allowedSection("overview"))return;let alive=true;const load=()=>operationApi(data.tenantId,"overview","GET",undefined,branch).then(result=>{if(alive){setLive(result);setLiveError("");}}).catch(error=>{if(alive)setLiveError(String(error.message));});void load();const timer=setInterval(()=>void load(),15000);return()=>{alive=false;clearInterval(timer);};},[data.tenantId,branch,revision,canManage,data.staffPermissions]);
  function changed(){setRevision(v=>v+1);router.refresh();}
  const canManage=["owner","manager"].includes(data.role),canPayments=["owner","manager","accountant"].includes(data.role);
- const visible=modules.filter(m=>m.roles.includes(data.role));
+ const allowedSection=(section:Section)=> {
+  if(canManage)return true;
+  if(section==="security")return true;
+  const key=({kds:"kitchen",branches:"storefront",remote:"team",payments:"internalInvoices",subscription:"reports",customers:"orders",overview:"orders"} as Partial<Record<Section,string>>)[section]??section;
+  return data.staffPermissions.some(permission=>permission===key+".view"||permission===key+".manage");
+ };
+ const visible=modules.filter(m=>m.roles.includes(data.role)&&allowedSection(m.key));
  const granted=(key?:string)=>!key||data.features.some(f=>f.key===key&&f.enabled);
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route="/restaurant?tenant="+encodeURIComponent(data.tenantId),paymentRoute="/restaurant/payments?tenant="+encodeURIComponent(data.tenantId);
- function navigate(section:Section){if(!modules.some(m=>m.key===section&&m.roles.includes(data.role)))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");}
+ function navigate(section:Section){if(!modules.some(m=>m.key===section&&m.roles.includes(data.role)&&allowedSection(m.key)))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");}
  useEffect(()=>{const handler=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setSearchOpen(true);}if(event.key==="Escape"){setSearchOpen(false);setDrawer(false);setNotifications(false);setProfile(false);}};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler);},[]);
  useEffect(()=>{if(searchOpen)searchRef.current?.focus();},[searchOpen]);
  useEffect(()=>{if(drawer)drawerCloseRef.current?.focus();},[drawer]);
