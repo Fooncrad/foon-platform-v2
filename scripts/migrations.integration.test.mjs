@@ -106,6 +106,8 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
 
     // A same-named but wrong index must fail, not silently mark the migration done.
     await db.query("ALTER TABLE tenant_payment_settings DROP FOREIGN KEY fk_payment_branch_same_tenant");
+    await db.query("ALTER TABLE employee_branch_assignments DROP FOREIGN KEY fk_staff_assignment_branch");
+    await db.query("ALTER TABLE employee_permission_grants DROP FOREIGN KEY fk_staff_permission_branch");
     await db.query("ALTER TABLE branches DROP INDEX uq_branches_tenant_id");
     await db.query("ALTER TABLE branches ADD INDEX uq_branches_tenant_id (tenant_id)");
     await db.execute("DELETE FROM schema_migrations WHERE id=?",["0014_payment_tenant_integrity.sql"]);
@@ -114,6 +116,9 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.notEqual(failed.status,0);
     const [[unrecorded]]=await db.execute("SELECT COUNT(*) AS n FROM schema_migrations WHERE id=?",["0014_payment_tenant_integrity.sql"]);
     assert.equal(Number(unrecorded.n),0);
+    // Restore the disposable schema for the HTTP/browser suites that follow.
+    await db.query("ALTER TABLE branches DROP INDEX uq_branches_tenant_id");
+    successfulRun();
   } finally {
     await db.end();
   }

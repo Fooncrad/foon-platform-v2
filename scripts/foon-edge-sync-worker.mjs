@@ -12,12 +12,17 @@ export function verifyEdgeAck(event,receipt,deviceId,signingSecret){
 
 // Sender is injected so the worker can be tested without network access.
 // Store ACK only after verified signed receipt; retry on any other response.
-export async function syncEdgeBatch({events,deviceId,signingSecret,send,ack}){
+export async function syncEdgeBatch({events,deviceId,signingSecret,send,ack,conflict}){
  if(!Array.isArray(events)||typeof send!=="function"||typeof ack!=="function")throw Error("INVALID_EDGE_SYNC_WORKER");
  const result={acked:0,retry:0,errors:[]};
  for(const event of events){
   try{
+   if(event.sync_error){result.conflicts=1;result.errors.push({seq:event.seq,error:"EDGE_CLOUD_CONFLICT",code:event.sync_error});break;}
    const response=await send(event);
+   if(response?.status===409&&response.error!=="EDGE_ORDER_NOT_FOUND"){
+    if(typeof conflict==="function")await conflict(event,response.error||"EDGE_REQUEST_REJECTED");
+    result.conflicts=1;result.errors.push({seq:event.seq,error:"EDGE_CLOUD_CONFLICT",code:response.error||"EDGE_REQUEST_REJECTED"});break;
+   }
    if(!response||![200,201].includes(response.status)||!verifyEdgeAck(event,response.receipt,deviceId,signingSecret)){
     result.retry++;result.errors.push({seq:event.seq,error:"UNVERIFIED_CLOUD_RECEIPT"});break;
    }

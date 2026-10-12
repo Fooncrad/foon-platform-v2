@@ -68,6 +68,12 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   await save(a,"team","Kitchen employee",{email:staff.email,role:"kitchen"});
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
+  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'kitchen',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'kitchen.view',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'kitchen.edit',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"GET",undefined,staff.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"PATCH",{id:order.body.id,version:1,status:"preparing"},staff.cookie,a.tenant)).status,403);
   const kitchen=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchen.status,200);assert.equal(kitchen.body.orders[0].total,null);assert.equal(kitchen.body.orders[0].customer_phone,null);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:1,paymentStatus:"paid"},"PATCH")).status,200);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:2,status:"cancelled"},"PATCH")).body.code,"REFUND_REQUIRED");
@@ -91,9 +97,13 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   await save(a,"remoteWorkers","Worker",{employeeId,skills:"Menu review"},"active");
   await save(a,"remoteMessages","Task message",{taskId:remoteTask,message:"Please review the menu."},"posted");
   await save(a,"remoteDeliveries","Delivery",{taskId:remoteTask,notes:"Review complete."},"submitted");
+  // Occupied tables may call a waiter, but cannot receive a new booking or dine-in order.
+  assert.equal((await resource(a,"reservations",{name:"Occupied booking",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:table}})).body.code,"TABLE_NOT_FOUND");
+  assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,items:[{id:item,quantity:1}]})).body.code,"TABLE_NOT_FOUND");
+  const reservationTable=await save(a,"tables","Booking table",{capacity:4,sectionId:family,number:20},"available");
   for(const [module,name,data,status] of [
    ["attendance","Attendance",{employeeId,date:"2026-10-09"},"present"],
-   ["reservations","Guest",{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:table},"confirmed"],
+   ["reservations","Guest",{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:reservationTable},"confirmed"],
    ["waitlist","Waiting guest",{partySize:2},"waiting"],
    ["remote","Remote task",{description:"Review menu",employeeId,budget:100},"assigned"],
    ["marketing","Campaign",{message:"Test draft only",channel:"email"},"draft"],
@@ -143,7 +153,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/customer/orders","POST",{...dinePayload,tableId:randomUUID(),partySize:2},customer.cookie)).body.code,"TABLE_NOT_FOUND");
   const diningOrder=await call("/api/customer/orders","POST",{...dinePayload,tableId:diningTable,partySize:3},customer.cookie);assert.equal(diningOrder.status,201,JSON.stringify(diningOrder.body));
   const [[diningContext]]=await db.execute("SELECT dining_section_id,party_size,dining_snapshot FROM restaurant_orders WHERE id=?",[diningOrder.body.id]);assert.equal(diningContext.dining_section_id,family);assert.equal(diningContext.party_size,3);assert.match(JSON.stringify(diningContext.dining_snapshot),/Families/);
-  const privateOverview=await call("/api/restaurant/operations/overview","GET",undefined,staff.cookie,a.tenant);assert.equal(privateOverview.body.summary.waiterCalls,0);
+  const privateOverview=await call("/api/restaurant/operations/overview","GET",undefined,staff.cookie,a.tenant);assert.equal(privateOverview.status,403);
   const [[noStaff]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=? AND tenant_id=?",[customer.body.user.id,a.tenant]);assert.equal(noStaff.n,0);
   assert.equal((await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie)).status,403);
   const placed=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",total:0,items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(placed.status,201);assert.equal(placed.body.total,22);

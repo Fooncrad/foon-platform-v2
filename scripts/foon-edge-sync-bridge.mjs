@@ -15,16 +15,20 @@ function invalidCloudHost(hostname){
  if(family)return blockedCloudAddresses.check(host,family===4?"ipv4":"ipv6");
  return host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal");
 }
+export function validateCloudEndpoint(value){
+ const cloud=new URL(value);
+ if(cloud.protocol!=="https:")throw Error("CLOUD_HTTPS_REQUIRED");
+ if(cloud.username||cloud.password||cloud.hash||cloud.search||invalidCloudHost(cloud.hostname)||!["443",""].includes(cloud.port))throw Error("INVALID_CLOUD_ENDPOINT");
+ return cloud;
+}
 
 export async function syncLocalOutbox({localUrl,localToken,ackSecret,cloudUrl,cloudToken,deviceId,tenantId,branchId,signingSecret,fetchImpl=fetch}){
- const local=new URL(localUrl),cloud=new URL(cloudUrl);
+ const local=new URL(localUrl),cloud=validateCloudEndpoint(cloudUrl);
  if(!["127.0.0.1","localhost","[::1]"].includes(local.hostname)||!["http:","https:"].includes(local.protocol))throw Error("INVALID_LOCAL_ENDPOINT");
- if(cloud.protocol!=="https:")throw Error("CLOUD_HTTPS_REQUIRED");
- if(cloud.username||cloud.password||cloud.hash||cloud.search||invalidCloudHost(cloud.hostname))throw Error("INVALID_CLOUD_ENDPOINT");
- if(!["443",""].includes(cloud.port))throw Error("INVALID_CLOUD_ENDPOINT");
  if([localToken,ackSecret,cloudToken,signingSecret].some(v=>typeof v!=="string"||v.length<32)||[deviceId,tenantId,branchId].some(v=>typeof v!=="string"||!v))throw Error("EDGE_SYNC_CONFIGURATION_REQUIRED");
  const headers={authorization:"Bearer "+localToken};
- const list=await fetchImpl(new URL("/outbox",local),{headers,redirect:"error"});
+ const outboxUrl=new URL("/outbox",local);outboxUrl.searchParams.set("deviceId",deviceId);
+ const list=await fetchImpl(outboxUrl,{headers,redirect:"error"});
  if(!list.ok)throw Error("LOCAL_OUTBOX_UNAVAILABLE");
  const data=await list.json();
  if(!Array.isArray(data.events)||data.events.length>1000)throw Error("INVALID_LOCAL_OUTBOX");
@@ -36,13 +40,21 @@ export async function syncLocalOutbox({localUrl,localToken,ackSecret,cloudUrl,cl
   async send(event){
    const input={tenantId,branchId,deviceId,eventSeq:event.seq,orderId:event.order_id,kind:event.kind,payload:event.payload,digest:eventDigest(event)};
    const response=await fetchImpl(cloud,{method:"POST",redirect:"error",headers:{"content-type":"application/json",authorization:"Bearer "+cloudToken},body:JSON.stringify(input)});
-   if(!response.ok)return {status:response.status};
+   if(!response.ok){
+    const body=await response.json().catch(()=>({}));
+    const codes=new Set(["EDGE_CATALOG_PRICE_CHANGED","EDGE_PRICE_CONFIRMATION_REQUIRED","EDGE_REQUIRED_OPTIONS_NOT_SUPPORTED","EDGE_ORDER_NOT_FOUND","EDGE_INVALID_STATUS_TRANSITION","EDGE_IDEMPOTENCY_CONFLICT","EDGE_CATALOG_ITEM_UNAVAILABLE","EDGE_MIXED_CURRENCY","EDGE_REFUND_REQUIRED","EDGE_ORDER_ID_CONFLICT"]);
+    return {status:response.status,error:codes.has(body.error)?body.error:"EDGE_REQUEST_REJECTED"};
+   }
    const body=await response.json();
    return {status:response.status,receipt:body.receipt};
   },
   async ack(event,receipt){
    const response=await fetchImpl(new URL("/outbox/ack",local),{method:"POST",redirect:"error",headers:{...headers,"x-foon-edge-ack-secret":ackSecret,"content-type":"application/json"},body:JSON.stringify({seq:event.outboxSeq,orderId:event.order_id,receipt})});
    if(!response.ok)throw Error("LOCAL_ACK_REJECTED");
+  },
+  async conflict(event,code){
+   const response=await fetchImpl(new URL("/outbox/conflict",local),{method:"POST",redirect:"error",headers:{...headers,"x-foon-edge-ack-secret":ackSecret,"content-type":"application/json"},body:JSON.stringify({seq:event.outboxSeq,orderId:event.order_id,code})});
+   if(!response.ok)throw Error("LOCAL_CONFLICT_REJECTED");
   }
  });
 }

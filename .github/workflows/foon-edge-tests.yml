@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
     paths:
+      - "lib/platform/edge-**"
+      - "scripts/foon-edge-**"
+      - "scripts/foon-lan-**"
+      - "migrations/**"
+      - "package*.json"
       - "scripts/foon-lan-sqlite.mjs"
       - "scripts/foon-lan-sqlite.test.mjs"
       - "scripts/foon-edge-backup.mjs"

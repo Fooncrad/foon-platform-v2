@@ -38,6 +38,10 @@ test("four dining sections validate independently without a database",()=>{
   assert.equal(section.data.area,area);
   assert.equal(section.data.smoking,smoking);
  }
- assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{area:"roof",smoking:"smoking"}}));
- assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{area:"indoor",smoking:"sometimes"}}));
+ const custom=validateResource("sections",{name:"قسم مخصص",status:"active",data:{area:"roof",smoking:"sometimes"}});
+ assert.equal(custom.data.area,"roof");assert.equal(custom.data.smoking,"sometimes");
+ const optional=validateResource("sections",{name:"قسم بسيط",status:"active",data:{}});
+ assert.equal(optional.data.area,null);assert.equal(optional.data.smoking,null);
+ for(const key of ["area","smoking"])assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{[key]:"x".repeat(81)}}));
+ assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{unknownClassification:"roof"}}));
 });

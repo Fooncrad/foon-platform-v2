@@ -38,7 +38,7 @@ async function authorize(request:Request,module:string,write:boolean){
   if(headerBranch&&queryBranch&&headerBranch!==queryBranch)throw new ResourceError("FORBIDDEN");
   let activeBranch=headerBranch??queryBranch;
   // Tenant-wide reads must not be exposed through an omitted branch selector.
-  if(!activeBranch&&request.method==="GET"&&!["security"].includes(module)){
+  if(!activeBranch&&!["security"].includes(module)){
    const [assigned]=await database().execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user]);
    if(assigned.length!==1)throw new ResourceError("BRANCH_REQUIRED");
    // A single assigned branch is safe to infer for permission checks.
@@ -150,6 +150,18 @@ async function mutate(request:Request,module:string,method:string){
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   
   db=await connection();await db.beginTransaction();
+  if(!["owner","manager"].includes(ctx.role)&&method==="POST"){
+   if(!ctx.authorizedBranch)throw new ResourceError("BRANCH_REQUIRED");
+   if(body.branchId!==undefined&&body.branchId!==ctx.authorizedBranch)throw new ResourceError("FORBIDDEN");
+   body.branchId=ctx.authorizedBranch;
+  }
+  // Existing records must belong to the employee's verified branch before any mutation.
+  if(!["owner","manager"].includes(ctx.role)&&typeof body.id==="string"){
+   if(!ctx.authorizedBranch)throw new ResourceError("BRANCH_REQUIRED");
+   const table=["orders","pos","kds"].includes(module)?"restaurant_orders":"restaurant_resources";
+   const [scope]=await db.execute<RowDataPacket[]>("SELECT id FROM "+table+" WHERE id=? AND tenant_id=? AND branch_id=? LIMIT 1 FOR UPDATE",[body.id,ctx.tenantId,ctx.authorizedBranch]);
+   if(!scope.length)throw new ResourceError("FORBIDDEN");
+  }
   // Never trust a branch supplied in a mutation body without verifying employee assignment.
   if(!["owner","manager"].includes(ctx.role)&&typeof body.branchId==="string"&&body.branchId){
    const [assigned]=await db.execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[ctx.tenantId,ctx.user,body.branchId]);

@@ -48,6 +48,20 @@ export async function queuePosOrderIfAbsent(order:PendingPosOrder):Promise<boole
 export async function pendingPosOrders():Promise<PendingPosOrder[]>{return (await transaction<PendingPosOrder[]>("readonly",store=>store.getAll())).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));}
 export async function removePosOrder(id:string){await transaction<undefined>("readwrite",store=>store.delete(id));}
 export async function markPosOrder(order:PendingPosOrder,error:string){await queuePosOrder({...order,status:"needs_review",lastError:error});}
+export async function retryReviewedPosOrder(id:string,tenantId:string):Promise<void>{
+ const database=await db();
+ return new Promise<void>((resolve,reject)=>{
+  const tx=database.transaction(STORE,"readwrite"),store=tx.objectStore(STORE),read=store.get(id);
+  read.onsuccess=()=>{
+   const order=read.result as PendingPosOrder|undefined;
+   if(!order||order.tenantId!==tenantId||order.status!=="needs_review"){tx.abort();return;}
+   store.put({...order,status:"pending",lastError:undefined});
+  };
+  tx.oncomplete=()=>{database.close();resolve();};
+  tx.onabort=()=>{database.close();reject(new Error("OFFLINE_RETRY_CONFLICT"));};
+  tx.onerror=()=>{database.close();reject(tx.error??new Error("OFFLINE_RETRY_FAILED"));};
+ });
+}
 export async function exportPendingPosOrders(tenantId:string):Promise<string>{
  const rows=(await pendingPosOrders()).filter(row=>row.tenantId===tenantId);
  return JSON.stringify({format:"foon-pos-recovery-v1",exportedAt:new Date().toISOString(),tenantId:tenantId,orders:rows},null,2);
@@ -64,10 +78,22 @@ export async function importPendingPosOrders(json:string,tenantId:string):Promis
   if(typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.tenantId!==tenantId||typeof order.branchId!=="string"||!order.branchId||typeof order.createdAt!=="string"||!Number.isFinite(Date.parse(order.createdAt))||!order.payload||typeof order.payload!=="object"||Array.isArray(order.payload)||order.payload.requestKey!==order.id||!["pending","needs_review"].includes(order.status))throw new Error("INVALID_OFFLINE_ORDER");
  }
  if(new Set((backup.orders as PendingPosOrder[]).map(order=>order.id)).size!==backup.orders.length)throw new Error("DUPLICATE_OFFLINE_BACKUP_ORDER");
- for(const order of backup.orders as PendingPosOrder[]){
-  if(await queuePosOrderIfAbsent(order))count++;
- }
- return count;
+ const database=await db();
+ return new Promise<number>((resolve,reject)=>{
+  const tx=database.transaction(STORE,"readwrite"),store=tx.objectStore(STORE);
+  let conflict=false;
+  for(const order of backup.orders as PendingPosOrder[]){
+   const read=store.get(order.id);
+   read.onsuccess=()=>{
+    const prior=read.result as PendingPosOrder|undefined;
+    if(prior&&(prior.tenantId!==order.tenantId||prior.branchId!==order.branchId||JSON.stringify(prior.payload)!==JSON.stringify(order.payload))){conflict=true;tx.abort();return;}
+    if(!prior){store.add(order);count++;}
+   };
+  }
+  tx.oncomplete=()=>{database.close();resolve(count);};
+  tx.onabort=()=>{database.close();reject(new Error(conflict?"OFFLINE_ORDER_CONFLICT":"OFFLINE_TRANSACTION_ABORTED"));};
+  tx.onerror=()=>{database.close();reject(conflict?new Error("OFFLINE_ORDER_CONFLICT"):tx.error??new Error("OFFLINE_TRANSACTION_FAILED"));};
+ });
 }
 
 export function isNetworkFailure(error:unknown){return typeof navigator!=="undefined"&&!navigator.onLine||error instanceof TypeError&&/fetch|network|failed/i.test(error.message);}
