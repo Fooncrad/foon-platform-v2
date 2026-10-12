@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import {readFile} from "node:fs/promises";
 import {randomBytes,scrypt as scryptCallback,timingSafeEqual} from "node:crypto";
 import {promisify} from "node:util";
@@ -7,7 +8,7 @@ export async function hashOperatorPassword(password,salt=randomBytes(16).toStrin
  if(typeof password!=="string"||password.length<8||password.length>128)throw Error("INVALID_OPERATOR_PASSWORD");
  return "scrypt:"+salt+":"+(await scrypt(password,salt,64)).toString("hex");
 }
-export function createEdgeConsoleServer({users,origin,gatewayUrl,gatewayToken,ackSecret,readCatalog,syncStatus=()=>({state:"offline"}),fetchImpl=fetch}){
+export function createEdgeConsoleServer({tls,users,origin,gatewayUrl,gatewayToken,ackSecret,readCatalog,syncStatus=()=>({state:"offline"}),fetchImpl=fetch}){
  const local=new URL(gatewayUrl),configuredOrigin=new URL(origin);
  if(configuredOrigin.username||configuredOrigin.password||configuredOrigin.search||configuredOrigin.hash||configuredOrigin.pathname!=="/")throw Error("INVALID_CONSOLE_ORIGIN");
  if(!["127.0.0.1","localhost","[::1]"].includes(local.hostname)||!["http:","https:"].includes(local.protocol)||local.username||local.password)throw Error("INVALID_LOCAL_ENDPOINT");
@@ -25,7 +26,9 @@ export function createEdgeConsoleServer({users,origin,gatewayUrl,gatewayToken,ac
   if(!catalog||!catalog.identity||["deviceId","tenantId","branchId","role"].some(key=>catalog.identity[key]!==user[key])||!Array.isArray(catalog.items)||!Number.isFinite(Date.parse(catalog.validUntil))||!Number.isFinite(Date.parse(catalog.savedAt))||Date.parse(catalog.validUntil)>Date.parse(catalog.savedAt)+8*60*60*1000)throw Error("LOCAL_CATALOG_UNAVAILABLE");
   return catalog;
  }
- return http.createServer({requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
+ if(tls&&(configuredOrigin.protocol!=="https:"||!tls.key||!tls.cert||Object.keys(tls).some(key=>!["key","cert"].includes(key))))throw Error("INVALID_CONSOLE_TLS_CONFIGURATION");
+ const transport=tls?https:http;
+ return transport.createServer({...tls,minVersion:"TLSv1.2",requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
   try{
    const url=new URL(req.url||"/",configuredOrigin);
    if(req.headers.host!==configuredOrigin.host)return reply(res,421,{error:"INVALID_HOST"});
