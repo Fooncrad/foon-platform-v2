@@ -33,7 +33,13 @@ async function authorize(request:Request,module:string,write:boolean){
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
   const activeBranch=request.headers.get("x-foon-branch");
-  const scoped=grants.filter(g=>g.branch_id===null||String(g.branch_id)===activeBranch);
+  let verifiedBranch:string|null=null;
+  if(activeBranch){
+   const [assignments]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[access.tenantId,user,activeBranch]);
+   if(!assignments.length)throw new ResourceError("FORBIDDEN");
+   verifiedBranch=activeBranch;
+  }
+  const scoped=grants.filter(g=>g.branch_id===null||(verifiedBranch!==null&&String(g.branch_id)===verifiedBranch));
   if(!scoped.some(g=>g.permission_key===permissionModule+"."+action&&Number(g.allowed)===1))throw new ResourceError("FORBIDDEN");
  }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
