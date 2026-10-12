@@ -9,7 +9,10 @@ import {hashPassword} from "@/lib/auth/password";
 export const runtime="nodejs";
 async function resolveEmployeeUser(db:Awaited<ReturnType<typeof database>>,tenantId:string,data:Record<string,unknown>):Promise<string>{
  const explicit=String(data?.userId??"");
- if(/^[a-f0-9-]{36}$/i.test(explicit))return explicit;
+ if(/^[a-f0-9-]{36}$/i.test(explicit)){
+  const [members]=await db.execute<RowDataPacket[]>("SELECT 1 FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,explicit]);
+  if(members.length)return explicit;
+ }
  const email=String(data?.email??"").trim().toLowerCase();
  if(!email.includes("@")||!email.includes("."))return "";
  const [users]=await db.execute<RowDataPacket[]>("SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE LOWER(u.email)=? AND m.tenant_id=? AND m.status='active' LIMIT 2",[email,tenantId]);
@@ -84,6 +87,6 @@ export async function GET(request:Request){
  if(!rows.length)return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});
  const data=typeof rows[0].data==="string"?JSON.parse(rows[0].data):rows[0].data,userId=await resolveEmployeeUser(database(),tenantId,data);
  if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
- const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND branch_id <=> ? AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
+ const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (branch_id IS NULL OR branch_id <=> ?) AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
  return NextResponse.json({ok:true,linked:true,permissions:grants.map(row=>String(row.permission_key)).filter(key=>validPermissions.has(key))});
 }
