@@ -85,14 +85,14 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   for(const f of config.fields){if(module==="tables"&&f.key==="number")continue;const value=String(form.get(f.key)??"").trim();data[f.key]=value===""?null:f.type==="number"?Number(value):f.type==="datetime"?new Date(value).toISOString():value;}
   if(module==="tables"){const tableNumber=String(form.get("name")??"").trim();data.number=/^[0-9]+$/.test(tableNumber)?Number(tableNumber):(editing?.data.number??null);}
   if(module==="menu")data.allergens=allergenChoices.filter(([key])=>form.getAll("allergenChoice").includes(key)).map(([key])=>key).join(",");
+  const employeePassword=module==="team"&&!editing?String(form.get("employeePassword")??""):"";
+  const employeePermissions=module==="team"&&!editing?[...form.keys()].filter(key=>key.startsWith("permission_")&&form.get(key)==="on").map(key=>key.slice("permission_".length)):[];
   setBusy(true);setMessage("");
   try{const saved=await operationApi(tenantId,module,editing?"PATCH":"POST",{...(editing?{id:editing.id,version:editing.version}:{}),name:form.get("name"),status:module==="tables"?(editing?.status??"available"):form.get("status"),branchId:(()=>{const selected=String(form.get("branchId")??"").trim();if(module==="tables"&&data.sectionId){const section=refs.sections?.find(item=>item.id===data.sectionId);if(section?.branch_id)return section.branch_id;}return selected&&branches.some(b=>b.id===selected)?selected:null;})(),data});await refresh();setShowForm(createOnly);setEditing(null);if(createOnly)formElement.reset();
   if(module==="team"&&!editing){
-   const password=String(form.get("employeePassword")??"");
-   if(password){
+   if(employeePassword){
     try{
-     const permissions=[...form.keys()].filter(key=>key.startsWith("permission_")&&form.get(key)==="on").map(key=>key.slice("permission_".length));
-     const response=await fetch("/api/restaurant/employee-provision",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tenantId,resourceId:saved.id,password,permissions})});
+     const response=await fetch("/api/restaurant/employee-provision",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tenantId,resourceId:saved.id,password:employeePassword,permissions:employeePermissions})});
      const result=await response.json().catch(()=>({}));
      if(!response.ok)throw Error(String(result.code??"EMPLOYEE_PROVISION_FAILED"));
      setMessage("تم إنشاء حساب الموظف بكلمة المرور المحددة وربطه بالمنشأة.");
