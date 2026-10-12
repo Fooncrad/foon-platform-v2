@@ -8,11 +8,16 @@ export default function OfflineMenuSave({menu,preview}:{menu:OfflineMenu;preview
   if(preview||!navigator.onLine||!("serviceWorker" in navigator))return;
   let cancelled=false;
   void (async()=>{
-   await navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"});
-   const registration=await navigator.serviceWorker.ready;
+   const registration=await navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"});
+   const worker=registration.installing??registration.waiting??registration.active;
+   if(!worker)return;
+   if(worker.state!=="activated")await new Promise<void>((resolve,reject)=>{
+    const changed=()=>{if(worker.state==="activated"||worker.state==="redundant"){worker.removeEventListener("statechange",changed);if(worker.state==="activated")resolve();else reject(new Error("Worker installation failed"));}};
+    worker.addEventListener("statechange",changed);changed();
+   });
    if(cancelled)return;
    const channel=new MessageChannel();channel.port1.onmessage=event=>{if(!cancelled&&event.data?.ok)setSaved(true);channel.port1.close();};
-   registration.active?.postMessage({type:"SAVE_PUBLIC_MENU",slug,html:offlineMenuDocument({name,slug,items,categories,branches}),images:items.map(i=>i.imageUrl).filter(Boolean)},[channel.port2]);
+   worker.postMessage({type:"SAVE_PUBLIC_MENU",slug,html:offlineMenuDocument({name,slug,items,categories,branches}),images:items.map(i=>i.imageUrl).filter(Boolean)},[channel.port2]);
   })().catch(()=>{});
   return()=>{cancelled=true};
  },[name,slug,items,categories,branches,preview]);
