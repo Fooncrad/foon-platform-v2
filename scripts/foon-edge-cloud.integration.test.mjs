@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import mysql from "mysql2/promise";
 import {spawnSync,spawn} from "node:child_process";
-import {mkdtemp,rm} from "node:fs/promises";
+import {mkdtemp,rm,writeFile,unlink} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {randomUUID,randomBytes} from "node:crypto";
@@ -13,6 +13,8 @@ import {eventDigest} from "./foon-edge-sync-contract.mjs";
 import {syncLocalOutbox} from "./foon-edge-sync-bridge.mjs";
 import {readFile} from "node:fs/promises";
 import {splitSqlStatements} from "./sql-statements.mjs";
+import {hashOperatorPassword} from "./foon-edge-console-server.mjs";
+import {freePort} from "./foon-edge-console-fixture.mjs";
 
 test("device registry preserves foreign keys with legacy identity collations",async()=>{
  const url=new URL(process.env.EDGE_TEST_DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_edge_test");
@@ -75,12 +77,21 @@ test("real MySQL cloud sync is atomic, scoped, revocable and idempotent under co
   await pool.execute("UPDATE restaurant_menu_items SET price=11.00 WHERE id=?",[itemId]);
   const stale=await receiveEdgeRequest(request(second),options);assert.equal(stale.status,409);assert.equal((await stale.json()).error,"EDGE_CATALOG_PRICE_CHANGED");
   await pool.execute("UPDATE restaurant_menu_items SET price=9.95 WHERE id=?",[itemId]);
+  const kitchenActor=randomUUID(),kitchenDevice=randomUUID(),kitchenToken=randomBytes(48).toString("hex");
+  await pool.execute("INSERT INTO users(id,email,status) VALUES (?,?,'active')",[kitchenActor,kitchenActor+"@test.example"]);
+  await pool.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'kitchen','active')",[randomUUID(),tenantId,kitchenActor]);
+  await pool.execute("INSERT INTO edge_devices(id,tenant_id,branch_id,actor_user_id,name,token_hash) VALUES (?,?,?,?,'Kitchen fixture',?)",[kitchenDevice,tenantId,branchId,kitchenActor,deviceTokenHash(kitchenToken)]);
+  const kitchenRequest=e=>new Request("https://cloud.example/api/edge/sync",{method:"POST",headers:{authorization:"Bearer "+kitchenToken,"content-type":"application/json"},body:JSON.stringify(e)});
+  const preparing=digest({tenantId,branchId,deviceId:kitchenDevice,eventSeq:1,orderId,kind:"status",payload:{id:orderId,status:"preparing",updatedAt:new Date().toISOString()}});
+  const cooked=await receiveEdgeRequest(kitchenRequest(preparing),options);assert.equal(cooked.status,201);assert.equal(verifyCloudReceiptSignature((await cooked.json()).receipt,deviceReceiptKey(masterKey,kitchenDevice)),true);
+  const cancelled=digest({...preparing,eventSeq:2,payload:{...preparing.payload,status:"cancelled"}});assert.equal((await receiveEdgeRequest(kitchenRequest(cancelled),options)).status,403);
+  const kitchenCreate=digest({...second,deviceId:kitchenDevice});assert.equal((await receiveEdgeRequest(kitchenRequest(kitchenCreate),options)).status,403);
   // Actual Next.js HTTP route + SQLite gateway, not a simulated cloud adapter.
   if(process.env.EDGE_TEST_HTTP==="true"){
    const dir=await mkdtemp(join(tmpdir(),"foon-edge-mysql-e2e-"));
    const localPort=21000+Math.floor(Math.random()*15000),localUrl="http://127.0.0.1:"+localPort,cloudOrigin="http://127.0.0.1:3114";
    const localToken=randomBytes(48).toString("hex"),ackSecret=randomBytes(48).toString("hex"),signingSecret=deviceReceiptKey(masterKey,deviceId);
-   let cloud,local;
+   let cloud,local,consoleProcess;
    const localEnv={...process.env,FOON_LAN_PORT:String(localPort),FOON_LAN_DB:join(dir,"orders.sqlite"),FOON_LAN_TOKEN:localToken,FOON_EDGE_ACK_SECRET:ackSecret,FOON_EDGE_DEVICE_ID:deviceId,FOON_EDGE_RECEIPT_SIGNING_KEY:signingSecret};
    const localRequest=(path,method="GET",body)=>fetch(localUrl+path,{method,headers:{authorization:"Bearer "+localToken,"content-type":"application/json"},body:body?JSON.stringify(body):undefined});
    const stop=async child=>{if(!child||child.exitCode!==null)return;await new Promise(resolve=>{child.once("exit",resolve);child.kill();});};
@@ -89,6 +100,11 @@ test("real MySQL cloud sync is atomic, scoped, revocable and idempotent under co
    try{
     cloud=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3114"],{env:{...process.env,DATABASE_URL:url.href,FOON_EDGE_MASTER_RECEIPT_KEY:masterKey,FOON_EDGE_PLAIN_TAKEAWAY_ENABLED:"true"},stdio:"ignore"});
     await ready(()=>fetch(cloudOrigin+"/api/health"));await startLocal();
+    const prepId=randomUUID();
+    await pool.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,created_by,channel,status,subtotal,total,dining_snapshot,party_size) VALUES (?,?,?,?,'dine_in','new',11.95,11.95,?,2)",[prepId,tenantId,branchId,actorUserId,JSON.stringify({name:"طاولة 7",sectionName:"الصالة"})]);
+    await pool.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,'Coffee',1,11.95,11.95,?)",[randomUUID(),tenantId,prepId,itemId,JSON.stringify([{name:"حليب إضافي",price:2}])]);
+    const realCatalog=await fetch(cloudOrigin+"/api/edge/catalog",{headers:{authorization:"Bearer "+token}});assert.equal(realCatalog.status,200);
+    const prep=(await realCatalog.json()).orders.find(order=>order.id===prepId);assert.equal(prep.location,"الصالة · طاولة 7");assert.deepEqual(prep.items[0].options,["حليب إضافي"]);
     const offlineId=randomUUID();
     const config={localUrl,localToken,ackSecret,cloudUrl:"https://cloud.example/api/edge/sync",cloudToken:token,tenantId,branchId,deviceId,signingSecret};
     // Use a fresh device event sequence; the direct API fixtures consumed seq 1.
@@ -105,8 +121,25 @@ test("real MySQL cloud sync is atomic, scoped, revocable and idempotent under co
     assert.equal((await syncLocalOutbox({...config,fetchImpl:transport})).acked,1);
     const [[one]]=await pool.execute("SELECT COUNT(*) AS n FROM restaurant_orders WHERE id=?",[offlineId]);assert.equal(Number(one.n),1);
     assert.equal((await (await localRequest("/health")).json()).pending,0);
+    await stop(local);local=null;
+    const consolePort=await freePort(),consoleOrigin="http://127.0.0.1:"+consolePort,offlineFlag=join(dir,"cloud-offline"),usersFile=join(dir,"operators.json"),password=randomBytes(16).toString("hex");
+    const users=[{username:"cashier",role:"cashier",tenantId,branchId,deviceId:httpDeviceId,cloudToken:token,signingSecret:config.signingSecret,passwordHash:await hashOperatorPassword(password)}];
+    await writeFile(usersFile,JSON.stringify(users),{mode:0o600});
+    const preload="import {existsSync} from 'node:fs';const original=globalThis.fetch;globalThis.fetch=async(u,o)=>{const target=new URL(u);if(target.hostname==='cloud.example'){if(existsSync("+JSON.stringify(offlineFlag)+"))throw new TypeError('offline');return original(new URL(target.pathname,"+JSON.stringify(cloudOrigin)+"),o);}return original(u,o);};";
+    const startConsole=async()=>{consoleProcess=spawn(process.execPath,["--import","data:text/javascript,"+encodeURIComponent(preload),"scripts/start-edge-console.mjs"],{env:{...localEnv,FOON_EDGE_USERS_FILE:usersFile,FOON_EDGE_CATALOG_CACHE:join(dir,"catalog.json"),FOON_EDGE_CLOUD_SYNC_URL:"https://cloud.example/api/edge/sync",FOON_EDGE_CONSOLE_PORT:String(consolePort),FOON_EDGE_CONSOLE_ORIGIN:consoleOrigin},stdio:"ignore"});await ready(()=>fetch(consoleOrigin));};
+    await startConsole();
+    async function loginConsole(){const r=await fetch(consoleOrigin+"/api/login",{method:"POST",headers:{origin:consoleOrigin,"content-type":"application/json"},body:JSON.stringify({username:"cashier",password})});assert.equal(r.status,200);return {cookie:r.headers.get("set-cookie").split(";")[0],csrf:(await r.json()).csrf};}
+    const session=await loginConsole();
+    await writeFile(offlineFlag,"");await stop(consoleProcess);consoleProcess=null;await startConsole();
+    const offlineSession=await loginConsole();assert.notEqual(offlineSession.cookie,session.cookie);
+    const restartedId=randomUUID();
+    const saved=await fetch(consoleOrigin+"/api/orders",{method:"POST",headers:{origin:consoleOrigin,"content-type":"application/json",cookie:offlineSession.cookie,"x-foon-csrf":offlineSession.csrf},body:JSON.stringify({id:restartedId,items:[{id:itemId,quantity:1}]})});assert.equal(saved.status,201);
+    const [[beforeReconnect]]=await pool.execute("SELECT COUNT(*) AS n FROM restaurant_orders WHERE id=?",[restartedId]);assert.equal(Number(beforeReconnect.n),0);
+    await unlink(offlineFlag);
+    let delivered=false;for(let i=0;i<100;i++){const [[row]]=await pool.execute("SELECT COUNT(*) AS n FROM restaurant_orders WHERE id=?",[restartedId]);if(Number(row.n)===1){delivered=true;break;}await new Promise(resolve=>setTimeout(resolve,100));}assert.equal(delivered,true);
+    await stop(consoleProcess);consoleProcess=null;
     await pool.execute("UPDATE edge_devices SET id=? WHERE id=?",[deviceId,httpDeviceId]);
-   }finally{await stop(local);await stop(cloud);await rm(dir,{recursive:true,force:true});}
+   }finally{await stop(consoleProcess);await stop(local);await stop(cloud);await rm(dir,{recursive:true,force:true});}
   }
   await pool.execute("UPDATE edge_devices SET enabled=FALSE WHERE id=?",[deviceId]);
   const revoked=await receiveEdgeRequest(request(event),options);assert.equal(revoked.status,401);assert.equal((await revoked.json()).receipt,undefined);

@@ -91,9 +91,13 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   await save(a,"remoteWorkers","Worker",{employeeId,skills:"Menu review"},"active");
   await save(a,"remoteMessages","Task message",{taskId:remoteTask,message:"Please review the menu."},"posted");
   await save(a,"remoteDeliveries","Delivery",{taskId:remoteTask,notes:"Review complete."},"submitted");
+  // Occupied tables may call a waiter, but cannot receive a new booking or dine-in order.
+  assert.equal((await resource(a,"reservations",{name:"Occupied booking",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:table}})).body.code,"TABLE_NOT_FOUND");
+  assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,items:[{id:item,quantity:1}]})).body.code,"TABLE_NOT_FOUND");
+  const reservationTable=await save(a,"tables","Booking table",{capacity:4,sectionId:family,number:20},"available");
   for(const [module,name,data,status] of [
    ["attendance","Attendance",{employeeId,date:"2026-10-09"},"present"],
-   ["reservations","Guest",{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:table},"confirmed"],
+   ["reservations","Guest",{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:reservationTable},"confirmed"],
    ["waitlist","Waiting guest",{partySize:2},"waiting"],
    ["remote","Remote task",{description:"Review menu",employeeId,budget:100},"assigned"],
    ["marketing","Campaign",{message:"Test draft only",channel:"email"},"draft"],

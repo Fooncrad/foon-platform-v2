@@ -48,21 +48,21 @@ if(edgeReceiptSecret&&edgeReceiptSecret.length<32)throw Error("FOON_EDGE_ACK_SEC
 function transact(fn){db.exec("BEGIN IMMEDIATE");try{const result=fn();db.exec("COMMIT");return result;}catch(e){db.exec("ROLLBACK");throw e;}}
 function send(res,status,data){res.writeHead(status,{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"});res.end(JSON.stringify(data));}
 function allowed(req){const given=Buffer.from((req.headers.authorization||"").replace(/^Bearer /,""));const expected=Buffer.from(token);return given.length===expected.length&&timingSafeEqual(given,expected);}
-async function readBody(req,limit=131072){const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>limit)throw new Error("BODY_TOO_LARGE");chunks.push(chunk);}try{return JSON.parse(Buffer.concat(chunks).toString("utf8")||"{}");}catch{throw new Error("INVALID_JSON");}}
+async function readBody(req,limit=131072){const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>limit)throw new Error("BODY_TOO_LARGE");chunks.push(chunk);}try{const input=JSON.parse(Buffer.concat(chunks).toString("utf8")||"{}");if(!input||typeof input!=="object"||Array.isArray(input))throw Error("INVALID_JSON");return input;}catch{throw new Error("INVALID_JSON");}}
 function emit(event){for(const client of clients){try{client.write(["event: order","data: "+JSON.stringify(event),"",""].join(String.fromCharCode(10)));}catch{clients.delete(client);}}}
-const server=http.createServer(async(req,res)=>{
+const server=http.createServer({requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
  if(!allowed(req))return send(res,401,{error:"UNAUTHORIZED"});
  let url;
  try{url=new URL(req.url||"/","http://localhost");}catch{return send(res,400,{error:"INVALID_URL"});}
  try{
   if(req.method==="GET"&&url.pathname==="/health")return send(res,200,{ok:true,storage:"sqlite-wal-full",pending:db.prepare("SELECT count(*) AS n FROM outbox WHERE synced_at IS NULL").get().n});
-  if(req.method==="GET"&&url.pathname==="/orders")return send(res,200,{orders:db.prepare("SELECT orders.*,(SELECT COUNT(*) FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE e.order_id=orders.id AND o.synced_at IS NULL) AS pending_events,(SELECT o.sync_error FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE e.order_id=orders.id AND o.synced_at IS NULL AND o.sync_error IS NOT NULL ORDER BY o.seq LIMIT 1) AS sync_error FROM orders ORDER BY created_at DESC LIMIT 500").all().map(row=>({...row,payload:JSON.parse(row.payload)}))});
+  if(req.method==="GET"&&url.pathname==="/orders")return send(res,200,{orders:db.prepare("SELECT orders.*,(SELECT COUNT(*) FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE e.order_id=orders.id AND o.synced_at IS NULL) AS pending_events,(SELECT o.sync_error FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE e.order_id=orders.id AND o.synced_at IS NULL AND o.sync_error IS NOT NULL ORDER BY o.seq LIMIT 1) AS sync_error,(SELECT o.sync_error FROM outbox o JOIN events e ON e.seq=o.event_seq WHERE e.order_id=orders.id AND e.device_id=? AND o.synced_at IS NULL AND o.sync_error IS NOT NULL ORDER BY o.seq LIMIT 1) AS own_sync_error FROM orders ORDER BY created_at DESC LIMIT 500").all(eventDevice(req)||"").map(row=>({...row,payload:JSON.parse(row.payload)}))});
   if(req.method==="POST"&&url.pathname==="/cloud/state"){
    if(!configuredBranch||!configuredTenant)return send(res,503,{error:"EDGE_SCOPE_NOT_CONFIGURED"});
    const input=await readBody(req,16*1024*1024);
    if(input.tenantId!==configuredTenant||input.branchId!==configuredBranch||!Array.isArray(input.orders)||input.orders.length>500)return send(res,400,{error:"INVALID_CLOUD_STATE"});
    for(const order of input.orders){
-    if(!order||typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.branch_id!==configuredBranch||!Object.hasOwn(allowedStatusTransitions,order.status)||!Number.isSafeInteger(order.version)||order.version<1||!Array.isArray(order.items)||order.items.length>100||!Number.isFinite(Date.parse(order.created_at))||!Number.isFinite(Date.parse(order.updated_at))||order.items.some(item=>!item||typeof item.id!=="string"||typeof item.name!=="string"||item.name.length>180||!Number.isSafeInteger(item.quantity)||item.quantity<1||item.quantity>1000))return send(res,400,{error:"INVALID_CLOUD_STATE"});
+    if(!order||typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.branch_id!==configuredBranch||!Object.hasOwn(allowedStatusTransitions,order.status)||!Number.isSafeInteger(order.version)||order.version<1||order.channel!==undefined&&!["dine_in","takeaway","delivery"].includes(order.channel)||order.location!=null&&(typeof order.location!=="string"||order.location.length>400)||!Array.isArray(order.items)||order.items.length>100||!Number.isFinite(Date.parse(order.created_at))||!Number.isFinite(Date.parse(order.updated_at))||order.items.some(item=>!item||typeof item.id!=="string"||typeof item.name!=="string"||item.name.length>180||!Number.isSafeInteger(item.quantity)||item.quantity<1||item.quantity>1000||item.options!==undefined&&(!Array.isArray(item.options)||item.options.length>100||item.options.some(option=>typeof option!=="string"||option.length>180))))return send(res,400,{error:"INVALID_CLOUD_STATE"});
    }
    let updated=0,conflicts=0;
    transact(()=>{
@@ -73,7 +73,7 @@ const server=http.createServer(async(req,res)=>{
      if(pending||old?.cloud_version>order.version)continue;
      const ranks={new:0,preparing:1,ready:2,completed:3};
      if(old&&old.status!==order.status&&(["completed","cancelled"].includes(old.status)||order.status!=="cancelled"&&ranks[order.status]<ranks[old.status])){conflicts++;continue;}
-     db.prepare("INSERT INTO orders(id,branch_id,payload,status,created_at,updated_at,cloud_version) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,status=excluded.status,updated_at=excluded.updated_at,cloud_version=excluded.cloud_version").run(order.id,configuredBranch,JSON.stringify({id:order.id,branchId:configuredBranch,items:order.items}),order.status,order.created_at,order.updated_at,order.version);
+     db.prepare("INSERT INTO orders(id,branch_id,payload,status,created_at,updated_at,cloud_version) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,status=excluded.status,updated_at=excluded.updated_at,cloud_version=excluded.cloud_version").run(order.id,configuredBranch,JSON.stringify({id:order.id,branchId:configuredBranch,items:order.items,channel:order.channel||"takeaway",location:order.location||null,partySize:order.party_size||null}),order.status,order.created_at,order.updated_at,order.version);
      updated++;
     }
    });
@@ -96,7 +96,8 @@ const server=http.createServer(async(req,res)=>{
     db.prepare("UPDATE outbox SET sync_error=? WHERE seq=? AND synced_at IS NULL").run(input.code,input.seq);
    }else{
     const deviceId=eventDevice(req);if(!deviceId||typeof input.orderId!=="string")return send(res,403,{error:"DEVICE_FORBIDDEN"});
-    db.prepare("UPDATE outbox SET sync_error=NULL WHERE synced_at IS NULL AND event_seq IN (SELECT seq FROM events WHERE order_id=? AND device_id=?)").run(input.orderId,deviceId);
+    const result=db.prepare("UPDATE outbox SET sync_error=NULL WHERE synced_at IS NULL AND sync_error IS NOT NULL AND event_seq IN (SELECT seq FROM events WHERE order_id=? AND device_id=?)").run(input.orderId,deviceId);
+    return send(res,200,{ok:true,updated:result.changes});
    }
    return send(res,200,{ok:true});
   }
@@ -120,10 +121,17 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="POST"&&url.pathname==="/orders"){
    const input=await readBody(req);
    const deviceId=eventDevice(req);if(allowedDevices.size&&!deviceId)return send(res,403,{error:"DEVICE_FORBIDDEN"});
+   if(Object.keys(input).some(key=>!["id","branchId","items"].includes(key)))return send(res,400,{error:"INVALID_ORDER"});
    if(typeof input.id!=="string"||!/^[a-f0-9-]{36}$/i.test(input.id)||typeof input.branchId!=="string"||!input.branchId||configuredBranch&&input.branchId!==configuredBranch||!Array.isArray(input.items)||input.items.length<1||input.items.length>100)return send(res,400,{error:"INVALID_ORDER"});
-   if(input.items.some(item=>!item||typeof item.id!=="string"||!/^[a-f0-9-]{36}$/i.test(item.id)||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>1000))return send(res,400,{error:"INVALID_ITEMS"});
+   if(new Set(input.items.map(item=>item?.id)).size!==input.items.length||input.items.some(item=>!item||typeof item!=="object"||Array.isArray(item)||Object.keys(item).some(key=>!["id","quantity","expectedUnitCents","expectedCurrency"].includes(key))||typeof item.id!=="string"||!/^[a-f0-9-]{36}$/i.test(item.id)||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>1000||item.expectedUnitCents!==undefined&&(!Number.isSafeInteger(item.expectedUnitCents)||item.expectedUnitCents<0)||item.expectedCurrency!==undefined&&(typeof item.expectedCurrency!=="string"||!/^[A-Z]{3}$/.test(item.expectedCurrency))))return send(res,400,{error:"INVALID_ITEMS"});
    const existing=getOrder.get(input.id);
-   if(existing){const saved=JSON.parse(existing.payload);if(saved.branchId!==input.branchId||JSON.stringify(saved.items)!==JSON.stringify(input.items))return send(res,409,{error:"IDEMPOTENCY_CONFLICT"});return send(res,200,{ok:true,duplicate:true,order:existing});}
+   if(existing){
+    const original=db.prepare("SELECT payload FROM events WHERE order_id=? AND kind='created' ORDER BY seq LIMIT 1").get(input.id);
+    if(!original)return send(res,409,{error:"IDEMPOTENCY_CONFLICT"});
+    const saved=JSON.parse(original.payload),intent=items=>JSON.stringify(items.map(({id,quantity})=>({id,quantity})).sort((a,b)=>a.id.localeCompare(b.id)));
+    if(saved.branchId!==input.branchId||intent(saved.items)!==intent(input.items))return send(res,409,{error:"IDEMPOTENCY_CONFLICT"});
+    return send(res,200,{ok:true,duplicate:true,order:existing});
+   }
    const now=new Date().toISOString();
    const event={id:input.id,branchId:input.branchId,items:input.items,status:"new",createdAt:now};
    const result=transact(()=>{insertOrder.run(input.id,input.branchId,JSON.stringify(event),"new",now,now);const e=insertEvent.run(input.id,"created",JSON.stringify(event),now,deviceId);insertOutbox.run(e.lastInsertRowid);return event;});
@@ -145,4 +153,10 @@ const server=http.createServer(async(req,res)=>{
  }catch(error){return send(res,error.message==="BODY_TOO_LARGE"?413:error.message==="INVALID_JSON"?400:500,{error:["BODY_TOO_LARGE","INVALID_JSON"].includes(error.message)?error.message:"GATEWAY_ERROR"});}
 });
 server.listen(port,host,()=>process.stdout.write("FOON SQLite LAN gateway on "+host+":"+port+"\\n"));
-process.on("SIGTERM",()=>{server.close();db.close();});
+let stoppingGateway;
+export function stopGateway(){
+ if(!stoppingGateway){for(const client of clients)client.end();clients.clear();stoppingGateway=new Promise(resolve=>server.close(()=>{db.close();resolve();}));}
+ return stoppingGateway;
+}
+process.on("SIGTERM",()=>void stopGateway());
+process.on("SIGINT",()=>void stopGateway());

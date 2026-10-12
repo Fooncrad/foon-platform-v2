@@ -10,10 +10,10 @@ const deviceId=randomUUID(),cloudToken=randomBytes(48).toString("hex"),receiptKe
 const db=await mysql.createConnection(process.env.DATABASE_URL);
 try{
  await db.beginTransaction();
- const [rows]=await db.execute("SELECT m.user_id FROM memberships m JOIN users u ON u.id=m.user_id AND u.status='active' JOIN tenants t ON t.id=m.tenant_id AND t.status='active' JOIN branches b ON b.tenant_id=t.id AND b.id=? AND b.enabled=TRUE WHERE m.tenant_id=? AND m.user_id=? AND m.status='active' AND m.role IN ('owner','manager','cashier','kitchen') FOR UPDATE",[branchId,tenantId,actorUserId]);
+ const [rows]=await db.execute("SELECT m.user_id,m.role FROM memberships m JOIN users u ON u.id=m.user_id AND u.status='active' JOIN tenants t ON t.id=m.tenant_id AND t.status='active' JOIN branches b ON b.tenant_id=t.id AND b.id=? AND b.enabled=TRUE WHERE m.tenant_id=? AND m.user_id=? AND m.status='active' AND m.role IN ('owner','manager','cashier','kitchen') FOR UPDATE",[branchId,tenantId,actorUserId]);
  if(rows.length!==1)throw Error("DEVICE_SCOPE_NOT_AUTHORIZED");
  await db.execute("INSERT INTO edge_devices(id,tenant_id,branch_id,actor_user_id,name,token_hash) VALUES (?,?,?,?,?,?)",[deviceId,tenantId,branchId,actorUserId,name,deviceTokenHash(cloudToken)]);
- const contents=`FOON_EDGE_DEVICE_ID=${deviceId}\nFOON_EDGE_TENANT_ID=${tenantId}\nFOON_EDGE_BRANCH_ID=${branchId}\nFOON_EDGE_CLOUD_DEVICE_TOKEN=${cloudToken}\nFOON_EDGE_RECEIPT_SIGNING_KEY=${receiptKey}\n`;
+ const contents=`FOON_EDGE_DEVICE_ID=${deviceId}\nFOON_EDGE_TENANT_ID=${tenantId}\nFOON_EDGE_BRANCH_ID=${branchId}\nFOON_EDGE_ACTOR_USER_ID=${actorUserId}\nFOON_EDGE_ACTOR_ROLE=${rows[0].role}\nFOON_EDGE_CLOUD_DEVICE_TOKEN=${cloudToken}\nFOON_EDGE_RECEIPT_SIGNING_KEY=${receiptKey}\n`;
  // Exclusive creation prevents overwriting an existing device configuration.
  await writeFile(output,contents,{flag:"wx",mode:0o600});
  await db.commit();

@@ -1,7 +1,6 @@
 // Trusted local host only. User/device secrets stay in this process and SQLite gateway.
 import {readFile,writeFile,mkdir,rename} from "node:fs/promises";
 import {resolve,dirname} from "node:path";
-import {spawn} from "node:child_process";
 import {createEdgeConsoleServer} from "./foon-edge-console-server.mjs";
 import {syncLocalOutbox,validateCloudEndpoint} from "./foon-edge-sync-bridge.mjs";
 
@@ -16,9 +15,12 @@ const cacheFile=resolve(process.env.FOON_EDGE_CATALOG_CACHE||"./data/edge-catalo
 try{const saved=JSON.parse(await readFile(cacheFile,"utf8"));if(Array.isArray(saved))for(const value of saved)catalogs.set(value.identity?.deviceId,value);}catch(error){if(error.code!=="ENOENT")throw Error("INVALID_CATALOG_CACHE");}
 const timedFetch=(url,options={})=>fetch(url,{...options,signal:AbortSignal.timeout(15000)});
 const server=createEdgeConsoleServer({users,origin,gatewayUrl,gatewayToken:localToken,ackSecret,readCatalog:user=>catalogs.get(user.deviceId),syncStatus:user=>states.get(user.deviceId)||{state:"offline"},fetchImpl:timedFetch});
-const gateway=spawn(process.execPath,["scripts/foon-lan-sqlite.mjs"],{env:{...process.env,FOON_LAN_HOST:"127.0.0.1",FOON_LAN_PORT:String(gatewayPort),FOON_EDGE_TENANT_ID:users[0].tenantId,FOON_EDGE_BRANCH_ID:users[0].branchId,FOON_EDGE_RECEIPT_KEYS:JSON.stringify(Object.fromEntries(users.map(user=>[user.deviceId,user.signingSecret])))},stdio:["ignore","inherit","inherit"]});
-let stopping=false,cycleRunning=false;
-for(let i=0;i<100;i++){if(gateway.exitCode!==null)throw Error("LOCAL_GATEWAY_START_FAILED");try{if((await timedFetch(gatewayUrl+"/health",{headers:{authorization:"Bearer "+localToken}})).ok)break;}catch{}if(i===99)throw Error("LOCAL_GATEWAY_START_FAILED");await new Promise(resolve=>setTimeout(resolve,100));}
+Object.assign(process.env,{FOON_LAN_HOST:"127.0.0.1",FOON_LAN_PORT:String(gatewayPort),FOON_EDGE_TENANT_ID:users[0].tenantId,FOON_EDGE_BRANCH_ID:users[0].branchId,FOON_EDGE_RECEIPT_KEYS:JSON.stringify(Object.fromEntries(users.map(user=>[user.deviceId,user.signingSecret])))});
+// One process owns both servers: a Windows process crash cannot orphan a child gateway.
+const {stopGateway}=await import("./foon-lan-sqlite.mjs");
+let stopping=false,cycleRunning=false,timer;
+process.on("SIGTERM",()=>void shutdown());process.on("SIGINT",()=>void shutdown());
+for(let i=0;i<100;i++){if(stopping)break;try{if((await timedFetch(gatewayUrl+"/health",{headers:{authorization:"Bearer "+localToken}})).ok)break;}catch{}if(i===99){await stopGateway();throw Error("LOCAL_GATEWAY_START_FAILED");}await new Promise(resolve=>setTimeout(resolve,100));}
 async function cycle(){
  if(stopping||cycleRunning)return;cycleRunning=true;
  try{
@@ -40,9 +42,6 @@ async function cycle(){
   await writeFile(temporary,JSON.stringify([...catalogs.values()]),{mode:0o600});await rename(temporary,cacheFile);
  }finally{cycleRunning=false;}
 }
-await cycle();
-server.listen(consolePort,"127.0.0.1",()=>process.stdout.write("FOON local console: "+origin+"\n"));
-const timer=setInterval(()=>void cycle().catch(()=>{}),5000);
-async function shutdown(){if(stopping)return;stopping=true;clearInterval(timer);server.close();gateway.kill();}
-gateway.on("exit",()=>{if(!stopping){process.stderr.write("Local gateway stopped; console is shutting down.\n");void shutdown();process.exitCode=1;}});
-process.on("SIGTERM",()=>void shutdown());process.on("SIGINT",()=>void shutdown());
+try{await cycle();}catch{await stopGateway();throw Error("LOCAL_CACHE_UNAVAILABLE");}
+if(!stopping){server.listen(consolePort,"127.0.0.1",()=>process.stdout.write("FOON local console: "+origin+"\n"));timer=setInterval(()=>void cycle().catch(()=>{}),5000);}
+async function shutdown(){if(stopping)return;stopping=true;clearInterval(timer);server.close();await stopGateway();}

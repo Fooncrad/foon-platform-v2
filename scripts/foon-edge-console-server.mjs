@@ -25,7 +25,7 @@ export function createEdgeConsoleServer({users,origin,gatewayUrl,gatewayToken,ac
   if(!catalog||!catalog.identity||["deviceId","tenantId","branchId","role"].some(key=>catalog.identity[key]!==user[key])||!Array.isArray(catalog.items)||!Number.isFinite(Date.parse(catalog.validUntil))||!Number.isFinite(Date.parse(catalog.savedAt))||Date.parse(catalog.validUntil)>Date.parse(catalog.savedAt)+8*60*60*1000)throw Error("LOCAL_CATALOG_UNAVAILABLE");
   return catalog;
  }
- return http.createServer(async(req,res)=>{
+ return http.createServer({requestTimeout:15000,headersTimeout:10000},async(req,res)=>{
   try{
    const url=new URL(req.url||"/",configuredOrigin);
    if(req.headers.host!==configuredOrigin.host)return reply(res,421,{error:"INVALID_HOST"});
@@ -59,7 +59,7 @@ export function createEdgeConsoleServer({users,origin,gatewayUrl,gatewayToken,ac
     const catalog=await grant(user),[ordersResponse,healthResponse]=await Promise.all([gateway("/orders",user),gateway("/health",user)]);
     if(!ordersResponse.ok||!healthResponse.ok)throw Error("LOCAL_GATEWAY_UNAVAILABLE");
     const {orders}=await ordersResponse.json(),health=await healthResponse.json();
-    return reply(res,200,{ok:true,csrf:session.csrf,user:{username:user.username,role:user.role},menu:catalog.items,savedAt:catalog.savedAt,validUntil:catalog.validUntil,orders:orders.filter(order=>order.branch_id===user.branchId).map(order=>({id:order.id,status:order.status,createdAt:order.created_at,items:order.payload.items,pending:order.pending_events,error:order.sync_error})),pending:health.pending,sync:syncStatus(user)});
+    return reply(res,200,{ok:true,csrf:session.csrf,user:{username:user.username,role:user.role},menu:catalog.items,savedAt:catalog.savedAt,validUntil:catalog.validUntil,orders:orders.filter(order=>order.branch_id===user.branchId).map(order=>({id:order.id,status:order.status,createdAt:order.created_at,items:order.payload.items,channel:order.payload.channel||"takeaway",location:order.payload.location||null,partySize:order.payload.partySize||null,pending:order.pending_events,error:order.sync_error,canRetry:Boolean(order.own_sync_error)})),pending:health.pending,sync:syncStatus(user)});
    }
    if(!csrfAllowed(req,session))return reply(res,403,{error:"FORBIDDEN"});
    if(req.method==="POST"&&url.pathname==="/api/logout"){sessions.delete(token);return reply(res,200,{ok:true},{"set-cookie":"foon_local_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"+(configuredOrigin.protocol==="https:"?"; Secure":"")});}

@@ -24,11 +24,13 @@ test("local POS/KDS protects sessions, roles, device queues and cloud reconcilia
   const firstEvent=queued[0][1];
   assert.equal((await fixture.gateway("/outbox/conflict","POST",{seq:firstEvent.seq,orderId:id,code:"EDGE_CATALOG_PRICE_CHANGED"})).status,200);
   assert.equal((await (await call("/api/state","GET",undefined,cashier)).json()).orders[0].error,"EDGE_CATALOG_PRICE_CHANGED");
+  assert.equal((await (await call("/api/state","GET",undefined,cashier)).json()).orders[0].canRetry,true);
+  assert.equal((await (await call("/api/state","GET",undefined,kitchen)).json()).orders[0].canRetry,false);
   assert.equal((await call("/api/orders/"+id+"/retry","POST",{},kitchen)).status,200);
   assert.equal((await (await fixture.gateway("/outbox?deviceId="+fixture.users[0].deviceId)).json()).events[0].sync_error,"EDGE_CATALOG_PRICE_CHANGED");
   assert.equal((await call("/api/orders/"+id+"/retry","POST",{},cashier)).status,200);
   assert.equal((await (await fixture.gateway("/outbox?deviceId="+fixture.users[0].deviceId)).json()).events[0].sync_error,null);
-  const order={id,branch_id:fixture.branchId,status:"ready",version:2,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),items:[{id:fixture.itemId,name:"قهوة",quantity:2}]};
+  const order={id,branch_id:fixture.branchId,status:"ready",version:2,channel:"dine_in",location:"الصالة · طاولة 7",created_at:new Date().toISOString(),updated_at:new Date().toISOString(),items:[{id:fixture.itemId,name:"قهوة",quantity:2,options:["حليب إضافي"]}]};
   const snapshot={tenantId:fixture.tenantId,branchId:fixture.branchId,orders:[order]};
   assert.equal((await fixture.gateway("/cloud/state","POST",snapshot)).status,200);
   assert.equal((await (await call("/api/state","GET",undefined,cashier)).json()).orders[0].status,"preparing");
@@ -40,6 +42,8 @@ test("local POS/KDS protects sessions, roles, device queues and cloud reconcilia
   }
   assert.equal((await fixture.gateway("/cloud/state","POST",snapshot)).status,200);
   assert.equal((await (await call("/api/state","GET",undefined,cashier)).json()).orders[0].status,"ready");
+  const prepared=(await (await call("/api/state","GET",undefined,kitchen)).json()).orders[0];assert.equal(prepared.location,"الصالة · طاولة 7");assert.deepEqual(prepared.items[0].options,["حليب إضافي"]);
+  assert.equal((await call("/api/orders","POST",cart,cashier)).status,200);
   assert.equal((await fixture.gateway("/cloud/state","POST",{...snapshot,orders:[{...order,status:"new",version:1}]})).status,200);
   assert.equal((await (await call("/api/state","GET",undefined,cashier)).json()).orders[0].status,"ready");
   assert.equal((await call("/api/logout","POST",{},cashier)).status,200);
