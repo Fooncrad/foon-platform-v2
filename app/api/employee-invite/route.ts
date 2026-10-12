@@ -33,7 +33,7 @@ export async function POST(request:Request){
    employeeUserId=randomUUID();
    await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?, 'active')",[employeeUserId,invite.email,passwordHash,"موظف"]);
   }
-  const [resources]=await db.execute<RowDataPacket[]>("SELECT id,status,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1 FOR UPDATE",[invite.resource_id,invite.tenant_id]);
+  const [resources]=await db.execute<RowDataPacket[]>("SELECT id,status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1 FOR UPDATE",[invite.resource_id,invite.tenant_id]);
   if(!resources.length){await db.rollback();return NextResponse.json({ok:false,code:"RESOURCE_NOT_FOUND"},{status:404});}
   const data=typeof resources[0].data==="string"?JSON.parse(resources[0].data):resources[0].data;
   if(String(data.email).toLowerCase()!==String(invite.email).toLowerCase()||data.userId){await db.rollback();return NextResponse.json({ok:false,code:"INVITATION_INVALID"},{status:409});}
@@ -42,6 +42,14 @@ export async function POST(request:Request){
   const role=String(data.role)==="supervisor"?"waiter":String(data.role);
   if(!["manager","cashier","waiter","kitchen","driver","accountant"].includes(role)){await db.rollback();return NextResponse.json({ok:false,code:"INVALID_ROLE"},{status:400});}
   await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?, 'active') ON DUPLICATE KEY UPDATE role=VALUES(role),status='active'",[randomUUID(),invite.tenant_id,employeeUserId,role]);
+  // A branch-specific employee invitation grants access only to its own tenant and branch.
+  // Tenant-wide employees remain unassigned until the manager selects branches.
+  const employeeBranch=resources[0].branch_id?String(resources[0].branch_id):null;
+  if(employeeBranch){
+   const [validBranch]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[employeeBranch,invite.tenant_id]);
+   if(!validBranch.length){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:400});}
+   await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,?,TRUE) ON DUPLICATE KEY UPDATE enabled=TRUE",[randomUUID(),invite.tenant_id,employeeUserId,employeeBranch,role]);
+  }
   data.userId=employeeUserId;data.invitationStatus="accepted";
   await db.execute("UPDATE restaurant_resources SET data=?,status='active',version=version+1 WHERE id=? AND tenant_id=?",[JSON.stringify(data),invite.resource_id,invite.tenant_id]);
   await db.execute("UPDATE employee_invites SET used_at=NOW() WHERE id=?",[invite.id]);
