@@ -59,7 +59,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
 
  const allowedSection=(section:Section)=> {
   if(canManage)return true;
-  if(section==="security")return true;
+
   const key=({kds:"kitchen",branches:"storefront",remote:"team",payments:"internalInvoices",subscription:"reports",customers:"orders",overview:"orders"} as Partial<Record<Section,string>>)[section]??section;
   return data.staffPermissions.some(permission=>permission===key+".view"||permission===key+".manage");
  };
