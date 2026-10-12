@@ -50,7 +50,7 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: node --test scripts/foon-edge-http.test.mjs scripts/foon-offline-pos.test.mjs scripts/foon-edge-console.test.mjs
+      - run: node --test scripts/foon-edge-http.test.mjs scripts/foon-offline-pos.test.mjs scripts/foon-edge-console.test.mjs scripts/foon-edge-console-tls.test.mjs
       - run: npm run build
       - run: node --test scripts/foon-edge-cloud.integration.test.mjs
         env:

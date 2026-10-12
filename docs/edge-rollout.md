@@ -17,7 +17,17 @@ Install Node 24 on a trusted host. Protect its disk, backups and configuration u
 
 Set private `FOON_LAN_TOKEN` and `FOON_EDGE_ACK_SECRET`, each at least 32 characters, plus `FOON_EDGE_CLOUD_SYNC_URL=https://nfoodz.com/api/edge/sync`. Use persistent `FOON_LAN_DB` and `FOON_EDGE_CATALOG_CACHE` paths on protected storage. Start `node scripts/start-edge-console.mjs` from the repository root.
 
-The gateway binds to loopback port 8787 and the browser console to loopback port 8788. Other restaurant devices require an independently reviewed HTTPS reverse proxy, valid certificates and firewall restrictions. Do not expose the gateway token or ACK endpoint to browsers, disable TLS checks, or bind either service directly to an unrestricted network interface.
+The gateway always binds to loopback port 8787. The browser console defaults to loopback port 8788. Other restaurant devices can use either a reviewed HTTPS reverse proxy or the optional native HTTPS listener below. Both require trusted certificates and firewall restrictions. Never expose the gateway token or ACK endpoint to browsers or disable TLS checks.
+
+### Native HTTPS for two Windows devices
+
+After approving device access, configure a private IPv4 address for the station, such as the confirmed cashier address 192.168.3.148. Set FOON_EDGE_CONSOLE_HOST=192.168.3.148, FOON_EDGE_CONSOLE_PORT=8788 and FOON_EDGE_CONSOLE_ORIGIN=https://192.168.3.148:8788. Set FOON_EDGE_CONSOLE_CERT_FILE and FOON_EDGE_CONSOLE_KEY_FILE to private certificate/key paths. The certificate must include the station IP in its subject alternative names and be trusted by both restaurant devices. Keep the private key on the station with restricted OS permissions.
+
+Startup rejects NODE_TLS_REJECT_UNAUTHORIZED=0, a LAN bind without certificate/key files, a mismatched HTTPS origin/port, public bind addresses and wildcard interfaces. TLS 1.2 or later is required; cookies remain Secure, HttpOnly and SameSite=Strict. These checks do not grant certificate trust or open the Windows firewall.
+
+If an internal CA is needed, review its fingerprint and obtain explicit approval before adding trust on either Windows device. Never bypass a browser certificate warning. Approve a firewall rule limited to the kitchen device address before allowing connections. Keep 8787 closed to the LAN. Do not infer the kitchen address from the cashier subnet.
+
+TLS tests generate temporary certificates and trust them only inside isolated Node HTTPS test requests. They do not modify Windows certificate stores, browser trust settings or restaurant firewall rules.
 
 Initial online enrollment/catalog synchronization is required. Cached authorization lasts at most eight hours; expired grants fail closed. Known online revocation or role changes remove the cached grant immediately. Offline authorization cannot observe remote revocation until connectivity returns or the grant expires.
 
