@@ -126,7 +126,8 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   finally{setBusy(false);}
  }
  async function updateTableStatus(row:StoredResource,status:string){
-  if(busy)return;setBusy(true);setMessage("");
+  if(busy)return;
+  if(status==="available"&&row.status==="occupied"&&!window.confirm("هل تأكدت من مغادرة العميل للطاولة؟ لن تصبح متاحة إلا بعد التأكيد."))return;setBusy(true);setMessage("");
   try{await operationApi(tenantId,"tables","PATCH",{id:row.id,version:row.version,name:row.name,status,branchId:row.branch_id,data:row.data});await refresh();setMessage("تم تحديث حالة الطاولة.");onChanged?.();}
   catch(error){setMessage(error instanceof Error?error.message:"تعذر تحديث حالة الطاولة.");}finally{setBusy(false);}
  }
