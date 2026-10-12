@@ -29,7 +29,7 @@ async function authorize(request:Request,module:string,write:boolean){
  if(!["owner","manager"].includes(access.role)){
   const permissionModule=module==="kds"?"kitchen":module;
   const action=write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view";
-  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (permission_key=? OR permission_key LIKE ?)",[access.tenantId,user,permissionModule+"."+action,permissionModule+".%"]);
+  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   if(grants.length&&!grants.some(g=>g.permission_key===permissionModule+"."+action&&Boolean(g.allowed)))throw new ResourceError("FORBIDDEN");
  }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
