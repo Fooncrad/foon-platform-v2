@@ -24,6 +24,7 @@ async function authorize(request:Request,module:string,write:boolean){
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
  const allowed=config?config.roles as TenantRole[]:module==="reports"?allRoles:module==="customers"||module==="health"?allRoles:module==="pos"?allRoles:module==="kds"?allRoles:allRoles;
  const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
+ let authorizedBranch:string|null=null;
  // Existing role checks remain mandatory. Explicit employee grants narrow them further.
  // Legacy memberships without grants continue to use the existing role policy.
  if(!["owner","manager"].includes(access.role)){
@@ -49,6 +50,7 @@ async function authorize(request:Request,module:string,write:boolean){
    if(!assignments.length)throw new ResourceError("FORBIDDEN");
    verifiedBranch=activeBranch;
   }
+  authorizedBranch=verifiedBranch;
   const scoped=grants.filter(g=>g.branch_id===null||(verifiedBranch!==null&&String(g.branch_id)===verifiedBranch));
   const exact=scoped.filter(g=>g.permission_key===permissionModule+"."+action);
   // A deliberately unchecked action must not be reopened by the broad "manage" grant.
@@ -57,7 +59,7 @@ async function authorize(request:Request,module:string,write:boolean){
  }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature&&!(await tenantEntitlement(access.tenantId,feature)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
- return {user,tenantId:access.tenantId,role:access.role,authorizedBranch:!["owner","manager"].includes(access.role)?activeBranch??null:null};
+ return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
 }
 function failure(error:unknown){
  const code=error instanceof ResourceError?error.code:(error as {code?:string})?.code==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":(error as {code?:string})?.code==="ER_LOCK_DEADLOCK"?"CONFLICT":"OPERATIONS_UNAVAILABLE";
