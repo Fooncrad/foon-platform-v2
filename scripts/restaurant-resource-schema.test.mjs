@@ -38,6 +38,17 @@ test("four dining sections validate independently without a database",()=>{
   assert.equal(section.data.area,area);
   assert.equal(section.data.smoking,smoking);
  }
- assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{area:"roof",smoking:"smoking"}}));
- assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{area:"indoor",smoking:"sometimes"}}));
+ // Custom section labels are intentionally allowed; the fields are free text.
+ const custom=validateResource("sections",{name:"قسم السطح",status:"active",data:{area:"roof",smoking:"sometimes"}});
+ assert.equal(custom.data.area,"roof");
+ assert.equal(custom.data.smoking,"sometimes");
+ // Keep the validation boundary: only strings up to 80 characters are accepted.
+ for(const field of ["area","smoking"]){
+  for(const invalid of [123,{}, "x".repeat(81)]){
+   assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{[field]:invalid}}));
+  }
+ }
+ const maxLength=validateResource("sections",{name:"قسم الحد الأقصى",status:"active",data:{area:"a".repeat(80),smoking:"s".repeat(80)}});
+ assert.equal(maxLength.data.area.length,80);
+ assert.equal(maxLength.data.smoking.length,80);
 });
