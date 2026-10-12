@@ -19,7 +19,7 @@ async function resolveEmployeeUser(db:Pool | PoolConnection,tenantId:string,data
  return users.length===1?String(users[0].id):"";
 }
 
-const modules=["orders","pos","kitchen","menu","categories","tables","sections","reservations","waitlist","waiterCalls","team","attendance","inventory","coupons","marketing","customerInvoices","internalInvoices","printers","reports","storefront","notifications","loyalty","delivery"] as const;
+const modules=["orders","pos","kitchen","menu","categories","tables","sections","reservations","waitlist","waiterCalls","team","attendance","inventory","coupons","marketing","customerInvoices","internalInvoices","printers","reports","storefront","notifications","loyalty","delivery","security"] as const;
 const actions=["view","create","edit","accept","reject","cancel","delete","manage"] as const;
 const validPermissions=new Set(modules.flatMap(module=>actions.map(action=>module+"."+action)));
 export async function POST(request:Request){
