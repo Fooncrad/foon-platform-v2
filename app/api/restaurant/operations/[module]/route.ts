@@ -30,7 +30,11 @@ async function authorize(request:Request,module:string,write:boolean){
   const permissionModule=module==="kds"?"kitchen":module;
   const action=write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view";
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
-  if(grants.length&&!grants.some(g=>g.permission_key===permissionModule+"."+action&&Boolean(g.allowed)))throw new ResourceError("FORBIDDEN");
+  // Fail closed: unconfigured employees cannot inherit broad role permissions.
+  if(!grants.length)throw new ResourceError("FORBIDDEN");
+  const activeBranch=request.headers.get("x-foon-branch");
+  const scoped=grants.filter(g=>g.branch_id===null||String(g.branch_id)===activeBranch);
+  if(!scoped.some(g=>g.permission_key===permissionModule+"."+action&&Number(g.allowed)===1))throw new ResourceError("FORBIDDEN");
  }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature&&!(await tenantEntitlement(access.tenantId,feature)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
