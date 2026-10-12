@@ -35,9 +35,14 @@ async function authorize(request:Request,module:string,write:boolean){
   const headerBranch=request.headers.get("x-foon-branch");
   const queryBranch=new URL(request.url).searchParams.get("branch");
   if(headerBranch&&queryBranch&&headerBranch!==queryBranch)throw new ResourceError("FORBIDDEN");
-  const activeBranch=headerBranch??queryBranch;
+  let activeBranch=headerBranch??queryBranch;
   // Tenant-wide reads must not be exposed through an omitted branch selector.
-  if(!activeBranch&&request.method==="GET"&&!["security"].includes(module))throw new ResourceError("FORBIDDEN");
+  if(!activeBranch&&request.method==="GET"&&!["security"].includes(module)){
+   const [assigned]=await database().execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user]);
+   if(assigned.length!==1)throw new ResourceError("BRANCH_REQUIRED");
+   // A single assigned branch is safe to infer for permission checks.
+   activeBranch=String(assigned[0].branch_id);
+  }
   let verifiedBranch:string|null=null;
   if(activeBranch){
    const [assignments]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[access.tenantId,user,activeBranch]);
