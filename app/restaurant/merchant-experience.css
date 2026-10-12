@@ -52,3 +52,12 @@
 @media(max-width:680px){.restaurantApp .restaurantPanel{padding:18px;border-radius:19px}.restaurantApp .restaurantPanel>header{flex-wrap:wrap;align-items:flex-start}.restaurantApp .restaurantStatusFilters{width:100%;gap:3px}.restaurantApp .restaurantStatusFilters button{flex:1 1 auto;padding:8px 10px;min-width:44px}.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList{grid-template-columns:1fr}.restaurantApp .restaurantResourceForm{padding:16px}.restaurantApp .restaurantOrderCards article,.restaurantApp .restaurantPanel[data-module=reservations] .restaurantResourceList article{padding:17px}.restaurantApp .calendarSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.restaurantApp .restaurantReservationSummary dl{grid-template-columns:1fr}.restaurantApp .restaurantResourceList article>header>div{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.restaurantApp button{transition:none!important}}
 @media(max-width:680px){.restaurantApp label.restaurantListTools{grid-template-columns:1fr;gap:7px}}
+
+/* Assigned tables and waiter calls: compact RTL-safe mobile cards. */
+.restaurantAssignedList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin:12px 0;min-width:0}
+.restaurantAssignedItem{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:13px 15px;border:1px solid var(--border,#e1e6ee);border-radius:14px;background:var(--surface,#f8fafc);direction:rtl}
+.restaurantAssignedName{font-weight:700;overflow-wrap:anywhere;min-width:0}
+.restaurantAssignedStatus{display:inline-flex;align-items:center;flex-shrink:0;max-width:100%;font-size:.83rem;padding:5px 10px;border-radius:999px;background:#e8f5ef;color:#166346;font-weight:600}
+.restaurantAssignedHeading{margin:18px 0 8px}
+.restaurantAssignedEmpty{margin:0;color:var(--muted,#64748b);font-size:.93rem}
+@media(max-width:600px){.restaurantAssignedList{grid-template-columns:minmax(0,1fr)}.restaurantAssignedItem{padding:12px;gap:6px}}
