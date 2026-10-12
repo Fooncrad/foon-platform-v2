@@ -58,8 +58,14 @@ test("real MySQL cloud sync is atomic, scoped, revocable and idempotent under co
   await pool.execute("INSERT INTO restaurant_menu_items(id,tenant_id,category_id,name,price,currency) VALUES (?,?,?,'Coffee',9.95,'SAR')",[itemId,tenantId,categoryId]);
   await pool.execute("INSERT INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'menu_item','Coffee','active','{}')",[itemId,tenantId]);
   await pool.execute("INSERT INTO edge_devices(id,tenant_id,branch_id,actor_user_id,name,token_hash) VALUES (?,?,?,?,'Test device',?)",[deviceId,tenantId,branchId,actorUserId,deviceTokenHash(token)]);
+  assert.equal((await receiveEdgeRequest(request(event),options)).status,403);
+  await pool.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'cashier',TRUE)",[randomUUID(),tenantId,actorUserId,branchId]);
+  for(const permission of ["pos.view","pos.create","orders.edit"])await pool.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,actorUserId,branchId,permission]);
   const first=await receiveEdgeRequest(request(event),options);assert.equal(first.status,201,JSON.stringify(await first.clone().json()));
   const receipt=(await first.json()).receipt;assert.equal(verifyCloudReceiptSignature(receipt,deviceReceiptKey(masterKey,deviceId)),true);
+  await pool.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'pos.create',FALSE)",[randomUUID(),tenantId,actorUserId,branchId]);
+  const deniedReplay=await receiveEdgeRequest(request(event),options);assert.equal(deniedReplay.status,403);assert.equal((await deniedReplay.json()).receipt,undefined);
+  await pool.execute("DELETE FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND permission_key='pos.create' AND allowed=FALSE",[tenantId,actorUserId]);
   const replay=await receiveEdgeRequest(request(event),options);assert.equal(replay.status,200);assert.deepEqual((await replay.json()).receipt,receipt);
   const retries=await Promise.all(Array.from({length:4},()=>receiveEdgeRequest(request(event),options)));assert.ok(retries.every(r=>r.status===200));
   const [[order]]=await pool.execute("SELECT total,status FROM restaurant_orders WHERE id=?",[orderId]);assert.equal(order.total,"19.90");assert.equal(order.status,"new");
@@ -83,6 +89,8 @@ test("real MySQL cloud sync is atomic, scoped, revocable and idempotent under co
   await pool.execute("INSERT INTO edge_devices(id,tenant_id,branch_id,actor_user_id,name,token_hash) VALUES (?,?,?,?,'Kitchen fixture',?)",[kitchenDevice,tenantId,branchId,kitchenActor,deviceTokenHash(kitchenToken)]);
   const kitchenRequest=e=>new Request("https://cloud.example/api/edge/sync",{method:"POST",headers:{authorization:"Bearer "+kitchenToken,"content-type":"application/json"},body:JSON.stringify(e)});
   const preparing=digest({tenantId,branchId,deviceId:kitchenDevice,eventSeq:1,orderId,kind:"status",payload:{id:orderId,status:"preparing",updatedAt:new Date().toISOString()}});
+  await pool.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'kitchen',TRUE)",[randomUUID(),tenantId,kitchenActor,branchId]);
+  for(const permission of ["kitchen.view","kitchen.edit"])await pool.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,kitchenActor,branchId,permission]);
   const cooked=await receiveEdgeRequest(kitchenRequest(preparing),options);assert.equal(cooked.status,201);assert.equal(verifyCloudReceiptSignature((await cooked.json()).receipt,deviceReceiptKey(masterKey,kitchenDevice)),true);
   const cancelled=digest({...preparing,eventSeq:2,payload:{...preparing.payload,status:"cancelled"}});assert.equal((await receiveEdgeRequest(kitchenRequest(cancelled),options)).status,403);
   const kitchenCreate=digest({...second,deviceId:kitchenDevice});assert.equal((await receiveEdgeRequest(kitchenRequest(kitchenCreate),options)).status,403);

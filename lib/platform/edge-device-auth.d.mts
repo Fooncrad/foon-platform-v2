@@ -3,3 +3,4 @@ export type EdgeIdentity={deviceId:string;tenantId:string;branchId:string;actorU
 export function deviceTokenHash(token:string):string;
 export function deviceReceiptKey(masterKey:string|undefined,deviceId:string):string;
 export function authenticateEdgeDevice(connection:Pool|PoolConnection,authorization:string|null,lock?:boolean):Promise<EdgeIdentity>;
+export function requireEdgePermission(connection:Pool|PoolConnection,identity:EdgeIdentity,module:string,action:string,lock?:boolean):Promise<void>;

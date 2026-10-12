@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {receiveEdgeRequest} from "../lib/platform/edge-sync-http.mjs";
-import {authenticateEdgeDevice,deviceTokenHash,deviceReceiptKey} from "../lib/platform/edge-device-auth.mjs";
+import {authenticateEdgeDevice,deviceTokenHash,deviceReceiptKey,requireEdgePermission} from "../lib/platform/edge-device-auth.mjs";
 import {eventDigest} from "./foon-edge-sync-contract.mjs";
 const token="a".repeat(96),masterKey="m".repeat(64);
 const identity={deviceId:"device",tenantId:"tenant",branchId:"branch",actorUserId:"33333333-3333-4333-8333-333333333333",role:"cashier"};
@@ -27,4 +27,13 @@ test("revocation between initial auth and transaction produces no inbox write or
  const pool={execute:async()=>[[identity]],getConnection:async()=>({beginTransaction:async()=>{},execute:async sql=>{if(sql.startsWith("SELECT d.id"))return [[]];writes++;throw Error("UNEXPECTED_WRITE");},rollback:async()=>{rolledBack=true;},release(){released=true;}})};
  const result=await receiveEdgeRequest(request(event()),{pool,masterKey,plainTakeawayEnabled:true});
  assert.equal(result.status,401);assert.equal((await result.json()).receipt,undefined);assert.equal(writes,0);assert.equal(rolledBack,true);assert.equal(released,true);
+});
+
+test("edge permission honors branch assignment and explicit denial over broad manage",async()=>{
+ let assigned=true,grants=[{permission_key:"pos.manage",allowed:1}];const queries=[];
+ const connection={execute:async(sql,args)=>{queries.push({sql,args});return [sql.includes("employee_branch_assignments")?(assigned?[{id:"assignment"}]:[]):grants];}};
+ await requireEdgePermission(connection,identity,"pos","create",true);
+ assert.ok(queries.every(q=>q.sql.endsWith("FOR UPDATE")&&q.args.includes(identity.branchId)));
+ grants.push({permission_key:"pos.create",allowed:0});await assert.rejects(()=>requireEdgePermission(connection,identity,"pos","create",true),/EDGE_FORBIDDEN/);
+ grants=[{permission_key:"pos.create",allowed:1}];assigned=false;await assert.rejects(()=>requireEdgePermission(connection,identity,"pos","create"),/EDGE_FORBIDDEN/);
 });
