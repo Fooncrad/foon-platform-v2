@@ -63,12 +63,12 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   const key=({kds:"kitchen",branches:"storefront",remote:"team",payments:"internalInvoices",subscription:"reports",customers:"orders",overview:"orders"} as Partial<Record<Section,string>>)[section]??section;
   return data.staffPermissions.some(permission=>permission===key+".view"||permission===key+".manage");
  };
- const visible=modules.filter(m=>m.roles.includes(data.role)&&allowedSection(m.key));
+ const visible=modules.filter(m=>allowedSection(m.key)&&(canManage||data.role==="owner"||m.key==="security"||data.staffPermissions.length>0));
  const granted=(key?:string)=>!key||data.features.some(f=>f.key===key&&f.enabled);
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route="/restaurant?tenant="+encodeURIComponent(data.tenantId),paymentRoute="/restaurant/payments?tenant="+encodeURIComponent(data.tenantId);
- function navigate(section:Section){if(!modules.some(m=>m.key===section&&m.roles.includes(data.role)&&allowedSection(m.key)))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");}
+ function navigate(section:Section){if(!modules.some(m=>m.key===section&&allowedSection(m.key)))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");}
  useEffect(()=>{const handler=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setSearchOpen(true);}if(event.key==="Escape"){setSearchOpen(false);setDrawer(false);setNotifications(false);setProfile(false);}};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler);},[]);
  useEffect(()=>{if(searchOpen)searchRef.current?.focus();},[searchOpen]);
  useEffect(()=>{if(drawer)drawerCloseRef.current?.focus();},[drawer]);
