@@ -32,7 +32,7 @@ async function authorize(request:Request,module:string,write:boolean){
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
-  const activeBranch=request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch")??(write?undefined:undefined);
+  const activeBranch=request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch");
   let verifiedBranch:string|null=null;
   if(activeBranch){
    const [assignments]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[access.tenantId,user,activeBranch]);
