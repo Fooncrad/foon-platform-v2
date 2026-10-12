@@ -24,6 +24,14 @@ async function authorize(request:Request,module:string,write:boolean){
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
  const allowed=config?config.roles as TenantRole[]:module==="reports"?allRoles:module==="customers"||module==="health"?allRoles:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:allRoles;
  const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
+ // Existing role checks remain mandatory. Explicit employee grants narrow them further.
+ // Legacy memberships without grants continue to use the existing role policy.
+ if(!["owner","manager"].includes(access.role)){
+  const permissionModule=module==="kds"?"kitchen":module;
+  const action=write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view";
+  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (permission_key=? OR permission_key LIKE ?)",[access.tenantId,user,permissionModule+"."+action,permissionModule+".%"]);
+  if(grants.length&&!grants.some(g=>g.permission_key===permissionModule+"."+action&&Boolean(g.allowed)))throw new ResourceError("FORBIDDEN");
+ }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature&&!(await tenantEntitlement(access.tenantId,feature)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
  return {user,tenantId:access.tenantId,role:access.role};
