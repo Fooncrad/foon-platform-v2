@@ -37,7 +37,7 @@ export async function GET(request:Request){
    const table=mine.find(t=>String(t.id)===String(d.tableId??"")&&String(t.branch_id)===branch);
    if(table)return true;
    // Legacy call payloads may use table number/name, but never match across branches.
-   return mine.some(t=>String(t.branch_id)===branch&&(String(parse(t.data).number??"")===String(d.tableNumber??d.table_number??"")&&Boolean(d.tableNumber??d.table_number)||String(t.name).trim()===String(d.tableName??"").trim()&&Boolean(d.tableName)));}).map(c=>({id:c.id,name:c.name,status:c.status}))});
+   return mine.some(t=>String(t.branch_id)===branch&&(String(parse(t.data).number??"")===String(d.tableNumber??d.table_number??"")&&Boolean(d.tableNumber??d.table_number)||String(t.name).trim()===String(d.tableName??"").trim()&&Boolean(d.tableName)));}).map(c=>{const d=parse(c.data);return {id:c.id,name:c.name,status:c.status,note:String(d.note??d.notes??d.message??d.reason??d.customerNote??d.customer_note??"").slice(0,1000)};})});
  }catch(error){console.error("[FOON assigned service]",error);return NextResponse.json({ok:false,code:"ASSIGNED_SERVICE_UNAVAILABLE"},{status:503});}
 }
 
