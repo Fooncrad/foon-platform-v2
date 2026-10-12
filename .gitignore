@@ -16,3 +16,8 @@ node_modules/
 *.db
 *.db-wal
 *.db-shm
+
+# Local/browser verification artifacts are uploaded by CI, not committed.
+/work/
+/test-results/
+/playwright-report/

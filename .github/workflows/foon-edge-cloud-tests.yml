@@ -1,0 +1,58 @@
+name: FOON Edge Cloud Integration
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lib/platform/edge-**"
+      - "lib/restaurant/offline-pos.ts"
+      - "app/api/edge/**"
+      - "scripts/foon-edge-**"
+      - "scripts/foon-offline-pos.test.mjs"
+      - "scripts/migrate.mjs"
+      - "scripts/dining-context-migration.mjs"
+      - "migrations/**"
+      - "package*.json"
+      - ".github/workflows/foon-edge-cloud-tests.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cloud-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: public.ecr.aws/docker/library/mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: foon-edge-ci-only
+          MYSQL_DATABASE: foon_edge_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      EDGE_TEST_DATABASE_URL: mysql://root:foon-edge-ci-only@127.0.0.1:3306/foon_edge_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node --test scripts/foon-edge-http.test.mjs scripts/foon-offline-pos.test.mjs scripts/foon-edge-console.test.mjs
+      - run: npm run build
+      - run: node --test scripts/foon-edge-cloud.integration.test.mjs
+        env:
+          EDGE_TEST_HTTP: "true"
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test scripts/foon-edge-console.browser.test.mjs --workers=1 --reporter=line
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: edge-console-screenshots
+          path: work/edge-console-*.png

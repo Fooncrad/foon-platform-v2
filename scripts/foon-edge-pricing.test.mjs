@@ -7,7 +7,7 @@ test("authoritative catalog prices and integer cents are used",async()=>{
  const connection={async execute(sql,args){
   if(sql.startsWith("SELECT id FROM branches")){assert.deepEqual(args,["branch-1","tenant-1"]);return [[{id:"branch-1"}]];}
   assert.match(sql,/tenant_id=\?/);assert.match(sql,/FOR UPDATE/);assert.match(sql,/JOIN restaurant_resources/);assert.match(sql,/rr\.archived=0/);assert.match(sql,/rr\.kind=\x27menu_item\x27/);
-  assert.deepEqual(args,["tenant-1",a,b]);
+  assert.deepEqual(args,["tenant-1","branch-1",a,b]);
   return [[{id:a,name:"Coffee",price:"9.95",currency:"SAR"},{id:b,name:"Tea",price:"4.50",currency:"SAR"}]];
  }};
  const result=await priceEdgeItems(connection,{tenantId:"tenant-1",branchId:"branch-1",items:[item(a,2),item(b,1)]});

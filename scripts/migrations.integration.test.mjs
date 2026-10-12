@@ -114,6 +114,9 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.notEqual(failed.status,0);
     const [[unrecorded]]=await db.execute("SELECT COUNT(*) AS n FROM schema_migrations WHERE id=?",["0014_payment_tenant_integrity.sql"]);
     assert.equal(Number(unrecorded.n),0);
+    // Restore the disposable schema for the HTTP/browser suites that follow.
+    await db.query("ALTER TABLE branches DROP INDEX uq_branches_tenant_id");
+    successfulRun();
   } finally {
     await db.end();
   }

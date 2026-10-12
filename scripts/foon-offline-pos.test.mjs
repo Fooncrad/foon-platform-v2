@@ -1,0 +1,30 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {stripTypeScriptTypes} from "node:module";
+import "fake-indexeddb/auto";
+const source=stripTypeScriptTypes(await readFile(new URL("../lib/restaurant/offline-pos.ts",import.meta.url),"utf8"),{mode:"strip"})+"\n//# sourceURL=offline-pos-runtime.mjs";
+const {queuePosOrder,pendingPosOrders,importPendingPosOrders,retryReviewedPosOrder}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
+const id1="11111111-1111-4111-8111-111111111111",id2="22222222-2222-4222-8222-222222222222";
+const order=(id,quantity=1)=>({id,tenantId:"tenant",branchId:"branch",createdAt:"2026-10-11T12:00:00Z",payload:{requestKey:id,items:[{id:"item",quantity}]},status:"pending"});
+const backup=orders=>JSON.stringify({format:"foon-pos-recovery-v1",tenantId:"tenant",orders});
+test("backup restore rolls back all inserts on a later conflict, then retries without duplicate orders",async()=>{
+ await queuePosOrder(order(id2));
+ await assert.rejects(()=>importPendingPosOrders(backup([order(id1),order(id2,2)]),"tenant"),/OFFLINE_ORDER_CONFLICT/);
+ assert.deepEqual((await pendingPosOrders()).map(o=>o.id),[id2]);
+ assert.equal(await importPendingPosOrders(backup([order(id1),order(id2)]),"tenant"),1);
+ assert.equal(await importPendingPosOrders(backup([order(id1),order(id2)]),"tenant"),0);
+ assert.equal((await pendingPosOrders()).length,2);
+ await assert.rejects(()=>importPendingPosOrders(backup([order(id1),order(id1)]),"tenant"),/DUPLICATE_OFFLINE_BACKUP_ORDER/);
+ assert.equal((await pendingPosOrders()).length,2);
+});
+test("automatic retry preserves review evidence; explicit retry is tenant-scoped",async()=>{
+ const id="33333333-3333-4333-8333-333333333333";
+ await queuePosOrder({...order(id),status:"needs_review",lastError:"PRICE_CHANGED"});
+ await queuePosOrder(order(id));
+ assert.equal((await pendingPosOrders()).find(o=>o.id===id).lastError,"PRICE_CHANGED");
+ await assert.rejects(()=>retryReviewedPosOrder(id,"other-tenant"),/OFFLINE_RETRY_CONFLICT/);
+ assert.equal((await pendingPosOrders()).find(o=>o.id===id).status,"needs_review");
+ await retryReviewedPosOrder(id,"tenant");
+ assert.equal((await pendingPosOrders()).find(o=>o.id===id).status,"pending");
+});
