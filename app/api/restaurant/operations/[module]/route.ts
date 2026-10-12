@@ -57,7 +57,7 @@ async function authorize(request:Request,module:string,write:boolean){
  }
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature&&!(await tenantEntitlement(access.tenantId,feature)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
- return {user,tenantId:access.tenantId,role:access.role};
+ return {user,tenantId:access.tenantId,role:access.role,authorizedBranch:!["owner","manager"].includes(access.role)?activeBranch??null:null};
 }
 function failure(error:unknown){
  const code=error instanceof ResourceError?error.code:(error as {code?:string})?.code==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":(error as {code?:string})?.code==="ER_LOCK_DEADLOCK"?"CONFLICT":"OPERATIONS_UNAVAILABLE";
@@ -110,7 +110,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
  let db:PoolConnection|undefined;
  try{
   const {module}=await params,ctx=await authorize(request,module,false);db=await connection();
-  const branch=new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
+  const branch=ctx.authorizedBranch??new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
   if(Object.hasOwn(resourceModules,module)){
    const refs:Record<string,unknown[]>={};
    for(const field of resourceModules[module].fields.filter(f=>f.ref)){
