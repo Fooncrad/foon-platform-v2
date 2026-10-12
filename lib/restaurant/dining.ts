@@ -9,7 +9,7 @@ export async function diningSection(db:PoolConnection,tenant:string,branch:strin
  return {id:String(rows[0].id),name:String(rows[0].name),branchId:rows[0].branch_id?String(rows[0].branch_id):null,data:json(rows[0].data)};
 }
 export async function diningTable(db:PoolConnection,tenant:string,branch:string,id:string,party?:number){
- const [rows]=await db.execute<RowDataPacket[]>("SELECT id,name,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status<>'inactive' FOR UPDATE",[tenant,id]);
+ const [rows]=await db.execute<RowDataPacket[]>("SELECT id,name,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status='available' FOR UPDATE",[tenant,id]);
  if(!rows.length||rows[0].branch_id&&rows[0].branch_id!==branch)throw new ResourceError('TABLE_NOT_FOUND');
  const data=json(rows[0].data);
  if(party!==undefined&&(!Number.isInteger(party)||party<1||party>Number(data.capacity)))throw new ResourceError('TABLE_CAPACITY_EXCEEDED');
