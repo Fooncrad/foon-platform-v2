@@ -43,6 +43,7 @@ type LiveOverview={attention?:Record<string,number>;summary:{sales:number|null;o
 function EmptyOperations({title,body}:{title:string;body:string}){return <div className="restaurantEmpty"><MerchantIcon name="bag"/><h3>{title}</h3><p>{body}</p></div>;}
 function trapFocus(event:ReactKeyboardEvent<HTMLElement>){if(event.key!=="Tab")return;const items=Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]),input,a[href],select,textarea'));if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
 export default function MerchantDashboard({data}:{data:MerchantData}){
+ const canManage=["owner","manager"].includes(data.role),canPayments=["owner","manager","accountant"].includes(data.role);
  const router=useRouter(),searchRef=useRef<HTMLInputElement>(null),drawerCloseRef=useRef<HTMLButtonElement>(null);
  const [active,setActive]=useState<Section>("overview"),[branch,setBranch]=useState(""),[drawer,setDrawer]=useState(false),[searchOpen,setSearchOpen]=useState(false),[query,setQuery]=useState(""),[notifications,setNotifications]=useState(false),[profile,setProfile]=useState(false),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const [editingBranch,setEditingBranch]=useState<Branch|null>(null);
@@ -55,7 +56,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  useEffect(()=>()=>{void audioRef.current?.close();},[]);
  useEffect(()=>{if(!canManage&&!allowedSection("overview"))return;let alive=true;const load=()=>operationApi(data.tenantId,"overview","GET",undefined,branch).then(result=>{if(alive){setLive(result);setLiveError("");}}).catch(error=>{if(alive)setLiveError(String(error.message));});void load();const timer=setInterval(()=>void load(),15000);return()=>{alive=false;clearInterval(timer);};},[data.tenantId,branch,revision,canManage,data.staffPermissions]);
  function changed(){setRevision(v=>v+1);router.refresh();}
- const canManage=["owner","manager"].includes(data.role),canPayments=["owner","manager","accountant"].includes(data.role);
+
  const allowedSection=(section:Section)=> {
   if(canManage)return true;
   if(section==="security")return true;
