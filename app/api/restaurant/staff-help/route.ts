@@ -39,23 +39,25 @@ export async function POST(request:Request){
  const body=await request.json().catch(()=>null) as {tenantId?:string;branchId?:string;description?:string;id?:string;action?:string}|null;
  if(!body||!uuid.test(body.tenantId??""))return NextResponse.json({ok:false},{status:400});
  try{
-  const {role,branches,db}=await context(body.tenantId!,user);
+  const tenantId=String(body.tenantId);
+  const {role,branches,db}=await context(tenantId,user);
   if(body.action==="resolve"){
    if(!["owner","manager"].includes(role)||!uuid.test(body.id??""))return NextResponse.json({ok:false},{status:403});
-   const [existing]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='staff_help' AND archived=FALSE AND status='pending'",[body.id,body.tenantId]);
+   const callId=String(body.id);
+   const [existing]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='staff_help' AND archived=FALSE AND status='pending'",[callId,tenantId]);
    if(!existing.length||(role!=="owner"&&!branches.includes(String(existing[0].branch_id))))return NextResponse.json({ok:false},{status:403});
-   const [updated]=await db.execute<ResultSetHeader>("UPDATE restaurant_resources SET status='resolved',updated_at=NOW() WHERE id=? AND tenant_id=? AND kind='staff_help' AND status='pending'",[body.id,body.tenantId]);
+   const [updated]=await db.execute<ResultSetHeader>("UPDATE restaurant_resources SET status='resolved',updated_at=NOW() WHERE id=? AND tenant_id=? AND kind='staff_help' AND status='pending'",[callId,tenantId]);
    if(updated.affectedRows!==1)return NextResponse.json({ok:false},{status:409});
-   await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,?,?,?)",[body.tenantId,user,"staff_help.resolve",body.id,JSON.stringify({branchId:existing[0].branch_id})]);
+   await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,?,?,?)",[tenantId,user,"staff_help.resolve",callId,JSON.stringify({branchId:existing[0].branch_id})]);
    return NextResponse.json({ok:true});
   }
   const branchId=body.branchId??"",description=String(body.description??"").trim();
   if(!uuid.test(branchId)||description.length<5||description.length>500||(role!=="owner"&&!branches.includes(branchId)))return NextResponse.json({ok:false},{status:400});
-  const [exists]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branchId,body.tenantId]);
+  const [exists]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branchId,tenantId]);
   if(!exists.length)return NextResponse.json({ok:false},{status:403});
   const id=randomUUID();
-  await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[id,body.tenantId,branchId,"staff_help",description,"pending",JSON.stringify({requesterId:user}),id]);
-  await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,?,?,?)",[body.tenantId,user,"staff_help.request",id,JSON.stringify({branchId})]);
+  await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[id,tenantId,branchId,"staff_help",description,"pending",JSON.stringify({requesterId:user}),id]);
+  await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,?,?,?)",[tenantId,user,"staff_help.request",id,JSON.stringify({branchId})]);
   return NextResponse.json({ok:true,id},{status:201});
  }catch{return NextResponse.json({ok:false},{status:503});}
 }
