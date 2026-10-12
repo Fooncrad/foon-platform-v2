@@ -4,6 +4,7 @@ import type {RowDataPacket,ResultSetHeader} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
+import {assertSameOrigin} from "@/lib/security/origin";
 export const runtime="nodejs";
 const roles=["owner","manager","waiter","cashier","kitchen","driver","accountant"] as const;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -33,6 +34,7 @@ export async function GET(request:Request){
  }catch{return NextResponse.json({ok:false},{status:403});}
 }
 export async function POST(request:Request){
+ try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false},{status:401});
  const body=await request.json().catch(()=>null) as {tenantId?:string;branchId?:string;description?:string;id?:string;action?:string}|null;
  if(!body||!uuid.test(body.tenantId??""))return NextResponse.json({ok:false},{status:400});
