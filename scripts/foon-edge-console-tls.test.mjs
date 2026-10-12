@@ -11,6 +11,8 @@ import {consoleNetwork} from "./foon-edge-console-network.mjs";
 import {createEdgeConsoleServer,hashOperatorPassword} from "./foon-edge-console-server.mjs";
 
 test("LAN binding fails closed without matching HTTPS configuration",()=>{
+ const insecure=spawnSync(process.execPath,["scripts/start-edge-console.mjs"],{encoding:"utf8",env:{...process.env,NODE_TLS_REJECT_UNAUTHORIZED:"0"},timeout:5000});
+ assert.notEqual(insecure.status,0);assert.match(insecure.stderr,/TLS_VERIFICATION_CANNOT_BE_DISABLED/);
  const config={host:"192.168.3.148",port:8788,origin:"https://192.168.3.148:8788",certFile:"certificate.pem",keyFile:"key.pem"};
  assert.deepEqual(consoleNetwork(config),{host:config.host,port:8788,tls:true});
  for(const host of ["0.0.0.0","::","8.8.8.8","localhost.example"])

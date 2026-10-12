@@ -5,6 +5,7 @@ import {consoleNetwork} from "./foon-edge-console-network.mjs";
 import {createEdgeConsoleServer} from "./foon-edge-console-server.mjs";
 import {syncLocalOutbox,validateCloudEndpoint} from "./foon-edge-sync-bridge.mjs";
 
+if(process.env.NODE_TLS_REJECT_UNAUTHORIZED==="0")throw Error("TLS_VERIFICATION_CANNOT_BE_DISABLED");
 const users=JSON.parse(await readFile(process.env.FOON_EDGE_USERS_FILE,"utf8"));
 if(!Array.isArray(users)||!users.length||users.some(user=>typeof user.cloudToken!=="string"||!/^[a-f0-9]{96}$/.test(user.cloudToken)||typeof user.signingSecret!=="string"||user.signingSecret.length<32))throw Error("INVALID_EDGE_USERS_CONFIGURATION");
 const localToken=process.env.FOON_LAN_TOKEN,ackSecret=process.env.FOON_EDGE_ACK_SECRET;

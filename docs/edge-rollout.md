@@ -23,7 +23,7 @@ The gateway always binds to loopback port 8787. The browser console defaults to 
 
 After approving device access, configure a private IPv4 address for the station, such as the confirmed cashier address 192.168.3.148. Set FOON_EDGE_CONSOLE_HOST=192.168.3.148, FOON_EDGE_CONSOLE_PORT=8788 and FOON_EDGE_CONSOLE_ORIGIN=https://192.168.3.148:8788. Set FOON_EDGE_CONSOLE_CERT_FILE and FOON_EDGE_CONSOLE_KEY_FILE to private certificate/key paths. The certificate must include the station IP in its subject alternative names and be trusted by both restaurant devices. Keep the private key on the station with restricted OS permissions.
 
-Startup rejects a LAN bind without certificate/key files, a mismatched HTTPS origin/port, public bind addresses and wildcard interfaces. TLS 1.2 or later is required; cookies remain Secure, HttpOnly and SameSite=Strict. These checks do not grant certificate trust or open the Windows firewall.
+Startup rejects NODE_TLS_REJECT_UNAUTHORIZED=0, a LAN bind without certificate/key files, a mismatched HTTPS origin/port, public bind addresses and wildcard interfaces. TLS 1.2 or later is required; cookies remain Secure, HttpOnly and SameSite=Strict. These checks do not grant certificate trust or open the Windows firewall.
 
 If an internal CA is needed, review its fingerprint and obtain explicit approval before adding trust on either Windows device. Never bypass a browser certificate warning. Approve a firewall rule limited to the kitchen device address before allowing connections. Keep 8787 closed to the LAN. Do not infer the kitchen address from the cashier subnet.
 
