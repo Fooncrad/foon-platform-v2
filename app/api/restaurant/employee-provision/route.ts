@@ -7,6 +7,15 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
 export const runtime="nodejs";
+async function resolveEmployeeUser(db:Awaited<ReturnType<typeof database>>,tenantId:string,data:Record<string,unknown>):Promise<string>{
+ const explicit=String(data?.userId??"");
+ if(/^[a-f0-9-]{36}$/i.test(explicit))return explicit;
+ const email=String(data?.email??"").trim().toLowerCase();
+ if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return "";
+ const [users]=await db.execute<RowDataPacket[]>("SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE LOWER(u.email)=? AND m.tenant_id=? AND m.status='active' LIMIT 2",[email,tenantId]);
+ return users.length===1?String(users[0].id):"";
+}
+
 const modules=["orders","pos","kitchen","menu","categories","tables","sections","reservations","waitlist","waiterCalls","team","attendance","inventory","coupons","marketing","customerInvoices","internalInvoices","printers","reports","storefront","notifications","loyalty","delivery"] as const;
 const actions=["view","create","edit","accept","reject","cancel","delete","manage"] as const;
 const validPermissions=new Set(modules.flatMap(module=>actions.map(action=>module+"."+action)));
@@ -55,7 +64,7 @@ export async function PATCH(request:Request){
   const [rows]=await db.execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE FOR UPDATE",[resourceId,tenantId]);
   if(!rows.length){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});}
   const employee=rows[0],data=typeof employee.data==="string"?JSON.parse(employee.data):employee.data;
-  const userId=String(data?.userId??"");
+  const userId=await resolveEmployeeUser(db,tenantId,data);
   if(!/^[a-f0-9-]{36}$/i.test(userId)){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});}
   const [memberships]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,userId]);
   if(!memberships.length||["owner","manager"].includes(String(memberships[0].role))){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_PERMISSION_CHANGE_FORBIDDEN"},{status:403});}
@@ -73,7 +82,7 @@ export async function GET(request:Request){
  try{await requireTenantMembership(actor,tenantId,["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const [rows]=await database().execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1",[resourceId,tenantId]);
  if(!rows.length)return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});
- const data=typeof rows[0].data==="string"?JSON.parse(rows[0].data):rows[0].data,userId=String(data?.userId??"");
+ const data=typeof rows[0].data==="string"?JSON.parse(rows[0].data):rows[0].data,userId=await resolveEmployeeUser(database(),tenantId,data);
  if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND branch_id <=> ? AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
  return NextResponse.json({ok:true,linked:true,permissions:grants.map(row=>String(row.permission_key)).filter(key=>validPermissions.has(key))});
