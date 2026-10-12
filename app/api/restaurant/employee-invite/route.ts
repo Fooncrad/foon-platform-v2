@@ -5,7 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
-import {createMailProvider} from "@/scripts/mail-provider.mjs";
+import {createTenantMailProvider} from "@/lib/restaurant/mail-settings";
 
 export const runtime="nodejs";
 export async function POST(request:Request){
@@ -27,10 +27,10 @@ export async function POST(request:Request){
  await db.execute("INSERT INTO employee_invites(id,tenant_id,resource_id,email,token_hash,expires_at) VALUES (?,?,?,?,?,DATE_ADD(NOW(),INTERVAL 48 HOUR))",[id,tenant,resource,email,hash]);
  const url="https://nfoodz.com/employee-invite?token="+encodeURIComponent(token);
  let mail;
- try{mail=await createMailProvider();await mail.send({id,to:email,subject:"FOON | دعوة الانضمام لفريق المطعم",text:"تمت دعوتك للانضمام إلى فريق "+String(rows[0].name)+".\nالرابط صالح لمدة 48 ساعة:\n"+url+"\nإذا لم تطلب الانضمام فتجاهل الرسالة.",html:"<p>لديك دعوة للانضمام إلى فريق FOON.</p><p>الرابط صالح لمدة 48 ساعة.</p><p><a href=\""+url+"\">فتح الدعوة</a></p>"});}
+ try{mail=await createTenantMailProvider(tenant);await mail.send({id,to:email,subject:"FOON | دعوة الانضمام لفريق المطعم",text:"تمت دعوتك للانضمام إلى فريق "+String(rows[0].name)+".\nالرابط صالح لمدة 48 ساعة:\n"+url+"\nإذا لم تطلب الانضمام فتجاهل الرسالة.",html:"<p>لديك دعوة للانضمام إلى فريق FOON.</p><p>الرابط صالح لمدة 48 ساعة.</p><p><a href=\""+url+"\">فتح الدعوة</a></p>"});}
  catch(error){await db.execute("DELETE FROM employee_invites WHERE id=?",[id]).catch(()=>{});
   const raw=error as {code?:string;responseCode?:number;message?:string};
-  const code=raw?.message==="MAIL_PROVIDER_NOT_CONFIGURED"?"MAIL_PROVIDER_NOT_CONFIGURED":raw?.message==="MAIL_IDENTITY_INVALID"?"MAIL_IDENTITY_INVALID":raw?.code==="EAUTH"||raw?.responseCode===535?"SMTP_AUTH_FAILED":raw?.code==="ETIMEDOUT"||raw?.code==="ESOCKET"||raw?.code==="ECONNECTION"?"SMTP_CONNECTION_FAILED":raw?.message==="MAIL_RECIPIENT_NOT_ACCEPTED"?"MAIL_RECIPIENT_NOT_ACCEPTED":"MAIL_SEND_FAILED";
+  const code=raw?.message==="MAIL_PROVIDER_NOT_CONFIGURED"?"MAIL_PROVIDER_NOT_CONFIGURED":raw?.message==="MAIL_IDENTITY_INVALID"?"MAIL_IDENTITY_INVALID":raw?.message==="TENANT_SMTP_PASSWORD_REQUIRED"?"TENANT_SMTP_PASSWORD_REQUIRED":raw?.code==="EAUTH"||raw?.responseCode===535?"SMTP_AUTH_FAILED":raw?.code==="ETIMEDOUT"||raw?.code==="ESOCKET"||raw?.code==="ECONNECTION"?"SMTP_CONNECTION_FAILED":raw?.message==="MAIL_RECIPIENT_NOT_ACCEPTED"?"MAIL_RECIPIENT_NOT_ACCEPTED":"MAIL_SEND_FAILED";
   console.error("[FOON employee invite mail]",{code,providerCode:raw?.code??null,responseCode:raw?.responseCode??null});
   return NextResponse.json({ok:false,code},{status:503});
  }
