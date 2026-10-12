@@ -77,3 +77,5 @@
 .restaurantEmployeeGrantGroup h5{font-size:.95rem;margin:0 0 10px;color:#0f172a}
 .restaurantEmployeeGrantGroup .restaurantEmployeeGrants{margin:0;gap:6px}
 .restaurantEmployeeGrantGroup .restaurantEmployeeGrants span{display:inline-flex;align-items:center;white-space:nowrap;font-weight:600}
+
+.restaurantCallNote{display:block;margin-top:6px;font-size:.85rem;line-height:1.65;color:#475569;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
