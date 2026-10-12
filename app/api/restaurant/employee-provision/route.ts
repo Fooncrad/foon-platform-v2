@@ -1,13 +1,13 @@
 import {NextResponse} from "next/server";
 import {randomUUID} from "node:crypto";
-import type {RowDataPacket} from "mysql2/promise";
+import type {RowDataPacket, Pool, PoolConnection} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
 export const runtime="nodejs";
-async function resolveEmployeeUser(db:Awaited<ReturnType<typeof database>>,tenantId:string,data:Record<string,unknown>):Promise<string>{
+async function resolveEmployeeUser(db:Pool | PoolConnection,tenantId:string,data:Record<string,unknown>):Promise<string>{
  const explicit=String(data?.userId??"");
  if(/^[a-f0-9-]{36}$/i.test(explicit)){
   const [members]=await db.execute<RowDataPacket[]>("SELECT 1 FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,explicit]);
