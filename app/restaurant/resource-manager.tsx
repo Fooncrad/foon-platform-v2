@@ -57,7 +57,7 @@ function formatOperationError(code:unknown,module:string,status:number){
 }
 export async function operationApi(tenantId:string,module:string,method="GET",body?:unknown,branch?:string,extra?:Record<string,string>){
  const query=new URLSearchParams({...extra,...(branch?{branch}:{})}).toString();
- const response=await fetch("/api/restaurant/operations/"+module+(query?"?"+query:""),{method,headers:{"content-type":"application/json","x-foon-tenant":tenantId},...(body===undefined?{}:{body:JSON.stringify(body)})});
+ const response=await fetch("/api/restaurant/operations/"+module+(query?"?"+query:""),{method,headers:{"content-type":"application/json","x-foon-tenant":tenantId,...((branch||(body&&typeof body==="object"&&"branchId" in body&&typeof body.branchId==="string"?body.branchId:""))?{"x-foon-branch":String(branch||(body as {branchId?:string}).branchId)}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
  const result=await response.json().catch(()=>({}));
  if(!response.ok)throw Error(formatOperationError(result.code,module,response.status));
  return result;
