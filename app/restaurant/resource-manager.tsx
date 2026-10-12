@@ -67,7 +67,7 @@ const localizedFieldLabels:Record<string,Record<string,string>>={ar:{indoor:"د�
 function fieldLabel(value:string){const language=typeof document==="undefined"?"ar":document.documentElement.lang.toLowerCase();const locale=document.documentElement.dir==="rtl"?"ar":language.startsWith("fr")?"fr":language.startsWith("en")?"en":"ar";return localizedFieldLabels[locale][value]??fieldLabels[value]??value;}
 function displayValue(value:unknown){if(value===null||value===undefined||value==="")return "—";return fieldLabel(String(value));}
 export default function ResourceManager({tenantId,module,branch,branches,onChanged,initialResource,initialDate,onlyForm=false,createOnly=false,grants,fullAccess=true}:{grants?:string[];fullAccess?:boolean;tenantId:string;module:string;branch:string;branches:{id:string;name:string}[];onChanged?:()=>void;initialResource?:StoredResource;initialDate?:string;onlyForm?:boolean;createOnly?:boolean}){
- const can=(action:string)=>fullAccess||Boolean(grants?.includes(module+"."+action)||grants?.includes(module+".manage"));
+ const can=(action:string)=>fullAccess||Boolean(grants?.includes(module+"."+action));
  const config=resourceModules[module];
  const action=resourceActions[module]??{add:"إضافة "+config.label,name:"الاسم",help:"أدخل البيانات المطلوبة ثم احفظ التغييرات."};
  const [rows,setRows]=useState<StoredResource[]>([]),[refs,setRefs]=useState<Record<string,StoredResource[]>>({}),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[editing,setEditing]=useState<StoredResource|null>(null),[showForm,setShowForm]=useState(false),[filter,setFilter]=useState("");
