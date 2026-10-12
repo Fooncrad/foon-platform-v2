@@ -32,7 +32,10 @@ async function authorize(request:Request,module:string,write:boolean){
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
-  const activeBranch=request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch");
+  const headerBranch=request.headers.get("x-foon-branch");
+  const queryBranch=new URL(request.url).searchParams.get("branch");
+  if(headerBranch&&queryBranch&&headerBranch!==queryBranch)throw new ResourceError("FORBIDDEN");
+  const activeBranch=headerBranch??queryBranch;
   // Tenant-wide reads must not be exposed through an omitted branch selector.
   if(!activeBranch&&request.method==="GET"&&!["security"].includes(module))throw new ResourceError("FORBIDDEN");
   let verifiedBranch:string|null=null;
@@ -99,7 +102,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
  let db:PoolConnection|undefined;
  try{
   const {module}=await params,ctx=await authorize(request,module,false);db=await connection();
-  const branch=new URL(request.url).searchParams.get("branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
+  const branch=new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
   if(Object.hasOwn(resourceModules,module)){
    const refs:Record<string,unknown[]>={};
    for(const field of resourceModules[module].fields.filter(f=>f.ref)){
