@@ -135,6 +135,13 @@ async function mutate(request:Request,module:string,method:string){
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   
   db=await connection();await db.beginTransaction();
+  // Never trust a branch supplied in a mutation body without verifying employee assignment.
+  if(!["owner","manager"].includes(ctx.role)&&typeof body.branchId==="string"&&body.branchId){
+   const [assigned]=await db.execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[ctx.tenantId,ctx.user,body.branchId]);
+   if(!assigned.length)throw new ResourceError("FORBIDDEN");
+   const headerBranch=request.headers.get("x-foon-branch");
+   if(headerBranch&&headerBranch!==body.branchId)throw new ResourceError("FORBIDDEN");
+  }
   if(["tables","sections"].includes(module))await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[ctx.tenantId]);
   let result;
   if(module==="sections"&&method==="POST"&&body.sections){result=await createDiningBatch(db,ctx.tenantId,ctx.user,ctx.role,body);}else if(Object.hasOwn(resourceModules,module)){
@@ -170,7 +177,7 @@ async function mutate(request:Request,module:string,method:string){
     }
    }
   }else if(["orders","pos","kds"].includes(module)){
-   if(method==="POST"){if(!["owner","manager","cashier","waiter"].includes(ctx.role)||module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
+   if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
    else if(method==="PATCH"){
     const [before]=await db.execute<RowDataPacket[]>("SELECT status,payment_status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
     result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
