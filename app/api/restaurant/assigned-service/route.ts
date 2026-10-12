@@ -19,8 +19,9 @@ export async function GET(request:Request){
   const mySections=new Set(sections.filter(section=>employeeIds.includes(String(parse(section.data).waiterId??""))).map(section=>String(section.id)));
   const [assignments]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE",[tenantId,user]);
   const myBranches=new Set(assignments.map(row=>String(row.branch_id)));
+  const hasExplicitAssignments=assignments.length>0;
   // Legacy employee profiles may predate the branch-assignment migration.
-  if(!myBranches.size)for(const employee of employees)if(employee.branch_id)myBranches.add(String(employee.branch_id));
+  if(!hasExplicitAssignments)for(const employee of employees)if(employee.branch_id)myBranches.add(String(employee.branch_id));
   const [tables]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE",[tenantId]);
   const mine=tables.filter(t=>{
    const details=parse(t.data);
