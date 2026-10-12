@@ -11,7 +11,7 @@ async function resolveEmployeeUser(db:Awaited<ReturnType<typeof database>>,tenan
  const explicit=String(data?.userId??"");
  if(/^[a-f0-9-]{36}$/i.test(explicit))return explicit;
  const email=String(data?.email??"").trim().toLowerCase();
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return "";
+ if(!email.includes("@")||!email.includes("."))return "";
  const [users]=await db.execute<RowDataPacket[]>("SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE LOWER(u.email)=? AND m.tenant_id=? AND m.status='active' LIMIT 2",[email,tenantId]);
  return users.length===1?String(users[0].id):"";
 }
