@@ -32,7 +32,7 @@ const modules:{key:Section;label:string;icon:string;feature?:string;roles:string
  {key:"reservations",label:"الحجوزات والانتظار",icon:"clock",feature:"reservations",roles:["owner","manager","waiter"]},
  {key:"reports",label:"التقارير",icon:"trend",feature:"analytics",roles:["owner","manager","accountant"]},
  {key:"customers",label:"العملاء",icon:"users",feature:"customers",roles:["owner","manager"]},
- {key:"storefront",label:"هوية واجهة المطعم",icon:"store",feature:"branding.colors",roles:["owner","manager"]},
+ {key:"storefront",label:"هوية واجهة النشاط",icon:"store",feature:"branding.colors",roles:["owner","manager"]},
  {key:"remote",label:"التوظيف عن بُعد",icon:"users",feature:"employees",roles:["owner","manager"]},
  {key:"payments",label:"إعدادات الدفع",icon:"wallet",roles:["owner","manager","accountant"]},
  {key:"security",label:"أمان الحساب والجلسات",icon:"shield",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
@@ -89,7 +89,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  };
  const restaurantOnly=new Set<Section>(["assigned","kds","tables","reservations"]);
  const isRestaurantActivity=["restaurant","cafe","sweets"].includes(data.activityCode);
- const visible=modules.filter(m=>allowedSection(m.key)&&(!restaurantOnly.has(m.key)||isRestaurantActivity));
+ const visible=modules.filter(m=>allowedSection(m.key)&&(!restaurantOnly.has(m.key)||isRestaurantActivity)&&!(m.key==="menu"&&!data.activityModules.includes("catalog")));
 
  const granted=(key?:string)=>!key||data.features.some(f=>f.key===key&&f.enabled);
  const selected=visible.find(m=>m.key===active)??visible[0];
