@@ -64,3 +64,21 @@
 .restaurantMain:has(.restaurantPosTopbarSlot) .restaurantPosWorkspace{margin-top:0;padding-top:12px;border-top-left-radius:0;border-top-right-radius:0}
 .restaurantMain:has(.restaurantPosTopbarSlot) .restaurantPosWorkspace>.restaurantPosToolsWrap[hidden]{display:none!important}
 @media(max-width:680px){.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantContent{padding-top:0!important}.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantPosWorkspace{padding-top:8px}}
+
+/* POS focus mode: the top bar contains only an exit control. */
+.restaurantPosFocus{height:100dvh;overflow:hidden}
+.restaurantPosFocus .restaurantSidebar,.restaurantPosFocus .restaurantDrawer{display:none!important}
+.restaurantPosFocus .restaurantMain{height:100dvh;margin-inline-start:0!important;display:flex;flex-direction:column;overflow:hidden}
+.restaurantPosFocus .restaurantTopbar{flex:0 0 auto;min-height:54px;padding:7px 18px;justify-content:flex-start}
+.restaurantPosFocus .restaurantTopbar>.restaurantMobileTrigger,.restaurantPosFocus .restaurantBreadcrumb,.restaurantPosFocus .restaurantTopActions>*:not(.restaurantPosExitFocus){display:none!important}
+.restaurantPosFocus .restaurantTopActions{width:100%;justify-content:flex-start}
+.restaurantPosExitFocus{display:none;min-height:40px;padding:7px 16px;border:1px solid #c84f20;border-radius:10px;background:#fff4ed;color:#9a3412!important;font-size:13px!important;font-weight:800!important;cursor:pointer}
+.restaurantPosFocus .restaurantPosExitFocus{display:inline-flex;align-items:center;gap:8px}
+.restaurantPosFocus .restaurantContent{flex:1;min-height:0;overflow:hidden;max-width:none;width:100%;padding:8px!important}
+.restaurantPosFocus .restaurantPosWorkspace{height:100%;min-height:0;overflow:hidden;padding:8px!important;border-radius:12px}
+.restaurantPosFocus .restaurantPosModern{height:100%;min-height:0;overflow:hidden;grid-template-columns:minmax(0,1.7fr) minmax(310px,.85fr)}
+.restaurantPosFocus .restaurantPosCatalog{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.restaurantPosFocus .restaurantPosCheckout{height:100%;max-height:none;min-height:0;overflow-y:auto;overscroll-behavior:contain;position:static;scrollbar-gutter:stable}
+.restaurantPosFocus .restaurantPosToolsWrap{display:none!important}
+@media(max-width:900px){.restaurantPosFocus .restaurantPosModern{grid-template-columns:minmax(0,1fr);overflow-y:auto;align-content:start}.restaurantPosFocus .restaurantPosCatalog{height:auto;max-height:55dvh}.restaurantPosFocus .restaurantPosCheckout{height:auto;max-height:none}}
+@media(max-width:540px){.restaurantPosFocus .restaurantTopbar{padding:6px 10px}.restaurantPosFocus .restaurantContent{padding:4px!important}.restaurantPosFocus .restaurantPosWorkspace{padding:4px!important}}
