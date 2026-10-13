@@ -127,3 +127,17 @@
 .restaurantPosCheckout>.restaurantPrimary{min-height:50px;font-weight:800}
 @media(max-width:1080px){.restaurantPosModern{grid-template-columns:minmax(0,1fr)}.restaurantPosModern>.restaurantPosCheckout{position:static;max-height:none;overflow:visible}}
 @media(max-width:540px){.restaurantPosCatalog,.restaurantPosCheckout{padding:12px;border-radius:14px}.restaurantPosModern .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.restaurantPosModern .restaurantPosProduct{padding:10px;min-height:145px}.restaurantPosModern>.restaurantPosCheckout{grid-template-columns:minmax(0,1fr)}}
+
+
+/* POS-first visual hierarchy: operational tools are available but do not displace selling. */
+.restaurantPosQuickBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin:0 0 12px;border:1px solid var(--rc-border,#e2e8f0);border-radius:12px;background:#fff;font-size:12px;color:#475569}
+.restaurantPosQuickBar>span,.restaurantPosQuickBar>strong{padding:6px 10px;border-radius:8px;background:#f8fafc;font-size:12px}
+.restaurantPosQuickBar .restaurantPosConnection[data-online="true"]{color:#047857;background:#ecfdf5}
+.restaurantPosQuickBar .restaurantPosConnection[data-online="false"]{color:#b45309;background:#fffbeb}
+.restaurantPosQuickBar button{min-height:36px;padding:7px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#334155;font-size:12px;font-weight:700;cursor:pointer}
+.restaurantPosQuickBar button:last-child{margin-inline-start:auto}
+.restaurantPosToolsWrap[hidden]{display:none!important}
+.restaurantPosToolsWrap{display:grid;gap:10px;margin-bottom:12px}
+.restaurantPosToolsWrap .restaurantPosSyncBar,.restaurantPosToolsWrap .restaurantOfflineBackup{margin:0}
+.restaurantPosModern{margin-top:0}
+@media(max-width:640px){.restaurantPosQuickBar button:last-child{margin-inline-start:0}.restaurantPosQuickBar{gap:6px;padding:8px}}
