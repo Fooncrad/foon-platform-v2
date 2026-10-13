@@ -47,7 +47,7 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  const filters=["p.tenant_id=?","p.enabled=TRUE","c.enabled=TRUE"];
  const filterValues:(string|number)[]=[String(tenant.id)];
  if(category){filters.push("c.id=?");filterValues.push(category)}
- if(search){filters.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");filterValues.push(...Array(3).fill("%"+search.replace(/[\\%_]/g,"\\ const [[themes],[products]]=await Promise.all(")+"%"))}
+ if(search){filters.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");filterValues.push(...Array(3).fill("%"+search+"%"))}
  const where=filters.join(" AND ");
  const [[categories],[counts]]=await Promise.all([
   database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE ORDER BY sort_order,created_at",[String(tenant.id)]),
