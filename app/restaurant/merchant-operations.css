@@ -79,3 +79,8 @@
  .restaurantResourceList dl{grid-template-columns:repeat(2,minmax(0,1fr))}
  .restaurantResourceList article>header{align-items:flex-start}
 }
+
+/* Expand order contents on demand without enlarging every card. */
+.restaurantOrderDetailsToggle{display:block;width:100%;min-height:36px;text-align:start;margin-top:8px;padding:7px 10px;border:1px solid var(--rc-border);border-radius:8px;background:#f8fafc;color:#334155;font-size:12px;font-weight:700;cursor:pointer}
+.restaurantOrderDetailsToggle:focus-visible{outline:3px solid #d97706;outline-offset:2px}
+.restaurantOrderCards [hidden]{display:none!important}
