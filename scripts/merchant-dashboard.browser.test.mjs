@@ -60,7 +60,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
- await expect(page.locator(".restaurantOrderCards").getByText("مدفوع",{exact:true})).toBeVisible();
+ await expect(page.locator(".restaurantOrderCards .restaurantPaymentBadge").getByText("مدفوع",{exact:true})).toBeVisible();
  // Exercise the real browser queue, reconnect, and replay the same request key.
  const queuedOrders=()=>page.evaluate(()=>new Promise((resolve,reject)=>{
   const open=indexedDB.open('foon-pos-offline-v1',2);
