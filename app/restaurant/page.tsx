@@ -16,7 +16,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const tenantId=workspace.tenant_id,canManage=["owner","manager"].includes(workspace.role);
  const db=database();
  const [activityRows]=await db.execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
- const activityCode=String(activityRows[0]?.activity_code??"restaurant");
+ const activityCode=String(activityRows[0]?.activity_code??"");
  const activityModules=isActivityType(activityCode)?[...defaultActivityModules(activityCode)]:[];
  const [[branches],[subscriptions],[features],[tenants],[choices]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
