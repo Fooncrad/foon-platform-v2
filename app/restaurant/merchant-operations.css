@@ -157,3 +157,11 @@
 .restaurantPosPaymentFields label{min-width:0}.restaurantPosFullField{grid-column:1/-1;min-width:0}
 .restaurantPosFullField textarea{width:100%;min-height:72px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e293b;resize:vertical;font:inherit}
 @media(max-width:540px){.restaurantPosPaymentFields{grid-template-columns:minmax(0,1fr)}}
+
+/* POS invoice breakdown: server-validated totals only. */
+.restaurantPosInvoiceBreakdown{display:grid;gap:9px;margin-top:12px;padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;min-width:0}
+.restaurantPosInvoiceBreakdown h4{margin:0 0 3px;font-size:14px;color:#17243b}
+.restaurantPosInvoiceBreakdown>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12px;line-height:1.5}
+.restaurantPosInvoiceBreakdown>div>span:last-child{color:#64748b;text-align:end;overflow-wrap:anywhere}
+.restaurantPosInvoiceBreakdown strong{white-space:nowrap;font-variant-numeric:tabular-nums;color:#9a3412}
+.restaurantPosInvoiceBreakdown>p{margin:5px 0 0;padding-top:9px;border-top:1px solid #dbe3ee;color:#64748b;font-size:11px;line-height:1.7}
