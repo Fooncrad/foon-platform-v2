@@ -42,3 +42,10 @@
 .restaurantApp .restaurantHeroTop p{margin-top:2px}
 .restaurantApp .restaurantHeroStats{margin-top:12px}
 @media(max-width:767px){.restaurantApp .restaurantContent{padding-top:6px}.restaurantApp .restaurantPageHeading{margin-bottom:6px}.restaurantApp .restaurantHero{padding-block:12px}.restaurantApp .restaurantHeroStats{margin-top:10px}}
+
+/* Global expanded workspace: applies to every restaurant section. */
+@media(min-width:1024px){.restaurantAppWide .restaurantSidebar{transform:translateX(110%);visibility:hidden;pointer-events:none}.restaurantAppWide .restaurantMain{margin-inline-start:0}.restaurantSidebar,.restaurantMain{transition:margin-inline-start .2s ease,transform .2s ease}}
+.restaurantExpandWorkspace{flex-shrink:0;min-width:44px;min-height:44px;font-size:22px!important;font-weight:700}
+.restaurantExpandWorkspace[aria-pressed="true"]{background:#fff1e6;color:#9a3412;border-color:#f4b183}
+@media(max-width:1023px){.restaurantExpandWorkspace{display:none!important}}
+@media(prefers-reduced-motion:reduce){.restaurantSidebar,.restaurantMain{transition:none!important}}
