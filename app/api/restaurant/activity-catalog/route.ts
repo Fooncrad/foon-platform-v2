@@ -21,12 +21,21 @@ async function scope(request:Request){
 function validName(v:unknown){return typeof v==="string"&&v.trim().length>=2&&v.trim().length<=180}
 export async function GET(request:Request){
  const ctx=await scope(request);if(ctx.error)return ctx.error;
+ const params=new URL(request.url).searchParams;
+ const page=Math.max(1,Math.min(100000,Number.parseInt(params.get("page")??"1",10)||1));
+ const pageSize=50,offset=(page-1)*pageSize;
+ const categoryId=params.get("category")?.slice(0,36)??"";
+ const q=params.get("q")?.trim().slice(0,100)??"";
+ const where=["p.tenant_id=?"],values:(string|number)[]=[ctx.tenantId!];
+ if(categoryId){where.push("p.category_id=?");values.push(categoryId)}
+ if(q){where.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");values.push("%"+q+"%","%"+q+"%","%"+q+"%")}
  try{
-  const [[categories],[products]]=await Promise.all([
+  const [[categories],[counts],[products]]=await Promise.all([
    database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
-   database().execute<RowDataPacket[]>("SELECT id,category_id,name_ar,name_en,name_fr,price,currency,enabled,product_type,stock_quantity FROM catalog_products WHERE tenant_id=? ORDER BY sort_order,created_at LIMIT 500",[ctx.tenantId])
+   database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p WHERE "+where.join(" AND "),values),
+   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
   ]);
-  return NextResponse.json({ok:true,activity:ctx.activity,categories,products});
+  return NextResponse.json({ok:true,activity:ctx.activity,categories,products,page,pageSize,total:Number(counts[0]?.total??0)});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UNAVAILABLE"},{status:503})}
 }
 export async function POST(request:Request){
