@@ -33,6 +33,7 @@ export default async function PublicTenantPage({params}:{params:Promise<{slug:st
  if(isRestaurant)return <PublicMenu {...await publicMenuData({id:String(tenant.id),name:String(tenant.name)},slug)}/>;
  const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
  const activity=String(profiles[0]?.activity_code??"");
- return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity}/>;
+ const [themes]=await database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
+ return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={themes[0]?.template_key?String(themes[0].template_key):null}/>;
 
 }
