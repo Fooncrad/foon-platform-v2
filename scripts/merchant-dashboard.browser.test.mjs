@@ -148,7 +148,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();
  await publicPage.getByRole('dialog').getByRole('button',{name:'مشروبات المعاينة',exact:false}).click();
  await expect(publicPage.getByRole('dialog')).toHaveCount(0);
- await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطاولات',exact:true}).click();
+ await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطاولات',exact:true}).click();
  await page.getByRole('button',{name:'الإضافة الجماعية',exact:true}).click();
  await page.getByLabel('اسم القسم',{exact:true}).fill('صالة العائلات');
  await page.getByLabel('عدد الطاولات',{exact:true}).fill('3');
@@ -191,7 +191,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').screenshot({path:'work/menu-booking-mobile.png'});
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
  const calls=await page.request.get(origin+'/api/restaurant/operations/waiterCalls',{headers:{'x-foon-tenant':visualTenant.tenant}});expect((await calls.json()).resources.some(row=>row.data.tableId===occupiedTableId&&row.status==='pending')).toBeTruthy();
- await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطاولات',exact:true}).click();
+ await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطاولات',exact:true}).click();
  await page.getByRole('button',{name:'نداءات النادل',exact:true}).click();
  await expect(page.getByText('ضيف المعاينة',{exact:true})).toBeVisible();
  await publicPage.getByRole('button',{name:'إضافة قهوة المعاينة إلى السلة',exact:true}).click();
@@ -202,7 +202,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
  await expect(publicPage.getByRole('status')).toContainText('تم تسجيل طلبك');
  await page.setViewportSize({width:1440,height:1000});
- await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
+ await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
  await expect(page.getByRole('heading',{name:'تقويم الحجوزات',exact:true})).toBeVisible();
  await expect(page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'})).toBeVisible();
  await page.screenshot({path:'work/merchant-reservations-calendar-desktop.png',fullPage:true});
@@ -223,7 +223,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.screenshot({path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
  await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
- await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
+ await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().height>=44))).toBeTruthy();await page.screenshot({path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
  await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await publicPage.screenshot({path:'work/menu-customer-orders-mobile.png',fullPage:true});
  await publicPage.goto(origin+'/visual-dashboard');
@@ -263,7 +263,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await customerPage.locator('.publicMenuInfoBar').getByRole('button',{name:'حجز طاولة',exact:true}).click();
   await expect(customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
  }finally{await unlinkedContext.close();}
- await page.getByRole('navigation',{name:'أقسام المطعم'}).getByRole('button',{name:'المنيو والأصناف',exact:true}).click();
+ await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'المنيو والأصناف',exact:true}).click();
  await page.getByRole('button',{name:'القوالب والمظهر',exact:true}).click();
  await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();
  await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-template","sufra");
