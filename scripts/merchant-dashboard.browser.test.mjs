@@ -25,7 +25,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByRole("heading",{name:"نظرة عامة",exact:true})).toBeVisible();
  await expect(page.getByRole("heading",{name:"لوحة التشغيل المباشر",exact:true})).toBeVisible();
  await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
- await expect(page.getByText("لا توجد طلبات محفوظة بعد",{exact:true})).toBeVisible();
+ await expect(page.getByText("لا توجد طلبات نشطة الآن",{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
