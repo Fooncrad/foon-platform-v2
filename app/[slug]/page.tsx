@@ -1,7 +1,6 @@
 import {notFound} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
-import Link from "next/link";
 import PublicMenu from "./public-menu";
 import ActivityStorefront from "./activity-storefront";
 import {publicMenuData} from "@/lib/restaurant/public-menu";
