@@ -121,7 +121,10 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
     // Orders are stored in restaurant_orders, not in the generic resource catalog.
     if(field.ref==="orders"){
      if(["owner","manager","accountant","cashier"].includes(ctx.role)){
-      const orders=await ordersRows(db,ctx.tenantId,ctx.role,branch);
+      const [orders]=await db.execute<RowDataPacket[]>(
+       "SELECT id,order_number,status,branch_id FROM restaurant_orders WHERE tenant_id=?"+(branch?" AND branch_id=?":"")+" ORDER BY created_at DESC LIMIT 200",
+       branch?[ctx.tenantId,branch]:[ctx.tenantId]
+      );
       refs.orders=orders.map(order=>({id:String(order.id),name:"#"+String(order.order_number),status:String(order.status),branch_id:order.branch_id}));
      }
      continue;
