@@ -24,7 +24,7 @@ export async function GET(request:Request){
  try{
   const [[categories],[products]]=await Promise.all([
    database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
-   database().execute<RowDataPacket[]>("SELECT id,category_id,name_ar,name_en,name_fr,price,currency,enabled,product_type FROM catalog_products WHERE tenant_id=? ORDER BY sort_order,created_at LIMIT 500",[ctx.tenantId])
+   database().execute<RowDataPacket[]>("SELECT id,category_id,name_ar,name_en,name_fr,price,currency,enabled,product_type,stock_quantity FROM catalog_products WHERE tenant_id=? ORDER BY sort_order,created_at LIMIT 500",[ctx.tenantId])
   ]);
   return NextResponse.json({ok:true,activity:ctx.activity,categories,products});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UNAVAILABLE"},{status:503})}
@@ -65,6 +65,16 @@ export async function PATCH(request:Request){
   const [category]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,String(body.categoryId)]);
   if(!category.length)return NextResponse.json({ok:false,code:"INVALID_CATEGORY"},{status:400});
   columns.push("category_id=?");values.push(String(body.categoryId))
+ }
+ if(body.kind==="product"&&body.stockQuantity!==undefined){
+  const quantity=body.stockQuantity===null?null:Number(body.stockQuantity);
+  if(quantity!==null&&(!Number.isFinite(quantity)||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
+  columns.push("stock_quantity=?");values.push(quantity);
+ }
+ for(const [key,column] of [["nameEn","name_en"],["nameFr","name_fr"]] as const){
+  if(body[key]===undefined)continue;
+  if(typeof body[key]!=="string"||body[key].length>180)return NextResponse.json({ok:false,code:"INVALID_TRANSLATION"},{status:400});
+  columns.push(column+"=?");values.push(body[key].trim()||null);
  }
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{
