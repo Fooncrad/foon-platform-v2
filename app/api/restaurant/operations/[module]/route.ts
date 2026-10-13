@@ -118,7 +118,16 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
   if(Object.hasOwn(resourceModules,module)){
    const refs:Record<string,unknown[]>={};
    for(const field of resourceModules[module].fields.filter(f=>f.ref)){
+    // Orders are stored in restaurant_orders, not in the generic resource catalog.
+    if(field.ref==="orders"){
+     if(["owner","manager","accountant","cashier"].includes(ctx.role)){
+      const orders=await ordersRows(db,ctx.tenantId,ctx.role,branch);
+      refs.orders=orders.map(order=>({id:String(order.id),name:"#"+String(order.order_number),status:String(order.status),branch_id:order.branch_id}));
+     }
+     continue;
+    }
     const config=resourceModules[field.ref!];
+    if(!config)continue;
     if((["owner","manager"].includes(ctx.role)||config.roles.includes(ctx.role))&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled)&&!(field.ref==="team"&&!["owner","manager"].includes(ctx.role)))refs[field.ref!]=field.ref==="tables"&&module==="reservations"?await availableTables(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,field.ref!,field.ref==="team"?null:branch);
    }
    let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
