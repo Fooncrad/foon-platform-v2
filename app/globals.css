@@ -758,3 +758,26 @@
 .customerProfileEditor :is(input,button):focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
 .customerHeader nav{display:flex;gap:12px;flex-wrap:wrap}
 @media(max-width:650px){.customerProfileEditor{padding:15px}.customerProfileMedia,.customerProfileForm{grid-template-columns:1fr}}
+
+
+/* FOON shared UX baseline: resilient RTL/LTR, small screens, keyboard navigation. */
+html{scroll-padding-top:76px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-width:0;overflow-x:clip}
+:where(main,section,article,aside,header,footer,nav,form){min-width:0}
+:where(img,video,canvas,svg){max-width:100%}
+:where(img,video){height:auto}
+:where(input,textarea,select){max-width:100%;min-width:0}
+:where(button,input,select,textarea){font-family:inherit}
+:where(button,a,input,select,textarea,[role="button"]):focus-visible{outline:3px solid #b45309;outline-offset:3px}
+:where(button,[role="button"]):disabled{cursor:not-allowed}
+:where(p,h1,h2,h3,h4,h5,h6,li,td,th){overflow-wrap:break-word}
+:where([dir="rtl"]){text-align:start}
+:where(input[type="tel"],input[type="email"],input[type="url"],input[type="number"]){direction:ltr;text-align:start}
+@media(max-width:600px){
+ :where(input,select,textarea){font-size:16px}
+ :where(button,a,[role="button"]){touch-action:manipulation}
+}
+@media(prefers-reduced-motion:reduce){
+ html:focus-within{scroll-behavior:auto}
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
