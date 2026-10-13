@@ -39,6 +39,30 @@ const modules:{key:Section;label:string;icon:string;feature?:string;roles:string
  {key:"health",label:"صحة النظام",icon:"dashboard",roles:["owner","manager"]},
  {key:"subscription",label:"الباقة والمميزات",icon:"shield",roles:["owner","manager"]},
 ];
+type UiLanguage="ar"|"en"|"fr";
+const sectionTranslations:Partial<Record<Section,{en:string;fr:string}>>={
+ assigned:{en:"My tables and calls",fr:"Mes tables et appels"},
+ overview:{en:"Overview",fr:"Vue d’ensemble"},
+ branches:{en:"Branches and settings",fr:"Succursales et paramètres"},
+ orders:{en:"Orders",fr:"Commandes"},
+ pos:{en:"Point of sale",fr:"Point de vente"},
+ kds:{en:"Kitchen display",fr:"Écran de cuisine"},
+ menu:{en:"Products and categories",fr:"Produits et catégories"},
+ tables:{en:"Tables",fr:"Tables"},
+ inventory:{en:"Inventory and purchasing",fr:"Stocks et achats"},
+ printers:{en:"Printers and invoices",fr:"Imprimantes et factures"},
+ team:{en:"Staff and permissions",fr:"Équipe et autorisations"},
+ marketing:{en:"Marketing and campaigns",fr:"Marketing et campagnes"},
+ reservations:{en:"Reservations and waitlist",fr:"Réservations et attente"},
+ reports:{en:"Reports",fr:"Rapports"},
+ customers:{en:"Customers",fr:"Clients"},
+ storefront:{en:"Storefront appearance",fr:"Apparence de la boutique"},
+ remote:{en:"Remote hiring",fr:"Recrutement à distance"},
+ payments:{en:"Payment settings",fr:"Paramètres de paiement"},
+ security:{en:"Account security",fr:"Sécurité du compte"},
+ health:{en:"System health",fr:"État du système"},
+ subscription:{en:"Subscription and features",fr:"Abonnement et fonctionnalités"}
+};
 const roles:Record<string,string>={owner:"مالك النشاط",manager:"مدير المطعم",cashier:"الكاشير",waiter:"النادل",kitchen:"المطبخ",driver:"التوصيل",accountant:"المحاسب"};
 const statuses:Record<string,string>={active:"نشط",pending:"معلق",expired:"منتهي",cancelled:"ملغي"};
 type LiveOrder={dining_snapshot:{name:string;sectionName:string}|null;party_size:number|null;id:string;order_number:number;channel:string;status:string;payment_status:string;total:number|null;items:{name:string;quantity:number}[]};
@@ -49,6 +73,16 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const canManage=["owner","manager"].includes(data.role),canPayments=["owner","manager","accountant"].includes(data.role);
  const router=useRouter(),searchRef=useRef<HTMLInputElement>(null),drawerCloseRef=useRef<HTMLButtonElement>(null);
  const [wideWorkspace,setWideWorkspace]=useState(false);
+ const [uiLanguage,setUiLanguage]=useState<UiLanguage>("ar");
+ useEffect(()=>{
+  const update=()=>{
+   const saved=window.localStorage.getItem("foon-language");
+   setUiLanguage(saved==="en"||saved==="fr"?saved:"ar");
+  };
+  update();
+  window.addEventListener("foon:language-change",update);
+  return()=>window.removeEventListener("foon:language-change",update);
+ },[]);
  const [active,setActive]=useState<Section>("overview"),[branch,setBranch]=useState(!["owner","manager"].includes(data.role)&&data.branches.length===1?data.branches[0].id:""),[drawer,setDrawer]=useState(false),[searchOpen,setSearchOpen]=useState(false),[query,setQuery]=useState(""),[notifications,setNotifications]=useState(false),[profile,setProfile]=useState(false),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const [editingBranch,setEditingBranch]=useState<Branch|null>(null);
  const [live,setLive]=useState<LiveOverview|null>(null),[revision,setRevision]=useState(0),[liveError,setLiveError]=useState("");
@@ -108,7 +142,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  async function createBranch(event:FormEvent<HTMLFormElement>){event.preventDefault();if(busy)return;const form=event.currentTarget,f=new FormData(form);setBusy(true);setMessage("");try{const r=await fetch("/api/restaurant/branches",{method:editingBranch?"PATCH":"POST",headers:{"content-type":"application/json","x-foon-tenant":data.tenantId},body:JSON.stringify({...(editingBranch?{id:editingBranch.id,version:editingBranch.version}:{}),name:f.get("name"),slug:f.get("slug")})});const result=await r.json();if(!r.ok){setMessage(result.code==="PLAN_FEATURE_REQUIRED"?"تعدد الفروع غير متاح في الباقة الحالية.":result.code==="BRANCH_SLUG_EXISTS"?"رابط الفرع مستخدم مسبقاً.":result.code==="CONFLICT"?"تغيّرت بيانات الفرع. حدّث الصفحة وأعد المحاولة.":"تعذر حفظ الفرع. راجع البيانات وحاول مجدداً.");return;}form.reset();setMessage(editingBranch?"تم تحديث الفرع.":"تم إنشاء الفرع.");setEditingBranch(null);changed();}catch{setMessage("تعذر الاتصال بالخادم.");}finally{setBusy(false);}}
  async function toggleBranch(value:Branch){if(busy)return;setBusy(true);try{const response=await fetch("/api/restaurant/branches",{method:"PATCH",headers:{"content-type":"application/json","x-foon-tenant":data.tenantId},body:JSON.stringify({id:value.id,version:value.version,enabled:!value.enabled})});const body=await response.json();if(!response.ok){setMessage(body.code==="BRANCH_HAS_OPEN_ORDERS"?"أكمل الطلبات المفتوحة قبل إيقاف الفرع.":"تعذر تحديث الفرع. حدّث البيانات وحاول مجدداً.");return;}setMessage("تم تحديث حالة الفرع.");changed();}catch{setMessage("تعذر الاتصال بالخادم.");}finally{setBusy(false);}}
  const navCount=(key:Section)=>{if(!live)return 0;if(key==="orders")return live.summary.newOrders;if(key==="kds")return live.summary.newOrders+live.summary.preparing;if(key==="reservations")return live.attention?.reservations??live.summary.reservations;if(key==="tables")return live.attention?.tables??live.summary.waiterCalls;return live.attention?.[key]??0;};
- const navigation=<><div className="restaurantSideBrand"><span><MerchantIcon name="menu"/></span><div><b>FOON</b><small>نظام تشغيل المطاعم</small></div></div><p className="restaurantNavLabel">مساحة العمل</p><nav aria-label="أقسام المطعم">{visible.map(m=><button key={m.key} type="button" aria-current={active===m.key?"page":undefined} data-action-state={navCount(m.key)>0?"pending":undefined} onClick={()=>navigate(m.key)}><MerchantIcon name={m.icon}/><span>{m.key==="menu"&&data.activityCode==="grocery"?"المنتجات والأقسام":m.key==="storefront"&&data.activityCode==="grocery"?"هوية واجهة السوبر ماركت":m.label}</span>{navCount(m.key)>0&&<small className="restaurantNavAttentionCount" aria-label="عناصر تحتاج إجراء">{navCount(m.key)}</small>}{m.feature&&!granted(m.feature)&&<small title="غير مشمول في الباقة">مقفل</small>}</button>)}</nav><div className="restaurantSideFooter">{canManage&&<button className="restaurantPlanShortcut" type="button" onClick={()=>navigate("subscription")}><MerchantIcon name="shield"/><span><small>الاشتراك الحالي</small><b>{data.subscription?.name??"لم تعيّن باقة"}</b></span><MerchantIcon name="arrow"/></button>}<Link href={data.adminAccess?"/admin/tenants":"/account"}>{data.adminAccess?"العودة إلى إدارة المنصة":"حسابي"}<MerchantIcon name="arrow"/></Link></div></>;
+ const navigation=<><div className="restaurantSideBrand"><span><MerchantIcon name="menu"/></span><div><b>FOON</b><small>نظام تشغيل المطاعم</small></div></div><p className="restaurantNavLabel">مساحة العمل</p><nav aria-label="أقسام المطعم">{visible.map(m=><button key={m.key} type="button" aria-current={active===m.key?"page":undefined} data-action-state={navCount(m.key)>0?"pending":undefined} onClick={()=>navigate(m.key)}><MerchantIcon name={m.icon}/><span>{uiLanguage!=="ar"?(sectionTranslations[m.key]?.[uiLanguage]??m.label):m.key==="menu"&&data.activityCode==="grocery"?"المنتجات والأقسام":m.key==="storefront"&&data.activityCode==="grocery"?"هوية واجهة السوبر ماركت":m.label}</span>{navCount(m.key)>0&&<small className="restaurantNavAttentionCount" aria-label="عناصر تحتاج إجراء">{navCount(m.key)}</small>}{m.feature&&!granted(m.feature)&&<small title="غير مشمول في الباقة">مقفل</small>}</button>)}</nav><div className="restaurantSideFooter">{canManage&&<button className="restaurantPlanShortcut" type="button" onClick={()=>navigate("subscription")}><MerchantIcon name="shield"/><span><small>الاشتراك الحالي</small><b>{data.subscription?.name??"لم تعيّن باقة"}</b></span><MerchantIcon name="arrow"/></button>}<Link href={data.adminAccess?"/admin/tenants":"/account"}>{data.adminAccess?"العودة إلى إدارة المنصة":"حسابي"}<MerchantIcon name="arrow"/></Link></div></>;
  const branchList=<div className="restaurantBranchList">{shownBranches.length?shownBranches.map(b=><div key={b.id}><i data-enabled={b.enabled}/><span><b>{b.name}</b><small>{b.slug==="main"?"الفرع الرئيسي":b.slug}</small></span><em>{b.enabled?"مفعّل":"معطّل"}</em>{active==="branches"&&canManage&&<div className="restaurantBranchActions"><button disabled={busy} onClick={()=>setEditingBranch(b)}>تعديل</button><button disabled={busy} onClick={()=>void toggleBranch(b)}>{b.enabled?"إيقاف":"تفعيل"}</button></div>}</div>):<p>لا توجد فروع ضمن الاختيار الحالي.</p>}</div>;
  return <div className={`restaurantApp${wideWorkspace?" restaurantAppWide":""}${wideWorkspace&&active==="pos"?" restaurantPosFocus":""}`} dir="rtl">
   <aside className="restaurantSidebar">{navigation}</aside>
