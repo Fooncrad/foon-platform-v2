@@ -9,6 +9,8 @@ const headings:Record<ActivityLanguage,{account:string;register:string;browse:st
  fr:{account:"Mon compte",register:"Créer un compte",browse:"Voir les produits",services:"Voir les services",coming:"Les produits et services publiés apparaîtront ici",shop:"Vitrine de l’activité"}
 };
 const activityNames:Record<string,Record<ActivityLanguage,string>>={
+ cafe:{ar:"المقهى",en:"Café",fr:"Café"},
+ sweets:{ar:"الحلويات والمخبوزات",en:"Sweets & bakery",fr:"Pâtisserie et boulangerie"},
  grocery:{ar:"سوبر ماركت",en:"Supermarket",fr:"Supermarché"},
  clothing:{ar:"أزياء وملابس",en:"Clothing & fashion",fr:"Mode et vêtements"},
  perfume:{ar:"العطور",en:"Perfumes",fr:"Parfums"},
@@ -30,6 +32,7 @@ export default function ActivityStorefront({name,slug,activity,template,language
  const url=(category:string,number:number,q=search)=>{const params=new URLSearchParams();if(category)params.set("category",category);if(q)params.set("q",q);if(number>1)params.set("page",String(number));const suffix=params.toString();return base+(suffix?"?"+suffix:"")};
  const categoryName=(c:StorefrontCategory)=>language==="en"?c.nameEn||c.name:language==="fr"?c.nameFr||c.name:c.name;
  const pages=Math.ceil(total/pageSize);
+ const visiblePage=Math.min(page,Math.max(1,pages));
  const chosen=template&&isTemplateForActivity(activity,template)?template:defaultTemplateForActivity(activity);
  const title=activityNames[activity]?.[language]??t.shop;
  const layout=chosen?.endsWith("grid")?"grid":chosen?.includes("gallery")?"gallery":service?"services":"featured";
@@ -50,7 +53,7 @@ export default function ActivityStorefront({name,slug,activity,template,language
    <nav className="foonActivityCategories" aria-label={language==="ar"?"أقسام النشاط":"Categories"}><Link aria-current={!selectedCategory?"page":undefined} href={url("",1)}>{language==="ar"?"الكل":language==="fr"?"Tout":"All"}</Link>{categories.map(c=><Link key={c.id} aria-current={selectedCategory===c.id?"page":undefined} href={url(c.id,1)}>{categoryName(c)}</Link>)}</nav>
    <p className="foonActivityCount">{language==="ar"?"عدد النتائج":language==="fr"?"Résultats":"Results"}: {total.toLocaleString("en-US")}</p>
    {products.length?<div className="foonActivityProducts">{products.map(product=><article className="foonActivityProduct" key={product.id}><div className="foonActivityProductMedia">{product.imageUrl?<img src={product.imageUrl} alt={language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name} loading="lazy"/>:<span aria-hidden="true">▦</span>}</div><div className="foonActivityProductInfo"><small>{product.category}</small><h3>{language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name}</h3><strong dir="ltr">{product.price.toFixed(2)} {product.currency}</strong></div></article>)}</div>:<div className="foonActivityEmpty"><span aria-hidden="true">{service?"◷":"▦"}</span><p>{t.coming}</p></div>}
-   {pages>1&&<nav className="foonActivityPagination" aria-label={language==="ar"?"صفحات المنتجات":"Product pages"}>{page>1&&<Link href={url(selectedCategory,page-1)}>{language==="ar"?"السابق":"Previous"}</Link>}<span>{page.toLocaleString("en-US")} / {pages.toLocaleString("en-US")}</span>{page<pages&&<Link href={url(selectedCategory,page+1)}>{language==="ar"?"التالي":"Next"}</Link>}</nav>}
+   {pages>1&&<nav className="foonActivityPagination" aria-label={language==="ar"?"صفحات المنتجات":"Product pages"}>{visiblePage>1&&<Link href={url(selectedCategory,visiblePage-1)}>{language==="ar"?"السابق":"Previous"}</Link>}<span>{visiblePage.toLocaleString("en-US")} / {pages.toLocaleString("en-US")}</span>{visiblePage<pages&&<Link href={url(selectedCategory,visiblePage+1)}>{language==="ar"?"التالي":"Next"}</Link>}</nav>}
   </section>
  </main>;
 }
