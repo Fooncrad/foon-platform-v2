@@ -219,7 +219,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole('button',{name:'يوم',exact:true}).click();await expect(page.locator('.calendarGrid-day')).toBeVisible();
  await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('button',{name:'قائمة الحجوزات',exact:true}).click();
- const reservationCard=page.locator('.restaurantResourceList article').filter({hasText:'ضيف المعاينة'});await expect(reservationCard).toHaveAttribute('data-status','confirmed');await expect(reservationCard.locator('time')).toBeVisible();await expect(reservationCard).toContainText('صالة العائلات');
+ const reservationCard=page.locator('.restaurantResourceList article').filter({hasText:'ضيف المعاينة'});await expect(reservationCard).toHaveAttribute('data-status','confirmed');await expect(reservationCard.locator('time')).toHaveAttribute('datetime',/\d{4}-\d{2}-\d{2}T/);await expect(reservationCard).toContainText('صالة العائلات');
  await page.screenshot({path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
  await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
