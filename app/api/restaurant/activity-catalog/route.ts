@@ -45,7 +45,7 @@ export async function POST(request:Request){
    const price=Number(body.price);
    if(!Number.isFinite(price)||price<0||price>9999999999)return NextResponse.json({ok:false,code:"INVALID_PRICE"},{status:400});
    const service=["carwash","laundry","automotive","salon","publicworks"].includes(ctx.activity!);
-   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,price,currency) VALUES (?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,price,"SAR"]);
+   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,typeof body.description==="string"?body.description.slice(0,5000):null,price,"SAR"]);
   }else return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
   return NextResponse.json({ok:true,id},{status:201});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_SAVE_FAILED"},{status:503})}
