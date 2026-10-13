@@ -108,3 +108,21 @@
  .restaurantApp:not(.restaurantPosFocus) .restaurantPanel{padding:10px;border-radius:11px}
  .restaurantApp:not(.restaurantPosFocus) .restaurantPageHeading h2{font-size:17px}
 }
+
+/* Activity-specific merchant workspace identity: keep one accessible navigation system. */
+.restaurantApp[data-activity="restaurant"]{--rc-accent:#d59a35;--rc-navy:#171613}
+.restaurantApp[data-activity="cafe"]{--rc-accent:#a56b3f;--rc-navy:#251b18}
+.restaurantApp[data-activity="sweets"]{--rc-accent:#b85c84;--rc-navy:#352032}
+.restaurantApp[data-activity="grocery"]{--rc-accent:#198754;--rc-navy:#123b2b}
+.restaurantApp[data-activity="clothing"]{--rc-accent:#9c5270;--rc-navy:#241c27}
+.restaurantApp[data-activity="perfume"]{--rc-accent:#a37b3c;--rc-navy:#211b2c}
+.restaurantApp[data-activity="accessories"]{--rc-accent:#5866a6;--rc-navy:#1a2136}
+.restaurantApp[data-activity="gifts"]{--rc-accent:#bf6c67;--rc-navy:#35252d}
+.restaurantApp[data-activity="ecommerce"]{--rc-accent:#365fd4;--rc-navy:#17294a}
+.restaurantApp[data-activity="carwash"]{--rc-accent:#148caa;--rc-navy:#122f41}
+.restaurantApp[data-activity="laundry"]{--rc-accent:#4382bb;--rc-navy:#19334d}
+.restaurantApp[data-activity="automotive"]{--rc-accent:#d07837;--rc-navy:#202934}
+.restaurantApp[data-activity="salon"]{--rc-accent:#ad6192;--rc-navy:#30213a}
+.restaurantApp[data-activity="publicworks"]{--rc-accent:#bd8733;--rc-navy:#26313d}
+.restaurantApp[data-activity] .restaurantHero{background:radial-gradient(ellipse at 5% 0%,color-mix(in srgb,var(--rc-accent) 30%,transparent),transparent 58%),var(--rc-navy)}
+.restaurantApp[data-activity] .restaurantHeroTop small{color:#fff0cf}
