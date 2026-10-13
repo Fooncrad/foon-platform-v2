@@ -49,3 +49,12 @@
 .restaurantExpandWorkspace[aria-pressed="true"]{background:#fff1e6;color:#9a3412;border-color:#f4b183}
 @media(max-width:1023px){.restaurantExpandWorkspace{display:none!important}}
 @media(prefers-reduced-motion:reduce){.restaurantSidebar,.restaurantMain{transition:none!important}}
+
+/* POS controls belong in the primary top bar, not a second stacked toolbar. */
+.restaurantPosTopbarSlot{display:flex;align-items:center;min-width:0;max-width:100%}
+.restaurantPosTopbarSlot .restaurantPosQuickBar{margin:0;padding:0;border:0;background:transparent;gap:6px;flex-wrap:nowrap}
+.restaurantPosTopbarSlot .restaurantPosQuickBar>span,.restaurantPosTopbarSlot .restaurantPosQuickBar>strong{white-space:nowrap;padding:6px;font-size:11px}
+.restaurantPosTopbarSlot .restaurantPosQuickBar button{white-space:nowrap;padding:6px 8px;font-size:11px}
+.restaurantPageHeadingPos{display:none!important}
+@media(max-width:1250px){.restaurantPosTopbarSlot .restaurantPosQuickBar button:last-child{max-width:110px;white-space:normal;line-height:1.2}}
+@media(max-width:1023px){.restaurantTopbar:has(.restaurantPosTopbarSlot){flex-wrap:wrap}.restaurantPosTopbarSlot{order:3;width:100%;justify-content:flex-start}.restaurantPosTopbarSlot .restaurantPosQuickBar{flex-wrap:wrap}}
