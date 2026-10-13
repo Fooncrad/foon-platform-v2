@@ -1,0 +1,27 @@
+.foonActivityStorefront{--activity-accent:#3458a4;overflow-x:clip}
+.foonActivityStorefront a{color:var(--activity-accent)}
+.foonActivityHero{padding:clamp(40px,7vw,90px) clamp(16px,5vw,72px);background:#edf2fa;border-bottom:1px solid #e2e8f0}
+.foonActivityHero h1{max-width:920px}
+.foonActivityContent{max-width:1200px;margin-inline:auto;padding:36px 20px}
+.foonActivityEmpty{min-height:230px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+.foonActivityEmpty span{font-size:42px;color:var(--activity-accent)}
+.foonActivityStorefront[data-template="market-grid"] .foonActivityHero,
+.foonActivityStorefront[data-template="commerce-grid"] .foonActivityHero{background:linear-gradient(120deg,#e1f2e7,#f6fbf7);border-bottom:5px solid var(--activity-accent)}
+.foonActivityStorefront[data-template="market-offers"] .foonActivityHero{background:linear-gradient(125deg,#145b3d,#27835c);color:#fff}
+.foonActivityStorefront[data-template="market-offers"] .foonActivityEmpty{border:2px dashed var(--activity-accent)}
+.foonActivityStorefront[data-template^="fashion-"] .foonActivityHero{background:#f7eaf0;text-align:center}
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityHero{padding-block:110px}
+.foonActivityStorefront[data-template^="fragrance-"] .foonActivityHero{background:#eee7f4;text-align:center}
+.foonActivityStorefront[data-template^="gift-"] .foonActivityHero{background:#fff0e6}
+.foonActivityStorefront[data-template^="coffee-"] .foonActivityHero{background:#f4e9dd}
+.foonActivityStorefront[data-template^="bakery-"] .foonActivityHero,
+.foonActivityStorefront[data-template="occasion-boxes"] .foonActivityHero{background:#fff0e9}
+.foonActivityStorefront[data-template^="wash-"] .foonActivityHero,
+.foonActivityStorefront[data-template^="laundry-"] .foonActivityHero,
+.foonActivityStorefront[data-template^="auto-"] .foonActivityHero{background:linear-gradient(120deg,#e1f4f3,#f5fbfc)}
+.foonActivityStorefront[data-template^="salon-"] .foonActivityHero{background:#fbeaf4}
+.foonActivityStorefront[data-template^="projects-"] .foonActivityHero,
+.foonActivityStorefront[data-template="service-quotation"] .foonActivityHero{background:#e7ecf1}
+.foonActivityStorefront[data-template$="-booking"] .foonActivityEmpty,
+.foonActivityStorefront[data-template$="-packages"] .foonActivityEmpty{border-inline-start:5px solid var(--activity-accent)}
+@media(max-width:480px){.foonActivityHero{padding:44px 18px}.foonActivityContent{padding:24px 14px}.foonActivityEmpty{min-height:180px}}
