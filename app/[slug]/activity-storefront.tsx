@@ -1,0 +1,47 @@
+import Link from "next/link";
+import "./activity-storefront.css";
+import {defaultTemplateForActivity,isTemplateForActivity} from "@/lib/platform/activity-templates";
+import {isActivityType,type ActivityLanguage} from "@/lib/platform/activity-presets";
+
+const headings:Record<ActivityLanguage,{account:string;register:string;browse:string;services:string;coming:string;shop:string}>={
+ ar:{account:"حسابي",register:"إنشاء حساب",browse:"استكشف المنتجات",services:"استكشف الخدمات",coming:"سيتم عرض المنتجات والخدمات المنشورة هنا",shop:"واجهة النشاط"},
+ en:{account:"My account",register:"Create account",browse:"Browse products",services:"Browse services",coming:"Published products and services will appear here",shop:"Business storefront"},
+ fr:{account:"Mon compte",register:"Créer un compte",browse:"Voir les produits",services:"Voir les services",coming:"Les produits et services publiés apparaîtront ici",shop:"Vitrine de l’activité"}
+};
+const activityNames:Record<string,Record<ActivityLanguage,string>>={
+ grocery:{ar:"سوبر ماركت",en:"Supermarket",fr:"Supermarché"},
+ clothing:{ar:"أزياء وملابس",en:"Clothing & fashion",fr:"Mode et vêtements"},
+ perfume:{ar:"العطور",en:"Perfumes",fr:"Parfums"},
+ accessories:{ar:"الإكسسوارات",en:"Accessories",fr:"Accessoires"},
+ gifts:{ar:"الهدايا",en:"Gifts",fr:"Cadeaux"},
+ ecommerce:{ar:"المتجر الإلكتروني",en:"Online shop",fr:"Boutique en ligne"},
+ carwash:{ar:"غسيل السيارات",en:"Car wash",fr:"Lavage auto"},
+ laundry:{ar:"المغسلة",en:"Laundry",fr:"Blanchisserie"},
+ automotive:{ar:"خدمات السيارات",en:"Automotive services",fr:"Services automobiles"},
+ salon:{ar:"الصالون",en:"Beauty salon",fr:"Salon de beauté"},
+ publicworks:{ar:"الخدمات والمشاريع",en:"Services and projects",fr:"Services et projets"}
+};
+const serviceActivities=new Set(["carwash","laundry","automotive","salon","publicworks"]);
+type StorefrontProduct={id:string;name:string;nameEn:string;nameFr:string;category:string;price:number;currency:string;imageUrl:string|null};
+export default function ActivityStorefront({name,slug,activity,template,language="ar",products=[]}:{name:string;slug:string;activity:string;template?:string|null;language?:ActivityLanguage;products?:StorefrontProduct[]}){
+ const t=headings[language],service=serviceActivities.has(activity);
+ const chosen=template&&isTemplateForActivity(activity,template)?template:defaultTemplateForActivity(activity);
+ const title=activityNames[activity]?.[language]??t.shop;
+ const layout=chosen?.endsWith("grid")?"grid":chosen?.includes("gallery")?"gallery":service?"services":"featured";
+ const accent=activity==="grocery"?"#23744b":activity==="perfume"?"#8052a2":activity==="clothing"?"#a64d62":activity==="salon"?"#ad4c83":service?"#147e80":"#3458a4";
+ return <main className={"foonActivityStorefront foonActivityStorefront-"+layout} data-activity={isActivityType(activity)?activity:"unknown"} data-template={chosen??"unassigned"} dir={language==="ar"?"rtl":"ltr"} lang={language} style={{minHeight:"100vh",background:"#f8fafc",color:"#172033",fontFamily:"inherit",["--activity-accent" as string]:accent}}>
+  <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",padding:"18px clamp(16px,4vw,64px)",background:"#fff",borderBottom:"1px solid #e2e8f0"}}>
+   <Link href={"/"+encodeURIComponent(slug)} style={{fontWeight:800,color:"inherit",textDecoration:"none"}}>{name}</Link>
+   <nav aria-label={t.shop} style={{display:"flex",gap:18}}><Link href={"/"+encodeURIComponent(slug)+"/login"}>{t.account}</Link><Link href={"/"+encodeURIComponent(slug)+"/register"}>{t.register}</Link></nav>
+  </header>
+  <section className="foonActivityHero">
+   <p style={{fontSize:14,letterSpacing:1,margin:0}}>{title}</p>
+   <h1 style={{fontSize:"clamp(30px,5vw,56px)",lineHeight:1.2,margin:"12px 0"}}>{name}</h1>
+   <p style={{fontSize:18}}>{service?t.services:t.browse}</p>
+  </section>
+  <section className="foonActivityContent" aria-label={service?t.services:t.browse}>
+   <h2 style={{fontSize:24}}>{service?t.services:t.browse}</h2>
+   {products.length?<div className="foonActivityProducts">{products.map(product=><article className="foonActivityProduct" key={product.id}><div className="foonActivityProductMedia">{product.imageUrl?<img src={product.imageUrl} alt={language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name} loading="lazy"/>:<span aria-hidden="true">▦</span>}</div><div className="foonActivityProductInfo"><small>{product.category}</small><h3>{language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name}</h3><strong dir="ltr">{product.price.toFixed(2)} {product.currency}</strong></div></article>)}</div>:<div className="foonActivityEmpty"><span aria-hidden="true">{service?"◷":"▦"}</span><p>{t.coming}</p></div>}
+  </section>
+ </main>;
+}

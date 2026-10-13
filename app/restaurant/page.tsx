@@ -1,3 +1,4 @@
+import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
@@ -14,6 +15,9 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
  const tenantId=workspace.tenant_id,canManage=["owner","manager"].includes(workspace.role);
  const db=database();
+ const [activityRows]=await db.execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
+ const activityCode=String(activityRows[0]?.activity_code??"");
+ const activityModules=isActivityType(activityCode)?[...defaultActivityModules(activityCode)]:[];
  const [[branches],[subscriptions],[features],[tenants],[choices]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
   db.execute<RowDataPacket[]>("SELECT p.name_ar AS plan_name,CASE WHEN s.status<>'active' THEN s.status WHEN s.ends_at IS NOT NULL AND s.ends_at<=NOW() THEN 'expired' WHEN p.enabled=FALSE OR (s.starts_at IS NOT NULL AND s.starts_at>NOW()) THEN 'pending' ELSE 'active' END AS status,s.starts_at,s.ends_at,p.enabled FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id WHERE s.tenant_id=? LIMIT 1",[tenantId]),
@@ -35,7 +39,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const subscription=subscriptions[0];
  const now=new Date();
  const data:MerchantData={
-  tenantId,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
+  tenantId,activityCode,activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
   staffPermissions,tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),

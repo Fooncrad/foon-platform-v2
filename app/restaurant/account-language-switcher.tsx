@@ -13,7 +13,7 @@ export default function AccountLanguageSwitcher(){
  useEffect(()=>{
   const saved=window.localStorage.getItem(storageKey);
   const next:Language=saved==="en"||saved==="fr"||saved==="ar"?saved:currentLanguage();
-  setLanguage(next);
+  queueMicrotask(()=>setLanguage(next));
   document.documentElement.lang=next;
   document.documentElement.dir=next==="ar"?"rtl":"ltr";
  },[]);
