@@ -36,7 +36,7 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
  const activity=String(profiles[0]?.activity_code??"");
  if(activity==="restaurant"||!activity&&String(tenant.kind)==="restaurant")return <PublicMenu {...await publicMenuData({id:String(tenant.id),name:String(tenant.name)},slug)}/>;
- const [[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE ORDER BY p.sort_order,p.created_at LIMIT 100",[String(tenant.id)])]);
+ const [[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE ORDER BY p.sort_order,p.created_at LIMIT 100",[String(tenant.id)])]);
  const {previewTemplate}=await searchParams;
  const locale=(await cookies()).get("foon_language")?.value;
  const language:ActivityLanguage=locale==="en"||locale==="fr"?locale:"ar";
@@ -48,6 +48,6 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
    if(membership.length)selected=previewTemplate;
   }
  }
- return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
 }
