@@ -57,3 +57,25 @@
 .restaurantPosSyncStats small{font-size:11px;color:#64748b}
 .restaurantPosSyncStats b{font-size:18px;line-height:1.3;color:#0f172a;font-variant-numeric:tabular-nums}
 @media(max-width:480px){.restaurantPosSyncStats{gap:6px}.restaurantPosSyncStats>span{padding:9px 7px}.restaurantPosSyncStats b{font-size:15px}}
+
+
+/* Compact operational cards: orders, reservations, tables and waitlist. */
+.restaurantOrderCards,.restaurantResourceList{min-width:0}
+.restaurantOrderCards{grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:10px;align-items:start}
+.restaurantOrderCards article,.restaurantResourceList article{min-width:0;overflow-wrap:anywhere;padding:12px;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.restaurantOrderCards article header,.restaurantResourceList article>header{min-width:0;flex-wrap:wrap;gap:8px}
+.restaurantOrderCards article>p{margin:7px 0}
+.restaurantOrderCards ul{min-height:0;max-height:9em;overflow-y:auto;margin:8px 0;padding-inline-start:20px}
+.restaurantOrderCards footer{gap:8px;flex-wrap:wrap;padding-top:9px}
+.restaurantOrderActions{margin-top:9px;gap:6px}
+.restaurantOrderActions button,.restaurantResourceList button{min-height:36px;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.restaurantOrderActions button:focus-visible,.restaurantResourceList button:focus-visible{outline:3px solid #d97706;outline-offset:2px}
+.restaurantResourceList dl{grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:10px}
+.restaurantResourceList dd{word-break:break-word}
+@media(max-width:640px){
+ .restaurantOrderCards{grid-template-columns:minmax(0,1fr);gap:8px}
+ .restaurantOrderCards article,.restaurantResourceList article{padding:11px}
+ .restaurantOrderActions button{flex:1 1 auto}
+ .restaurantResourceList dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .restaurantResourceList article>header{align-items:flex-start}
+}
