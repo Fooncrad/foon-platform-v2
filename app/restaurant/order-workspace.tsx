@@ -23,6 +23,8 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  const ui=orderUi[locale];
  const [orders,setOrders]=useState<Order[]>([]),[menu,setMenu]=useState<{id:string;name:string;status:string;data:{price:number;categoryName?:string;category_name?:string}}[]>([]),[tables,setTables]=useState<{id:string;name:string;status:string;data:{capacity:number;sectionId?:string}}[]>([]),[cart,setCart]=useState<Record<string,CartLine>>({}),[filter,setFilter]=useState("all"),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[orderBranch,setOrderBranch]=useState(branch||branches[0]?.id||"");
  const [options,setOptions]=useState<Record<string,MenuGroup[]>>({});
+ const [posItemSearch,setPosItemSearch]=useState("");
+ const [posCategory,setPosCategory]=useState("all");
  const branchUnavailable=module==="pos"&&(!branches.length||!orderBranch);
  const activePosItems=menu.filter(item=>item.status==="active"&&Number(item.data.price)>=0);
  const posCategories=[...new Set(activePosItems.map(item=>item.data.categoryName??item.data.category_name??"").filter(Boolean))];
@@ -118,8 +120,6 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  }
  const [posTopbarSlot,setPosTopbarSlot]=useState<HTMLElement|null>(null);
  useEffect(()=>{if(module==="pos")setPosTopbarSlot(document.getElementById("foon-pos-topbar-slot"));},[module]);
- const [posItemSearch,setPosItemSearch]=useState("");
- const [posCategory,setPosCategory]=useState("all");
  const [posToolsOpen,setPosToolsOpen]=useState(false);
  const [expandedOrders,setExpandedOrders]=useState<Set<string>>(()=>new Set());
  function toggleOrderDetails(id:string){setExpandedOrders(previous=>{const next=new Set(previous);if(next.has(id))next.delete(id);else next.add(id);return next;});}
