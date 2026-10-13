@@ -21,7 +21,7 @@ export default function ActivityTemplateEditor({tenantId,activity,slug}:{tenantI
   </div>
   <div style={{display:"flex",gap:12,alignItems:"center",marginTop:20,flexWrap:"wrap"}}>
    <button type="button" className="restaurantPrimary" onClick={()=>void save()} disabled={busy||loading||!selected||selected===saved}>{busy?"جارٍ الحفظ…":"حفظ القالب"}</button>
-   <a href={"/"+encodeURIComponent(slug)} target="_blank" rel="noopener noreferrer">معاينة واجهة المتجر الحالية</a>
+   <a href={"/"+encodeURIComponent(slug)+"?previewTemplate="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer">معاينة القالب المحدد قبل الحفظ</a>
   </div>
   {message&&<p role="status">{message}</p>}
  </section>;
