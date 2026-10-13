@@ -8,12 +8,12 @@ export const ACTIVITY_PRESETS = {
   perfume: ["catalog","orders","pos","inventory","variants","delivery"],
   accessories: ["catalog","orders","pos","inventory","variants","delivery"],
   gifts: ["catalog","orders","pos","inventory","delivery"],
-  ecommerce: ["catalog","orders","inventory","delivery","pickup"],
+  ecommerce: ["catalog","orders","pos","inventory","delivery","pickup"],
   carwash: ["services","bookings","orders","pos"],
   laundry: ["services","orders","pos","delivery","pickup"],
   automotive: ["services","bookings","orders","pos","inventory"],
-  salon: ["services","bookings","pos","staff"],
-  publicworks: ["services","quotes","bookings","invoices"]
+  salon: ["services","bookings","orders","pos","staff"],
+  publicworks: ["services","quotes","bookings","orders","pos","invoices"]
 } as const;
 export type ActivityType = keyof typeof ACTIVITY_PRESETS;
 export type ActivityModule = (typeof ACTIVITY_PRESETS)[ActivityType][number];
