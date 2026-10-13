@@ -38,3 +38,14 @@
 .foonActivityStorefront-services .foonActivityProduct{display:flex;flex-direction:row}
 .foonActivityStorefront-services .foonActivityProductMedia{width:110px;flex:none;aspect-ratio:auto}
 @media(max-width:480px){.foonActivityProducts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.foonActivityProductInfo{padding:10px}.foonActivityProductInfo h3{font-size:14px}.foonActivityStorefront-services .foonActivityProducts{grid-template-columns:1fr}}
+
+.foonActivitySearch{display:flex;gap:10px;max-width:680px;margin:0 0 20px}
+.foonActivitySearch input{flex:1;min-width:0;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;font:inherit}
+.foonActivitySearch button{background:var(--activity-accent);color:white;border:0;border-radius:12px;padding:10px 20px;cursor:pointer}
+.foonActivityCategories{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.foonActivityCategories a{display:inline-flex;padding:9px 14px;border-radius:999px;border:1px solid #d4dce6;background:white;text-decoration:none;max-width:100%;overflow-wrap:anywhere}
+.foonActivityCategories a[aria-current="page"]{background:var(--activity-accent);color:#fff;border-color:var(--activity-accent)}
+.foonActivityCount{font-size:14px;color:#64748b;margin:0 0 18px}
+.foonActivityPagination{display:flex;justify-content:center;align-items:center;gap:18px;padding:28px 0}
+.foonActivityPagination a{border:1px solid #d4dce6;padding:10px 18px;border-radius:10px;text-decoration:none;background:white}
+@media(max-width:480px){.foonActivitySearch button{padding:10px 13px}.foonActivityCategories{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.foonActivityCategories a{flex:none;white-space:nowrap}}
