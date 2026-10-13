@@ -82,3 +82,20 @@ export async function PATCH(request:Request){
   return NextResponse.json({ok:true,changed:(result as {affectedRows?:number}).affectedRows??0});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UPDATE_FAILED"},{status:503})}
 }
+
+export async function DELETE(request:Request){
+ try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
+ const ctx=await scope(request);if(ctx.error)return ctx.error;
+ const body=await request.json().catch(()=>null);
+ if(!body||!["category","product"].includes(body.kind)||typeof body.id!=="string"||body.id.length!==36)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ try{
+  if(body.kind==="category"){
+   const [children]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND category_id=? LIMIT 1",[ctx.tenantId,body.id]);
+   const [subcategories]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND parent_id=? LIMIT 1",[ctx.tenantId,body.id]);
+   if(children.length||subcategories.length)return NextResponse.json({ok:false,code:"CATEGORY_NOT_EMPTY"},{status:409});
+  }
+  const table=body.kind==="category"?"catalog_categories":"catalog_products";
+  const [result]=await database().execute("DELETE FROM "+table+" WHERE tenant_id=? AND id=?",[ctx.tenantId,body.id]);
+  return NextResponse.json({ok:true,deleted:(result as {affectedRows?:number}).affectedRows??0});
+ }catch{return NextResponse.json({ok:false,code:"CATALOG_DELETE_FAILED"},{status:503})}
+}
