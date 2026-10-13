@@ -22,9 +22,14 @@ const activityNames:Record<string,Record<ActivityLanguage,string>>={
  publicworks:{ar:"الخدمات والمشاريع",en:"Services and projects",fr:"Services et projets"}
 };
 const serviceActivities=new Set(["carwash","laundry","automotive","salon","publicworks"]);
+type StorefrontCategory={id:string;name:string;nameEn:string;nameFr:string};
 type StorefrontProduct={id:string;name:string;nameEn:string;nameFr:string;category:string;price:number;currency:string;imageUrl:string|null};
-export default function ActivityStorefront({name,slug,activity,template,language="ar",products=[]}:{name:string;slug:string;activity:string;template?:string|null;language?:ActivityLanguage;products?:StorefrontProduct[]}){
+export default function ActivityStorefront({name,slug,activity,template,language="ar",products=[],categories=[],selectedCategory="",search="",page=1,total=0,pageSize=24}:{name:string;slug:string;activity:string;template?:string|null;language?:ActivityLanguage;products?:StorefrontProduct[];categories?:StorefrontCategory[];selectedCategory?:string;search?:string;page?:number;total?:number;pageSize?:number}){
  const t=headings[language],service=serviceActivities.has(activity);
+ const base="/"+encodeURIComponent(slug);
+ const url=(category:string,number:number,q=search)=>{const params=new URLSearchParams();if(category)params.set("category",category);if(q)params.set("q",q);if(number>1)params.set("page",String(number));const suffix=params.toString();return base+(suffix?"?"+suffix:"")};
+ const categoryName=(c:StorefrontCategory)=>language==="en"?c.nameEn||c.name:language==="fr"?c.nameFr||c.name:c.name;
+ const pages=Math.ceil(total/pageSize);
  const chosen=template&&isTemplateForActivity(activity,template)?template:defaultTemplateForActivity(activity);
  const title=activityNames[activity]?.[language]??t.shop;
  const layout=chosen?.endsWith("grid")?"grid":chosen?.includes("gallery")?"gallery":service?"services":"featured";
@@ -41,7 +46,11 @@ export default function ActivityStorefront({name,slug,activity,template,language
   </section>
   <section className="foonActivityContent" aria-label={service?t.services:t.browse}>
    <h2 style={{fontSize:24}}>{service?t.services:t.browse}</h2>
+   <form action={base} method="get" className="foonActivitySearch"><input name="q" defaultValue={search} maxLength={100} aria-label={language==="ar"?"بحث المنتجات والخدمات":"Search products and services"} placeholder={language==="ar"?"ابحث عن منتج أو خدمة":language==="fr"?"Rechercher":"Search products or services"}/>{selectedCategory&&<input type="hidden" name="category" value={selectedCategory}/>}<button type="submit">{language==="ar"?"بحث":language==="fr"?"Rechercher":"Search"}</button></form>
+   <nav className="foonActivityCategories" aria-label={language==="ar"?"أقسام النشاط":"Categories"}><Link aria-current={!selectedCategory?"page":undefined} href={url("",1)}>{language==="ar"?"الكل":language==="fr"?"Tout":"All"}</Link>{categories.map(c=><Link key={c.id} aria-current={selectedCategory===c.id?"page":undefined} href={url(c.id,1)}>{categoryName(c)}</Link>)}</nav>
+   <p className="foonActivityCount">{language==="ar"?"عدد النتائج":language==="fr"?"Résultats":"Results"}: {total.toLocaleString("en-US")}</p>
    {products.length?<div className="foonActivityProducts">{products.map(product=><article className="foonActivityProduct" key={product.id}><div className="foonActivityProductMedia">{product.imageUrl?<img src={product.imageUrl} alt={language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name} loading="lazy"/>:<span aria-hidden="true">▦</span>}</div><div className="foonActivityProductInfo"><small>{product.category}</small><h3>{language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name}</h3><strong dir="ltr">{product.price.toFixed(2)} {product.currency}</strong></div></article>)}</div>:<div className="foonActivityEmpty"><span aria-hidden="true">{service?"◷":"▦"}</span><p>{t.coming}</p></div>}
+   {pages>1&&<nav className="foonActivityPagination" aria-label={language==="ar"?"صفحات المنتجات":"Product pages"}>{page>1&&<Link href={url(selectedCategory,page-1)}>{language==="ar"?"السابق":"Previous"}</Link>}<span>{page.toLocaleString("en-US")} / {pages.toLocaleString("en-US")}</span>{page<pages&&<Link href={url(selectedCategory,page+1)}>{language==="ar"?"التالي":"Next"}</Link>}</nav>}
   </section>
  </main>;
 }
