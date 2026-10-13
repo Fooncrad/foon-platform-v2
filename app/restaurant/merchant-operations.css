@@ -84,3 +84,7 @@
 .restaurantOrderDetailsToggle{display:block;width:100%;min-height:36px;text-align:start;margin-top:8px;padding:7px 10px;border:1px solid var(--rc-border);border-radius:8px;background:#f8fafc;color:#334155;font-size:12px;font-weight:700;cursor:pointer}
 .restaurantOrderDetailsToggle:focus-visible{outline:3px solid #d97706;outline-offset:2px}
 .restaurantOrderCards [hidden]{display:none!important}
+
+.restaurantOrderMeta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0;padding:10px;border-radius:9px;background:#f8fafc}
+.restaurantOrderMeta div{min-width:0}.restaurantOrderMeta dt{font-size:11px;color:#64748b}.restaurantOrderMeta dd{margin:3px 0 0;font-size:12px;font-weight:700;overflow-wrap:anywhere}
+@media(max-width:360px){.restaurantOrderMeta{grid-template-columns:minmax(0,1fr)}}
