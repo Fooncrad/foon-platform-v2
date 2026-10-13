@@ -1,3 +1,4 @@
+import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -21,7 +22,8 @@ export async function POST(request:Request){
     const name=String(body.name??"").trim().slice(0,180);
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length>254 || password.length<9 || password.length>128) return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
     const activity=typeof body.activity==="string"?body.activity:"";
-    if(!restaurantActivities.has(activity)&&!storeActivities.has(activity))return NextResponse.json({ok:false,code:"ACTIVITY_REQUIRED"},{status:400});
+    if(!isActivityType(activity))return NextResponse.json({ok:false,code:"ACTIVITY_REQUIRED"},{status:400});
+    const activityModules=defaultActivityModules(activity);
     const countryCode=String(body.countryCode??"");
     const currency=currencyForCountry(countryCode);
     const region=typeof body.region==="string"?body.region.trim():"";
@@ -41,7 +43,7 @@ export async function POST(request:Request){
       await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
       await createSession(id,db);
       await db.commit();
-      return NextResponse.json({ok:true,user:{id,email},...workspace,plan:"free"},{status:201});
+      return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free"},{status:201});
     }catch(error){
       await db.rollback();
       if((error as {code?:string}).code==="ER_DUP_ENTRY")return NextResponse.json({ok:false,code:stage==="user"?"EMAIL_EXISTS":"SLUG_EXISTS"},{status:409});
