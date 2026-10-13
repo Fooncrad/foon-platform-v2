@@ -3,6 +3,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import Link from "next/link";
 import PublicMenu from "./public-menu";
+import ActivityStorefront from "./activity-storefront";
 import {publicMenuData} from "@/lib/restaurant/public-menu";
 
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
@@ -31,16 +32,8 @@ export default async function PublicTenantPage({params}:{params:Promise<{slug:st
  if(!tenant||tenant.status!=="active")notFound();
  const isRestaurant=String(tenant.kind)==="restaurant";
  if(isRestaurant)return <PublicMenu {...await publicMenuData({id:String(tenant.id),name:String(tenant.name)},slug)}/>;
- return <main className={"publicTenant publicTenantProfile"} dir="rtl">
-  <header className="publicTenantTop"><Link href={`/${slug}`} aria-label="صفحة المتجر">{String(tenant.name)}</Link><nav><Link href={`/${slug}/login`}>حسابي · دخول العملاء</Link><Link href={`/${slug}/register`}>تسجيل عميل</Link></nav></header>
-  <section className="publicTenantHero">
-   <span>{isRestaurant?"مطعم على منصة FOON":"نشاط على منصة FOON"}</span>
-   <h1>{String(tenant.name)}</h1>
-   <p>{isRestaurant?"مرحبًا بك في صفحة المطعم. اكتشف نشاطنا وتابع الخدمات المتاحة.":"مرحبًا بك في صفحة المتجر. اكتشف نشاطنا وتابع الخدمات المتاحة."}</p>
-   <div className="publicTenantActions">{isRestaurant&&<a href="#restaurant-menu">استعرض المنيو</a>}<Link href={`/${slug}/register`}>إنشاء حساب عميل</Link><Link href={`/${slug}/login`}>حسابي · دخول العملاء</Link></div>
-  </section>
+ const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
+ const activity=String(profiles[0]?.activity_code??"");
+ return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity}/>;
 
-  {!isRestaurant&&<section className="publicTenantDetails"><article><span>نوع النشاط</span><strong>{isRestaurant?"مطعم":"متجر أو نشاط خدمي"}</strong></article><article><span>حالة النشاط</span><strong>متاح على المنصة</strong></article><article><span>حساب العملاء</span><strong>التسجيل من خلال هذا النشاط</strong></article></section>}
-  <footer className="publicTenantFooter"><span>FOON PLATFORM</span><Link href={`/${slug}/login`}>دخول العملاء</Link></footer>
- </main>;
 }
