@@ -94,3 +94,11 @@
 .restaurantResourceDetailsToggle:focus-visible{outline:3px solid #d97706;outline-offset:2px}
 .restaurantResourceDetails[hidden]{display:none!important}
 .restaurantResourceDetails{min-width:0;overflow-wrap:anywhere}
+
+/* FOON confirmation dialog, replacing browser-native confirms. */
+.foonConfirmBackdrop{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.68);display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
+.foonConfirmDialog{direction:rtl;width:min(100%,440px);max-height:calc(100dvh - 32px);overflow-y:auto;background:var(--rc-surface,#fff);color:var(--rc-text,#1e293b);border:1px solid var(--rc-border,#e2e8f0);border-radius:20px;padding:26px;box-shadow:0 24px 70px rgba(0,0,0,.28);text-align:start}
+.foonConfirmIcon{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#fff1e6;color:#a34113;font-size:26px;font-weight:800;margin-bottom:14px}
+.foonConfirmDialog h3{margin:0 0 10px;font-size:19px}.foonConfirmDialog p{line-height:1.8;font-size:14px;margin:0 0 24px;color:var(--rc-muted,#64748b)}
+.foonConfirmActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.foonConfirmActions button{min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--rc-border,#cbd5e1);background:transparent;color:inherit;font-weight:700;cursor:pointer}.foonConfirmActions .foonConfirmDanger{background:#a34113;border-color:#a34113;color:#fff}.foonConfirmActions button:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:420px){.foonConfirmDialog{padding:20px}.foonConfirmActions button{flex:1 1 100%}}
