@@ -50,3 +50,25 @@ export async function POST(request:Request){
   return NextResponse.json({ok:true,id},{status:201});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_SAVE_FAILED"},{status:503})}
 }
+
+export async function PATCH(request:Request){
+ try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
+ const ctx=await scope(request);if(ctx.error)return ctx.error;
+ const body=await request.json().catch(()=>null);
+ if(!body||!["category","product"].includes(body.kind)||typeof body.id!=="string")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const table=body.kind==="category"?"catalog_categories":"catalog_products";
+ const columns:string[]=[],values:(string|number|boolean|null)[]=[];
+ if(body.name!==undefined){if(!validName(body.name))return NextResponse.json({ok:false,code:"INVALID_NAME"},{status:400});columns.push("name_ar=?");values.push(body.name.trim())}
+ if(body.enabled!==undefined){if(typeof body.enabled!=="boolean")return NextResponse.json({ok:false,code:"INVALID_ENABLED"},{status:400});columns.push("enabled=?");values.push(body.enabled)}
+ if(body.kind==="product"&&body.price!==undefined){const price=Number(body.price);if(!Number.isFinite(price)||price<0||price>9999999999)return NextResponse.json({ok:false,code:"INVALID_PRICE"},{status:400});columns.push("price=?");values.push(price)}
+ if(body.kind==="product"&&body.categoryId!==undefined){
+  const [category]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,String(body.categoryId)]);
+  if(!category.length)return NextResponse.json({ok:false,code:"INVALID_CATEGORY"},{status:400});
+  columns.push("category_id=?");values.push(String(body.categoryId))
+ }
+ if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
+ try{
+  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?",[...values,ctx.tenantId,body.id]);
+  return NextResponse.json({ok:true,changed:(result as {affectedRows?:number}).affectedRows??0});
+ }catch{return NextResponse.json({ok:false,code:"CATALOG_UPDATE_FAILED"},{status:503})}
+}
