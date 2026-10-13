@@ -58,3 +58,9 @@
 .restaurantPageHeadingPos{display:none!important}
 @media(max-width:1250px){.restaurantPosTopbarSlot .restaurantPosQuickBar button:last-child{max-width:110px;white-space:normal;line-height:1.2}}
 @media(max-width:1023px){.restaurantTopbar:has(.restaurantPosTopbarSlot){flex-wrap:wrap}.restaurantPosTopbarSlot{order:3;width:100%;justify-content:flex-start}.restaurantPosTopbarSlot .restaurantPosQuickBar{flex-wrap:wrap}}
+
+/* POS begins immediately beneath the topbar; no redundant title block or dead whitespace. */
+.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantContent{padding-top:0!important}
+.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantPosWorkspace{margin-top:0;padding-top:12px;border-top-left-radius:0;border-top-right-radius:0}
+.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantPosWorkspace>.restaurantPosToolsWrap[hidden]{display:none!important}
+@media(max-width:680px){.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantContent{padding-top:0!important}.restaurantMain:has(.restaurantPosTopbarSlot) .restaurantPosWorkspace{padding-top:8px}}
