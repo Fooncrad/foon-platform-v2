@@ -165,3 +165,25 @@
 .restaurantPosInvoiceBreakdown>div>span:last-child{color:#64748b;text-align:end;overflow-wrap:anywhere}
 .restaurantPosInvoiceBreakdown strong{white-space:nowrap;font-variant-numeric:tabular-nums;color:#9a3412}
 .restaurantPosInvoiceBreakdown>p{margin:5px 0 0;padding-top:9px;border-top:1px solid #dbe3ee;color:#64748b;font-size:11px;line-height:1.7}
+
+/* Clear, compact, accessible live orders on the overview dashboard. */
+.restaurantOrders .restaurantOrderHead{grid-template-columns:.75fr 1.2fr 1.7fr .9fr .8fr;gap:12px;padding:11px 14px;font-size:12px;font-weight:750;color:#475569;margin-bottom:2px}
+.restaurantOrders .restaurantLiveOrders button{grid-template-columns:.75fr 1.2fr 1.7fr .9fr .8fr;gap:12px;min-height:56px;padding:11px 14px;font-size:13px!important;line-height:1.5;border-bottom-color:#e2e8f0;cursor:pointer}
+.restaurantOrders .restaurantLiveOrders button>b{font-size:15px;color:#0f172a;font-variant-numeric:tabular-nums}
+.restaurantOrders .restaurantLiveOrders button>strong{font-size:14px;color:#0f172a;font-variant-numeric:tabular-nums;white-space:nowrap}
+.restaurantOrders .restaurantLiveOrders button>span{color:#334155;font-size:12px}
+.restaurantOrders .restaurantLiveOrders button>em{display:inline-flex;justify-self:start;align-items:center;border-radius:999px;padding:5px 10px;background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800;white-space:nowrap}
+.restaurantOrders .restaurantLiveOrders button>em[data-status="new"]{background:#dbeafe;color:#1d4ed8}
+.restaurantOrders .restaurantLiveOrders button>em[data-status="preparing"]{background:#fff7ed;color:#9a3412}
+.restaurantOrders .restaurantLiveOrders button>em[data-status="ready"]{background:#dcfce7;color:#166534}
+.restaurantOrders .restaurantLiveOrders button:focus-visible{outline:2px solid #d97706;outline-offset:-2px}
+@media(max-width:720px){
+ .restaurantOrders .restaurantOrderHead{display:none}
+ .restaurantOrders .restaurantLiveOrders{gap:8px}
+ .restaurantOrders .restaurantLiveOrders button{grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+ .restaurantOrders .restaurantLiveOrders button>b{grid-column:1;grid-row:1}
+ .restaurantOrders .restaurantLiveOrders button>em{grid-column:2;grid-row:1}
+ .restaurantOrders .restaurantLiveOrders button>span:first-of-type{grid-column:1/-1;white-space:normal}
+ .restaurantOrders .restaurantLiveOrders button>span:nth-of-type(2){grid-column:1/-1;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+ .restaurantOrders .restaurantLiveOrders button>strong{grid-column:1/-1}
+}
