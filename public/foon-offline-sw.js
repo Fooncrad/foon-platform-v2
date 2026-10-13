@@ -35,7 +35,14 @@ self.addEventListener("fetch",event=>{
  }
  if(request.mode!=="navigate")return;
  const slug=url.origin===self.location.origin?menuSlug(url.pathname):null;
- if(slug){event.respondWith((async()=>{const cache=await caches.open(MENU_CACHE);try{const response=await fetch(request);if(response.status===404||response.status===410)await cache.delete("/"+slug);return response;}catch{const saved=await cache.match("/"+slug);return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:Response.error();}})());return;}
+ if(slug){event.respondWith((async()=>{
+  const cache=await caches.open(MENU_CACHE);
+  const fallback=async()=>{const saved=await cache.match("/"+slug);return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:null;};
+  // When the browser already knows it is offline, avoid a doomed network navigation.
+  if(self.navigator.onLine===false){const saved=await fallback();if(saved)return saved;}
+  try{const response=await fetch(request);if(response.status===404||response.status===410)await cache.delete("/"+slug);return response;}
+  catch{return await fallback()??Response.error();}
+ })());return;}
  if(url.origin!==self.location.origin||url.pathname.startsWith("/api/")||url.pathname.startsWith("/admin")||url.pathname.startsWith("/auth"))return;
  if(!url.pathname.startsWith("/restaurant")&&url.pathname!=="/offline")return;
  event.respondWith((async()=>{
