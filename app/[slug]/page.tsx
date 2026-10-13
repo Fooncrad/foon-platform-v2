@@ -42,8 +42,9 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  const query=await searchParams;
  const category=typeof query.category==="string"?query.category.slice(0,36):"";
  const search=typeof query.q==="string"?query.q.trim().slice(0,100):"";
- const page=Math.max(1,Math.min(100000,Number.isSafeInteger(Number(query.page))?Number(query.page):1));
- const limit=24,offset=(page-1)*limit;
+ const requestedPage=Number(query.page??1);
+ const page=Math.max(1,Math.min(100000,Number.isSafeInteger(requestedPage)?requestedPage:1));
+ const limit=24;
  const filters=["p.tenant_id=?","p.enabled=TRUE","c.enabled=TRUE"];
  const filterValues:(string|number)[]=[String(tenant.id)];
  if(category){filters.push("c.id=?");filterValues.push(category)}
@@ -54,7 +55,9 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
   database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where,filterValues)
  ]);
  const total=Number(counts[0]?.total??0);
- const [[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,offset])]);
+ const safePage=Math.min(page,Math.max(1,Math.ceil(total/limit)));
+ const safeOffset=(safePage-1)*limit;
+ const [[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset])]);
  const {previewTemplate}=query;
  const locale=(await cookies()).get("foon_language")?.value;
  const language:ActivityLanguage=locale==="en"||locale==="fr"?locale:"ar";
@@ -66,6 +69,6 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
    if(membership.length)selected=previewTemplate;
   }
  }
- return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={page} total={total} pageSize={limit} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
 }
