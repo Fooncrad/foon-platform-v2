@@ -16,11 +16,14 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
  const slug=raw.toLowerCase();
  if(!validStoreSlug(slug))return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
  try{
-  const [rows]=await database().execute<RowDataPacket[]>("SELECT name,kind,status FROM tenants WHERE slug=? LIMIT 1",[slug]);
+  const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,kind,status FROM tenants WHERE slug=? LIMIT 1",[slug]);
   const tenant=rows[0];
   if(!tenant||tenant.status!=="active")return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
   const name=String(tenant.name);
-  return {title:name+" | FOON",description:(tenant.kind==="restaurant"?"اكتشف مطعم ":"اكتشف متجر ")+name+" على منصة FOON.",alternates:{canonical:"/"+encodeURIComponent(slug)}};
+  const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
+  const activity=String(profiles[0]?.activity_code??"");
+  const description=activity==="restaurant"||!activity&&tenant.kind==="restaurant"?"اكتشف مطعم ":"اكتشف نشاط ";
+  return {title:name+" | FOON",description:description+name+" على منصة FOON.",alternates:{canonical:"/"+encodeURIComponent(slug)}};
  }catch{return {title:"FOON",robots:{index:false,follow:false}}}
 }
 
