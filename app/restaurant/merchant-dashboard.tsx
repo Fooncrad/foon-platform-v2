@@ -14,7 +14,7 @@ import StaffHelpPanel from "./staff-help-panel";
 
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;enabled:boolean;limit:number|null};
-export type MerchantData={staffPermissions:string[];tenantId:string;name:string;slug:string;role:string;adminAccess:boolean;date:string;reportDay:string;branches:Branch[];features:Feature[];subscription:{name:string;status:string;endsAt:string|null}|null;customerCount:number|null;tenantChoices:{id:string;name:string}[]};
+export type MerchantData={activityCode:string;activityModules:string[];staffPermissions:string[];tenantId:string;name:string;slug:string;role:string;adminAccess:boolean;date:string;reportDay:string;branches:Branch[];features:Feature[];subscription:{name:string;status:string;endsAt:string|null}|null;customerCount:number|null;tenantChoices:{id:string;name:string}[]};
 type Section="assigned"| "overview"|"branches"|"orders"|"pos"|"kds"|"menu"|"tables"|"inventory"|"team"|"marketing"|"reservations"|"subscription"|"customers"|"storefront"|"remote"|"security"|"health"|"payments"|"reports"|"printers";
 const modules:{key:Section;label:string;icon:string;feature?:string;roles:string[]}[]=[
  {key:"assigned",label:"طاولاتي ونداءاتي",icon:"table",roles:["owner","manager","waiter","cashier","kitchen","driver","accountant"]},
@@ -87,12 +87,15 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   const key=({kds:"kitchen",branches:"storefront",remote:"team",payments:"internalInvoices",subscription:"reports",customers:"orders",overview:"orders"} as Partial<Record<Section,string>>)[section]??section;
   return data.staffPermissions.some(permission=>permission===key+".view"||permission===key+".manage");
  };
- const visible=modules.filter(m=>allowedSection(m.key));
+ const restaurantOnly=new Set<Section>(["assigned","kds","tables","reservations"]);
+ const isRestaurantActivity=["restaurant","cafe","sweets"].includes(data.activityCode);
+ const visible=modules.filter(m=>allowedSection(m.key)&&(!restaurantOnly.has(m.key)||isRestaurantActivity));
+
  const granted=(key?:string)=>!key||data.features.some(f=>f.key===key&&f.enabled);
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route="/restaurant?tenant="+encodeURIComponent(data.tenantId),paymentRoute="/restaurant/payments?tenant="+encodeURIComponent(data.tenantId);
- function navigate(section:Section){if(!modules.some(m=>m.key===section&&allowedSection(m.key)))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");}
+ function navigate(section:Section){if(!visible.some(m=>m.key===section))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");}
  useEffect(()=>{const handler=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setSearchOpen(true);}if(event.key==="Escape"){setSearchOpen(false);setDrawer(false);setNotifications(false);setProfile(false);}};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler);},[]);
  useEffect(()=>{if(searchOpen)searchRef.current?.focus();},[searchOpen]);
  useEffect(()=>{if(drawer)drawerCloseRef.current?.focus();},[drawer]);
