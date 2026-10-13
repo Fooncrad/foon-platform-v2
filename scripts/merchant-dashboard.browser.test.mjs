@@ -29,7 +29,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
- await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"الباقة والمميزات",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"الباقة والمميزات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"اشتراك المطعم",exact:true})).toBeVisible();
  await page.keyboard.press("Control+k");
  await expect(page.getByRole("dialog",{name:"بحث في أقسام المطعم"})).toBeVisible();
@@ -42,7 +42,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug='visual-dashboard' LIMIT 1");
  await database.end();
  await page.reload();
- await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
  await page.getByRole("button",{name:"التصنيفات",exact:true}).click();
  await page.getByRole("button",{name:"إضافة قسم جديد",exact:true}).click();
  await page.getByLabel("اسم القسم",{exact:true}).fill("مشروبات المعاينة");
@@ -55,7 +55,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel("التصنيف",{exact:true}).selectOption({label:"مشروبات المعاينة"});
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
- await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
  await page.locator(".restaurantPosMenu article").filter({hasText:"قهوة المعاينة"}).getByRole("button").click();
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
@@ -84,10 +84,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const offlineOrder=syncedOrders.find(order=>order.payment_status==='unpaid');expect(offlineOrder.total).toBe(10);
  const replay=await page.request.post(origin+'/api/restaurant/operations/pos',{headers:posHeaders,data:offlinePayload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(offlineOrder.id);
  const afterReplay=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});expect((await afterReplay.json()).orders).toHaveLength(2);
- await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 ر.س",{exact:true})).toBeVisible();
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
- await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
  await page.getByRole("button",{name:"القوالب والمظهر",exact:true}).click();
  const menuResponse=await page.request.get(origin+"/api/restaurant/operations/menu",{headers:{"x-foon-tenant":visualTenant.tenant}});
  const menuData=await menuResponse.json();const fixtureCategory=menuData.references.categories[0].id;
@@ -274,7 +274,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("template");
  await page.locator(".menuTemplateEditor").screenshot({path:"work/menu-studio-preview.png"});
  await page.getByRole("button",{name:"إغلاق المعاينة",exact:true}).click();
- await page.getByRole("navigation",{name:"أقسام المطعم"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
+ await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await page.setViewportSize({width:390,height:844});
  await expect(page.getByRole("button",{name:"فتح قائمة المطعم",exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
