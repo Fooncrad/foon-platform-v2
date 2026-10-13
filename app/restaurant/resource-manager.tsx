@@ -59,7 +59,7 @@ export async function operationApi(tenantId:string,module:string,method="GET",bo
  const query=new URLSearchParams({...extra,...(branch?{branch}:{})}).toString();
  const response=await fetch("/api/restaurant/operations/"+module+(query?"?"+query:""),{method,headers:{"content-type":"application/json","x-foon-tenant":tenantId,...((branch||(body&&typeof body==="object"&&"branchId" in body&&typeof body.branchId==="string"?body.branchId:""))?{"x-foon-branch":String(branch||(body as {branchId?:string}).branchId)}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
  const result=await response.json().catch(()=>({}));
- if(!response.ok)throw Error(formatOperationError(result.code,module,response.status));
+ if(!response.ok)throw Error(formatOperationError(result.code,module,response.status)+(result.incidentId?" · رمز التتبع: "+String(result.incidentId):""));
  return result;
 }
 const allergenChoices=[["banana","موز","Banana","Banane"],["milk","حليب","Milk","Lait"],["cheese","جبن","Cheese","Fromage"],["eggs","بيض","Eggs","Œufs"],["peanuts","فول سوداني","Peanuts","Arachides"],["tree_nuts","مكسرات","Tree nuts","Fruits à coque"],["wheat","قمح / جلوتين","Wheat / gluten","Blé / gluten"],["soy","صويا","Soy","Soja"],["sesame","سمسم","Sesame","Sésame"],["fish","سمك","Fish","Poisson"],["shellfish","محار وقشريات","Shellfish","Crustacés"]] as const;
