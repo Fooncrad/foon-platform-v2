@@ -22,7 +22,8 @@ const activityNames:Record<string,Record<ActivityLanguage,string>>={
  publicworks:{ar:"الخدمات والمشاريع",en:"Services and projects",fr:"Services et projets"}
 };
 const serviceActivities=new Set(["carwash","laundry","automotive","salon","publicworks"]);
-export default function ActivityStorefront({name,slug,activity,template,language="ar"}:{name:string;slug:string;activity:string;template?:string|null;language?:ActivityLanguage}){
+type StorefrontProduct={id:string;name:string;nameEn:string;nameFr:string;category:string;price:number;currency:string;imageUrl:string|null};
+export default function ActivityStorefront({name,slug,activity,template,language="ar",products=[]}:{name:string;slug:string;activity:string;template?:string|null;language?:ActivityLanguage;products?:StorefrontProduct[]}){
  const t=headings[language],service=serviceActivities.has(activity);
  const chosen=template&&isTemplateForActivity(activity,template)?template:defaultTemplateForActivity(activity);
  const title=activityNames[activity]?.[language]??t.shop;
@@ -40,7 +41,7 @@ export default function ActivityStorefront({name,slug,activity,template,language
   </section>
   <section className="foonActivityContent" aria-label={service?t.services:t.browse}>
    <h2 style={{fontSize:24}}>{service?t.services:t.browse}</h2>
-   <div className="foonActivityEmpty"><span aria-hidden="true">{service?"◷":"▦"}</span><p>{t.coming}</p></div>
+   {products.length?<div className="foonActivityProducts">{products.map(product=><article className="foonActivityProduct" key={product.id}><div className="foonActivityProductMedia">{product.imageUrl?<img src={product.imageUrl} alt={language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name} loading="lazy"/>:<span aria-hidden="true">▦</span>}</div><div className="foonActivityProductInfo"><small>{product.category}</small><h3>{language==="en"?product.nameEn||product.name:language==="fr"?product.nameFr||product.name:product.name}</h3><strong dir="ltr">{product.price.toFixed(2)} {product.currency}</strong></div></article>)}</div>:<div className="foonActivityEmpty"><span aria-hidden="true">{service?"◷":"▦"}</span><p>{t.coming}</p></div>}
   </section>
  </main>;
 }
