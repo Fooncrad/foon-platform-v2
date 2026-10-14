@@ -37,3 +37,8 @@ test("activity setup fails closed on unknown types and preserves selected langua
  assert.match(setup,/if\(!activity\)return/);
  assert.match(setup,/language=\{lang==="en"\|\|lang==="fr"\?lang:"ar"\}/);
 });
+
+test("activity dashboard guards against invalid activity codes before resolving modules",()=>{
+ assert.match(tools,/isActivityType\(activity\)\?localizedActivityModules\(activity,lang\):\[\]/);
+ assert.match(tools,/if\(!isActivityType\(activity\)\)return <section role="alert"/);
+});
