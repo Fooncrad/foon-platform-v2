@@ -49,3 +49,73 @@
 .foonActivityPagination{display:flex;justify-content:center;align-items:center;gap:18px;padding:28px 0}
 .foonActivityPagination a{border:1px solid #d4dce6;padding:10px 18px;border-radius:10px;text-decoration:none;background:white}
 @media(max-width:480px){.foonActivitySearch button{padding:10px 13px}.foonActivityCategories{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.foonActivityCategories a{flex:none;white-space:nowrap}}
+
+
+/* FOON activity-specific storefront design system — keeps restaurant public menu untouched. */
+.foonActivityStorefront{--activity-surface:#fff;--activity-ink:#1c2532;--activity-muted:#687386;--activity-border:#e6e9ef;--activity-radius:20px;background:#f7f8fb!important;color:var(--activity-ink)!important}
+.foonActivityStorefront>header{position:sticky;top:0;z-index:20;box-shadow:0 4px 20px #1620330b;min-height:70px}
+.foonActivityStorefront>header>a{font-size:clamp(18px,2.4vw,26px);font-weight:850!important;letter-spacing:-.02em}
+.foonActivityStorefront>header nav{align-items:center;flex-wrap:wrap;gap:10px!important}
+.foonActivityStorefront>header nav a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 15px;border:1px solid var(--activity-border);border-radius:999px;text-decoration:none;font-size:14px;font-weight:650}
+.foonActivityStorefront>header nav a:last-child{background:var(--activity-accent);border-color:var(--activity-accent);color:white}
+.foonActivityHero{position:relative;isolation:isolate;overflow:hidden;min-height:245px;padding-block:clamp(48px,7vw,94px);background:linear-gradient(115deg,color-mix(in srgb,var(--activity-accent) 14%,white),#fff 88%);border-bottom:0!important}
+.foonActivityHero:after{content:"";position:absolute;z-index:-1;width:min(45vw,430px);aspect-ratio:1;border-radius:50%;inset-inline-end:-7%;top:-45%;background:color-mix(in srgb,var(--activity-accent) 13%,transparent);box-shadow:0 0 0 55px color-mix(in srgb,var(--activity-accent) 6%,transparent),0 0 0 110px color-mix(in srgb,var(--activity-accent) 3%,transparent)}
+.foonActivityHero>p:first-child{font-weight:750;text-transform:uppercase;color:var(--activity-accent);letter-spacing:.08em!important}
+.foonActivityHero h1{font-weight:850;letter-spacing:-.035em;max-width:800px}
+.foonActivityHero>p:last-child{max-width:650px;opacity:.82}
+.foonActivityContent{max-width:1360px;padding-block:42px 72px}
+.foonActivityContent>h2{font-size:clamp(22px,3vw,30px)!important;font-weight:800;margin:0 0 22px}
+.foonActivitySearch{max-width:none;background:#fff;border:1px solid var(--activity-border);padding:8px;border-radius:18px;box-shadow:0 6px 24px #16203308}
+.foonActivitySearch input{border:0;background:transparent;min-height:44px;outline-offset:2px}
+.foonActivitySearch button{min-height:44px;font-weight:750}
+.foonActivityCategories{gap:10px;margin-block:22px}
+.foonActivityCategories a{min-height:44px;align-items:center;border-color:var(--activity-border);font-weight:650;transition:background .2s,transform .2s}
+.foonActivityCategories a:hover{transform:translateY(-2px);border-color:var(--activity-accent)}
+.foonActivityProducts{grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));gap:20px}
+.foonActivityProduct{border-color:var(--activity-border);border-radius:var(--activity-radius);box-shadow:0 5px 20px #16203309;transition:transform .2s,box-shadow .2s}
+.foonActivityProduct:hover{transform:translateY(-4px);box-shadow:0 14px 32px #16203318}
+.foonActivityProductMedia{background:color-mix(in srgb,var(--activity-accent) 7%,#f4f5f8);overflow:hidden}
+.foonActivityProductMedia img{transition:transform .35s}
+.foonActivityProduct:hover img{transform:scale(1.045)}
+.foonActivityProductInfo{padding:16px;gap:10px}
+.foonActivityProductInfo small{font-size:12px;color:var(--activity-muted);font-weight:650}
+.foonActivityProductInfo h3{font-size:17px;font-weight:750;min-height:2.8em}
+.foonActivityProductInfo strong{font-size:19px;font-weight:850}
+.foonActivityEmpty{border:1px dashed color-mix(in srgb,var(--activity-accent) 45%,#d5dbe3);background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--activity-accent) 5%,#fff));box-shadow:0 5px 20px #16203308}
+.foonActivityPagination a{min-height:44px;display:inline-flex;align-items:center;border-radius:14px;font-weight:700}
+.foonActivityStorefront[data-activity="cafe"]{--activity-accent:#88542d!important}
+.foonActivityStorefront[data-activity="sweets"]{--activity-accent:#c34868!important}
+.foonActivityStorefront[data-activity="grocery"]{--activity-accent:#167348!important}
+.foonActivityStorefront[data-activity="clothing"]{--activity-accent:#723b84!important}
+.foonActivityStorefront[data-activity="perfume"]{--activity-accent:#ae285b!important}
+.foonActivityStorefront[data-activity="accessories"]{--activity-accent:#b28733!important}
+.foonActivityStorefront[data-activity="gifts"]{--activity-accent:#b32242!important}
+.foonActivityStorefront[data-activity="ecommerce"]{--activity-accent:#135ca5!important}
+.foonActivityStorefront[data-activity="carwash"]{--activity-accent:#136caa!important}
+.foonActivityStorefront[data-activity="laundry"]{--activity-accent:#2877b8!important}
+.foonActivityStorefront[data-activity="automotive"]{--activity-accent:#ad3436!important}
+.foonActivityStorefront[data-activity="salon"]{--activity-accent:#ad4077!important}
+.foonActivityStorefront[data-activity="publicworks"]{--activity-accent:#99601c!important}
+.foonActivityStorefront[data-activity="accessories"] .foonActivityHero{background:linear-gradient(115deg,#19191b,#3d3429);color:#fff}
+.foonActivityStorefront[data-activity="accessories"] .foonActivityHero>p:first-child{color:#eac87b}
+.foonActivityStorefront[data-activity="perfume"] .foonActivityHero{background:linear-gradient(115deg,#f9e5eb,#fff4f7)}
+.foonActivityStorefront[data-activity="gifts"] .foonActivityHero{background:linear-gradient(115deg,#fff0f1,#fff7ef)}
+.foonActivityStorefront[data-activity="publicworks"] .foonActivityHero{background:linear-gradient(115deg,#f1e8d9,#f8f8f8)}
+.foonActivityStorefront-services .foonActivityProduct{display:flex;align-items:stretch}
+.foonActivityStorefront-services .foonActivityProductMedia{width:38%;min-width:110px}
+.foonActivityStorefront-services .foonActivityProductInfo{flex:1}
+@media(max-width:600px){
+ .foonActivityStorefront>header{min-height:60px;padding:10px 14px!important}
+ .foonActivityStorefront>header nav a{font-size:12px;padding:7px 10px;min-height:40px}
+ .foonActivityHero{min-height:180px;padding:42px 18px!important}
+ .foonActivityContent{padding:26px 12px 54px}
+ .foonActivityProducts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .foonActivityProductInfo{padding:11px;gap:7px}
+ .foonActivityProductInfo h3{font-size:14px;min-height:2.8em}
+ .foonActivityProductInfo strong{font-size:15px}
+ .foonActivitySearch{gap:4px;padding:5px}
+ .foonActivitySearch button{padding-inline:12px}
+ .foonActivityCategories{flex-wrap:nowrap;overflow-x:auto}
+ .foonActivityStorefront-services .foonActivityProducts{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.foonActivityStorefront *{transition:none!important}}
