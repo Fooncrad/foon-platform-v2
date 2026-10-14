@@ -24,9 +24,11 @@ export default function ActivityCatalogEditor({tenantId,service}:{tenantId:strin
  async function addImage(product:string){
   const url=window.prompt("رابط الصورة HTTPS");
   if(!url)return;
+  let parsed:URL;
+  try{parsed=new URL(url);if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.toString().length>1024)throw Error()}catch{setMessage("أدخل رابط صورة HTTPS صالحًا بدون بيانات دخول.");return}
   setBusy(true);setMessage("");
   try{
-   const response=await fetch("/api/restaurant/activity-catalog/images",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({product,url})});
+   const response=await fetch("/api/restaurant/activity-catalog/images",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({product,url:parsed.toString()})});
    if(!response.ok)throw Error((await response.json().catch(()=>({}))).code??"IMAGE_SAVE_FAILED");
    setMessage("تمت إضافة الصورة إلى المنتج.");
   }catch(error){setMessage("تعذر إضافة الصورة: "+String(error))}
