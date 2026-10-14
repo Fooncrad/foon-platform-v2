@@ -220,7 +220,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const otherTenantOrder=await resource(b,"serviceOrders",{...serviceOrderPayload,branchId:b.branch});
   assert.notEqual(otherTenantOrder.status,201,JSON.stringify(otherTenantOrder.body));
   assert.ok(["SERVICE_ORDER_QUOTATION_NOT_ACCEPTED","PLAN_FEATURE_REQUIRED"].includes(otherTenantOrder.body.code),JSON.stringify(otherTenantOrder.body));
-  const serviceInvoice={name:"Standalone service invoice",status:"draft",branchId:a.branch,data:{quotationId:serviceQuoteId,subtotal:35,taxAmount:0,serviceFee:0}};
+  const serviceInvoice={name:"Standalone service invoice",status:"draft",branchId:a.branch,data:{quotationId:serviceQuoteId,serviceOrderId:createdServiceOrder.body.id,subtotal:35,taxAmount:0,serviceFee:0}};
   const billedService=await resource(a,"customerInvoices",serviceInvoice);
   assert.equal(billedService.status,201,JSON.stringify(billedService.body));
   const repeatedService=await resource(a,"customerInvoices",{...serviceInvoice,name:"Duplicate standalone service invoice"});
