@@ -12,7 +12,7 @@ test("catalog API is tenant scoped and requires owner or manager",()=>{
 });
 test("catalog editor exposes search, pagination and product translation",()=>{
  const ui=read("app/restaurant/activity-catalog-editor.tsx");
- for(const feature of ["filterCategory","pageSize","name_en","name_fr","addImage"]){
+ for(const feature of ["filterCategory","foonCatalogPagination","name_en","name_fr","addImage"]){
   assert.ok(ui.includes(feature),feature);
  }
 });
