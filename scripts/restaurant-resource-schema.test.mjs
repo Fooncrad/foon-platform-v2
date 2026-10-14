@@ -45,3 +45,14 @@ test("four dining sections validate independently without a database",()=>{
  for(const key of ["area","smoking"])assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{[key]:"x".repeat(81)}}));
  assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{unknownClassification:"roof"}}));
 });
+
+test("public works quotation enforces customer, service, amount and lifecycle",()=>{
+ const valid={name:"تجديد محل",status:"draft",data:{customerName:"عميل",serviceDescription:"أعمال صيانة",amount:1200}};
+ const created=validateResource("quotations",valid);
+ assert.equal(created.data.amount,1200);
+ for(const status of ["draft","sent","accepted","rejected","cancelled"])assert.equal(validateResource("quotations",{...valid,status}).status,status);
+ for(const amount of [-1,Infinity,NaN,100000001])assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,amount}}));
+ assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,customerName:""}}));
+ assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,serviceDescription:""}}));
+ assert.throws(()=>validateResource("quotations",{...valid,status:"paid"}));
+});
