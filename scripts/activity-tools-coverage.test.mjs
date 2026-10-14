@@ -115,3 +115,11 @@ test("merchant catalog handles malformed API errors and validates image URLs",()
  assert.ok(editor.includes("parsed.username||parsed.password"));
  assert.ok(editor.includes("parsed.toString().length>1024"));
 });
+
+test("merchant catalog rejects malformed initial and paginated responses",()=>{
+ const editor=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
+ assert.ok(editor.includes('throw Error("INVALID_CATALOG_RESPONSE")'));
+ assert.ok(editor.includes("!Number.isInteger(d.page)||d.page<1"));
+ assert.ok(editor.includes('setTotal(d.total);setPage(d.page);setMessage("")'));
+ assert.ok((editor.match(/!Array\.isArray\(d\.categories\)/g)??[]).length>=2);
+});
