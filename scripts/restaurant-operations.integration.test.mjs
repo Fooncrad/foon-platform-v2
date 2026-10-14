@@ -207,6 +207,12 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const acceptedService=await resource(a,"quotations",{id:serviceQuoteId,version:savedServiceQuote.version,name:savedServiceQuote.name,status:"accepted",branchId:savedServiceQuote.branchId??a.branch,data:savedServiceQuote.data},"PATCH");
   assert.equal(acceptedService.status,200,JSON.stringify(acceptedService.body));
   const serviceOrderPayload={name:"Repair service order",status:"new",branchId:a.branch,data:{quotationId:serviceQuoteId,customerName:"Service client",serviceDescription:"Repair service",amount:35}};
+  // A create request must not jump directly to running or final states.
+  for(const status of ["in_progress","completed","cancelled"]){
+   const invalidCreate=await resource(a,"serviceOrders",{...serviceOrderPayload,status});
+   assert.equal(invalidCreate.status,400,JSON.stringify(invalidCreate.body));
+   assert.equal(invalidCreate.body.code,"INVALID_SERVICE_ORDER_TRANSITION");
+  }
   const createdServiceOrder=await resource(a,"serviceOrders",serviceOrderPayload);
   assert.equal(createdServiceOrder.status,201,JSON.stringify(createdServiceOrder.body));
   const repeatedOrder=await resource(a,"serviceOrders",{...serviceOrderPayload,name:"Duplicate repair"});
@@ -255,6 +261,60 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(reopenedService.body.code,"INVALID_INVOICE_TRANSITION");
   const [[serviceInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
   assert.equal(Number(serviceInvoiceCount.n),2);
+  // Exercise the real HTTP lifecycle, optimistic versions and immutable terminal records.
+  const readService=async id=>{
+   const response=await resource(a,"serviceOrders",undefined,"GET");
+   assert.equal(response.status,200,JSON.stringify(response.body));
+   const row=response.body.resources.find(row=>row.id===id);assert.ok(row);return row;
+  };
+  const servicePayload=row=>({id:row.id,version:row.version,name:row.name,status:row.status,branchId:row.branchId??row.branch_id??a.branch,data:row.data});
+  const completedSource=await readService(createdServiceOrder.body.id);
+  const completeService=await resource(a,"serviceOrders",{...servicePayload(completedSource),status:"completed"},"PATCH");
+  assert.equal(completeService.status,200,JSON.stringify(completeService.body));
+  const completedSnapshot=await readService(createdServiceOrder.body.id);
+  for(const status of ["new","scheduled","in_progress","cancelled"]){
+   const reopened=await resource(a,"serviceOrders",{...servicePayload(completedSnapshot),status},"PATCH");
+   assert.equal(reopened.body.code,"INVALID_SERVICE_ORDER_TRANSITION",JSON.stringify(reopened.body));
+  }
+  for(const change of [{name:"Changed final order"},{data:{...completedSnapshot.data,amount:36}},{data:{...completedSnapshot.data,notes:"Changed after completion"}}]){
+   const edited=await resource(a,"serviceOrders",{...servicePayload(completedSnapshot),...change},"PATCH");
+   assert.equal(edited.body.code,"SERVICE_ORDER_FINAL_IMMUTABLE",JSON.stringify(edited.body));
+  }
+  const archivedCompleted=await resource(a,"serviceOrders",{id:completedSnapshot.id,version:completedSnapshot.version},"DELETE");
+  assert.equal(archivedCompleted.body.code,"SERVICE_ORDER_ARCHIVE_FORBIDDEN",JSON.stringify(archivedCompleted.body));
+  assert.deepEqual(await readService(completedSnapshot.id),completedSnapshot);
+  const staleService=await resource(a,"serviceOrders",{...servicePayload(completedSource),status:"completed"},"PATCH");
+  assert.equal(staleService.status,409,JSON.stringify(staleService.body));
+  const standalonePayload={name:"Scheduled standalone service",status:"scheduled",branchId:a.branch,data:{customerName:"Lifecycle client",serviceDescription:"Maintenance",amount:10}};
+  const scheduledCreated=await resource(a,"serviceOrders",standalonePayload);
+  assert.equal(scheduledCreated.status,201,JSON.stringify(scheduledCreated.body));
+  const scheduledSnapshot=await readService(scheduledCreated.body.id);
+  const regressedService=await resource(a,"serviceOrders",{...servicePayload(scheduledSnapshot),status:"new"},"PATCH");
+  assert.equal(regressedService.body.code,"INVALID_SERVICE_ORDER_TRANSITION",JSON.stringify(regressedService.body));
+  const archivedScheduled=await resource(a,"serviceOrders",{id:scheduledSnapshot.id,version:scheduledSnapshot.version},"DELETE");
+  assert.equal(archivedScheduled.body.code,"SERVICE_ORDER_ARCHIVE_FORBIDDEN",JSON.stringify(archivedScheduled.body));
+  const cancelService=await resource(a,"serviceOrders",{...servicePayload(scheduledSnapshot),status:"cancelled"},"PATCH");
+  assert.equal(cancelService.status,200,JSON.stringify(cancelService.body));
+  const cancelledSnapshot=await readService(scheduledSnapshot.id);
+  const reopenedCancelled=await resource(a,"serviceOrders",{...servicePayload(cancelledSnapshot),status:"in_progress"},"PATCH");
+  assert.equal(reopenedCancelled.body.code,"INVALID_SERVICE_ORDER_TRANSITION",JSON.stringify(reopenedCancelled.body));
+  const editedCancelled=await resource(a,"serviceOrders",{...servicePayload(cancelledSnapshot),name:"Changed cancelled order"},"PATCH");
+  assert.equal(editedCancelled.body.code,"SERVICE_ORDER_FINAL_IMMUTABLE",JSON.stringify(editedCancelled.body));
+  const archivedCancelled=await resource(a,"serviceOrders",{id:cancelledSnapshot.id,version:cancelledSnapshot.version},"DELETE");
+  assert.equal(archivedCancelled.body.code,"SERVICE_ORDER_ARCHIVE_FORBIDDEN",JSON.stringify(archivedCancelled.body));
+  assert.deepEqual(await readService(cancelledSnapshot.id),cancelledSnapshot);
+  const draftService=await resource(a,"serviceOrders",{...standalonePayload,name:"Unscheduled service",status:"new"});
+  assert.equal(draftService.status,201,JSON.stringify(draftService.body));
+  const draftSnapshot=await readService(draftService.body.id);
+  const linkedDraftInvoice=await resource(a,"customerInvoices",{name:"Linked new service invoice",status:"draft",branchId:a.branch,data:{serviceOrderId:draftSnapshot.id,subtotal:10,taxAmount:0,serviceFee:0}});
+  assert.equal(linkedDraftInvoice.status,201,JSON.stringify(linkedDraftInvoice.body));
+  const archivedInvoiced=await resource(a,"serviceOrders",{id:draftSnapshot.id,version:draftSnapshot.version},"DELETE");
+  assert.equal(archivedInvoiced.body.code,"SERVICE_ORDER_ALREADY_INVOICED",JSON.stringify(archivedInvoiced.body));
+  assert.deepEqual(await readService(draftSnapshot.id),draftSnapshot);
+  const unbilledDraft=await resource(a,"serviceOrders",{...standalonePayload,name:"Unused service",status:"new"});
+  assert.equal(unbilledDraft.status,201,JSON.stringify(unbilledDraft.body));
+  const unbilledSnapshot=await readService(unbilledDraft.body.id);
+  assert.equal((await resource(a,"serviceOrders",{id:unbilledSnapshot.id,version:unbilledSnapshot.version},"DELETE")).status,200);
   const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);
   const [[savedOptions]]=await db.execute("SELECT options_snapshot FROM restaurant_order_items WHERE order_id=?",[placed.body.id]);assert.match(JSON.stringify(savedOptions.options_snapshot),/Large/);
   const sessions=await resource(a,"security",undefined,"GET");assert.equal(sessions.status,200);
@@ -269,3 +329,4 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
  }finally{server.kill();await db.end();}
 });
+
