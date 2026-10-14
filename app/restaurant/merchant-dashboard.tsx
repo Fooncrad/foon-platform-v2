@@ -17,7 +17,7 @@ import StaffHelpPanel from "./staff-help-panel";
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;enabled:boolean;limit:number|null};
 export type MerchantData={activityCode:string;currency?:string;activityModules:string[];staffPermissions:string[];tenantId:string;name:string;slug:string;role:string;adminAccess:boolean;date:string;reportDay:string;branches:Branch[];features:Feature[];subscription:{name:string;status:string;endsAt:string|null}|null;customerCount:number|null;tenantChoices:{id:string;name:string}[]};
-type Section="assigned"| "overview"|"branches"|"orders"|"pos"|"kds"|"menu"|"tables"|"inventory"|"team"|"marketing"|"reservations"|"subscription"|"customers"|"storefront"|"remote"|"security"|"health"|"payments"|"reports"|"printers";
+type Section="assigned"| "overview"|"branches"|"orders"|"pos"|"kds"|"menu"|"tables"|"inventory"|"team"|"marketing"|"reservations"|"subscription"|"customers"|"storefront"|"remote"|"security"|"health"|"payments"|"reports"|"printers"|"quotes";
 const modules:{key:Section;label:string;icon:string;feature?:string;roles:string[]}[]=[
  {key:"assigned",label:"طاولاتي ونداءاتي",icon:"table",roles:["owner","manager","waiter","cashier","kitchen","driver","accountant"]},
  {key:"overview",label:"نظرة عامة",icon:"dashboard",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
@@ -28,6 +28,7 @@ const modules:{key:Section;label:string;icon:string;feature?:string;roles:string
  {key:"menu",label:"المنيو والأصناف",icon:"menu",feature:"digital_menu",roles:["owner","manager"]},
  {key:"tables",label:"الطاولات",icon:"table",feature:"tables",roles:["owner","manager","waiter"]},
  {key:"inventory",label:"المخزون والمشتريات",icon:"box",feature:"inventory",roles:["owner","manager","accountant"]},
+ {key:"quotes",label:"عروض الأسعار",icon:"wallet",roles:["owner","manager","accountant"]},
  {key:"printers",label:"الطابعات والفواتير",icon:"wallet",feature:"departments",roles:["owner","manager","cashier","waiter","kitchen","driver","accountant"]},
  {key:"team",label:"إدارة الموظفين والصلاحيات",icon:"users",feature:"employees",roles:["owner","manager"]},
  {key:"marketing",label:"التسويق والحملات",icon:"trend",feature:"campaigns",roles:["owner","manager"]},
@@ -52,6 +53,7 @@ const sectionTranslations:Partial<Record<Section,{en:string;fr:string}>>={
  menu:{en:"Products and categories",fr:"Produits et catégories"},
  tables:{en:"Tables",fr:"Tables"},
  inventory:{en:"Inventory and purchasing",fr:"Stocks et achats"},
+ quotes:{en:"Quotations",fr:"Devis"},
  printers:{en:"Printers and invoices",fr:"Imprimantes et factures"},
  team:{en:"Staff and permissions",fr:"Équipe et autorisations"},
  marketing:{en:"Marketing and campaigns",fr:"Marketing et campagnes"},
@@ -126,7 +128,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  };
  const sectionCapability:Partial<Record<Section,string>>={
   assigned:"waiter",kds:"kitchen",tables:"tables",reservations:"reservations",
-  menu:"catalog",orders:"orders",pos:"pos",inventory:"inventory"
+  menu:"catalog",orders:"orders",pos:"pos",inventory:"inventory",quotes:"quotes"
  };
  const visible=modules.filter(m=>{
   const capability=sectionCapability[m.key];
