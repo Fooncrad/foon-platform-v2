@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import {PAYMENT_PROVIDERS,paymentMissingFields,type PaymentProvider,type PaymentMode,type PaymentLanguage,type CredentialName} from "@/lib/payments/provider-catalog";
 import "./payments.css";
 
@@ -11,6 +11,7 @@ export default function PaymentEditor({tenantId,canEdit,branches,activityCode,la
  const [localLanguage,setLocalLanguage]=useState<PaymentLanguage>("ar");
  const lang=language??localLanguage;
  const t=(ar:string,en:string,fr:string)=>lang==="ar"?ar:lang==="en"?en:fr;
+ const selectedScope=useRef("");
  const [scope,setScope]=useState(""),[all,setAll]=useState<Setting[]>([]),[provider,setProvider]=useState<PaymentProvider>("manual"),[mode,setMode]=useState<PaymentMode>("test"),[enabled,setEnabled]=useState(false),[currency,setCurrency]=useState("SAR"),[reference,setReference]=useState(""),[publicKey,setPublicKey]=useState("");
  const [credentials,setCredentials]=useState({secret_key:"",webhook_secret:""}),[clear,setClear]=useState<CredentialName[]>([]),[vault,setVault]=useState(false),[loaded,setLoaded]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[dirty,setDirty]=useState(false),[retry,setRetry]=useState(0);
  const saved=all.find(s=>(s.branch_id??"")===scope);
@@ -34,6 +35,7 @@ export default function PaymentEditor({tenantId,canEdit,branches,activityCode,la
   const values=messages[code];return values?t(...values):t("تعذر تنفيذ العملية. حاول مرة أخرى.","The request failed. Please try again.","Échec de la demande. Réessayez.");
  };
  const restore=useCallback((v:string,items:Setting[])=>{
+  selectedScope.current=v;
   const found=items.find(s=>(s.branch_id??"")===v);setScope(v);setProvider(found?.provider??"manual");setMode(found?.mode??"test");setEnabled(Boolean(found?.enabled));setCurrency(found?.currency??defaultCurrency);setReference(found?.merchant_reference??"CASH");setPublicKey(found?.public_key??"");setCredentials({secret_key:"",webhook_secret:""});setClear([]);setDirty(false);
  },[defaultCurrency]);
  useEffect(()=>{
@@ -41,7 +43,7 @@ export default function PaymentEditor({tenantId,canEdit,branches,activityCode,la
  },[]);
  useEffect(()=>{
   let active=true;queueMicrotask(()=>{if(active){setLoaded(false);setMessage("");}});
-  fetch("/api/restaurant/payments/settings",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);if(active){setAll(j.settings??[]);setVault(Boolean(j.vault_ready));restore("",j.settings??[]);setLoaded(true);}}).catch(e=>{if(active)setMessage(e instanceof Error?e.message:"REQUEST_FAILED");});return()=>{active=false;};
+  fetch("/api/restaurant/payments/settings",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);if(active){setAll(j.settings??[]);setVault(Boolean(j.vault_ready));restore(selectedScope.current,j.settings??[]);setLoaded(true);}}).catch(e=>{if(active)setMessage(e instanceof Error?e.message:"REQUEST_FAILED");});return()=>{active=false;};
  },[tenantId,retry,restore]);
  function switchProvider(v:PaymentProvider){setProvider(v);setEnabled(false);setReference(v==="manual"?"CASH":"");setPublicKey("");setCredentials({secret_key:"",webhook_secret:""});setClear([]);setDirty(true);}
  function switchMode(v:PaymentMode){setMode(v);setPublicKey("");setCredentials({secret_key:"",webhook_secret:""});setClear([]);setDirty(true);}
