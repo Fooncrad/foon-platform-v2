@@ -24,7 +24,8 @@
     "test:tax": "node --experimental-strip-types --test scripts/restaurant-tax.test.mjs scripts/restaurant-tax-boundaries.test.mjs",
     "test:activities": "node --experimental-strip-types --test scripts/activity-coverage.test.mjs scripts/activity-integration-contract.test.mjs",
     "test:payments": "node --experimental-strip-types --test scripts/payment-settings.test.mjs",
-    "test:payment-webhooks": "node --experimental-strip-types --test scripts/payment-webhook.test.mjs"
+    "test:payment-webhooks": "node --experimental-strip-types --test scripts/payment-webhook.test.mjs",
+    "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -45,4 +46,3 @@
     "typescript": "^5.9.0"
   }
 }
-
