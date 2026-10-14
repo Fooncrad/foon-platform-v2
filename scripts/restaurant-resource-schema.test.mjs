@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {validateResource} from "./restaurant-resource-schema.mjs";
+import {validateResource,resourceModules} from "./restaurant-resource-schema.mjs";
 test("resource validation rejects unknown keys, nonfinite prices and unsafe asset URLs",()=>{
  assert.throws(()=>validateResource("__proto__",{name:"X",status:"active"}));
  for(const price of [NaN,Infinity,-1])assert.throws(()=>validateResource("menu",{name:"X",status:"active",data:{price}}));
@@ -73,4 +73,13 @@ test("quotation updates require a controlled approval lifecycle",()=>{
  assert.match(source,/if\(from==="sent"&&JSON\.stringify\(parseData\(previous\.data\)\)/);
  assert.match(source,/String\(previous\.branch_id\?\?""\)/);
  assert.match(source,/from==="sent"&&to==="accepted"/);
+});
+
+test("customer invoices link only accepted quotations with matching totals",()=>{
+ const quotationField=resourceModules.customerInvoices.fields.find(field=>field.key==="quotationId");
+ assert.equal(quotationField?.ref,"quotations");
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ for(const error of ["QUOTATION_NOT_ACCEPTED","QUOTATION_INVOICE_AMOUNT_MISMATCH","QUOTATION_ALREADY_INVOICED"])assert.ok(source.includes(error));
+ assert.match(source,/kind='service_quotation' AND archived=FALSE FOR UPDATE/);
+ assert.ok(source.includes("JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))"));
 });
