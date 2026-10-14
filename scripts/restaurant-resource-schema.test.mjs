@@ -133,3 +133,8 @@ test("finalized invoice names are immutable with invoice amounts and branch",()=
  const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
  assert.ok(source.includes('String(previous.name)!==String(input.name))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE")'));
 });
+
+test("invoice must have one authoritative billing source",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('input.data.quotationId&&input.data.orderId)throw new ResourceError("INVOICE_MULTIPLE_SOURCES")'));
+});
