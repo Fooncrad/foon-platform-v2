@@ -201,8 +201,9 @@
 @media (max-width: 600px) {
   .restaurantOrderActions button,
   .restaurantApp .restaurantOrderActions button {
-    min-height: 44px;
+    box-sizing: border-box;
+    min-height: 48px !important;
     height: auto;
-    padding-block: 11px;
+    padding-block: 12px;
   }
 }
