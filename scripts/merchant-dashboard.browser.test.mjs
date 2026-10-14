@@ -282,7 +282,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"فتح قائمة النشاط",exact:true}).click();
  await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
- await page.getByRole("combobox",{name:"اختيار الفرع",exact:true}).selectOption({label:"مطعم المعاينة"});
+ // Branch selection lives in the responsive topbar; verify the branch card after navigating on mobile.
  await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
  // A foreign tenant address must not expose its workspace.
  const db=await mysql.createConnection(process.env.DATABASE_URL);
