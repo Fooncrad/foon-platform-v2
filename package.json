@@ -25,7 +25,7 @@
     "test:activities": "node --experimental-strip-types --test scripts/activity-coverage.test.mjs scripts/activity-integration-contract.test.mjs",
     "test:payments": "node --experimental-strip-types --test scripts/payment-settings.test.mjs",
     "test:payment-webhooks": "node --experimental-strip-types --test scripts/payment-webhook.test.mjs",
-    "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs"
+    "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs scripts/media-oauth-state.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
