@@ -95,3 +95,9 @@ test("customer invoice lifecycle rejects backwards and unverified payment transi
  assert.ok(source.includes("INVALID_INVOICE_TRANSITION"));
  assert.ok(source.includes('!previous&&!["draft","issued"].includes(String(input.status))'));
 });
+
+test("issued paid and void customer invoices cannot be archived",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('module==="customerInvoices"&&previous?.status!=="draft"'));
+ assert.ok(source.includes("INVOICE_ARCHIVE_FORBIDDEN"));
+});
