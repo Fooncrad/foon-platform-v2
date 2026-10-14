@@ -46,8 +46,8 @@ jobs:
     timeout-minutes: 15
     services:
       mariadb:
-        # Docker Official Images mirror; avoid Docker Hub's shared runner pull quota.
-        image: public.ecr.aws/docker/library/mariadb:11.8
+        # Use the official image directly; the ECR mirror hit its shared data limit.
+        image: mariadb:11.8
         env:
           # Catch pooled-session clock leaks hidden by UTC-only CI hosts.
           TZ: Asia/Riyadh
