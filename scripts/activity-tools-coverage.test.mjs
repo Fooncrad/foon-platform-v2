@@ -65,3 +65,10 @@ test("storefront template editor rejects responses from a different activity",()
  assert.ok(editor.includes("if(d.activity!==activity)"));
  assert.ok(editor.includes("setLoading(false);return"));
 });
+
+test("merchant catalog validates product prices before sending mutations",()=>{
+ const catalog=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
+ assert.ok(catalog.includes('Number.isFinite(Number(price))'));
+ assert.ok(catalog.includes('Number(price)<0'));
+ assert.ok(catalog.includes('Number.isFinite(Number(value))&&Number(value)>=0'));
+});
