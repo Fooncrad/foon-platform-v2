@@ -105,7 +105,7 @@ test("issued paid and void customer invoices cannot be archived",()=>{
 test("invoice order references resolve against tenant scoped orders instead of generic resources",()=>{
  const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
  assert.ok(source.includes('if(field.ref==="orders")'));
- assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 LOCK IN SHARE MODE"));
+ assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
  assert.equal(resourceModules.customerInvoices.fields.find(field=>field.key==="orderId")?.ref,"orders");
 });
 
@@ -114,4 +114,11 @@ test("linked customer invoice totals match live orders and exclude cancelled ord
  assert.ok(source.includes("ORDER_INVOICE_AMOUNT_MISMATCH"));
  assert.ok(source.includes("INVOICE_ORDER_CANCELLED"));
  assert.ok(source.includes('orders[0].status==="cancelled"'));
+});
+
+test("a restaurant order cannot be invoiced twice by concurrent requests",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("ORDER_ALREADY_INVOICED"));
+ assert.ok(source.includes("JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? LIMIT 1 FOR UPDATE"));
+ assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
 });
