@@ -70,6 +70,11 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  await branchExists(db,tenantId,input.branchId);
  for(const field of config.fields.filter(f=>f.type==="ref")){
   const value=input.data[field.key];if(!value)continue;
+  if(field.ref==="orders"){
+   const [orders]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 LOCK IN SHARE MODE",[value,tenantId]);
+   if(!orders.length||input.branchId&&orders[0].branch_id&&orders[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
+   continue;
+  }
   const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE LIMIT 1 LOCK IN SHARE MODE",[value,tenantId,resourceModules[field.ref!].kind]);
   if(!rows.length||input.branchId&&rows[0].branch_id&&rows[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
  }
