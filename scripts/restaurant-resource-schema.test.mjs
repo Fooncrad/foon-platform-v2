@@ -69,5 +69,7 @@ test("quotation updates require a controlled approval lifecycle",()=>{
  assert.match(source,/module==="quotations"&&previous\?\.status!=="draft"/);
  assert.match(source,/QUOTATION_ARCHIVE_FORBIDDEN/);
  assert.match(source,/QUOTATION_EXPIRED/);
+ assert.match(source,/if\(from==="sent"&&JSON\.stringify\(parseData\(previous\.data\)\)/);
+ assert.match(source,/String\(previous\.branch_id\?\?""\)/);
  assert.match(source,/from==="sent"&&to==="accepted"/);
 });
