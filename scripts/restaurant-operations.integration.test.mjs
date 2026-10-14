@@ -178,6 +178,15 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const duplicateInvoice=await resource(a,"customerInvoices",{...invoicePayload,name:"Duplicate invoice"});
   assert.notEqual(duplicateInvoice.status,201,JSON.stringify(duplicateInvoice.body));
   assert.ok(["QUOTATION_ALREADY_INVOICED","ORDER_ALREADY_INVOICED"].includes(duplicateInvoice.body.code),JSON.stringify(duplicateInvoice.body));
+  // An invoice must not silently adopt another order or change its billed amount.
+  const existingInvoice=(await resource(a,"customerInvoices",undefined,"GET")).body.resources.find(row=>row.id===createdInvoice.body.id);
+  assert.ok(existingInvoice,"issued invoice should be visible to its tenant");
+  const changedOrder=await resource(a,"customerInvoices",{id:createdInvoice.body.id,version:existingInvoice.version,name:existingInvoice.name,status:"draft",branchId:a.branch,data:{...existingInvoice.data,orderId:diningOrder.body.id}},"PATCH");
+  assert.notEqual(changedOrder.status,200,JSON.stringify(changedOrder.body));
+  assert.equal(changedOrder.body.code,"INVOICE_ORDER_LINK_IMMUTABLE");
+  const wrongTotal=await resource(a,"customerInvoices",{...invoicePayload,name:"Incorrect amount",data:{...invoicePayload.data,subtotal:21}});
+  assert.notEqual(wrongTotal.status,201,JSON.stringify(wrongTotal.body));
+  assert.ok(["QUOTATION_INVOICE_AMOUNT_MISMATCH","ORDER_INVOICE_AMOUNT_MISMATCH"].includes(wrongTotal.body.code),JSON.stringify(wrongTotal.body));
   const foreignInvoice=await resource(b,"customerInvoices",{...invoicePayload,branchId:b.branch});
   assert.notEqual(foreignInvoice.status,201,JSON.stringify(foreignInvoice.body));
   const [[invoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
