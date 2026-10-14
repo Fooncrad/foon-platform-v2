@@ -67,7 +67,7 @@ export async function PUT(req:Request){
   for(const name of names){if(clear.includes(name))delete credentials[name];const value=provided[name]?.trim();if(value)credentials[name]=value;}
   if(b.provider==="manual")for(const name of names)delete credentials[name];
   if(b.provider==="hyperpay"&&credentials.webhook_secret&&!/^[a-f0-9]{64}$/i.test(credentials.webhook_secret)){await db.rollback();return failure("INVALID_WEBHOOK_SECRET",400);}
-  if(b.enabled&&b.provider==="tap"&&(!paymentVaultReady()||!webhookUrl("ready")||!credentials.secret_key||!b.public_key.trim())){
+  if(b.enabled&&b.provider==="tap"&&(!paymentVaultReady()||!webhookUrl("ready")||!credentials.secret_key||/[\r\n]/.test(credentials.secret_key)||!b.public_key.trim())){
    await db.rollback();return failure("PAYMENT_SETUP_INCOMPLETE",409);
   }
   if(b.enabled&&b.provider==="tap"&&new URL(process.env.APP_URL??"").protocol!=="https:"){await db.rollback();return failure("CHECKOUT_HTTPS_REQUIRED",409);}

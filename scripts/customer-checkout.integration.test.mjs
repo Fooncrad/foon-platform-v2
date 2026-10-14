@@ -32,6 +32,11 @@ test("customer checkout persists before HTTP, isolates ownership, survives retri
   assert.equal((await put({...payload,mode:"live",public_key:"pk_live_synthetic",credentials:{secret_key:"sk_live_synthetic"},version:1})).status,409,"live checkout remains disabled");
   async function order(branchId=branch.id,total=12.34){const id=randomUUID();await pool.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,created_by,customer_user_id,channel,status,payment_status,subtotal,discount,total,currency) VALUES (?,?,?,?,?,'takeaway','new','unpaid',?,0,?,'SAR')",[id,tenant,branchId,owner.user.id,customer,total,total]);return id;}
   const request=(orderId,body={orderId},auth=cookie,origin=app)=>fetch(local+"/api/customer/payments",{method:"POST",headers:{cookie:auth,origin,"content-type":"application/json"},body:JSON.stringify(body)});
+  const invalidKey=await put({...payload,version:1,credentials:{secret_key:"sk_test_invalid\r\nheader"}});
+  assert.equal(invalidKey.status,409);assert.equal((await invalidKey.json()).code,"PAYMENT_SETUP_INCOMPLETE");
+  const zero=await order(branch.id,0);
+  await assert.rejects(()=>startCustomerPayment(pool,{userId:customer,orderId:zero,appUrl:app},()=>assert.fail("zero amount must not reach Tap")),/CHECKOUT_AMOUNT_INVALID/);
+  assert.equal((await pool.execute("SELECT COUNT(*) AS n FROM tenant_payment_checkouts WHERE order_id=?",[zero]))[0][0].n,0);
   const main=await order();
   assert.equal((await request(main,{orderId:main},"")).status,401);
   assert.equal((await request(main,{orderId:main},cookie,"https://foreign.example")).status,403);

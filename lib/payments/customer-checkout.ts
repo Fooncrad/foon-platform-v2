@@ -29,11 +29,25 @@ async function config(db:PoolConnection,order:RowDataPacket){
  if(setting.currency!==order.currency)fail("CHECKOUT_CURRENCY_MISMATCH");
  return setting;
 }
-export async function startCustomerPayment(pool:Pool,input:{userId:string;orderId:string;appUrl:string},fetcher?:typeof fetch){
+type CheckoutInput={userId:string;orderId:string;appUrl:string};
+export async function startCustomerPayment(pool:Pool,input:CheckoutInput,fetcher?:typeof fetch){
+ // Database conflicts may occur before or after provider creation. The durable
+ // record guarantees each retry uses the same provider key, never a new charge.
+ for(let retry=0;;retry++){
+  try{return await startOnce(pool,input,fetcher);}
+  catch(error){
+   const code=(error as {code?:string}).code;
+   if(retry>=2||!["ER_CHECKREAD","ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT"].includes(code??""))throw error;
+   await new Promise(resolve=>setTimeout(resolve,25*(retry+1)));
+  }
+ }
+}
+async function startOnce(pool:Pool,input:CheckoutInput,fetcher?:typeof fetch){
  const origin=appOrigin(input.appUrl),db=await pool.getConnection();
  let gatewayInput:TapCheckoutInput;
  let checkoutId="",tenantId="",scope="";
  try{
+  await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
   await db.beginTransaction();
   const candidate=await ownedOrder(db,input.userId,input.orderId);
   const setting=await config(db,candidate);
@@ -44,9 +58,11 @@ export async function startCustomerPayment(pool:Pool,input:{userId:string;orderI
   if(!grants[0]||!(grants[0].enabled===null?grants[0].code==="enterprise":Boolean(grants[0].enabled)))fail("PLAN_FEATURE_REQUIRED",403);
   tenantId=String(order.tenant_id);scope=String(setting.scope_key);
   const credentials=decryptPaymentCredentials(String(setting.credentials_ciphertext),{tenantId,scope,provider:"tap",mode:"test"});
+  if(typeof credentials.secret_key!=="string"||!credentials.secret_key.startsWith("sk_test_")||/[\r\n]/.test(credentials.secret_key))fail("PAYMENT_SETUP_INCOMPLETE");
   const [existing]=await db.execute<RowDataPacket[]>("SELECT *,TIMESTAMPDIFF(SECOND,created_at,NOW()) AS age_seconds FROM tenant_payment_checkouts WHERE tenant_id=? AND order_id=? AND mode='test' FOR UPDATE",[tenantId,input.orderId]);
   const checkout=existing[0];checkoutId=checkout?String(checkout.id):randomUUID();
   const amountMinor=majorToMinor(String(order.total),String(order.currency));
+  if(amountMinor<=0||amountMinor>9999999999)fail("CHECKOUT_AMOUNT_INVALID",400);
   const name=String(order.display_name??"").trim(),email=String(order.email);
   if(!name||name.length>100||!/^\S+@\S+\.\S+$/.test(email))fail("CHECKOUT_PROFILE_REQUIRED",400);
   gatewayInput={mode:"test",secretKey:credentials.secret_key,amountMinor,currency:String(order.currency),orderReference:input.orderId,idempotencyKey:checkoutId,webhookUrl:origin+"/api/payments/webhooks/"+setting.endpoint_id,returnUrl:origin+"/customer?payment_return=1",customer:{name,email}};
@@ -79,6 +95,7 @@ export async function startCustomerPayment(pool:Pool,input:{userId:string;orderI
  }
  const finish=await pool.getConnection();
  try{
+  await finish.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
   await finish.beginTransaction();
   const [settings]=await finish.execute<RowDataPacket[]>("SELECT provider,mode FROM tenant_payment_gateway_credentials WHERE tenant_id=? AND scope_key=? FOR UPDATE",[tenantId,scope]);
   const order=await ownedOrder(finish,input.userId,input.orderId,true);
