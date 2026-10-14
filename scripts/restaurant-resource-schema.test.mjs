@@ -86,3 +86,12 @@ test("customer invoices link only accepted quotations with matching totals",()=>
  assert.ok(source.includes("INVOICE_QUOTATION_LINK_IMMUTABLE"));
  assert.match(source,/\["issued","paid","void"\]/);
 });
+
+test("customer invoice lifecycle rejects backwards and unverified payment transitions",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.match(source,/draft:\["draft","issued","void"\]/);
+ assert.match(source,/issued:\["issued","paid","void"\]/);
+ assert.match(source,/paid:\["paid"\],void:\["void"\]/);
+ assert.ok(source.includes("INVALID_INVOICE_TRANSITION"));
+ assert.ok(source.includes('!previous&&!["draft","issued"].includes(String(input.status))'));
+});
