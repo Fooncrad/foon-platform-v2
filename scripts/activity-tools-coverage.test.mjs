@@ -42,3 +42,10 @@ test("activity dashboard guards against invalid activity codes before resolving 
  assert.match(tools,/isActivityType\(activity\)\?localizedActivityModules\(activity,lang\):\[\]/);
  assert.match(tools,/if\(!isActivityType\(activity\)\)return <section role="alert"/);
 });
+
+test("storefront template editor refuses unavailable saved templates",()=>{
+ const editor=readFileSync(new URL("../app/restaurant/activity-template-editor.tsx",import.meta.url),"utf8");
+ assert.match(editor,/choices\.includes\(d\.template\)/);
+ assert.match(editor,/if\(!choices\.includes\(selected\)\)return/);
+ assert.match(editor,/disabled=\{busy\|\|loading\|\|!choices\.includes\(selected\)\|\|selected===saved\}/);
+});
