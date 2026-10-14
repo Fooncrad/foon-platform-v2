@@ -19,8 +19,11 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  // Legacy restaurant tenants may not yet have a business profile. Restore their
  // restaurant navigation without overriding an explicitly configured activity.
  const storedActivityCode=String(activityRows[0]?.activity_code??"").trim();
- const activityCode=storedActivityCode||"restaurant";
- const activityModules=isActivityType(activityCode)?[...defaultActivityModules(activityCode)]:[];
+ // This is the restaurant workspace: an absent or legacy unknown activity code
+ // must not hide restaurant tools. Explicitly supported other activities retain
+ // their own module presets; RBAC and subscription checks remain unchanged.
+ const activityCode=isActivityType(storedActivityCode)?storedActivityCode:"restaurant";
+ const activityModules=[...defaultActivityModules(activityCode)];
  const [[branches],[subscriptions],[features],[tenants],[choices]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
   db.execute<RowDataPacket[]>("SELECT p.name_ar AS plan_name,CASE WHEN s.status<>'active' THEN s.status WHEN s.ends_at IS NOT NULL AND s.ends_at<=NOW() THEN 'expired' WHEN p.enabled=FALSE OR (s.starts_at IS NOT NULL AND s.starts_at>NOW()) THEN 'pending' ELSE 'active' END AS status,s.starts_at,s.ends_at,p.enabled FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id WHERE s.tenant_id=? LIMIT 1",[tenantId]),
