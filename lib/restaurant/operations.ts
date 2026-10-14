@@ -28,6 +28,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(archive&&!previous)throw new ResourceError("INVALID_INPUT");
  if(archive){
   if(module==="quotations"&&previous?.status!=="draft")throw new ResourceError("QUOTATION_ARCHIVE_FORBIDDEN");
+  if(module==="customerInvoices"&&previous?.status!=="draft")throw new ResourceError("INVOICE_ARCHIVE_FORBIDDEN");
   if(["sections","tables"].includes(module)){const field=module==="sections"?"sectionId":"tableId";const [[used]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,?))=? AND (kind='dining_table' OR status IN ('pending','confirmed','seated','in_progress'))",[tenantId,id,"$."+field,id]) as [RowDataPacket[],unknown];if(Number(used.n))throw new ResourceError("SECTION_IN_USE");}
   if(module==="team"){const data=parseData(previous!.data);if(data.userId===actor||role!=="owner"&&data.role==="manager")throw new ResourceError("FORBIDDEN");if(data.userId)await db.execute("UPDATE memberships SET status='suspended' WHERE tenant_id=? AND user_id=? AND role<>'owner'",[tenantId,data.userId]);}
   await db.execute("UPDATE restaurant_resources SET archived=TRUE,lookup_key=NULL,version=version+1 WHERE id=? AND tenant_id=?",[id,tenantId]);
