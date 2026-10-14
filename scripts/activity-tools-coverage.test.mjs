@@ -87,3 +87,9 @@ test("merchant catalog API rejects fractional and coerced stock values",()=>{
  assert.ok(route.includes("Number.isSafeInteger(quantity)"));
  assert.ok(route.includes('code:"INVALID_STOCK"'));
 });
+
+test("catalog update and delete report missing records instead of false success",()=>{
+ const route=readFileSync(new URL("../app/api/restaurant/activity-catalog/route.ts",import.meta.url),"utf8");
+ assert.ok(route.includes('if(!changed)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404})'));
+ assert.ok(route.includes('if(!deleted)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404})'));
+});
