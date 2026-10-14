@@ -32,6 +32,13 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   await db.execute("UPDATE restaurant_resources SET archived=TRUE,lookup_key=NULL,version=version+1 WHERE id=? AND tenant_id=?",[id,tenantId]);
   await audit(db,tenantId,actor,module+".archive",id);return {id};
  }
+ if(module==="quotations"&&previous){
+  const from=String(previous.status),to=String(body.status??"");
+  const transitions:Record<string,string[]>={draft:["draft","sent","cancelled"],sent:["sent","accepted","rejected","cancelled"],accepted:[],rejected:[],cancelled:[]};
+  if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
+  if(from==="sent"&&to==="sent"&&JSON.stringify(parseData(previous.data))!==JSON.stringify(body.data??{}))throw new ResourceError("QUOTATION_SENT_IMMUTABLE");
+ }
+ if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
  if(module==="storefront"&&input.data.menuTheme){await db.execute("INSERT INTO restaurant_menu_appearance(tenant_id,template_key) VALUES (?,?) ON DUPLICATE KEY UPDATE template_key=VALUES(template_key)",[tenantId,input.data.menuTheme]);}
  if(config.singleton)input.branchId=null;
