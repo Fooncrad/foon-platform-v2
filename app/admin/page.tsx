@@ -58,7 +58,6 @@ const adminTranslations:Record<string,{en:string;fr:string}>={
  "مؤشرات التشغيل":{en:"Operations metrics",fr:"Indicateurs opérationnels"},
  "الحسابات المسجلة":{en:"Registered accounts",fr:"Comptes inscrits"},
  "النشطة: ":{en:"Active: ",fr:"Actifs : "},
- "النشطة: ":{en:"Active: ",fr:"Actifs : "},
  " · المعلقة: ":{en:" · Pending: ",fr:" · En attente : "},
  "البيانات غير متاحة":{en:"Data unavailable",fr:"Données indisponibles"},
  "آخر نشاط إداري":{en:"Latest admin activity",fr:"Dernière activité administrative"},
