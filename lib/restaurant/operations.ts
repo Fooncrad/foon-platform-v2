@@ -71,13 +71,15 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  for(const field of config.fields.filter(f=>f.type==="ref")){
   const value=input.data[field.key];if(!value)continue;
   if(field.ref==="orders"){
-   const [orders]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 LOCK IN SHARE MODE",[value,tenantId]);
+   const [orders]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[value,tenantId]);
    if(!orders.length||input.branchId&&orders[0].branch_id&&orders[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
    if(module==="customerInvoices"){
     if(orders[0].status==="cancelled")throw new ResourceError("INVOICE_ORDER_CANCELLED");
     const total=Math.round(Number(orders[0].total)*100);
     const invoiceTotal=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
     if(!Number.isSafeInteger(total)||total!==invoiceTotal)throw new ResourceError("ORDER_INVOICE_AMOUNT_MISMATCH");
+    const [linkedInvoices]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,value]);
+    if(linkedInvoices.length)throw new ResourceError("ORDER_ALREADY_INVOICED");
    }
    continue;
   }
