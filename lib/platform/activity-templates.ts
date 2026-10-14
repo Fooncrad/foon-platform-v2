@@ -1,4 +1,4 @@
-import {isActivityType,type ActivityType} from "./activity-presets";
+import {isActivityType,type ActivityType} from "./activity-presets.ts";
 
 /** Activity-specific storefront choices. Legacy menu themes remain available to restaurants. */
 export const ACTIVITY_TEMPLATES={

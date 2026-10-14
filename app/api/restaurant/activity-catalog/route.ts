@@ -77,7 +77,7 @@ export async function PATCH(request:Request){
  }
  if(body.kind==="product"&&body.stockQuantity!==undefined){
   const quantity=body.stockQuantity===null?null:Number(body.stockQuantity);
-  if(quantity!==null&&(!Number.isFinite(quantity)||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
+  if(quantity!==null&&(typeof body.stockQuantity!=="number"||!Number.isSafeInteger(quantity)||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
   columns.push("stock_quantity=?");values.push(quantity);
  }
  for(const [key,column] of [["nameEn","name_en"],["nameFr","name_fr"]] as const){
@@ -88,7 +88,9 @@ export async function PATCH(request:Request){
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{
   const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?",[...values,ctx.tenantId,body.id]);
-  return NextResponse.json({ok:true,changed:(result as {affectedRows?:number}).affectedRows??0});
+  const changed=(result as {affectedRows?:number}).affectedRows??0;
+  if(!changed)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});
+  return NextResponse.json({ok:true,changed});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UPDATE_FAILED"},{status:503})}
 }
 
@@ -105,6 +107,8 @@ export async function DELETE(request:Request){
   }
   const table=body.kind==="category"?"catalog_categories":"catalog_products";
   const [result]=await database().execute("DELETE FROM "+table+" WHERE tenant_id=? AND id=?",[ctx.tenantId,body.id]);
-  return NextResponse.json({ok:true,deleted:(result as {affectedRows?:number}).affectedRows??0});
+  const deleted=(result as {affectedRows?:number}).affectedRows??0;
+  if(!deleted)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});
+  return NextResponse.json({ok:true,deleted});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_DELETE_FAILED"},{status:503})}
 }

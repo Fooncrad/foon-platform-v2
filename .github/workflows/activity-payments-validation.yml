@@ -1,0 +1,72 @@
+name: Activity payments validation
+on:
+  push:
+    branches: [test/foon-v2-completion-20261014]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: activity-payments-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:payments
+      - run: npm run test:payment-webhooks
+      - run: node --test scripts/tap-hosted-checkout.test.mjs
+      - run: npm run test:migrations
+      - run: npm run test:activities
+      - run: node --experimental-strip-types --test scripts/activity-tools-coverage.test.mjs
+      - run: node --experimental-strip-types --test scripts/activity-coverage.test.mjs scripts/activity-integration-contract.test.mjs
+      - run: npm run test:resources
+      - run: npm run test:admin-policy
+      - run: npm run test:mail
+      - run: npm run test:tax
+      - run: npm run test:media
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+  payment-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: foon-ci-only-password
+          MARIADB_DATABASE: foon_migration_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:foon-ci-only-password@127.0.0.1:3306/foon_migration_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run build
+      - run: node --test scripts/payment-settings.integration.test.mjs
+      - run: node --experimental-strip-types --test scripts/payment-webhook.integration.test.mjs
+      - run: node --experimental-strip-types --test scripts/customer-checkout.integration.test.mjs
+      - run: npm run test:operations
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
+

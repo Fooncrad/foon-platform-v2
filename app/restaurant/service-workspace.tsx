@@ -8,6 +8,7 @@ import TemplateEditor from "./menu/template-editor";
 import ResourceManager,{operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 const groups:Record<string,{key:string;label:string}[]>={
+ quotes:[{key:"quotations",label:"عروض أسعار الخدمات"}],
  printers:[{key:"printers",label:"الطابعات"},{key:"printerIntegrations",label:"إعدادات التكامل"},{key:"departments",label:"أقسام التشغيل"},{key:"departmentAssignments",label:"توجيه الأصناف"},{key:"customerInvoices",label:"فواتير العملاء"},{key:"billingTax",label:"إعدادات الفوترة والضرائب"}],
  tables:[{key:"sections",label:"إضافة قسم صالة"},{key:"tables",label:"الطاولات وربطها بالقسم"},{key:"diningBatch",label:"الإضافة الجماعية"},{key:"waiterCalls",label:"نداءات النادل"}],
  menu:[{key:"menu",label:"الأصناف"},{key:"categories",label:"التصنيفات"},{key:"menuGroups",label:"الخيارات"},{key:"menuValues",label:"قيم الخيارات"},{key:"menuImages",label:"الصور"},{key:"templates",label:"القوالب والمظهر"}],

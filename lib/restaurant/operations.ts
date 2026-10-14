@@ -27,17 +27,106 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(body.id!==undefined){const [rows]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id,version,lookup_key FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE FOR UPDATE",[id,tenantId,config.kind]);previous=rows[0];if(!previous)throw new ResourceError("RESOURCE_NOT_FOUND");if(!Number.isInteger(body.version)||Number(body.version)!==Number(previous.version))throw new ResourceError("CONFLICT");}
  if(archive&&!previous)throw new ResourceError("INVALID_INPUT");
  if(archive){
+  if(module==="quotations"&&previous?.status!=="draft")throw new ResourceError("QUOTATION_ARCHIVE_FORBIDDEN");
+  if(module==="customerInvoices"&&previous?.status!=="draft")throw new ResourceError("INVOICE_ARCHIVE_FORBIDDEN");
   if(["sections","tables"].includes(module)){const field=module==="sections"?"sectionId":"tableId";const [[used]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,?))=? AND (kind='dining_table' OR status IN ('pending','confirmed','seated','in_progress'))",[tenantId,id,"$."+field,id]) as [RowDataPacket[],unknown];if(Number(used.n))throw new ResourceError("SECTION_IN_USE");}
   if(module==="team"){const data=parseData(previous!.data);if(data.userId===actor||role!=="owner"&&data.role==="manager")throw new ResourceError("FORBIDDEN");if(data.userId)await db.execute("UPDATE memberships SET status='suspended' WHERE tenant_id=? AND user_id=? AND role<>'owner'",[tenantId,data.userId]);}
   await db.execute("UPDATE restaurant_resources SET archived=TRUE,lookup_key=NULL,version=version+1 WHERE id=? AND tenant_id=?",[id,tenantId]);
   await audit(db,tenantId,actor,module+".archive",id);return {id};
  }
+ if(module==="quotations"&&previous){
+  const from=String(previous.status),to=String(body.status??"");
+  const transitions:Record<string,string[]>={draft:["draft","sent","cancelled"],sent:["sent","accepted","rejected","cancelled"],accepted:[],rejected:[],cancelled:[]};
+  if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
+  if(from==="sent"&&to==="accepted"){const validUntil=String(parseData(previous.data).validUntil??"");if(validUntil&&Date.parse(validUntil+"T23:59:59.999Z")<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
+  if(from==="sent"&&JSON.stringify(parseData(previous.data))!==JSON.stringify(body.data??{}))throw new ResourceError("QUOTATION_SENT_IMMUTABLE");
+  if(from==="sent"&&(String(previous.name)!==String(body.name??"")||String(previous.branch_id??"")!==String(body.branchId??"")))throw new ResourceError("QUOTATION_SENT_IMMUTABLE");
+ }
+ if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
+ if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
+ if(module==="serviceOrders"){
+  const inputOrder=validateResource(module,body);
+  if(previous){
+   const transitions:Record<string,string[]>={new:["new","scheduled","in_progress","cancelled"],scheduled:["scheduled","in_progress","cancelled"],in_progress:["in_progress","completed","cancelled"],completed:["completed"],cancelled:["cancelled"]};
+   if(!transitions[String(previous.status)]?.includes(String(inputOrder.status)))throw new ResourceError("INVALID_SERVICE_ORDER_TRANSITION");
+   const old=parseData(previous.data);
+   if(old.quotationId!==inputOrder.data.quotationId)throw new ResourceError("SERVICE_ORDER_QUOTATION_IMMUTABLE");
+   if(["completed","cancelled"].includes(String(previous.status))&&(JSON.stringify(old)!==JSON.stringify(inputOrder.data)||String(previous.name)!==String(inputOrder.name)||String(previous.branch_id??"")!==String(inputOrder.branchId??"")))throw new ResourceError("SERVICE_ORDER_FINAL_IMMUTABLE");
+  }
+  if(inputOrder.data.quotationId){
+   const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[inputOrder.data.quotationId,tenantId]);
+   if(!quotes.length||quotes[0].status!=="accepted"||quotes[0].branch_id&&quotes[0].branch_id!==inputOrder.branchId)throw new ResourceError("SERVICE_ORDER_QUOTATION_NOT_ACCEPTED");
+   const quote=parseData(quotes[0].data);
+   if(Math.round(Number(quote.amount)*100)!==Math.round(Number(inputOrder.data.amount)*100)||String(quote.customerName)!==String(inputOrder.data.customerName)||String(quote.serviceDescription)!==String(inputOrder.data.serviceDescription))throw new ResourceError("SERVICE_ORDER_QUOTATION_MISMATCH");
+   const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,inputOrder.data.quotationId]);
+   if(linked.length)throw new ResourceError("SERVICE_ORDER_ALREADY_CREATED");
+  }
+ }
+ if(module==="customerInvoices"&&previous){
+  const from=String(previous.status),to=String(input.status);
+  const transitions:Record<string,string[]>={draft:["draft","issued","void"],issued:["issued","paid","void"],paid:["paid"],void:["void"]};
+  if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_INVOICE_TRANSITION");
+ }
+ if(module==="customerInvoices"&&!previous&&!["draft","issued"].includes(String(input.status)))throw new ResourceError("INVALID_INVOICE_TRANSITION");
+ if(module==="customerInvoices"&&previous&&["issued","paid","void"].includes(String(previous.status))){
+  if(JSON.stringify(parseData(previous.data))!==JSON.stringify(input.data)||String(previous.branch_id??"")!==String(input.branchId??"")||String(previous.name)!==String(input.name))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE");
+ }
+ if(module==="customerInvoices"&&previous&&parseData(previous.data).quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_QUOTATION_LINK_IMMUTABLE");
+ if(module==="customerInvoices"&&previous&&parseData(previous.data).orderId!==input.data.orderId)throw new ResourceError("INVOICE_ORDER_LINK_IMMUTABLE");
+
+ if(module==="customerInvoices"&&previous&&parseData(previous.data).serviceOrderId!==input.data.serviceOrderId)throw new ResourceError("INVOICE_SERVICE_ORDER_LINK_IMMUTABLE");
+ if(module==="customerInvoices"&&input.data.serviceOrderId){
+  if(input.data.orderId)throw new ResourceError("INVOICE_MULTIPLE_ORDER_SOURCES");
+  const [services]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[input.data.serviceOrderId,tenantId]);
+  if(!services.length||services[0].status==="cancelled")throw new ResourceError("SERVICE_ORDER_NOT_BILLABLE");
+  if(input.branchId&&services[0].branch_id&&input.branchId!==services[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH");
+  const service=parseData(services[0].data);
+  if(input.data.quotationId&&service.quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_SOURCE_QUOTATION_MISMATCH");
+  const total=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
+  if(!Number.isSafeInteger(total)||total!==Math.round(Number(service.amount)*100))throw new ResourceError("SERVICE_ORDER_INVOICE_AMOUNT_MISMATCH");
+  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,input.data.serviceOrderId]);
+  if(linked.length)throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
+ }
+
+ // A converted quotation may retain both references: each is independently
+ // validated against the same invoice total, without adding the amounts together.
+ if(module==="customerInvoices"&&input.data.quotationId){
+  const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[input.data.quotationId,tenantId]);
+  if(!quotes.length||quotes[0].status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
+  if(input.branchId&&quotes[0].branch_id&&input.branchId!==quotes[0].branch_id)throw new ResourceError("REFERENCE_NOT_FOUND");
+  if(input.data.orderId){
+   const [linkedOrders]=await db.execute<RowDataPacket[]>("SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[input.data.orderId,tenantId]);
+   if(!linkedOrders.length)throw new ResourceError("REFERENCE_NOT_FOUND");
+   if(quotes[0].branch_id&&linkedOrders[0].branch_id&&quotes[0].branch_id!==linkedOrders[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH");
+   const quotedPhone=String(parseData(quotes[0].data).customerPhone??"").replace(/[^0-9]/g,"");
+   const orderedPhone=String(linkedOrders[0].customer_phone??"").replace(/[^0-9]/g,"");
+   if(quotedPhone&&orderedPhone&&quotedPhone!==orderedPhone)throw new ResourceError("INVOICE_SOURCE_CUSTOMER_MISMATCH");
+  }
+  const quotedAmount=Math.round(Number(parseData(quotes[0].data).amount)*100);
+  const invoiceAmount=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
+  if(!Number.isSafeInteger(quotedAmount)||quotedAmount!==invoiceAmount)throw new ResourceError("QUOTATION_INVOICE_AMOUNT_MISMATCH");
+  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,input.data.quotationId]);
+  if(linked.length)throw new ResourceError("QUOTATION_ALREADY_INVOICED");
+ }
  if(module==="storefront"&&input.data.menuTheme){await db.execute("INSERT INTO restaurant_menu_appearance(tenant_id,template_key) VALUES (?,?) ON DUPLICATE KEY UPDATE template_key=VALUES(template_key)",[tenantId,input.data.menuTheme]);}
  if(config.singleton)input.branchId=null;
  await branchExists(db,tenantId,input.branchId);
  for(const field of config.fields.filter(f=>f.type==="ref")){
   const value=input.data[field.key];if(!value)continue;
+  if(field.ref==="orders"){
+   const [orders]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[value,tenantId]);
+   if(!orders.length||input.branchId&&orders[0].branch_id&&orders[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
+   if(module==="customerInvoices"){
+    if(orders[0].status==="cancelled")throw new ResourceError("INVOICE_ORDER_CANCELLED");
+    const total=Math.round(Number(orders[0].total)*100);
+    const invoiceTotal=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
+    if(!Number.isSafeInteger(total)||total!==invoiceTotal)throw new ResourceError("ORDER_INVOICE_AMOUNT_MISMATCH");
+    const [linkedInvoices]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,value]);
+    if(linkedInvoices.length)throw new ResourceError("ORDER_ALREADY_INVOICED");
+   }
+   continue;
+  }
   const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE LIMIT 1 LOCK IN SHARE MODE",[value,tenantId,resourceModules[field.ref!].kind]);
   if(!rows.length||input.branchId&&rows[0].branch_id&&rows[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
  }

@@ -1,0 +1,25 @@
+-- Durable initiation precedes any provider request. No card details or plaintext keys.
+CREATE TABLE IF NOT EXISTS tenant_payment_checkouts (
+ id VARCHAR(36) NOT NULL PRIMARY KEY,
+ tenant_id VARCHAR(36) NOT NULL,
+ scope_key VARCHAR(80) NOT NULL,
+ order_id VARCHAR(36) NOT NULL,
+ branch_id VARCHAR(36) NOT NULL,
+ customer_user_id VARCHAR(36) NOT NULL,
+ provider VARCHAR(40) NOT NULL,
+ mode ENUM('test','live') NOT NULL,
+ amount_minor BIGINT UNSIGNED NOT NULL,
+ currency CHAR(3) NOT NULL,
+ payload_hash CHAR(64) NOT NULL,
+ state ENUM('creating','uncertain','ready','review') NOT NULL DEFAULT 'creating',
+ provider_payment_id VARCHAR(180) COLLATE utf8mb4_bin NULL,
+ hosted_url VARCHAR(2048) NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_checkout_order_mode(tenant_id,order_id,mode),
+ KEY ix_checkout_scope(tenant_id,scope_key,state),
+ CONSTRAINT fk_checkout_setting FOREIGN KEY(tenant_id,scope_key) REFERENCES tenant_payment_settings(tenant_id,scope_key),
+ CONSTRAINT fk_checkout_order FOREIGN KEY(tenant_id,order_id) REFERENCES restaurant_orders(tenant_id,id),
+ CONSTRAINT fk_checkout_branch FOREIGN KEY(tenant_id,branch_id) REFERENCES branches(tenant_id,id),
+ CONSTRAINT fk_checkout_customer FOREIGN KEY(customer_user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

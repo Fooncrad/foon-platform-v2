@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {validateResource} from "./restaurant-resource-schema.mjs";
+import {readFileSync} from "node:fs";
+import {validateResource,resourceModules} from "./restaurant-resource-schema.mjs";
 test("resource validation rejects unknown keys, nonfinite prices and unsafe asset URLs",()=>{
  assert.throws(()=>validateResource("__proto__",{name:"X",status:"active"}));
  for(const price of [NaN,Infinity,-1])assert.throws(()=>validateResource("menu",{name:"X",status:"active",data:{price}}));
@@ -44,4 +45,122 @@ test("four dining sections validate independently without a database",()=>{
  assert.equal(optional.data.area,null);assert.equal(optional.data.smoking,null);
  for(const key of ["area","smoking"])assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{[key]:"x".repeat(81)}}));
  assert.throws(()=>validateResource("sections",{name:"قسم غير صالح",status:"active",data:{unknownClassification:"roof"}}));
+});
+
+test("public works quotation enforces customer, service, amount and lifecycle",()=>{
+ const valid={name:"تجديد محل",status:"draft",data:{customerName:"عميل",serviceDescription:"أعمال صيانة",amount:1200}};
+ const created=validateResource("quotations",valid);
+ assert.equal(created.data.amount,1200);
+ for(const status of ["draft","sent","accepted","rejected","cancelled"])assert.equal(validateResource("quotations",{...valid,status}).status,status);
+ for(const amount of [-1,Infinity,NaN,100000001])assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,amount}}));
+ assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,customerName:""}}));
+ assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,serviceDescription:""}}));
+ assert.throws(()=>validateResource("quotations",{...valid,status:"paid"}));
+});
+
+test("quotation updates require a controlled approval lifecycle",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.match(source,/module==="quotations"&&previous/);
+ assert.match(source,/draft:\["draft","sent","cancelled"\]/);
+ assert.match(source,/sent:\["sent","accepted","rejected","cancelled"\]/);
+ assert.match(source,/accepted:\[\],rejected:\[\],cancelled:\[\]/);
+ assert.match(source,/INVALID_QUOTATION_TRANSITION/);
+ assert.match(source,/QUOTATION_SENT_IMMUTABLE/);
+ assert.match(source,/module==="quotations"&&previous\?\.status!=="draft"/);
+ assert.match(source,/QUOTATION_ARCHIVE_FORBIDDEN/);
+ assert.match(source,/QUOTATION_EXPIRED/);
+ assert.match(source,/module==="quotations"&&input\.status==="sent"&&input\.data\.validUntil/);
+ assert.match(source,/if\(from==="sent"&&JSON\.stringify\(parseData\(previous\.data\)\)/);
+ assert.match(source,/String\(previous\.branch_id\?\?""\)/);
+ assert.match(source,/from==="sent"&&to==="accepted"/);
+});
+
+test("customer invoices link only accepted quotations with matching totals",()=>{
+ const quotationField=resourceModules.customerInvoices.fields.find(field=>field.key==="quotationId");
+ assert.equal(quotationField?.ref,"quotations");
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ for(const error of ["QUOTATION_NOT_ACCEPTED","QUOTATION_INVOICE_AMOUNT_MISMATCH","QUOTATION_ALREADY_INVOICED"])assert.ok(source.includes(error));
+ assert.match(source,/kind='service_quotation' AND archived=FALSE FOR UPDATE/);
+ assert.ok(source.includes("JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))"));
+ assert.ok(source.includes("ISSUED_INVOICE_IMMUTABLE"));
+ assert.ok(source.includes("INVOICE_QUOTATION_LINK_IMMUTABLE"));
+ assert.match(source,/\["issued","paid","void"\]/);
+});
+
+test("customer invoice lifecycle rejects backwards and unverified payment transitions",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.match(source,/draft:\["draft","issued","void"\]/);
+ assert.match(source,/issued:\["issued","paid","void"\]/);
+ assert.match(source,/paid:\["paid"\],void:\["void"\]/);
+ assert.ok(source.includes("INVALID_INVOICE_TRANSITION"));
+ assert.ok(source.includes('!previous&&!["draft","issued"].includes(String(input.status))'));
+});
+
+test("issued paid and void customer invoices cannot be archived",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('module==="customerInvoices"&&previous?.status!=="draft"'));
+ assert.ok(source.includes("INVOICE_ARCHIVE_FORBIDDEN"));
+});
+
+test("invoice order references resolve against tenant scoped orders instead of generic resources",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('if(field.ref==="orders")'));
+ assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
+ assert.equal(resourceModules.customerInvoices.fields.find(field=>field.key==="orderId")?.ref,"orders");
+});
+
+test("linked customer invoice totals match live orders and exclude cancelled orders",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("ORDER_INVOICE_AMOUNT_MISMATCH"));
+ assert.ok(source.includes("INVOICE_ORDER_CANCELLED"));
+ assert.ok(source.includes('orders[0].status==="cancelled"'));
+});
+
+test("a restaurant order cannot be invoiced twice by concurrent requests",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("ORDER_ALREADY_INVOICED"));
+ assert.ok(source.includes("JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? LIMIT 1 FOR UPDATE"));
+ assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
+});
+
+test("customer invoice cannot be reassigned to another order after initial linking",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("INVOICE_ORDER_LINK_IMMUTABLE"));
+ assert.ok(source.includes("parseData(previous.data).orderId!==input.data.orderId"));
+});
+
+test("finalized invoice names are immutable with invoice amounts and branch",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('String(previous.name)!==String(input.name))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE")'));
+});
+
+test("invoice can retain quotation and order links with independent amount validation",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(!source.includes("INVOICE_MULTIPLE_SOURCES"));
+ assert.ok(source.includes("QUOTATION_INVOICE_AMOUNT_MISMATCH"));
+ assert.ok(source.includes("ORDER_INVOICE_AMOUNT_MISMATCH"));
+ assert.ok(source.includes("QUOTATION_ALREADY_INVOICED"));
+ assert.ok(source.includes("ORDER_ALREADY_INVOICED"));
+});
+
+test("linked quotation and order must belong to the same branch",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('quotes[0].branch_id!==linkedOrders[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH")'));
+ assert.ok(source.includes('SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE'));
+});
+
+test("invoice quote-order linkage rejects different customer phone numbers",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("INVOICE_SOURCE_CUSTOMER_MISMATCH"));
+ assert.ok(source.includes("SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
+});
+
+test("service orders validate required fields and accepted quotation references",()=>{
+ const quotationId="11111111-1111-4111-8111-111111111111";
+ const order=validateResource("serviceOrders",{name:"Repair",status:"new",data:{quotationId,customerName:"Customer",serviceDescription:"Repair equipment",amount:120}});
+ assert.equal(order.data.quotationId,quotationId);
+ assert.equal(order.data.amount,120);
+ assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{customerName:"Customer",amount:120}}));
+ assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{customerName:"Customer",serviceDescription:"Repair equipment",amount:-1}}));
+ assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{quotationId:"foreign",customerName:"Customer",serviceDescription:"Repair equipment",amount:120}}));
 });
