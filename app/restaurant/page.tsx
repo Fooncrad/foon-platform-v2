@@ -15,7 +15,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
  const tenantId=workspace.tenant_id,canManage=["owner","manager"].includes(workspace.role);
  const db=database();
- const [activityRows]=await db.execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
+ const [activityRows]=await db.execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
  // Legacy restaurant tenants may not yet have a business profile. Restore their
  // restaurant navigation without overriding an explicitly configured activity.
  const storedActivityCode=String(activityRows[0]?.activity_code??"").trim();
@@ -45,7 +45,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const subscription=subscriptions[0];
  const now=new Date();
  const data:MerchantData={
-  tenantId,activityCode,activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
+  tenantId,activityCode,currency:String(activityRows[0]?.currency??"SAR"),activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
   staffPermissions,tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),

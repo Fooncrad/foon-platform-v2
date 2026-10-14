@@ -17,9 +17,9 @@ test("every activity module has Arabic, English and French labels",()=>{
  for(const activity of activities){
   const modules=defaultActivityModules(activity);
   assert.ok(modules.length>0,activity);
-  for(const module of modules){
+  for(const capability of modules){
    for(const locale of ["ar","en","fr"]){
-    assert.ok(MODULE_LABELS[module]?.[locale]?.trim(),activity+"/"+module+"/"+locale);
+    assert.ok(MODULE_LABELS[capability]?.[locale]?.trim(),activity+"/"+capability+"/"+locale);
    }
   }
  }
