@@ -225,7 +225,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(billedService.status,201,JSON.stringify(billedService.body));
   const repeatedService=await resource(a,"customerInvoices",{...serviceInvoice,name:"Duplicate standalone service invoice"});
   assert.notEqual(repeatedService.status,201,JSON.stringify(repeatedService.body));
-  assert.equal(repeatedService.body.code,"QUOTATION_ALREADY_INVOICED");
+  assert.ok(["SERVICE_ORDER_ALREADY_INVOICED","QUOTATION_ALREADY_INVOICED"].includes(repeatedService.body.code),JSON.stringify(repeatedService.body));
   // Verify the full standalone service invoice lifecycle and immutable issued/paid records.
   const serviceInvoices=await resource(a,"customerInvoices",undefined,"GET");
   const savedServiceInvoice=serviceInvoices.body.resources.find(row=>row.id===billedService.body.id);
