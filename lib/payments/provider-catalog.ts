@@ -6,7 +6,7 @@ export const PAYMENT_PROVIDERS:Record<PaymentProvider,{name:string;publicKey:boo
  manual:{name:'Cash',publicKey:false,merchantRequired:false,webhook:false,docs:null},
  moyasar:{name:'Moyasar',publicKey:true,merchantRequired:false,webhook:true,docs:'https://docs.moyasar.com/'},
  tap:{name:'Tap',publicKey:true,merchantRequired:false,webhook:false,docs:'https://developers.tap.company/docs/get-started'},
- hyperpay:{name:'HyperPay',publicKey:false,merchantRequired:true,webhook:false,docs:'https://hyperpay.docs.oppwa.com/'},
+ hyperpay:{name:'HyperPay',publicKey:false,merchantRequired:true,webhook:true,docs:'https://hyperpay.docs.oppwa.com/'},
  stripe:{name:'Stripe',publicKey:true,merchantRequired:false,webhook:true,docs:'https://docs.stripe.com/keys'},
  custom:{name:'Other gateway',publicKey:true,merchantRequired:true,webhook:true,docs:null}
 };

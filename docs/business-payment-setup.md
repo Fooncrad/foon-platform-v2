@@ -18,7 +18,7 @@ The payment editor is shared by all 14 activity types. Owners and managers may s
 5. Restart the test application; the UI indicates whether secret storage is configured.
 
 ## Checkout status
-Saving configuration does not activate online collection. Current checkout remains cash/manual only. Electronic settings are marked configured_pending_integration and cannot be enabled until provider payment creation, durable reconciliation and authenticated callbacks are implemented and tested. No webhook URL is advertised before a receiver exists. Custom gateways require an adapter.
+Saving configuration does not activate online collection. Current checkout remains cash/manual only. Electronic settings are marked configured_pending_integration and cannot be enabled until provider payment creation, durable reconciliation and authenticated callbacks are implemented and tested. Webhook reception for supported providers is now implemented; see payment-webhooks.md for verification and settlement prerequisites. Custom gateways require an adapter.
 
 Provider references:
 - https://docs.moyasar.com/
@@ -33,3 +33,4 @@ scripts/payment-settings.integration.test.mjs exercises the actual Next routes a
 
 ## Activity tools
 The activity setup page and overview expose relevant tool links in three languages. Cafe presets include tables, reservations, waitlist and waiter service. Service-based businesses retain their catalog and booking navigation. Quotation integration remains explicitly pending.
+

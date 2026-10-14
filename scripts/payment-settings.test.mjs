@@ -49,7 +49,7 @@ test("test keys cannot be configured as live keys and restricted Stripe keys are
 test("gateway readiness reports actual missing credential fields",()=>{
  assert.deepEqual(paymentMissingFields("manual",null,"CASH",{}),[]);
  assert.deepEqual(paymentMissingFields("moyasar",null,null,{}),["public_key","secret_key","webhook_secret"]);
- assert.deepEqual(paymentMissingFields("hyperpay",null,null,{}),["merchant_reference","secret_key"]);
+ assert.deepEqual(paymentMissingFields("hyperpay",null,null,{}),["merchant_reference","secret_key","webhook_secret"]);
  assert.deepEqual(paymentMissingFields("stripe","pk_test_synthetic",null,{secret_key:true,webhook_secret:true}),[]);
  assert.equal(Object.keys(PAYMENT_PROVIDERS).length,6);
 });
@@ -68,3 +68,4 @@ test("cafes retain the full table, waiter, reservation and waitlist workflow",()
   assert.ok(ACTIVITY_PRESETS.cafe.includes(feature),feature);
  }
 });
+
