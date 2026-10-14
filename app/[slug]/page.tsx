@@ -53,10 +53,10 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  let catalogError=false;
  let categories:RowDataPacket[]=[];
  let counts:RowDataPacket[]=[];
- try{[[categories],[counts]]=await Promise.all([
-  database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE ORDER BY sort_order,created_at",[String(tenant.id)]),
-  database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where,filterValues)
- ]);}catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"categories/count",error});}
+ try{const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE ORDER BY sort_order,created_at",[String(tenant.id)]);categories=rows;}
+ catch(error){console.error("[FOON_STOREFRONT_CATEGORIES]",{slug,tenantId:String(tenant.id),error});}
+ try{const [rows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where,filterValues);counts=rows;}
+ catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"count",error});}
  const total=Number(counts[0]?.total??0);
  const safePage=Math.min(page,Math.max(1,Math.ceil(total/limit)));
  const safeOffset=(safePage-1)*limit;
@@ -67,7 +67,14 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  if(!catalogError)try{
   const [productRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
   products=productRows;
- }catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"products",error});}
+ }catch(error){
+  // Image metadata is optional. A missing catalog_images table must not hide products.
+  console.error("[FOON_STOREFRONT_IMAGES]",{slug,tenantId:String(tenant.id),error});
+  try{
+   const [fallbackRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,NULL AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
+   products=fallbackRows;
+  }catch(fallbackError){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"products",error:fallbackError});}
+ }
 
  const {previewTemplate}=query;
  const locale=(await cookies()).get("foon_language")?.value;
