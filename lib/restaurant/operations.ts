@@ -37,6 +37,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   const from=String(previous.status),to=String(body.status??"");
   const transitions:Record<string,string[]>={draft:["draft","sent","cancelled"],sent:["sent","accepted","rejected","cancelled"],accepted:[],rejected:[],cancelled:[]};
   if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
+  if(from==="sent"&&to==="accepted"){const validUntil=String(parseData(previous.data).validUntil??"");if(validUntil&&Date.parse(validUntil+"T23:59:59.999Z")<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
   if(from==="sent"&&to==="sent"&&JSON.stringify(parseData(previous.data))!==JSON.stringify(body.data??{}))throw new ResourceError("QUOTATION_SENT_IMMUTABLE");
  }
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
