@@ -164,8 +164,9 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const quoteId=quoteCreated.body.id;
   const quoteRows=await resource(a,"quotations",undefined,"GET");
   assert.equal(quoteRows.status,200);
-  const quoteVersion=quoteRows.body.resources.find(row=>row.id===quoteId).version;
-  const quoteAccepted=await resource(a,"quotations",{id:quoteId,version:quoteVersion,name:"Service quote",status:"accepted",branchId:a.branch,data:quoteData},"PATCH");
+  const savedQuote=quoteRows.body.resources.find(row=>row.id===quoteId);
+  assert.ok(savedQuote,"newly created quotation should be readable");
+  const quoteAccepted=await resource(a,"quotations",{id:quoteId,version:savedQuote.version,name:savedQuote.name,status:"accepted",branchId:savedQuote.branchId??a.branch,data:savedQuote.data},"PATCH");
   assert.equal(quoteAccepted.status,200,JSON.stringify(quoteAccepted.body));
   const invoicePayload={name:"Approved service invoice",status:"draft",branchId:a.branch,data:{quotationId:quoteId,orderId:placed.body.id,subtotal:22,taxAmount:0,serviceFee:0}};
   const createdInvoice=await resource(a,"customerInvoices",invoicePayload);
