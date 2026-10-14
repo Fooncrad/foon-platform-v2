@@ -57,5 +57,6 @@ jobs:
       - run: npm run build
       - run: node --test scripts/payment-settings.integration.test.mjs
       - run: node --experimental-strip-types --test scripts/payment-webhook.integration.test.mjs
+      - run: node --experimental-strip-types --test scripts/customer-checkout.integration.test.mjs
 
 

@@ -31,7 +31,7 @@ A live successful receipt can mark an order paid only when a server-registered p
 
 The trusted initiation adapter must call registerPaymentAttempt in its transaction after obtaining the provider transaction ID. It derives the expected amount from the persisted order. An authenticated callback that arrives first is stored as unmatched and reconciled when that adapter registers the payment. Never bind transaction IDs through an unauthenticated browser request.
 
-Online checkout initiation remains disabled until its provider adapters are connected and tested. Webhook reception does not by itself activate collection. Supported non-capture event formats are recorded as ignored; unsupported event schemas are rejected. Automated refunds and dispute handling are not implemented by this receiver.
+Tap test-mode initiation is available after explicit merchant activation; live collection and initiation for other providers remain disabled. Webhook reception does not by itself activate collection. Supported non-capture event formats are recorded as ignored; unsupported event schemas are rejected. Automated refunds and dispute handling are not implemented by this receiver.
 
 Changing provider/environment rotates the endpoint; updating keys in the same environment preserves the configured URL. Old URLs return 404 after rotation.
 
@@ -43,3 +43,6 @@ payment-webhook.integration.test.mjs covers actual Next routes and MariaDB: stab
 Pending registered payment attempts block gateway/environment/secret or account-reference changes, preventing their callback URLs from being invalidated before reconciliation.
 
 Migration 0081 enforces provider transaction uniqueness across tenants and branch scopes; one payment ID cannot settle two orders. Existing duplicates cause migration failure and require investigation, never automatic deletion.
+
+## Customer initiation
+Tap test-mode initiation is connected to the authenticated customer's order through /api/customer/payments and a durable checkout record (migration 0085). The charge ID is committed as a payment attempt before redirect. Other gateway initiation and live collection remain disabled. See [Tap checkout](tap-hosted-checkout.md).

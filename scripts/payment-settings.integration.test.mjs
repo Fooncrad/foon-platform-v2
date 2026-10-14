@@ -36,7 +36,7 @@ test("payment settings isolate tenants and branches, hide secrets and reject sta
   let saved=await request(owner,"PUT",payload);assert.equal(saved.status,200,await saved.clone().text());assert.equal((await saved.json()).version,1);
   const get=await request(owner,"GET");assert.equal(get.status,200);const text=await get.text();
   assert.ok(!text.includes("sk_test_synthetic"));assert.ok(!text.includes("synthetic-webhook"));assert.ok(!text.includes("credentials_ciphertext"));
-  const data=JSON.parse(text);assert.equal(data.settings[0].status,"configured_pending_integration");assert.equal(data.settings[0].enabled,false);assert.equal(data.electronic_checkout_ready,false);
+  const data=JSON.parse(text);assert.equal(data.settings[0].status,"configured_pending_integration");assert.equal(data.settings[0].enabled,false);assert.equal(data.electronic_checkout_ready,true);assert.deepEqual(data.supported_checkout,[{provider:"tap",mode:"test"}]);
   const [[stored]]=await db.execute("SELECT credentials_ciphertext FROM tenant_payment_gateway_credentials WHERE tenant_id=? AND scope_key='tenant'",[owner.tenant]);
   assert.ok(stored.credentials_ciphertext.startsWith("v1."));assert.ok(!stored.credentials_ciphertext.includes("sk_test_synthetic"));
   assert.equal((await request(owner,"PUT",payload)).status,409);

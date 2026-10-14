@@ -18,19 +18,6 @@ The payment editor is shared by all 14 activity types. Owners and managers may s
 5. Restart the test application; the UI indicates whether secret storage is configured.
 
 ## Checkout status
-Saving configuration does not activate online collection. Current checkout remains cash/manual only. Electronic settings are marked configured_pending_integration and cannot be enabled until provider payment creation, durable reconciliation and authenticated callbacks are implemented and tested. Webhook reception for supported providers is now implemented; see payment-webhooks.md for verification and settlement prerequisites. Custom gateways require an adapter.
+Tap test checkout can be enabled from each merchant's dashboard after completing keys and configuring HTTPS APP_URL. Customers use the test payment button beside their own orders at /customer. Migration 0085 and earlier migrations are required. Branch overrides are explicit; disabled overrides block inherited checkout. Test callbacks never mark orders paid.
 
-Provider references:
-- https://docs.moyasar.com/
-- https://developers.tap.company/docs/get-started
-- https://hyperpay.docs.oppwa.com/
-- https://docs.stripe.com/keys
-
-## Validation
-npm run test:payments checks encryption, cross-scope rejection, tampering, environment checks, missing fields and activity coverage.
-scripts/payment-settings.integration.test.mjs exercises the actual Next routes against disposable MariaDB, including authorization, branch isolation, stale versions, credential preservation/removal and provider changes.
-.github/workflows/activity-payments-validation.yml runs these checks, typecheck, lint and build on the test branch. Passing source checks is not deployment evidence.
-
-## Activity tools
-The activity setup page and overview expose relevant tool links in three languages. Cafe presets include tables, reservations, waitlist and waiter service. Service-based businesses retain their catalog and booking navigation. Quotation integration remains explicitly pending.
-
+Live collection and other providers are not enabled. See [Tap checkout](tap-hosted-checkout.md) for durable initiation, safe retry and remaining recovery work. Cash collection is confirmed in the orders workspace.
