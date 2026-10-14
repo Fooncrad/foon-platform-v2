@@ -187,6 +187,12 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const wrongTotal=await resource(a,"customerInvoices",{...invoicePayload,name:"Incorrect amount",data:{...invoicePayload.data,subtotal:21}});
   assert.notEqual(wrongTotal.status,201,JSON.stringify(wrongTotal.body));
   assert.ok(["QUOTATION_INVOICE_AMOUNT_MISMATCH","ORDER_INVOICE_AMOUNT_MISMATCH"].includes(wrongTotal.body.code),JSON.stringify(wrongTotal.body));
+  // A quotation accepted by one tenant cannot be billed against another tenant's order.
+  const foreignOrder=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie);
+  assert.notEqual(foreignOrder.status,201,JSON.stringify(foreignOrder.body));
+  const rejectedQuoteEdit=await resource(a,"quotations",{id:quoteId,version:quoteAccepted.body.version??savedQuote.version+1,name:savedQuote.name,status:"sent",branchId:a.branch,data:savedQuote.data},"PATCH");
+  assert.notEqual(rejectedQuoteEdit.status,200,JSON.stringify(rejectedQuoteEdit.body));
+  assert.equal(rejectedQuoteEdit.body.code,"INVALID_QUOTATION_TRANSITION");
   const foreignInvoice=await resource(b,"customerInvoices",{...invoicePayload,branchId:b.branch});
   assert.notEqual(foreignInvoice.status,201,JSON.stringify(foreignInvoice.body));
   const [[invoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
