@@ -20,7 +20,8 @@
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
     "test:resources": "node --test scripts/restaurant-resource-schema.test.mjs",
     "test:operations": "node --test scripts/restaurant-operations.integration.test.mjs",
-    "test:browser": "playwright test scripts/merchant-dashboard.browser.test.mjs --workers=1 --reporter=line"
+    "test:browser": "playwright test scripts/merchant-dashboard.browser.test.mjs --workers=1 --reporter=line",
+    "test:tax": "node --experimental-strip-types --test scripts/restaurant-tax.test.mjs scripts/restaurant-tax-boundaries.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
