@@ -8,7 +8,7 @@ export default function ActivityTemplateEditor({tenantId,activity,slug}:{tenantI
  const [busy,setBusy]=useState(false);
  const [loading,setLoading]=useState(true);
  const [message,setMessage]=useState("");
- useEffect(()=>{let live=true;fetch("/api/restaurant/activity-template",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{if(live){if(typeof d.template==="string"&&choices.includes(d.template)){setSelected(d.template);setSaved(d.template)}else{setSelected(choices[0]??"");setSaved("");setMessage("القالب المحفوظ غير متاح لهذا النشاط. اختر قالبًا مناسبًا ثم احفظه.")}setLoading(false)}}).catch(()=>{if(live){setMessage("تعذر تحميل إعدادات القوالب. تأكد من ترحيل قاعدة البيانات.");setLoading(false)}});return()=>{live=false}},[tenantId]);
+ useEffect(()=>{let live=true;setLoading(true);setSaved("");setSelected(choices[0]??"");setMessage("");fetch("/api/restaurant/activity-template",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{if(live){if(typeof d.template==="string"&&choices.includes(d.template)){setSelected(d.template);setSaved(d.template)}else{setSelected(choices[0]??"");setSaved("");setMessage("القالب المحفوظ غير متاح لهذا النشاط. اختر قالبًا مناسبًا ثم احفظه.")}setLoading(false)}}).catch(()=>{if(live){setMessage("تعذر تحميل إعدادات القوالب. تأكد من ترحيل قاعدة البيانات.");setLoading(false)}});return()=>{live=false}},[tenantId,activity]);
  async function save(){if(!choices.includes(selected))return;setBusy(true);setMessage("");try{const r=await fetch("/api/restaurant/activity-template",{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({template:selected})});if(!r.ok)throw Error();setSaved(selected);setMessage("تم حفظ قالب النشاط بنجاح.")}catch{setMessage("تعذر حفظ القالب. حاول مجددًا.")}finally{setBusy(false)}}
  return <section className="restaurantPanel" style={{padding:20}}>
   <h2>قوالب واجهة النشاط</h2><p>اختر قالبًا مخصصًا لنشاطك. التغيير لا يؤثر على بيانات المنتجات أو العملاء.</p>
@@ -21,7 +21,7 @@ export default function ActivityTemplateEditor({tenantId,activity,slug}:{tenantI
   </div>
   <div style={{display:"flex",gap:12,alignItems:"center",marginTop:20,flexWrap:"wrap"}}>
    <button type="button" className="restaurantPrimary" onClick={()=>void save()} disabled={busy||loading||!choices.includes(selected)||selected===saved}>{busy?"جارٍ الحفظ…":"حفظ القالب"}</button>
-   <a href={"/"+encodeURIComponent(slug)+"?previewTemplate="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer">معاينة القالب المحدد قبل الحفظ</a>
+   {!loading&&choices.includes(selected)&&slug&&<a href={"/"+encodeURIComponent(slug)+"?previewTemplate="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer">معاينة القالب المحدد قبل الحفظ</a>}
   </div>
   {message&&<p role="status">{message}</p>}
  </section>;
