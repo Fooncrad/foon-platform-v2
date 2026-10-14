@@ -50,14 +50,19 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  if(category){filters.push("c.id=?");filterValues.push(category)}
  if(search){filters.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");filterValues.push(...Array(3).fill("%"+search+"%"))}
  const where=filters.join(" AND ");
- const [[categories],[counts]]=await Promise.all([
+ let catalogError=false;
+ let categories:RowDataPacket[]=[];
+ let counts:RowDataPacket[]=[];
+ try{[[categories],[counts]]=await Promise.all([
   database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE ORDER BY sort_order,created_at",[String(tenant.id)]),
   database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where,filterValues)
- ]);
+ ]);}catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"categories/count",error});}
  const total=Number(counts[0]?.total??0);
  const safePage=Math.min(page,Math.max(1,Math.ceil(total/limit)));
  const safeOffset=(safePage-1)*limit;
- const [[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset])]);
+ let themes:RowDataPacket[]=[];
+ let products:RowDataPacket[]=[];
+ if(!catalogError)try{[[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset])]);}catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"theme/products",error});}
  const {previewTemplate}=query;
  const locale=(await cookies()).get("foon_language")?.value;
  const language:ActivityLanguage=locale==="en"||locale==="fr"?locale:"ar";
@@ -69,6 +74,6 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
    if(membership.length)selected=previewTemplate;
   }
  }
- return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
 }
