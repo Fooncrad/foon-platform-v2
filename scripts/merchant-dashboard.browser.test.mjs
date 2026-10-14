@@ -276,10 +276,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"إغلاق المعاينة",exact:true}).click();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await page.setViewportSize({width:390,height:844});
- await expect(page.getByRole("button",{name:"فتح قائمة المطعم",exact:true})).toBeVisible();
+ await expect(page.getByRole("button",{name:"فتح قائمة النشاط",exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.screenshot({path:"work/merchant-mobile.png",fullPage:true});
- await page.getByRole("button",{name:"فتح قائمة المطعم",exact:true}).click();
+ await page.getByRole("button",{name:"فتح قائمة النشاط",exact:true}).click();
  await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
  await page.getByRole("combobox",{name:"اختيار الفرع",exact:true}).selectOption({label:"مطعم المعاينة"});
