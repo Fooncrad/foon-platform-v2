@@ -29,3 +29,11 @@ test("service activities do not accidentally receive restaurant tables and waite
   assert.ok(modules.includes("services"),code);
  }
 });
+
+test("activity setup fails closed on unknown types and preserves selected language",()=>{
+ const setup=readFileSync(new URL("../app/restaurant/activity-setup/page.tsx",import.meta.url),"utf8");
+ assert.match(setup,/const activity=isActivityType\(stored\)\?stored:null/);
+ assert.doesNotMatch(setup,/isActivityType\(stored\)\?stored:"restaurant"/);
+ assert.match(setup,/if\(!activity\)return/);
+ assert.match(setup,/language=\{lang==="en"\|\|lang==="fr"\?lang:"ar"\}/);
+});
