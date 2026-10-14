@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {calculateTax,calculateOrderTax} from '../lib/restaurant/tax-calculation.ts';
+import {majorToMinor} from '../lib/payments/webhook-verification.mjs';
 
 const minor=value=>Math.round(value*100);
 
@@ -31,4 +32,17 @@ test('rates outside 0–100 and discounts exceeding subtotal are rejected',()=>{
   assert.throws(()=>calculateTax(1,rate),RangeError);
  }
  assert.throws(()=>calculateOrderTax(0.01,0.02,15),RangeError);
+});
+
+test('VAT totals agree with payment minor units for inclusive and exclusive order previews',()=>{
+ const toMinor=value=>majorToMinor(value.toFixed(2),'SAR');
+ for(const [subtotal,discount] of [[0,0],[0.01,0],[0.04,0],[10,1],[100,10],[115,15],[99999.99,999.99]]){
+  for(const inclusive of [false,true]){
+   const {net,tax,gross}=calculateOrderTax(subtotal,discount,15,inclusive);
+   const expected=toMinor(subtotal)-toMinor(discount);
+   assert.equal(toMinor(net)+toMinor(tax),toMinor(gross),'invoice line tax breakdown must match checkout amount');
+   assert.equal(toMinor(inclusive?gross:net),expected,'inclusive price must not be taxed twice; exclusive net must match order base');
+   assert.ok(toMinor(gross)>=0,'payment amount cannot be negative');
+  }
+ }
 });
