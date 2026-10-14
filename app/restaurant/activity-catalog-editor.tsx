@@ -27,7 +27,7 @@ export default function ActivityCatalogEditor({tenantId,service}:{tenantId:strin
   setBusy(true);setMessage("");
   try{
    const response=await fetch("/api/restaurant/activity-catalog/images",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({product,url})});
-   if(!response.ok)throw Error((await response.json()).code);
+   if(!response.ok)throw Error((await response.json().catch(()=>({}))).code??"IMAGE_SAVE_FAILED");
    setMessage("تمت إضافة الصورة إلى المنتج.");
   }catch(error){setMessage("تعذر إضافة الصورة: "+String(error))}
   finally{setBusy(false)}
@@ -37,7 +37,7 @@ export default function ActivityCatalogEditor({tenantId,service}:{tenantId:strin
   setBusy(true);setMessage("");
   try{
    const response=await fetch("/api/restaurant/activity-catalog",{method:"DELETE",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({kind,id})});
-   if(!response.ok)throw Error((await response.json()).code);
+   if(!response.ok)throw Error((await response.json().catch(()=>({}))).code??"DELETE_FAILED");
    await load();setMessage("تم الحذف.");
   }catch(error){setMessage("تعذر الحذف: "+String(error))}
   finally{setBusy(false)}
