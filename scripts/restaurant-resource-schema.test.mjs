@@ -122,3 +122,9 @@ test("a restaurant order cannot be invoiced twice by concurrent requests",()=>{
  assert.ok(source.includes("JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? LIMIT 1 FOR UPDATE"));
  assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
 });
+
+test("customer invoice cannot be reassigned to another order after initial linking",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("INVOICE_ORDER_LINK_IMMUTABLE"));
+ assert.ok(source.includes("parseData(previous.data).orderId!==input.data.orderId"));
+});
