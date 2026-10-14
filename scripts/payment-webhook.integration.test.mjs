@@ -60,6 +60,32 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   await db.execute("INSERT INTO tenant_payment_attempts(id,tenant_id,scope_key,order_id,branch_id,provider,mode,provider_payment_id,amount_minor,currency) VALUES (?,?,'tenant',?,?,'stripe','test','pi_test_synthetic',1234,'SAR')",[randomUUID(),account.tenant,testOrder,branch.id]);
   assert.equal((await send(event("evt_test","pi_test_synthetic",1234,false),testConfig.webhook.url)).status,200);
   assert.equal((await paymentStatus(testOrder)).payment_status,"unpaid");assert.equal((await settings())[0].webhook.last_status,"test_received");
+
+  const attemptStatus=async paymentId=>(await db.execute("SELECT status FROM tenant_payment_attempts WHERE tenant_id=? AND provider_payment_id=?",[account.tenant,paymentId]))[0][0]?.status;
+  assert.equal(await attemptStatus("pi_test_synthetic"),"test_completed");
+  const testVersion=(await paymentStatus(testOrder)).version;
+  assert.equal((await send(event("evt_test","pi_test_synthetic",1234,false),testConfig.webhook.url)).status,200);
+  assert.equal((await paymentStatus(testOrder)).version,testVersion,"sandbox replays must never change order version");
+  // Authenticated sandbox callbacks can arrive before the server binds the provider ID.
+  const earlyTest=await order();
+  assert.equal((await send(event("evt_test_early","pi_test_early",1234,false),testConfig.webhook.url)).status,200);
+  await db.beginTransaction();
+  try{await registerPaymentAttempt(db,{tenantId:account.tenant,scope:"tenant",orderId:earlyTest,provider:"stripe",mode:"test",paymentId:"pi_test_early"});await db.commit();}catch(e){await db.rollback();throw e;}
+  assert.equal(await attemptStatus("pi_test_early"),"test_completed");
+  assert.equal((await paymentStatus(earlyTest)).payment_status,"unpaid");
+  // Wrong amounts must leave the attempt pending and retain the settings guard.
+  const wrongTest=await order();
+  await db.beginTransaction();
+  try{await registerPaymentAttempt(db,{tenantId:account.tenant,scope:"tenant",orderId:wrongTest,provider:"stripe",mode:"test",paymentId:"pi_test_wrong"});await db.commit();}catch(e){await db.rollback();throw e;}
+  assert.equal((await send(event("evt_test_wrong","pi_test_wrong",100,false),testConfig.webhook.url)).status,200);
+  assert.equal(await attemptStatus("pi_test_wrong"),"pending");
+  assert.equal((await settings())[0].webhook.last_status,"amount_mismatch");
+  const stillBlocked=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,version:3})});
+  assert.equal(stillBlocked.status,409);assert.equal((await stillBlocked.json()).code,"PAYMENT_ATTEMPTS_PENDING");
+  assert.equal((await send(event("evt_test_corrected","pi_test_wrong",1234,false),testConfig.webhook.url)).status,200);
+  assert.equal(await attemptStatus("pi_test_wrong"),"test_completed");
+  await configure({...payload,version:3});
+  assert.equal((await settings())[0].mode,"live","completed sandbox attempts must allow switching to live");
   assert.equal((await fetch(testConfig.webhook.url,{method:"POST",body:"x".repeat(131073)})).status,413);
  }finally{server.kill();await db.end();}
 });

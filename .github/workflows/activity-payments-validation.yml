@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run test:payments
       - run: npm run test:payment-webhooks
+      - run: node --test scripts/tap-hosted-checkout.test.mjs
       - run: npm run test:migrations
       - run: npm run test:activities
       - run: npm run typecheck

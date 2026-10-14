@@ -13,16 +13,16 @@ export async function registerPaymentAttempt(db:PoolConnection,input:{tenantId:s
  await db.execute("INSERT INTO tenant_payment_attempts(id,tenant_id,scope_key,order_id,branch_id,provider,mode,provider_payment_id,amount_minor,currency) VALUES (?,?,?,?,?,?,?,?,?,?)",[randomUUID(),input.tenantId,input.scope,input.orderId,order.branch_id,input.provider,input.mode,input.paymentId,majorToMinor(String(order.total),String(order.currency)),order.currency]);
  // A gateway can deliver its webhook before its creation response reaches FOON.
  // Reconcile the already authenticated minimal receipt as soon as the trusted adapter binds the ID.
- const [early]=await db.execute<RowDataPacket[]>("SELECT endpoint_id,event_key,event_type,payment_id,amount_minor,currency FROM tenant_payment_webhook_receipts WHERE tenant_id=? AND scope_key=? AND provider=? AND mode=? AND payment_id=? AND status='unmatched' ORDER BY sequence_id",[input.tenantId,input.scope,input.provider,input.mode,input.paymentId]);
+ const [early]=await db.execute<RowDataPacket[]>("SELECT endpoint_id,event_key,event_type,payment_id,amount_minor,currency FROM tenant_payment_webhook_receipts WHERE tenant_id=? AND scope_key=? AND provider=? AND mode=? AND payment_id=? AND status IN ('unmatched','test_received') ORDER BY sequence_id",[input.tenantId,input.scope,input.provider,input.mode,input.paymentId]);
  for(const row of early)await persistPaymentWebhook(db,{tenant_id:input.tenantId,scope_key:input.scope,endpoint_id:String(row.endpoint_id),provider:input.provider,mode:input.mode},{eventKey:String(row.event_key),eventType:String(row.event_type),paymentId:String(row.payment_id),amountMinor:Number(row.amount_minor),currency:String(row.currency),paid:true});
 }
 export async function persistPaymentWebhook(db:PoolConnection,endpoint:Endpoint,event:VerifiedPaymentWebhook){
  // Caller holds the endpoint lock and commits only after this function persists the receipt.
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id,status FROM tenant_payment_webhook_receipts WHERE endpoint_id=? AND event_key=?",[endpoint.endpoint_id,event.eventKey]);
- if(existing.length&&existing[0].status!=="unmatched")return {duplicate:true,status:String(existing[0].status)};
+ if(existing.length&&!["unmatched","test_received"].includes(String(existing[0].status)))return {duplicate:true,status:String(existing[0].status)};
  let status=event.paid?"unmatched":"ignored";
  if(event.paid&&endpoint.mode==="test")status="test_received";
- if(event.paid&&endpoint.mode==="live"){
+ if(event.paid){
   const [attempts]=await db.execute<RowDataPacket[]>("SELECT id,order_id,branch_id,amount_minor,currency,status FROM tenant_payment_attempts WHERE tenant_id=? AND scope_key=? AND provider=? AND mode=? AND provider_payment_id=? FOR UPDATE",[endpoint.tenant_id,endpoint.scope_key,endpoint.provider,endpoint.mode,event.paymentId]);
   const attempt=attempts[0];
   if(attempt){
@@ -31,6 +31,11 @@ export async function persistPaymentWebhook(db:PoolConnection,endpoint:Endpoint,
    if(!order||order.branch_id!==attempt.branch_id||endpoint.scope_key!=="tenant"&&order.branch_id!==endpoint.scope_key)status="scope_mismatch";
    else if(Number(attempt.amount_minor)!==event.amountMinor||attempt.currency!==event.currency||order.currency!==event.currency||majorToMinor(String(order.total),String(order.currency))!==event.amountMinor)status="amount_mismatch";
    else if(order.status==="cancelled"||order.payment_status==="refunded")status="review_required";
+   else if(endpoint.mode==="test"){
+    // Finish the sandbox attempt without changing the real order or its version.
+    await db.execute("UPDATE tenant_payment_attempts SET status='test_completed' WHERE tenant_id=? AND id=? AND mode='test' AND status='pending'",[endpoint.tenant_id,attempt.id]);
+    status="test_received";
+   }
    else if(order.payment_status==="paid")status="already_paid";
    else{
     await db.execute("UPDATE restaurant_orders SET payment_status='paid',version=version+1 WHERE tenant_id=? AND id=? AND payment_status='unpaid'",[endpoint.tenant_id,attempt.order_id]);
