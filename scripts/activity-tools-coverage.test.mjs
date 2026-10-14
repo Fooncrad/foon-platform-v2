@@ -123,3 +123,16 @@ test("merchant catalog rejects malformed initial and paginated responses",()=>{
  assert.ok(editor.includes('setTotal(d.total);setPage(d.page);setMessage("")'));
  assert.ok((editor.match(/!Array\.isArray\(d\.categories\)/g)??[]).length>=2);
 });
+
+test("public works quotation capability reaches a real merchant resource workspace",()=>{
+ const dashboard=readFileSync(new URL("../app/restaurant/merchant-dashboard.tsx",import.meta.url),"utf8");
+ const workspace=readFileSync(new URL("../app/restaurant/service-workspace.tsx",import.meta.url),"utf8");
+ const schema=readFileSync(new URL("./restaurant-resource-schema.mjs",import.meta.url),"utf8");
+ assert.ok(ACTIVITY_PRESETS.publicworks.includes("quotes"));
+ assert.ok(!ACTIVITY_PRESETS.restaurant.includes("quotes"));
+ assert.match(tools,/quotes:"quotes"/);
+ assert.match(dashboard,/quotes:"quotes"/);
+ assert.match(dashboard,/key:"quotes",label:"عروض الأسعار"/);
+ assert.match(workspace,/quotes:\[\{key:"quotations",label:"عروض أسعار الخدمات"\}\]/);
+ assert.match(schema,/quotations:\{kind:"service_quotation"/);
+});
