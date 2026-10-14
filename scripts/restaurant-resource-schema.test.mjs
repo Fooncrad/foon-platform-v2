@@ -66,4 +66,6 @@ test("quotation updates require a controlled approval lifecycle",()=>{
  assert.match(source,/accepted:\[\],rejected:\[\],cancelled:\[\]/);
  assert.match(source,/INVALID_QUOTATION_TRANSITION/);
  assert.match(source,/QUOTATION_SENT_IMMUTABLE/);
+ assert.match(source,/module==="quotations"&&previous\?\.status!=="draft"/);
+ assert.match(source,/QUOTATION_ARCHIVE_FORBIDDEN/);
 });
