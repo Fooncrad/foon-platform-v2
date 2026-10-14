@@ -142,3 +142,9 @@ test("invoice can retain quotation and order links with independent amount valid
  assert.ok(source.includes("QUOTATION_ALREADY_INVOICED"));
  assert.ok(source.includes("ORDER_ALREADY_INVOICED"));
 });
+
+test("linked quotation and order must belong to the same branch",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('quotes[0].branch_id!==linkedOrders[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH")'));
+ assert.ok(source.includes('SELECT branch_id FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE'));
+});
