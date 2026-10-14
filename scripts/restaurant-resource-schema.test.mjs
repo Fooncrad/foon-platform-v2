@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {validateResource} from "./restaurant-resource-schema.mjs";
 test("resource validation rejects unknown keys, nonfinite prices and unsafe asset URLs",()=>{
  assert.throws(()=>validateResource("__proto__",{name:"X",status:"active"}));
@@ -55,4 +56,14 @@ test("public works quotation enforces customer, service, amount and lifecycle",(
  assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,customerName:""}}));
  assert.throws(()=>validateResource("quotations",{...valid,data:{...valid.data,serviceDescription:""}}));
  assert.throws(()=>validateResource("quotations",{...valid,status:"paid"}));
+});
+
+test("quotation updates require a controlled approval lifecycle",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.match(source,/module==="quotations"&&previous/);
+ assert.match(source,/draft:\["draft","sent","cancelled"\]/);
+ assert.match(source,/sent:\["sent","accepted","rejected","cancelled"\]/);
+ assert.match(source,/accepted:\[\],rejected:\[\],cancelled:\[\]/);
+ assert.match(source,/INVALID_QUOTATION_TRANSITION/);
+ assert.match(source,/QUOTATION_SENT_IMMUTABLE/);
 });
