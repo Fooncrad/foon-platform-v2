@@ -105,6 +105,13 @@ test("issued paid and void customer invoices cannot be archived",()=>{
 test("invoice order references resolve against tenant scoped orders instead of generic resources",()=>{
  const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
  assert.ok(source.includes('if(field.ref==="orders")'));
- assert.ok(source.includes("SELECT id,branch_id FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 LOCK IN SHARE MODE"));
+ assert.ok(source.includes("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 LOCK IN SHARE MODE"));
  assert.equal(resourceModules.customerInvoices.fields.find(field=>field.key==="orderId")?.ref,"orders");
+});
+
+test("linked customer invoice totals match live orders and exclude cancelled orders",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("ORDER_INVOICE_AMOUNT_MISMATCH"));
+ assert.ok(source.includes("INVOICE_ORDER_CANCELLED"));
+ assert.ok(source.includes('orders[0].status==="cancelled"'));
 });
