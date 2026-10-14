@@ -26,6 +26,9 @@ jobs:
       - run: node --test scripts/tap-hosted-checkout.test.mjs
       - run: npm run test:migrations
       - run: npm run test:activities
+      - run: npm run test:resources
+      - run: npm run test:tax
+      - run: npm run test:media
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
