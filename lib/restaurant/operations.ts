@@ -44,6 +44,12 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
+ if(module==="customerInvoices"&&previous){
+  const from=String(previous.status),to=String(input.status);
+  const transitions:Record<string,string[]>={draft:["draft","issued","void"],issued:["issued","paid","void"],paid:["paid"],void:["void"]};
+  if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_INVOICE_TRANSITION");
+ }
+ if(module==="customerInvoices"&&!previous&&!["draft","issued"].includes(String(input.status)))throw new ResourceError("INVALID_INVOICE_TRANSITION");
  if(module==="customerInvoices"&&previous&&["issued","paid","void"].includes(String(previous.status))){
   if(JSON.stringify(parseData(previous.data))!==JSON.stringify(input.data)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE");
  }
