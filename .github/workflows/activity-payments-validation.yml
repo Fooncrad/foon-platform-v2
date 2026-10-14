@@ -64,5 +64,7 @@ jobs:
       - run: node --experimental-strip-types --test scripts/payment-webhook.integration.test.mjs
       - run: node --experimental-strip-types --test scripts/customer-checkout.integration.test.mjs
       - run: npm run test:operations
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
 
 
