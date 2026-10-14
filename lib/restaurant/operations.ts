@@ -45,6 +45,24 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
+ if(module==="serviceOrders"){
+  const inputOrder=validateResource(module,body);
+  if(previous){
+   const transitions:Record<string,string[]>={new:["new","scheduled","in_progress","cancelled"],scheduled:["scheduled","in_progress","cancelled"],in_progress:["in_progress","completed","cancelled"],completed:["completed"],cancelled:["cancelled"]};
+   if(!transitions[String(previous.status)]?.includes(String(inputOrder.status)))throw new ResourceError("INVALID_SERVICE_ORDER_TRANSITION");
+   const old=parseData(previous.data);
+   if(old.quotationId!==inputOrder.data.quotationId)throw new ResourceError("SERVICE_ORDER_QUOTATION_IMMUTABLE");
+   if(["completed","cancelled"].includes(String(previous.status))&&(JSON.stringify(old)!==JSON.stringify(inputOrder.data)||String(previous.name)!==String(inputOrder.name)||String(previous.branch_id??"")!==String(inputOrder.branchId??"")))throw new ResourceError("SERVICE_ORDER_FINAL_IMMUTABLE");
+  }
+  if(inputOrder.data.quotationId){
+   const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[inputOrder.data.quotationId,tenantId]);
+   if(!quotes.length||quotes[0].status!=="accepted"||quotes[0].branch_id&&quotes[0].branch_id!==inputOrder.branchId)throw new ResourceError("SERVICE_ORDER_QUOTATION_NOT_ACCEPTED");
+   const quote=parseData(quotes[0].data);
+   if(Math.round(Number(quote.amount)*100)!==Math.round(Number(inputOrder.data.amount)*100)||String(quote.customerName)!==String(inputOrder.data.customerName)||String(quote.serviceDescription)!==String(inputOrder.data.serviceDescription))throw new ResourceError("SERVICE_ORDER_QUOTATION_MISMATCH");
+   const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,inputOrder.data.quotationId]);
+   if(linked.length)throw new ResourceError("SERVICE_ORDER_ALREADY_CREATED");
+  }
+ }
  if(module==="customerInvoices"&&previous){
   const from=String(previous.status),to=String(input.status);
   const transitions:Record<string,string[]>={draft:["draft","issued","void"],issued:["issued","paid","void"],paid:["paid"],void:["void"]};
