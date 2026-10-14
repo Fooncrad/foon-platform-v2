@@ -226,6 +226,15 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const repeatedService=await resource(a,"customerInvoices",{...serviceInvoice,name:"Duplicate standalone service invoice"});
   assert.notEqual(repeatedService.status,201,JSON.stringify(repeatedService.body));
   assert.ok(["SERVICE_ORDER_ALREADY_INVOICED","QUOTATION_ALREADY_INVOICED"].includes(repeatedService.body.code),JSON.stringify(repeatedService.body));
+  const mismatchedServiceInvoice=await resource(a,"customerInvoices",{...serviceInvoice,name:"Mismatched service invoice",data:{...serviceInvoice.data,subtotal:34,quotationId:null}});
+  assert.notEqual(mismatchedServiceInvoice.status,201,JSON.stringify(mismatchedServiceInvoice.body));
+  assert.equal(mismatchedServiceInvoice.body.code,"SERVICE_ORDER_INVOICE_AMOUNT_MISMATCH");
+  const cancelledSourceInvoice=await resource(a,"customerInvoices",{...serviceInvoice,name:"Wrong source invoice",data:{...serviceInvoice.data,orderId:placed.body.id}});
+  assert.notEqual(cancelledSourceInvoice.status,201,JSON.stringify(cancelledSourceInvoice.body));
+  assert.equal(cancelledSourceInvoice.body.code,"INVOICE_MULTIPLE_ORDER_SOURCES");
+  const mismatchedQuotationInvoice=await resource(a,"customerInvoices",{...serviceInvoice,name:"Mismatched quotation invoice",data:{...serviceInvoice.data,quotationId:quoteId}});
+  assert.notEqual(mismatchedQuotationInvoice.status,201,JSON.stringify(mismatchedQuotationInvoice.body));
+  assert.equal(mismatchedQuotationInvoice.body.code,"INVOICE_SOURCE_QUOTATION_MISMATCH");
   // Verify the full standalone service invoice lifecycle and immutable issued/paid records.
   const serviceInvoices=await resource(a,"customerInvoices",undefined,"GET");
   const savedServiceInvoice=serviceInvoices.body.resources.find(row=>row.id===billedService.body.id);
