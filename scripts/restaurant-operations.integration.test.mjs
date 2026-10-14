@@ -212,6 +212,24 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const repeatedService=await resource(a,"customerInvoices",{...serviceInvoice,name:"Duplicate standalone service invoice"});
   assert.notEqual(repeatedService.status,201,JSON.stringify(repeatedService.body));
   assert.equal(repeatedService.body.code,"QUOTATION_ALREADY_INVOICED");
+  // Verify the full standalone service invoice lifecycle and immutable issued/paid records.
+  const serviceInvoices=await resource(a,"customerInvoices",undefined,"GET");
+  const savedServiceInvoice=serviceInvoices.body.resources.find(row=>row.id===billedService.body.id);
+  assert.ok(savedServiceInvoice);
+  const issuedService=await resource(a,"customerInvoices",{id:billedService.body.id,version:savedServiceInvoice.version,name:savedServiceInvoice.name,status:"issued",branchId:savedServiceInvoice.branchId??a.branch,data:savedServiceInvoice.data},"PATCH");
+  assert.equal(issuedService.status,200,JSON.stringify(issuedService.body));
+  const issuedInvoiceRows=await resource(a,"customerInvoices",undefined,"GET");
+  const issuedSnapshot=issuedInvoiceRows.body.resources.find(row=>row.id===billedService.body.id);
+  const editedIssued=await resource(a,"customerInvoices",{id:billedService.body.id,version:issuedSnapshot.version,name:issuedSnapshot.name,status:"issued",branchId:a.branch,data:{...issuedSnapshot.data,notes:"Tampered after issue"}},"PATCH");
+  assert.notEqual(editedIssued.status,200,JSON.stringify(editedIssued.body));
+  assert.equal(editedIssued.body.code,"ISSUED_INVOICE_IMMUTABLE");
+  const paidService=await resource(a,"customerInvoices",{id:billedService.body.id,version:issuedSnapshot.version,name:issuedSnapshot.name,status:"paid",branchId:issuedSnapshot.branchId??a.branch,data:issuedSnapshot.data},"PATCH");
+  assert.equal(paidService.status,200,JSON.stringify(paidService.body));
+  const paidInvoiceRows=await resource(a,"customerInvoices",undefined,"GET");
+  const paidSnapshot=paidInvoiceRows.body.resources.find(row=>row.id===billedService.body.id);
+  const reopenedService=await resource(a,"customerInvoices",{id:billedService.body.id,version:paidSnapshot.version,name:paidSnapshot.name,status:"draft",branchId:paidSnapshot.branchId??a.branch,data:paidSnapshot.data},"PATCH");
+  assert.notEqual(reopenedService.status,200,JSON.stringify(reopenedService.body));
+  assert.equal(reopenedService.body.code,"INVALID_INVOICE_TRANSITION");
   const [[serviceInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
   assert.equal(Number(serviceInvoiceCount.n),2);
   const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);
