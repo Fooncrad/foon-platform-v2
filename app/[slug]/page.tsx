@@ -62,7 +62,13 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  const safeOffset=(safePage-1)*limit;
  let themes:RowDataPacket[]=[];
  let products:RowDataPacket[]=[];
- if(!catalogError)try{[[themes],[products]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]),database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset])]);}catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"theme/products",error});}
+ // A missing optional theme must never hide an otherwise available catalog.
+ try{const [themeRows]=await database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);themes=themeRows;}catch(error){console.error("[FOON_STOREFRONT_THEME]",{slug,tenantId:String(tenant.id),error});}
+ if(!catalogError)try{
+  const [productRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
+  products=productRows;
+ }catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"products",error});}
+
  const {previewTemplate}=query;
  const locale=(await cookies()).get("foon_language")?.value;
  const language:ActivityLanguage=locale==="en"||locale==="fr"?locale:"ar";
