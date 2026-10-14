@@ -128,3 +128,8 @@ test("customer invoice cannot be reassigned to another order after initial linki
  assert.ok(source.includes("INVOICE_ORDER_LINK_IMMUTABLE"));
  assert.ok(source.includes("parseData(previous.data).orderId!==input.data.orderId"));
 });
+
+test("finalized invoice names are immutable with invoice amounts and branch",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('String(previous.name)!==String(input.name))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE")'));
+});
