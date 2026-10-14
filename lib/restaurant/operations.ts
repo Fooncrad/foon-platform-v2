@@ -63,9 +63,12 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   if(!quotes.length||quotes[0].status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
   if(input.branchId&&quotes[0].branch_id&&input.branchId!==quotes[0].branch_id)throw new ResourceError("REFERENCE_NOT_FOUND");
   if(input.data.orderId){
-   const [linkedOrders]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[input.data.orderId,tenantId]);
+   const [linkedOrders]=await db.execute<RowDataPacket[]>("SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[input.data.orderId,tenantId]);
    if(!linkedOrders.length)throw new ResourceError("REFERENCE_NOT_FOUND");
    if(quotes[0].branch_id&&linkedOrders[0].branch_id&&quotes[0].branch_id!==linkedOrders[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH");
+   const quotedPhone=String(parseData(quotes[0].data).customerPhone??"").replace(/[^0-9]/g,"");
+   const orderedPhone=String(linkedOrders[0].customer_phone??"").replace(/[^0-9]/g,"");
+   if(quotedPhone&&orderedPhone&&quotedPhone!==orderedPhone)throw new ResourceError("INVOICE_SOURCE_CUSTOMER_MISMATCH");
   }
   const quotedAmount=Math.round(Number(parseData(quotes[0].data).amount)*100);
   const invoiceAmount=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
