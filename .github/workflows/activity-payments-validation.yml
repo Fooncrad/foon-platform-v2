@@ -26,6 +26,7 @@ jobs:
       - run: node --test scripts/tap-hosted-checkout.test.mjs
       - run: npm run test:migrations
       - run: npm run test:activities
+      - run: node --experimental-strip-types --test scripts/activity-coverage.test.mjs scripts/activity-integration-contract.test.mjs
       - run: npm run test:resources
       - run: npm run test:admin-policy
       - run: npm run test:mail
