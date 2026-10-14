@@ -77,7 +77,7 @@ export async function PATCH(request:Request){
  }
  if(body.kind==="product"&&body.stockQuantity!==undefined){
   const quantity=body.stockQuantity===null?null:Number(body.stockQuantity);
-  if(quantity!==null&&(!Number.isFinite(quantity)||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
+  if(quantity!==null&&(typeof body.stockQuantity!=="number"||!Number.isSafeInteger(quantity)||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
   columns.push("stock_quantity=?");values.push(quantity);
  }
  for(const [key,column] of [["nameEn","name_en"],["nameFr","name_fr"]] as const){
