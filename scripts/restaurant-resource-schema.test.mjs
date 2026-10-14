@@ -82,4 +82,7 @@ test("customer invoices link only accepted quotations with matching totals",()=>
  for(const error of ["QUOTATION_NOT_ACCEPTED","QUOTATION_INVOICE_AMOUNT_MISMATCH","QUOTATION_ALREADY_INVOICED"])assert.ok(source.includes(error));
  assert.match(source,/kind='service_quotation' AND archived=FALSE FOR UPDATE/);
  assert.ok(source.includes("JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))"));
+ assert.ok(source.includes("ISSUED_INVOICE_IMMUTABLE"));
+ assert.ok(source.includes("INVOICE_QUOTATION_LINK_IMMUTABLE"));
+ assert.match(source,/\["issued","paid","void"\]/);
 });
