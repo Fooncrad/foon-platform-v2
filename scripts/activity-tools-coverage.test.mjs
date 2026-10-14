@@ -80,3 +80,10 @@ test("merchant catalog enforces server stock and price bounds",()=>{
  assert.ok(catalog.includes("Number(value)<=9999999999"));
  assert.ok(catalog.includes("Number(price)>9999999999"));
 });
+
+test("merchant catalog API rejects fractional and coerced stock values",()=>{
+ const route=readFileSync(new URL("../app/api/restaurant/activity-catalog/route.ts",import.meta.url),"utf8");
+ assert.ok(route.includes('typeof body.stockQuantity!=="number"'));
+ assert.ok(route.includes("Number.isSafeInteger(quantity)"));
+ assert.ok(route.includes('code:"INVALID_STOCK"'));
+});
