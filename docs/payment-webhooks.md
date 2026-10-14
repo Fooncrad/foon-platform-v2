@@ -41,3 +41,5 @@ payment-webhook.integration.test.mjs covers actual Next routes and MariaDB: stab
 
 
 Pending registered payment attempts block gateway/environment/secret or account-reference changes, preventing their callback URLs from being invalidated before reconciliation.
+
+Migration 0081 enforces provider transaction uniqueness across tenants and branch scopes; one payment ID cannot settle two orders. Existing duplicates cause migration failure and require investigation, never automatic deletion.

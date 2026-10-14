@@ -42,6 +42,10 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   // Remove this intentionally inconsistent fixture from the disposable database before mode-rotation assertions.
   await db.execute("DELETE FROM tenant_payment_attempts WHERE tenant_id=? AND order_id=?",[account.tenant,mismatch]);
   const foreign=await order(other.tenant,foreignBranch.id,other.user);
+  const otherSetup=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers:{...headers,cookie:other.cookie,"x-foon-tenant":other.tenant},body:JSON.stringify(payload)});assert.equal(otherSetup.status,200);
+  await db.beginTransaction();
+  try{await assert.rejects(()=>registerPaymentAttempt(db,{tenantId:other.tenant,scope:"tenant",orderId:foreign,provider:"stripe",mode:"live",paymentId:"pi_live_synthetic"}),e=>e.code==="ER_DUP_ENTRY");}finally{await db.rollback();}
+  assert.equal((await paymentStatus(foreign)).payment_status,"unpaid");
   assert.equal((await send({...event("evt_foreign","pi_unknown"),metadata:{order_id:foreign}})).status,200);
   assert.equal((await paymentStatus(foreign)).payment_status,"unpaid");
   const early=await order();assert.equal((await send(event("evt_early","pi_early"))).status,200);assert.equal((await paymentStatus(early)).payment_status,"unpaid");
