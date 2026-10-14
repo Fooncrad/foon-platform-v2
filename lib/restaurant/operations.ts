@@ -44,6 +44,16 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
+ if(module==="customerInvoices"&&input.data.quotationId){
+  const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[input.data.quotationId,tenantId]);
+  if(!quotes.length||quotes[0].status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
+  if(input.branchId&&quotes[0].branch_id&&input.branchId!==quotes[0].branch_id)throw new ResourceError("REFERENCE_NOT_FOUND");
+  const quotedAmount=Math.round(Number(parseData(quotes[0].data).amount)*100);
+  const invoiceAmount=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
+  if(!Number.isSafeInteger(quotedAmount)||quotedAmount!==invoiceAmount)throw new ResourceError("QUOTATION_INVOICE_AMOUNT_MISMATCH");
+  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,input.data.quotationId]);
+  if(linked.length)throw new ResourceError("QUOTATION_ALREADY_INVOICED");
+ }
  if(module==="storefront"&&input.data.menuTheme){await db.execute("INSERT INTO restaurant_menu_appearance(tenant_id,template_key) VALUES (?,?) ON DUPLICATE KEY UPDATE template_key=VALUES(template_key)",[tenantId,input.data.menuTheme]);}
  if(config.singleton)input.branchId=null;
  await branchExists(db,tenantId,input.branchId);
