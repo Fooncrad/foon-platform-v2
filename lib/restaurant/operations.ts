@@ -44,6 +44,10 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
+ if(module==="customerInvoices"&&previous&&["issued","paid","void"].includes(String(previous.status))){
+  if(JSON.stringify(parseData(previous.data))!==JSON.stringify(input.data)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE");
+ }
+ if(module==="customerInvoices"&&previous&&parseData(previous.data).quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_QUOTATION_LINK_IMMUTABLE");
  if(module==="customerInvoices"&&input.data.quotationId){
   const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[input.data.quotationId,tenantId]);
   if(!quotes.length||quotes[0].status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
