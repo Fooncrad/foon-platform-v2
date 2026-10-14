@@ -32,6 +32,7 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   const blockedChange=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}})});assert.equal(blockedChange.status,409);assert.equal((await blockedChange.json()).code,"PAYMENT_ATTEMPTS_PENDING");
   assert.equal((await send(event("evt_invalid","pi_live_synthetic"),webhook,false)).status,400);
   assert.equal((await paymentStatus(main)).payment_status,"unpaid");
+  assert.equal((await send(event("evt_case_sensitive","pi_LIVE_synthetic"))).status,200);assert.equal((await paymentStatus(main)).payment_status,"unpaid");
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
   assert.equal((await paymentStatus(main)).payment_status,"paid");const version=(await paymentStatus(main)).version;
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
