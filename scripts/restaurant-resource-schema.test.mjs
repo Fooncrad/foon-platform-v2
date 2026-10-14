@@ -148,3 +148,9 @@ test("linked quotation and order must belong to the same branch",()=>{
  assert.ok(source.includes('quotes[0].branch_id!==linkedOrders[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH")'));
  assert.ok(source.includes('SELECT branch_id FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE'));
 });
+
+test("invoice quote-order linkage rejects different customer phone numbers",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes("INVOICE_SOURCE_CUSTOMER_MISMATCH"));
+ assert.ok(source.includes("SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
+});
