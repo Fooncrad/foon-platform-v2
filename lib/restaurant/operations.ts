@@ -56,6 +56,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  if(module==="customerInvoices"&&previous&&parseData(previous.data).quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_QUOTATION_LINK_IMMUTABLE");
  if(module==="customerInvoices"&&previous&&parseData(previous.data).orderId!==input.data.orderId)throw new ResourceError("INVOICE_ORDER_LINK_IMMUTABLE");
+ if(module==="customerInvoices"&&input.data.quotationId&&input.data.orderId)throw new ResourceError("INVOICE_MULTIPLE_SOURCES");
  if(module==="customerInvoices"&&input.data.quotationId){
   const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[input.data.quotationId,tenantId]);
   if(!quotes.length||quotes[0].status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
