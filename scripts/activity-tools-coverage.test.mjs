@@ -106,3 +106,12 @@ test("catalog browsing surfaces request failures",()=>{
  assert.ok(editor.includes('تعذر تحميل الصفحة السابقة'));
  assert.ok(editor.includes('تعذر تحميل الصفحة التالية'));
 });
+
+test("merchant catalog handles malformed API errors and validates image URLs",()=>{
+ const editor=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
+ assert.ok(editor.includes('code??"IMAGE_SAVE_FAILED"'));
+ assert.ok(editor.includes('code??"DELETE_FAILED"'));
+ assert.ok(editor.includes('parsed.protocol!=="https:"'));
+ assert.ok(editor.includes("parsed.username||parsed.password"));
+ assert.ok(editor.includes("parsed.toString().length>1024"));
+});
