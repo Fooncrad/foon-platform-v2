@@ -154,3 +154,13 @@ test("invoice quote-order linkage rejects different customer phone numbers",()=>
  assert.ok(source.includes("INVOICE_SOURCE_CUSTOMER_MISMATCH"));
  assert.ok(source.includes("SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE"));
 });
+
+test("service orders validate required fields and accepted quotation references",()=>{
+ const quotationId="11111111-1111-4111-8111-111111111111";
+ const order=validateResource("serviceOrders",{name:"Repair",status:"new",data:{quotationId,customerName:"Customer",serviceDescription:"Repair equipment",amount:120}});
+ assert.equal(order.data.quotationId,quotationId);
+ assert.equal(order.data.amount,120);
+ assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{customerName:"Customer",amount:120}}));
+ assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{customerName:"Customer",serviceDescription:"Repair equipment",amount:-1}}));
+ assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{quotationId:"foreign",customerName:"Customer",serviceDescription:"Repair equipment",amount:120}}));
+});
