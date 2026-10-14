@@ -26,7 +26,7 @@ test('real service worker: tenant isolation, offline reload, images, languages, 
  try{
   for(const slug of ['alpha','bravo']){await page.goto(origin+'/'+slug);await page.waitForFunction(async slug=>!!await (await caches.open('foon-public-menu-v1')).match('/'+slug),slug);}
   await page.waitForFunction(async()=>!!await (await caches.open('foon-public-menu-v1')).match('/api/restaurant/assets/11111111-1111-1111-1111-111111111111'));
-  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await context.setOffline(true);await page.goto(origin+'/alpha?table=private');
+  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await page.waitForFunction(async()=>{const cache=await caches.open('foon-public-menu-v1');return !!(await cache.match('/alpha'));});await context.setOffline(true);await page.goto(origin+'/alpha?table=private');
   assert.equal(await page.locator('h1').textContent(),'alpha');assert(!(await page.content()).includes('PRIVATE@example.test'));assert.equal(await page.locator('article').count(),1);
   assert.equal(await page.locator('form').count(),0);assert.equal(await page.locator('a').count(),0);assert.equal(await page.locator('img').evaluate(i=>i.complete&&i.naturalWidth>0),true);
   await page.selectOption('#language','en');assert.equal(await page.locator('h2').textContent(),'Dish alpha');await page.fill('#search','absent');assert.equal(await page.locator('article').count(),0);await page.fill('#search','');await page.selectOption('#branch','two');assert.equal(await page.locator('h2').textContent(),'فرع آخر');
