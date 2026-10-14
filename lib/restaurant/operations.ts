@@ -52,7 +52,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  if(module==="customerInvoices"&&!previous&&!["draft","issued"].includes(String(input.status)))throw new ResourceError("INVALID_INVOICE_TRANSITION");
  if(module==="customerInvoices"&&previous&&["issued","paid","void"].includes(String(previous.status))){
-  if(JSON.stringify(parseData(previous.data))!==JSON.stringify(input.data)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE");
+  if(JSON.stringify(parseData(previous.data))!==JSON.stringify(input.data)||String(previous.branch_id??"")!==String(input.branchId??"")||String(previous.name)!==String(input.name))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE");
  }
  if(module==="customerInvoices"&&previous&&parseData(previous.data).quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_QUOTATION_LINK_IMMUTABLE");
  if(module==="customerInvoices"&&previous&&parseData(previous.data).orderId!==input.data.orderId)throw new ResourceError("INVOICE_ORDER_LINK_IMMUTABLE");
