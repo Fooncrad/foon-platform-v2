@@ -49,3 +49,11 @@ test("storefront template editor refuses unavailable saved templates",()=>{
  assert.match(editor,/if\(!choices\.includes\(selected\)\)return/);
  assert.match(editor,/disabled=\{busy\|\|loading\|\|!choices\.includes\(selected\)\|\|selected===saved\}/);
 });
+
+
+test("storefront template editor resets tenant state and avoids invalid previews",()=>{
+ const editor=readFileSync(new URL("../app/restaurant/activity-template-editor.tsx",import.meta.url),"utf8");
+ assert.ok(editor.includes('setLoading(true);setSaved("");setSelected(choices[0]??"");setMessage("");'));
+ assert.ok(editor.includes('[tenantId,activity]'));
+ assert.ok(editor.includes('!loading&&choices.includes(selected)&&slug'));
+});
