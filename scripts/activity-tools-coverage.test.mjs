@@ -72,3 +72,11 @@ test("merchant catalog validates product prices before sending mutations",()=>{
  assert.ok(catalog.includes('Number(price)<0'));
  assert.ok(catalog.includes('Number.isFinite(Number(value))&&Number(value)>=0'));
 });
+
+test("merchant catalog enforces server stock and price bounds",()=>{
+ const catalog=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
+ assert.ok(catalog.includes("Number.isInteger(stock)&&stock>=0&&stock<=999999999"));
+ assert.ok(catalog.includes('stockQuantity:trimmed===""?null:stock'));
+ assert.ok(catalog.includes("Number(value)<=9999999999"));
+ assert.ok(catalog.includes("Number(price)>9999999999"));
+});
