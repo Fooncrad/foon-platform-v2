@@ -101,3 +101,10 @@ test("issued paid and void customer invoices cannot be archived",()=>{
  assert.ok(source.includes('module==="customerInvoices"&&previous?.status!=="draft"'));
  assert.ok(source.includes("INVOICE_ARCHIVE_FORBIDDEN"));
 });
+
+test("invoice order references resolve against tenant scoped orders instead of generic resources",()=>{
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ assert.ok(source.includes('if(field.ref==="orders")'));
+ assert.ok(source.includes("SELECT id,branch_id FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 LOCK IN SHARE MODE"));
+ assert.equal(resourceModules.customerInvoices.fields.find(field=>field.key==="orderId")?.ref,"orders");
+});
