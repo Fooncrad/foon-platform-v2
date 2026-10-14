@@ -53,7 +53,9 @@ test("storefront template editor refuses unavailable saved templates",()=>{
 
 test("storefront template editor resets tenant state and avoids invalid previews",()=>{
  const editor=readFileSync(new URL("../app/restaurant/activity-template-editor.tsx",import.meta.url),"utf8");
- assert.ok(editor.includes('setLoading(true);setSaved("");setSelected(choices[0]??"");setMessage("");'));
+ assert.ok(!editor.includes('setLoading(true);setSaved("");setSelected(choices[0]??"");setMessage("");'));
+ const setup=readFileSync(new URL("../app/restaurant/activity-setup/page.tsx",import.meta.url),"utf8");
+ assert.ok(setup.includes('key={workspace.tenant_id+":"+activity}'));
  assert.ok(editor.includes('[tenantId,activity]'));
  assert.ok(editor.includes('!loading&&choices.includes(selected)&&slug'));
 });
