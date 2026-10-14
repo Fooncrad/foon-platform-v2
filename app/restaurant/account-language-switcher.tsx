@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import {useRouter} from "next/navigation";
 type Language="ar"|"en"|"fr";
 const labels:Record<Language,string>={ar:"العربية",en:"English",fr:"Français"};
 const storageKey="foon-language";
@@ -9,6 +10,7 @@ function currentLanguage():Language{
  return value==="en"||value==="fr"?value:"ar";
 }
 export default function AccountLanguageSwitcher(){
+ const router=useRouter();
  const [language,setLanguage]=useState<Language>("ar");
  useEffect(()=>{
   const saved=window.localStorage.getItem(storageKey);
@@ -24,6 +26,7 @@ export default function AccountLanguageSwitcher(){
   document.documentElement.lang=next;
   document.documentElement.dir=next==="ar"?"rtl":"ltr";
   window.dispatchEvent(new CustomEvent("foon:language-change",{detail:{language:next}}));
+  router.refresh();
  }
  return <label className="restaurantLanguageSelector" style={{display:"inline-flex",alignItems:"center",gap:6}}>
   <span className="sr-only">اللغة / Language / Langue</span>
