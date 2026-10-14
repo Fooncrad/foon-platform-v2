@@ -5,6 +5,7 @@ import {operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 import OfflineWorker from "./offline-worker";
 import {printLocales,resolvePrintLocale} from "@/lib/restaurant/print-locales";
+import {kitchenTicketNotes} from "@/lib/restaurant/print-notes";
 import {queuePosOrder,retryReviewedPosOrder,pendingPosOrders,removePosOrder,markPosOrder,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import MenuChoices,{cartKey,choicePrice,choicesValid,type CartLine} from "./menu-choices";
@@ -106,6 +107,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   if(finalInvoice&&order.customer_name)line(t.customer,order.customer_name);
   el("h2",t.items);
   for(const item of order.items)line(item.name,"× "+item.quantity);
+  if(!finalInvoice)for(const note of kitchenTicketNotes(order,locale))line(note.label,note.value);
   if(finalInvoice)line(t.paidAmount,Number(order.total??0).toFixed(2)+" "+(order.currency??"SAR"),"total");
   el("div",finalInvoice?t.notTaxInvoice:t.kitchenNote,"note");
   const controls=doc.createElement("div");controls.className="controls";
