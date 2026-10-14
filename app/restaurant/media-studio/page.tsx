@@ -3,6 +3,8 @@ import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {database} from "@/lib/db/mysql";
+import type {RowDataPacket} from "mysql2/promise";
 import {MEDIA_STUDIO_SECTIONS,MEDIA_STUDIO_LABELS,MEDIA_STUDIO_PROVIDERS,type MediaStudioLocale} from "@/lib/platform/media-studio";
 
 /** Tenant-scoped Media Studio preview. No OAuth, publishing or messaging is enabled. */
@@ -13,6 +15,7 @@ export default async function MediaStudioPage({searchParams}:{searchParams:Promi
  let workspace:Awaited<ReturnType<typeof resolveWorkspace>>;
  try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
  if(!["owner","manager"].includes(workspace.role))redirect("/restaurant");
+ const [accounts]=await database().execute<RowDataPacket[]>("SELECT provider,display_name,status FROM tenant_media_social_accounts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[workspace.tenant_id]);
  const language=(await cookies()).get("foon_language")?.value;
  const locale:MediaStudioLocale=language==="en"||language==="fr"?language:"ar";
  const t=(ar:string,en:string,fr:string)=>locale==="en"?en:locale==="fr"?fr:ar;
@@ -25,6 +28,9 @@ export default async function MediaStudioPage({searchParams}:{searchParams:Promi
       "Setup preview: account connection, publishing and messaging are not enabled. Do not enter social account passwords here.",
       "Aperçu initial : connexion, publication et messagerie non activées. Ne saisissez pas vos mots de passe sociaux ici.")}
   </p>
+  <section><h2>{t("الحسابات المرتبطة","Connected accounts","Comptes connectés")}</h2>
+   {accounts.length===0?<p>{t("لم يتم ربط أي حساب بعد","No accounts connected yet","Aucun compte connecté")}</p>:<ul>{accounts.map((account,index)=><li key={index}>{String(account.provider)} · {String(account.display_name)} · {String(account.status)}</li>)}</ul>}
+  </section>
   <section aria-label={t("أقسام إدارة الميديا","Media Studio sections","Sections du studio média")} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,230px),1fr))",gap:12}}>
    {MEDIA_STUDIO_SECTIONS.map(section=><article key={section} style={{padding:16,border:"1px solid #8885",borderRadius:12}}>
     <h2 style={{fontSize:"1.1rem"}}>{MEDIA_STUDIO_LABELS[section][locale]}</h2>
