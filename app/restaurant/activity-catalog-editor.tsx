@@ -15,7 +15,7 @@ export default function ActivityCatalogEditor({tenantId,service}:{tenantId:strin
   const r=await fetch("/api/restaurant/activity-catalog?"+params,{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
   if(!r.ok)throw Error();
   const d=await r.json();
-  setCategories(d.categories);setProducts(d.products);setTotal(d.total);setPage(d.page);
+  setCategories(d.categories);setProducts(d.products);setTotal(d.total);setPage(d.page);setMessage("");
   setCategoryId(v=>d.categories.some((c:Category)=>c.id===v)?v:d.categories[0]?.id??"");
  }
  useEffect(()=>{let active=true;const params=new URLSearchParams({page:"1"});fetch("/api/restaurant/activity-catalog?"+params,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{if(!active)return;setCategories(d.categories);setProducts(d.products);setTotal(d.total);setCategoryId(d.categories[0]?.id??"");setLoading(false)}).catch(()=>{if(active){setMessage("تعذر تحميل الكتالوج. تحقق من ترحيل قاعدة البيانات.");setLoading(false)}});return()=>{active=false}},[tenantId]);
