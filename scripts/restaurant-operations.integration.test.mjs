@@ -197,6 +197,23 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.notEqual(foreignInvoice.status,201,JSON.stringify(foreignInvoice.body));
   const [[invoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
   assert.equal(Number(invoiceCount.n),1);
+  // Service activities can bill an accepted quotation without a restaurant menu order.
+  const serviceQuote=await resource(a,"quotations",{name:"Standalone service quotation",status:"sent",branchId:a.branch,data:{customerName:"Service client",serviceDescription:"Repair service",amount:35}});
+  assert.equal(serviceQuote.status,201,JSON.stringify(serviceQuote.body));
+  const serviceQuoteId=serviceQuote.body.id;
+  const serviceQuotes=await resource(a,"quotations",undefined,"GET");
+  const savedServiceQuote=serviceQuotes.body.resources.find(row=>row.id===serviceQuoteId);
+  assert.ok(savedServiceQuote);
+  const acceptedService=await resource(a,"quotations",{id:serviceQuoteId,version:savedServiceQuote.version,name:savedServiceQuote.name,status:"accepted",branchId:savedServiceQuote.branchId??a.branch,data:savedServiceQuote.data},"PATCH");
+  assert.equal(acceptedService.status,200,JSON.stringify(acceptedService.body));
+  const serviceInvoice={name:"Standalone service invoice",status:"draft",branchId:a.branch,data:{quotationId:serviceQuoteId,subtotal:35,taxAmount:0,serviceFee:0}};
+  const billedService=await resource(a,"customerInvoices",serviceInvoice);
+  assert.equal(billedService.status,201,JSON.stringify(billedService.body));
+  const repeatedService=await resource(a,"customerInvoices",{...serviceInvoice,name:"Duplicate standalone service invoice"});
+  assert.notEqual(repeatedService.status,201,JSON.stringify(repeatedService.body));
+  assert.equal(repeatedService.body.code,"QUOTATION_ALREADY_INVOICED");
+  const [[serviceInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
+  assert.equal(Number(serviceInvoiceCount.n),2);
   const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);
   const [[savedOptions]]=await db.execute("SELECT options_snapshot FROM restaurant_order_items WHERE order_id=?",[placed.body.id]);assert.match(JSON.stringify(savedOptions.options_snapshot),/Large/);
   const sessions=await resource(a,"security",undefined,"GET");assert.equal(sessions.status,200);
