@@ -15,6 +15,7 @@ export default function ActivityCatalogEditor({tenantId,service}:{tenantId:strin
   const r=await fetch("/api/restaurant/activity-catalog?"+params,{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
   if(!r.ok)throw Error();
   const d=await r.json();
+  if(!Array.isArray(d.categories)||!Array.isArray(d.products)||!Number.isFinite(Number(d.total))||!Number.isInteger(d.page)||d.page<1)throw Error("INVALID_CATALOG_RESPONSE");
   setCategories(d.categories);setProducts(d.products);setTotal(d.total);setPage(d.page);setMessage("");
   setCategoryId(v=>d.categories.some((c:Category)=>c.id===v)?v:d.categories[0]?.id??"");
  }
