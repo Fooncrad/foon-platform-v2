@@ -41,6 +41,8 @@ export async function DELETE(request:Request){
  const tenant=await authorize(request);if(!tenant)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});
  const body=await request.json().catch(()=>null);
  if(typeof body?.id!=="string")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
- await database().execute("DELETE FROM catalog_images WHERE tenant_id=? AND id=?",[tenant,body.id]);
- return NextResponse.json({ok:true});
+ const [result]=await database().execute("DELETE FROM catalog_images WHERE tenant_id=? AND id=?",[tenant,body.id]);
+ const deleted=(result as {affectedRows?:number}).affectedRows??0;
+ if(!deleted)return NextResponse.json({ok:false,code:"IMAGE_NOT_FOUND"},{status:404});
+ return NextResponse.json({ok:true,deleted});
 }
