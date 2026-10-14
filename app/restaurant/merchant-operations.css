@@ -196,3 +196,13 @@
 .restaurantOrderNotes{margin:8px 0 10px;padding:10px 12px;border:1px solid #f4c889;border-inline-start:4px solid #d97706;border-radius:9px;background:#fffbeb;color:#78350f;overflow-wrap:anywhere}
 .restaurantOrderNotes strong{font-size:12px;font-weight:850}
 .restaurantOrderNotes p{margin:4px 0 0;font-size:13px;line-height:1.6;white-space:pre-wrap}
+
+/* Order actions remain accessible on compact merchant screens. */
+@media (max-width: 600px) {
+  .restaurantOrderActions button,
+  .restaurantApp .restaurantOrderActions button {
+    min-height: 44px;
+    height: auto;
+    padding-block: 11px;
+  }
+}
