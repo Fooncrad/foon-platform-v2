@@ -38,6 +38,6 @@ export default async function ActivitySetupPage({searchParams}:{searchParams:Pro
   <section id="catalog"><h2>{service?t("الخدمات والأقسام","Services and categories","Services et catégories"):t("المنتجات والأقسام","Products and categories","Produits et catégories")}</h2>
    {activity==="restaurant"?<Link href={"/restaurant/menu?tenant="+encodeURIComponent(workspace.tenant_id)}>{t("فتح إدارة المنيو","Open menu management","Ouvrir la gestion du menu")}</Link>:<ActivityCatalogEditor tenantId={workspace.tenant_id} service={service}/>}
   </section>
-  <ActivityTemplateEditor tenantId={workspace.tenant_id} activity={activity} slug={slug}/>
+  <ActivityTemplateEditor key={workspace.tenant_id+":"+activity} tenantId={workspace.tenant_id} activity={activity} slug={slug}/>
  </main>;
 }
