@@ -74,6 +74,21 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  if(module==="customerInvoices"&&previous&&parseData(previous.data).quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_QUOTATION_LINK_IMMUTABLE");
  if(module==="customerInvoices"&&previous&&parseData(previous.data).orderId!==input.data.orderId)throw new ResourceError("INVOICE_ORDER_LINK_IMMUTABLE");
+
+ if(module==="customerInvoices"&&previous&&parseData(previous.data).serviceOrderId!==input.data.serviceOrderId)throw new ResourceError("INVOICE_SERVICE_ORDER_LINK_IMMUTABLE");
+ if(module==="customerInvoices"&&input.data.serviceOrderId){
+  if(input.data.orderId)throw new ResourceError("INVOICE_MULTIPLE_ORDER_SOURCES");
+  const [services]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[input.data.serviceOrderId,tenantId]);
+  if(!services.length||services[0].status==="cancelled")throw new ResourceError("SERVICE_ORDER_NOT_BILLABLE");
+  if(input.branchId&&services[0].branch_id&&input.branchId!==services[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH");
+  const service=parseData(services[0].data);
+  if(input.data.quotationId&&service.quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_SOURCE_QUOTATION_MISMATCH");
+  const total=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
+  if(!Number.isSafeInteger(total)||total!==Math.round(Number(service.amount)*100))throw new ResourceError("SERVICE_ORDER_INVOICE_AMOUNT_MISMATCH");
+  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,input.data.serviceOrderId]);
+  if(linked.length)throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
+ }
+
  // A converted quotation may retain both references: each is independently
  // validated against the same invoice total, without adding the amounts together.
  if(module==="customerInvoices"&&input.data.quotationId){
