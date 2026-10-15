@@ -1,0 +1,22 @@
+.foonServiceOrders{min-width:0;overflow-wrap:anywhere}
+.foonServiceOrders>header,.foonServiceOrderList article>header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.foonServiceOrders h4{margin:0;font-size:17px}
+.foonServiceOrders input,.foonServiceOrders textarea,.foonServiceOrders select{font:inherit;min-width:0;max-width:100%;width:100%;border:1px solid var(--border,#d9e2ee);border-radius:10px;padding:10px;background:var(--surface,#fff);color:inherit}
+.foonServiceOrders button{font:inherit;min-height:44px;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.foonServiceOrders label{display:grid;gap:6px;min-width:0}
+.foonServiceOrderForm{display:grid;gap:14px;border:1px solid var(--border,#d9e2ee);border-radius:14px;padding:16px;margin-block:16px}
+.foonServiceOrderForm fieldset{border:0;padding:0;margin:0;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.foonServiceOrderWide{grid-column:1/-1}
+.foonServiceOrders textarea{min-height:90px;resize:vertical}
+.foonServiceOrderFilters{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin-block:18px}
+.foonServiceOrderFilters label:first-child{flex:1 1 200px}
+.foonServiceOrderFilters label{flex:0 1 180px}
+.foonServiceOrderActions{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:10px}
+.foonServiceOrderActions button{border:1px solid var(--border,#d9e2ee);border-radius:9px;padding:8px 12px;background:var(--surface,#fff);color:inherit;cursor:pointer}
+.foonServiceOrders button:disabled{cursor:default;opacity:.55}
+.foonServiceOrderList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}
+.foonServiceOrderList article{min-width:0;border:1px solid var(--border,#d9e2ee);border-radius:14px;padding:16px}
+.foonServiceOrderList article p{white-space:pre-wrap}
+.foonServiceOrderList article>strong{display:block}
+.foonServiceOrders :is(button,input,textarea,select):focus-visible{outline:3px solid #b88927;outline-offset:2px}
+@media(max-width:480px){.foonServiceOrderForm{padding:12px}.foonServiceOrderForm fieldset{grid-template-columns:minmax(0,1fr)}.foonServiceOrderFilters>label{flex:1 1 100%}}

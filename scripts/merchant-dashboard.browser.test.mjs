@@ -292,4 +292,71 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.goto(origin+"/restaurant?tenant="+foreignId);
  await expect(page.getByText("Private foreign tenant",{exact:true})).toHaveCount(0);
 });
+test("all 14 activities expose their own tools; service orders work in three languages at 320px",async({browser})=>{
+ const activities=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
+ const services=new Set(["carwash","laundry","automotive","salon","publicworks"]);
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ try{
+  for(const activity of activities){
+   const context=await browser.newContext({viewport:{width:1440,height:1000}});
+   try{
+    const slug="service-ui-"+activity;
+    const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
+    expect(created.status(),await created.text()).toBe(201);
+    const account=await created.json();
+    await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
+    const page=await context.newPage();
+    await page.goto(origin+"/restaurant?tenant="+account.tenant.id);
+    await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
+    await expect(page.locator('.foonActivityTools')).toBeVisible();
+    await expect(page.locator('.foonActivityTools a[href*="/restaurant/payments?"]')).toBeVisible();
+    const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
+    const serviceLink=navigation.getByRole('button',{name:'أوامر الخدمة',exact:true});
+    if(!services.has(activity)){await expect(serviceLink).toHaveCount(0);continue;}
+    await expect(serviceLink).toBeVisible();
+    await page.locator('.foonActivityTools').getByRole('link',{name:'أوامر الخدمة',exact:false}).click();
+    const workspace=page.locator('.foonServiceOrders');
+    await expect(workspace.getByRole('heading',{name:'أوامر الخدمة',exact:true})).toBeVisible();
+    if(activity!=="carwash")continue;
+    await workspace.getByRole('button',{name:'إنشاء أمر خدمة',exact:true}).click();
+    const form=workspace.locator('form');
+    await expect(form.locator('select[name="status"] option')).toHaveCount(2);
+    await form.getByLabel('عنوان الخدمة',{exact:true}).fill('خدمة معاينة السيارة');
+    await form.getByLabel('اسم العميل',{exact:true}).fill('عميل الخدمة');
+    await form.getByLabel('جوال العميل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');
+    await expect(form.getByLabel('جوال العميل',{exact:true})).toHaveValue('0500004321');
+    await form.getByLabel('تفاصيل الخدمة',{exact:true}).fill('Service '+"X".repeat(120));
+    await form.locator('input[name="amount"]').fill('45.50');
+    await form.locator('select[name="branchId"]').selectOption(account.branch.id);
+    await form.getByRole('button',{name:'حفظ',exact:true}).click();
+    const card=workspace.locator('article').filter({hasText:'خدمة معاينة السيارة'});
+    await expect(card).toHaveAttribute('data-status','new');
+    await workspace.getByRole('searchbox',{name:'بحث في أوامر الخدمة',exact:true}).fill('0500004321');
+    await expect(card).toBeVisible();
+    await card.getByRole('button',{name:'قيد التنفيذ',exact:true}).click();
+    await expect(card).toHaveAttribute('data-status','in_progress');
+    await card.getByRole('button',{name:'مكتمل',exact:true}).click();
+    await expect(card).toHaveAttribute('data-status','completed');
+    await expect(card.getByRole('button',{name:'تعديل',exact:true})).toHaveCount(0);
+    await expect(card.getByRole('button',{name:'أرشفة',exact:true})).toHaveCount(0);
+    await card.getByRole('button',{name:'عرض التفاصيل',exact:true}).click();
+    await expect(form.locator('fieldset')).toHaveAttribute('disabled','');
+    for(const control of await form.locator('input,select,textarea').all())await expect(control).toBeDisabled();
+    await expect(form.getByRole('button',{name:'حفظ',exact:true})).toHaveCount(0);
+    await form.getByRole('button',{name:'إغلاق',exact:true}).click();
+    await page.setViewportSize({width:320,height:720});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+    await page.screenshot({path:'work/merchant-service-orders-ar-mobile.png',fullPage:true});
+    for(const [language,title] of [["en","Service orders"],["fr","Ordres de service"]]){
+     await page.locator('.restaurantLanguageSelector select').selectOption(language);
+     await expect(workspace.getByRole('heading',{name:title,exact:true})).toBeVisible();
+     await expect(workspace).toHaveAttribute('dir','ltr');
+     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+     await page.screenshot({path:'work/merchant-service-orders-'+language+'-mobile.png',fullPage:true});
+    }
+   }finally{await context.close();}
+  }
+ }finally{await db.end();}
+});
 test.setTimeout(180000);
+
