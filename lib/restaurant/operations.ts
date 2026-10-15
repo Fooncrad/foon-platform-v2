@@ -178,6 +178,37 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  return {id};
 }
 
+/** Atomically convert the server-stored, accepted quotation into a service order.
+ * Lock the quotation first: concurrent conversions serialize on this same row.
+ * Never trust prices, customer data or the quotation status supplied by a browser.
+ */
+export async function convertAcceptedQuotation(db:PoolConnection,tenantId:string,actor:string,role:string,quotationId:string,requestedBranch:string|null){
+ if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(quotationId))throw new ResourceError("INVALID_INPUT");
+ const [quotes]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[quotationId,tenantId]);
+ if(!quotes.length)throw new ResourceError("REFERENCE_NOT_FOUND");
+ const quote=quotes[0];
+ if(quote.status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
+ const quoteBranch=quote.branch_id?String(quote.branch_id):null;
+ if(quoteBranch&&requestedBranch&&quoteBranch!==requestedBranch)throw new ResourceError("REFERENCE_NOT_FOUND");
+ const branchId=quoteBranch??requestedBranch;
+ await branchExists(db,tenantId,branchId);
+ // Include archived rows in the duplicate guard: archival must never permit re-conversion.
+ const [linked]=await db.execute<RowDataPacket[]>("SELECT id,archived,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 2 FOR UPDATE",[tenantId,quotationId]);
+ if(linked.length){
+  if(linked.length!==1||Number(linked[0].archived))throw new ResourceError("SERVICE_ORDER_ALREADY_CREATED");
+  if(branchId&&linked[0].branch_id&&String(linked[0].branch_id)!==branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
+  return {id:String(linked[0].id),existing:true};
+ }
+ const data=parseData(quote.data),amount=Number(data.amount);
+ if(!Number.isFinite(amount)||amount<0||amount>100000000)throw new ResourceError("INVALID_QUOTATION_AMOUNT");
+ const saved=await saveResource(db,tenantId,actor,role,"serviceOrders",{
+  name:String(quote.name),status:"new",branchId,
+  data:{quotationId,customerName:String(data.customerName??""),customerPhone:String(data.customerPhone??""),serviceDescription:String(data.serviceDescription??""),amount,notes:String(data.notes??"")}
+ });
+ await audit(db,tenantId,actor,"quotation.convert",saved.id,{quotationId});
+ return {...saved,existing:false};
+}
+
 export async function ordersRows(db:PoolConnection,tenantId:string,role:string,branchId?:string|null){
  const financial=["owner","manager","cashier","accountant"].includes(role);
  const values:string[]=[tenantId];let filter="";
