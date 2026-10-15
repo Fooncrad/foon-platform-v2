@@ -202,6 +202,9 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const convertQuote=await resource(a,"quotations",{name:"Conversion source",status:"sent",branchId:a.branch,data:{customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5,notes:"Accepted scope"}});
   assert.equal(convertQuote.status,201,JSON.stringify(convertQuote.body));
   const conversionId=convertQuote.body.id;
+  const invalidConversion=await resource(a,"serviceOrders",{convertQuotationId:"not-a-uuid",branchId:a.branch});
+  assert.equal(invalidConversion.body.code,"INVALID_INPUT");
+
   const notYetAccepted=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch});
   assert.equal(notYetAccepted.body.code,"QUOTATION_NOT_ACCEPTED");
   const source=(await resource(a,"quotations",undefined,"GET")).body.resources.find(row=>row.id===conversionId);
@@ -234,8 +237,9 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const replayConversion=await resource(a,"serviceOrders",conversionPayload);
   assert.equal(replayConversion.body.id,firstConversion.body.id);
   assert.equal(replayConversion.body.existing,true);
+  await db.execute("UPDATE tenant_subscriptions SET plan_id=? WHERE tenant_id=?",["operations-enterprise",b.tenant]);
   const foreignConversion=await resource(b,"serviceOrders",conversionPayload);
-  assert.notEqual(foreignConversion.status,201,JSON.stringify(foreignConversion.body));
+  assert.equal(foreignConversion.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(foreignConversion.body));
   const directDuplicate=await resource(a,"serviceOrders",{name:"Manual duplicate",status:"new",branchId:a.branch,data:{quotationId:conversionId,customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5}});
   assert.equal(directDuplicate.body.code,"SERVICE_ORDER_ALREADY_CREATED");
 
