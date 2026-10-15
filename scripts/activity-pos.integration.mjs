@@ -40,7 +40,7 @@ export async function runActivityPosChecks({db,call,resource,register}){
  assert.equal((await resource(b.owner,"pos",request({branchId:b.owner.branch}))).body.code,"ITEM_UNAVAILABLE");
  assert.equal((await call("/api/restaurant/operations/pos","GET",undefined,b.owner.cookie,owner.tenant)).status,403);
  assert.equal((await resource(owner,"pos",request({currency:"EUR"}))).body.code,"CURRENCY_CHANGED");
- assert.equal((await resource(owner,"pos",request({channel:"dine_in",partySize:1,tableId:randomUUID()}))).body.code,"CHANNEL_UNAVAILABLE");
+ assert.equal((await resource(owner,"pos",request({channel:"dine_in",partySize:1,tableId:randomUUID()}))).body.code,"PLAN_FEATURE_REQUIRED","server table entitlement denies dining before channel validation");
  await db.execute("UPDATE catalog_products SET currency='EUR' WHERE id=?",[product]);
  assert.equal((await resource(owner,"pos",request())).body.code,"UNSUPPORTED_CURRENCY");
  await db.execute("UPDATE catalog_products SET currency='USD',price=7.25 WHERE id=?",[product]);
