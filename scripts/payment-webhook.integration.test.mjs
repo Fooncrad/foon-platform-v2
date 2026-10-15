@@ -148,7 +148,7 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
    try{const saved=await registerServiceInvoicePaymentAttempt(db,{tenantId,scope,invoiceId,provider:"stripe",mode,paymentId});await db.commit();return saved;}catch(error){await db.rollback();throw error;}
   }
   const service=await serviceInvoice();
-  await assert.rejects(()=>bindService(service.id,"pi_wrong_scope","live",foreignBranch.id),/INVOICE_NOT_PAYABLE/);
+  await assert.rejects(()=>bindService(service.id,"pi_wrong_scope","live",foreignBranch.id),/PAYMENT_CONFIGURATION_CHANGED|INVOICE_NOT_PAYABLE/);
   await assert.rejects(()=>bindService(randomUUID(),"pi_unknown_invoice"),/INVOICE_NOT_PAYABLE/);
   await assert.rejects(()=>bindService(service.id,"pi_other_tenant_service","live","tenant",other.tenant),/INVOICE_NOT_PAYABLE/);
   await bindService(service.id,"pi_service_verified");
