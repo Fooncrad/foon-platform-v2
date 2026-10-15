@@ -8,7 +8,7 @@ import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
-import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoiceForCompletedService,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
+import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoiceForCompletedService,confirmManualInvoiceReceipt,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
 import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
 import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
@@ -66,7 +66,7 @@ function failure(error:unknown){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
  const code=error instanceof ResourceError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"?403:code.endsWith("_NOT_FOUND")?404:code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  if(status>=500)console.error("[FOON operations]",{incidentId,code,error});
  return NextResponse.json({ok:false,code,incidentId},{status});
 }
@@ -199,7 +199,7 @@ async function mutate(request:Request,module:string,method:string){
     }
     if(body.data?.menuTheme==="dark"&&!(await tenantEntitlement(ctx.tenantId,"branding.dark_mode")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
    }
-   if(method==="POST"&&resourceModules[module].feature){const grant=await tenantEntitlement(ctx.tenantId,resourceModules[module].feature!);if(grant.limit!==null){await db.execute("SELECT tenant_id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[ctx.tenantId]);const [[used]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE",[ctx.tenantId,resourceModules[module].kind]);if((canonicalMenuModules.includes(module)?(await resourceRows(db,ctx.tenantId,module)).length:Number(used.n))>=grant.limit)throw new ResourceError("PLAN_LIMIT_REACHED");}}
+   if(method==="POST"&&body.confirmManualReceiptId===undefined&&resourceModules[module].feature){const grant=await tenantEntitlement(ctx.tenantId,resourceModules[module].feature!);if(grant.limit!==null){await db.execute("SELECT tenant_id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[ctx.tenantId]);const [[used]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE",[ctx.tenantId,resourceModules[module].kind]);if((canonicalMenuModules.includes(module)?(await resourceRows(db,ctx.tenantId,module)).length:Number(used.n))>=grant.limit)throw new ResourceError("PLAN_LIMIT_REACHED");}}
    if(module==="purchases"&&!(await tenantEntitlement(ctx.tenantId,"inventory")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
    if(module==="serviceOrders"&&method==="POST"&&body.convertQuotationId!==undefined){
     if(typeof body.convertQuotationId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
@@ -207,6 +207,9 @@ async function mutate(request:Request,module:string,method:string){
    }else if(module==="customerInvoices"&&method==="POST"&&body.invoiceFromServiceOrderId!==undefined){
     if(typeof body.invoiceFromServiceOrderId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
     result=await draftInvoiceForCompletedService(db,ctx.tenantId,ctx.user,ctx.role,body.invoiceFromServiceOrderId,body.branchId?String(body.branchId):null);
+   }else if(module==="customerInvoices"&&method==="POST"&&body.confirmManualReceiptId!==undefined){
+    if(typeof body.confirmManualReceiptId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
+    result=await confirmManualInvoiceReceipt(db,ctx.tenantId,ctx.user,body.confirmManualReceiptId,body.branchId?String(body.branchId):null,body.method,body.reference,body.amount,body.attested);
    }else result=await saveResource(db,ctx.tenantId,ctx.user,ctx.role,module,body,method==="DELETE");
    if(module==="reservations"&&method==="PATCH"&&body.status&&typeof body.id==="string"){
     const [previous]=await db.execute<RowDataPacket[]>("SELECT status,data,name FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='reservation' LIMIT 1",[body.id,ctx.tenantId]);
