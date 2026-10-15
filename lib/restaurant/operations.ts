@@ -251,7 +251,7 @@ export async function confirmManualInvoiceReceipt(
 ){
  if(typeof invoiceId!=="string"||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(invoiceId))throw new ResourceError("INVALID_INPUT");
  if(method!=="cash"&&method!=="bank_transfer")throw new ResourceError("INVALID_SETTLEMENT_METHOD");
- if(typeof reference!=="string"||! /^[A-Za-z0-9][A-Za-z0-9_\\-/. ]{5,119}$/.test(reference.trim()))throw new ResourceError("INVALID_SETTLEMENT_REFERENCE");
+ if(typeof reference!=="string"||!new RegExp("^[A-Za-z0-9][A-Za-z0-9_./ -]{5,119}$").test(reference.trim()))throw new ResourceError("INVALID_SETTLEMENT_REFERENCE");
  if(typeof amount!=="number"||!Number.isFinite(amount)||amount<0||amount>100000000||Math.abs(amount*100-Math.round(amount*100))>0.000001)throw new ResourceError("INVALID_SETTLEMENT_AMOUNT");
  if(attested!==true)throw new ResourceError("MANUAL_RECEIPT_CONFIRMATION_REQUIRED");
  const [invoices]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND archived=FALSE FOR UPDATE",[invoiceId,tenantId]);
