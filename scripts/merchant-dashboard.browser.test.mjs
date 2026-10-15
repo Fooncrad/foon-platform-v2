@@ -306,11 +306,28 @@ test("all 14 activities expose their own tools; service orders work in three lan
     const account=await created.json();
     await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
     const page=await context.newPage();
+    const assignedRequests=[];
+    page.on('request',request=>{if(request.url().includes('/assigned-service'))assignedRequests.push(request.url());});
     await page.goto(origin+"/restaurant?tenant="+account.tenant.id);
     await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
     await expect(page.locator('.foonActivityTools')).toBeVisible();
     await expect(page.locator('.foonActivityTools a[href*="/restaurant/payments?"]')).toBeVisible();
     const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
+    const dining=activity==="restaurant"||activity==="cafe";
+    if(activity!=="restaurant"){
+     await expect(page.locator('.restaurantHero')).not.toContainText('المطعم');
+     await expect(page.locator('.restaurantHero h2')).not.toHaveText('لوحة التشغيل المباشر');
+    }
+    if(!dining){
+     await expect(page.locator('.restaurantMetrics')).not.toContainText('الطاولات');
+     await expect(navigation.getByRole('button',{name:'الطاولات والأقسام',exact:true})).toHaveCount(0);
+     expect(assignedRequests).toHaveLength(0);
+    }
+    if(services.has(activity)&&activity!=="laundry"){
+     await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
+     await expect(page.locator('.foonServiceOrders')).toBeVisible();
+     await expect(page.getByRole('button',{name:'قائمة الانتظار',exact:true})).toHaveCount(0);
+    }
     const serviceLink=navigation.getByRole('button',{name:'أوامر الخدمة',exact:true});
     if(!services.has(activity)){await expect(serviceLink).toHaveCount(0);continue;}
     await expect(serviceLink).toBeVisible();
@@ -359,4 +376,5 @@ test("all 14 activities expose their own tools; service orders work in three lan
  }finally{await db.end();}
 });
 test.setTimeout(180000);
+
 
