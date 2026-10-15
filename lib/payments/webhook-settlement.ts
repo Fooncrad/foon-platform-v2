@@ -43,6 +43,8 @@ export async function registerServiceInvoicePaymentAttempt(db:PoolConnection,inp
  // Both order and service registrations serialize through the same gateway row.
  const [other]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_payment_attempts WHERE provider=? AND mode=? AND BINARY provider_payment_id=BINARY ? LIMIT 1",[input.provider,input.mode,input.paymentId]);
  if(other.length)throw Error("PROVIDER_PAYMENT_ALREADY_BOUND");
+ const [serviceReuse]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_service_invoice_payment_attempts WHERE provider=? AND mode=? AND BINARY provider_payment_id=BINARY ? LIMIT 1",[input.provider,input.mode,input.paymentId]);
+ if(serviceReuse.length)throw Error("PROVIDER_PAYMENT_ALREADY_BOUND");
  const [pending]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_service_invoice_payment_attempts WHERE tenant_id=? AND invoice_id=? LIMIT 1 FOR UPDATE",[input.tenantId,input.invoiceId]);
  if(pending.length)throw Error("SERVICE_INVOICE_PAYMENT_ATTEMPT_EXISTS");
  const id=randomUUID();
