@@ -323,6 +323,12 @@ test("all 14 activities expose their own tools; service orders work in three lan
      await expect(navigation.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
      expect(assignedRequests).toHaveLength(0);
     }
+    if(activity!=="restaurant"){
+     await navigation.getByRole('button',{name:services.has(activity)?'دليل الخدمات':activity==="cafe"?'قائمة المشروبات والمأكولات':'المنتجات والأقسام',exact:true}).click();
+     await expect(page.getByLabel(services.has(activity)?'اسم الخدمة':activity==="cafe"?'اسم المشروب أو الصنف':'اسم المنتج',{exact:true})).toBeVisible();
+     await navigation.getByRole('button',{name:activity==="grocery"?'هوية واجهة السوبر ماركت':'هوية واجهة النشاط',exact:true}).click();
+     await expect(page.locator('.restaurantResourceForm')).toHaveCount(0);
+    }
     if(services.has(activity)&&activity!=="laundry"){
      await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
      await expect(page.locator('.foonServiceOrders')).toBeVisible();
