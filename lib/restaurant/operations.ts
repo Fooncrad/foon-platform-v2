@@ -74,6 +74,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   const from=String(previous.status),to=String(input.status);
   const transitions:Record<string,string[]>={draft:["draft","issued","void"],issued:["issued","paid","void"],paid:["paid"],void:["void"]};
   if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_INVOICE_TRANSITION");
+  if(from!=="paid"&&to==="paid")throw new ResourceError("INVOICE_SETTLEMENT_REQUIRED");
  }
  if(module==="customerInvoices"&&!previous&&!["draft","issued"].includes(String(input.status)))throw new ResourceError("INVALID_INVOICE_TRANSITION");
  if(module==="customerInvoices"&&previous&&["issued","paid","void"].includes(String(previous.status))){
@@ -238,6 +239,48 @@ export async function draftInvoiceForCompletedService(db:PoolConnection,tenantId
  });
  await audit(db,tenantId,actor,"service_order.invoice_draft",saved.id,{serviceOrderId,quotationId});
  return {...saved,existing:false};
+}
+
+/** Merchant-attested manual receipt. This is NOT a gateway/bank verification.
+ * Invoice locks serialize competing receipts; settlement records cannot be mutated
+ * through resource APIs and are written in the same transaction as the paid status.
+ */
+export async function confirmManualInvoiceReceipt(
+ db:PoolConnection,tenantId:string,actor:string,invoiceId:string,requestedBranch:string|null,
+ method:unknown,reference:unknown,amount:unknown,attested:unknown
+){
+ if(typeof invoiceId!=="string"||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(invoiceId))throw new ResourceError("INVALID_INPUT");
+ if(method!=="cash"&&method!=="bank_transfer")throw new ResourceError("INVALID_SETTLEMENT_METHOD");
+ if(typeof reference!=="string"||! /^[A-Za-z0-9][A-Za-z0-9_\\-/. ]{5,119}$/.test(reference.trim()))throw new ResourceError("INVALID_SETTLEMENT_REFERENCE");
+ if(typeof amount!=="number"||!Number.isFinite(amount)||amount<0||amount>100000000||Math.abs(amount*100-Math.round(amount*100))>0.000001)throw new ResourceError("INVALID_SETTLEMENT_AMOUNT");
+ if(attested!==true)throw new ResourceError("MANUAL_RECEIPT_CONFIRMATION_REQUIRED");
+ const [invoices]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND archived=FALSE FOR UPDATE",[invoiceId,tenantId]);
+ if(!invoices.length)throw new ResourceError("REFERENCE_NOT_FOUND");
+ const invoice=invoices[0],invoiceBranch=invoice.branch_id?String(invoice.branch_id):null;
+ if(invoiceBranch&&requestedBranch&&invoiceBranch!==requestedBranch)throw new ResourceError("REFERENCE_NOT_FOUND");
+ await branchExists(db,tenantId,invoiceBranch??requestedBranch);
+ const detail=parseData(invoice.data);
+ const due=Math.round((Number(detail.subtotal??0)+Number(detail.taxAmount??0)+Number(detail.serviceFee??0))*100);
+ const paid=Math.round(amount*100);
+ if(!Number.isSafeInteger(due)||due<0||due!==paid)throw new ResourceError("INVOICE_SETTLEMENT_AMOUNT_MISMATCH");
+ const trimmed=reference.trim();
+ const [existing]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=? LIMIT 2 FOR UPDATE",[tenantId,invoiceId]);
+ if(existing.length){
+  if(existing.length!==1)throw new ResourceError("INVOICE_ALREADY_SETTLED");
+  const prior=parseData(existing[0].data);
+  if(invoice.status==="paid"&&prior.method===method&&prior.reference===trimmed&&Math.round(Number(prior.amount)*100)===paid)return {id:invoiceId,settlementId:String(existing[0].id),existing:true};
+  throw new ResourceError("INVOICE_ALREADY_SETTLED");
+ }
+ if(invoice.status!=="issued")throw new ResourceError("INVOICE_NOT_ISSUED");
+ const token=createHash("sha256").update(String(method)+":"+trimmed).digest("hex");
+ const [reused]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND lookup_key=? LIMIT 1 FOR UPDATE",[tenantId,token]);
+ if(reused.length)throw new ResourceError("SETTLEMENT_REFERENCE_REUSED");
+ const settlementId=randomUUID(),now=new Date().toISOString();
+ const proof={invoiceId,method,reference:trimmed,amount,confirmedBy:actor,confirmedAt:now,source:"merchant_attested_manual"};
+ await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[settlementId,tenantId,invoiceBranch??requestedBranch,"invoice_settlement","Manual settlement: "+String(invoice.name),"confirmed",JSON.stringify(proof),token]);
+ await db.execute("UPDATE restaurant_resources SET status='paid',version=version+1 WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND status='issued'",[invoiceId,tenantId]);
+ await audit(db,tenantId,actor,"customer_invoice.manual_receipt",invoiceId,{settlementId,method,amount,source:"merchant_attested_manual"});
+ return {id:invoiceId,settlementId,existing:false};
 }
 
 export async function ordersRows(db:PoolConnection,tenantId:string,role:string,branchId?:string|null){
