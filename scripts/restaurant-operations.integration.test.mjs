@@ -314,8 +314,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(Number(Boolean(firstReceipt.body.existing))+Number(Boolean(secondReceipt.body.existing)),1);
   const [[settlementCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=?",[a.tenant,billedService.body.id]);
   assert.equal(Number(settlementCount.n),1);
-  const repeated=await resource(a,"customerInvoices",proof);
-  assert.equal(repeated.body.existing,true);
+  const replayedReceipt=await resource(a,"customerInvoices",proof);
+  assert.equal(replayedReceipt.body.existing,true);
   const changed=await resource(a,"customerInvoices",{...proof,reference:"BANK-123457"});
   assert.equal(changed.body.code,"INVOICE_ALREADY_SETTLED");
   const paidInvoiceRows=await resource(a,"customerInvoices",undefined,"GET");
