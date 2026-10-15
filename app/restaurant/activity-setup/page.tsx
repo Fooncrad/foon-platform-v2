@@ -36,7 +36,7 @@ export default async function ActivitySetupPage({searchParams}:{searchParams:Pro
   <h1>{t("إعداد النشاط","Business setup","Configuration de l’activité")} · {workspace.name}</h1>
   <ActivityTools tenantId={workspace.tenant_id} activity={activity} language={lang==="en"||lang==="fr"?lang:"ar"}/>
   <section id="catalog"><h2>{service?t("الخدمات والأقسام","Services and categories","Services et catégories"):t("المنتجات والأقسام","Products and categories","Produits et catégories")}</h2>
-   {activity==="restaurant"?<Link href={"/restaurant/menu?tenant="+encodeURIComponent(workspace.tenant_id)}>{t("فتح إدارة المنيو","Open menu management","Ouvrir la gestion du menu")}</Link>:<ActivityCatalogEditor tenantId={workspace.tenant_id} service={service}/>}
+   {activity==="restaurant"?<Link href={"/restaurant/menu?tenant="+encodeURIComponent(workspace.tenant_id)}>{t("فتح إدارة المنيو","Open menu management","Ouvrir la gestion du menu")}</Link>:<ActivityCatalogEditor tenantId={workspace.tenant_id} service={service} activityCode={activity}/>}
   </section>
   <ActivityTemplateEditor key={workspace.tenant_id+":"+activity} tenantId={workspace.tenant_id} activity={activity} slug={slug}/>
  </main>;
