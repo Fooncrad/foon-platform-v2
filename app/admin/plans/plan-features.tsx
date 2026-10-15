@@ -12,7 +12,8 @@ export default function PlanFeatures({planId,canEdit}:{planId:string;canEdit:boo
   catch(e){setError(String(e));}finally{setBusy("");}
  }
  const supported=new Set<string>(ACTIVITY_PRESETS[activity]);
- const filtered=features.filter(f=>!Object.values(ACTIVITY_PRESETS).some(modules=>(modules as readonly string[]).includes(f.feature_key))||supported.has(f.feature_key));
+ const allModules=new Set<string>(Object.values(ACTIVITY_PRESETS).flatMap(modules=>[...modules]));
+ const filtered=features.filter(f=>!allModules.has(f.feature_key)||supported.has(f.feature_key));
  return <details><summary>المميزات وحدود الباقة ({features.filter(f=>Boolean(f.enabled)).length}/{features.length})</summary>
  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",margin:"12px 0"}}><label htmlFor={"plan-activity-"+planId}>عرض مميزات النشاط</label><select id={"plan-activity-"+planId} value={activity} onChange={e=>setActivity(e.target.value as ActivityType)}>{(Object.keys(ACTIVITY_PRESETS) as ActivityType[]).map(code=><option key={code} value={code}>{code}</option>)}</select><small>المميزات المشتركة تظهر لجميع الأنشطة؛ هذا العرض لا يغيّر منح الباقة.</small></div>
  {loading?<p>جارٍ التحميل…</p>:<div style={{maxHeight:360,overflowY:"auto"}}>{filtered.map(f=><div key={f.feature_key} style={{padding:"8px 0",borderBottom:"1px solid #7774"}}>
