@@ -318,6 +318,33 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(replayedReceipt.body.existing,true);
   const changed=await resource(a,"customerInvoices",{...proof,reference:"BANK-123457"});
   assert.equal(changed.body.code,"INVOICE_ALREADY_SETTLED");
+  // A refund review is an audited request only; it never refunds money.
+  const review=(owner,body,method="POST")=>call("/api/restaurant/payments/refund-reviews",method,body,owner.cookie,owner.tenant);
+  const reviewRequest={invoiceId:billedService.body.id,reason:"Customer requested a full refund after service delivery",reviewAcknowledged:true};
+  const invalidReview=await review(a,{...reviewRequest,reason:"short"});
+  assert.equal(invalidReview.body.code,"REFUND_REASON_REQUIRED");
+  const selfDeclared=await review(a,{...reviewRequest,amount:1});
+  assert.equal(selfDeclared.status,400,"clients cannot select a refund amount");
+  const foreignRefund=await review(b,reviewRequest);
+  assert.notEqual(foreignRefund.status,201,"another merchant may not request an invoice refund");
+  const [firstReview,secondReview]=await Promise.all([review(a,reviewRequest),review(a,reviewRequest)]);
+  assert.equal(firstReview.status===201||firstReview.status===200,true,JSON.stringify(firstReview.body));
+  assert.equal(secondReview.status===201||secondReview.status===200,true,JSON.stringify(secondReview.body));
+  assert.equal(firstReview.body.id,secondReview.body.id);
+  assert.equal(Number(Boolean(firstReview.body.existing))+Number(Boolean(secondReview.body.existing)),1);
+  assert.equal(firstReview.body.financialEffect,"none");
+  assert.equal(secondReview.body.financialEffect,"none");
+  const [[refundCaseCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_refund_review' AND lookup_key=?",[a.tenant,billedService.body.id]);
+  assert.equal(Number(refundCaseCount.n),1);
+  const readReview=await review(a,undefined,"GET");
+  assert.equal(readReview.status,200,JSON.stringify(readReview.body));
+  assert.ok(readReview.body.reviews.some(row=>row.invoiceId===billedService.body.id&&row.status==="review_pending"&&row.source==="manual"));
+  const changedRefundReason=await review(a,{...reviewRequest,reason:"A different long reason for a second refund request"});
+  assert.equal(changedRefundReason.body.code,"REFUND_REVIEW_ALREADY_EXISTS");
+  const [[reviewedInvoice]]=await db.execute("SELECT status FROM restaurant_resources WHERE id=? AND tenant_id=?",[billedService.body.id,a.tenant]);
+  assert.equal(reviewedInvoice.status,"paid","refund review is not a real refund");
+  const [[refundAuditCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='customer_invoice.refund_review_requested'",[a.tenant,billedService.body.id]);
+  assert.equal(Number(refundAuditCount.n),1,"duplicate reviews must not generate multiple audit events");
   const paidInvoiceRows=await resource(a,"customerInvoices",undefined,"GET");
   const paidSnapshot=paidInvoiceRows.body.resources.find(row=>row.id===billedService.body.id);
   const reopenedService=await resource(a,"customerInvoices",{id:billedService.body.id,version:paidSnapshot.version,name:paidSnapshot.name,status:"draft",branchId:paidSnapshot.branchId??a.branch,data:paidSnapshot.data},"PATCH");
@@ -325,6 +352,16 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(reopenedService.body.code,"INVALID_INVOICE_TRANSITION");
   const [[serviceInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
   assert.equal(Number(serviceInvoiceCount.n),2);
+  const unprovedId=randomUUID();
+  await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,?,?,?,?,?)",[unprovedId,a.tenant,a.branch,"customer_invoice","Unproved paid invoice","paid",JSON.stringify({subtotal:5,taxAmount:0,serviceFee:0})]);
+  const noProofRefund=await review(a,{invoiceId:unprovedId,reason:"Review request without financial evidence",reviewAcknowledged:true});
+  assert.equal(noProofRefund.body.code,"PAYMENT_EVIDENCE_REQUIRED");
+  const unpaidInvoice=await db.execute("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND status='draft' LIMIT 1",[a.tenant]);
+  if(unpaidInvoice[0].length){
+   const notPaidReview=await review(a,{invoiceId:unpaidInvoice[0][0].id,reason:"Review for an invoice that is not paid",reviewAcknowledged:true});
+   assert.equal(notPaidReview.body.code,"INVOICE_NOT_PAID");
+  }
+
   // Exercise the real HTTP lifecycle, optimistic versions and immutable terminal records.
   const readService=async id=>{
    const response=await resource(a,"serviceOrders",undefined,"GET");

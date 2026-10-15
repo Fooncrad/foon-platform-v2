@@ -61,6 +61,18 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   const proofData=typeof proof.data==="string"?JSON.parse(proof.data):proof.data;
   assert.equal(proofData.source,"provider_verified_webhook");assert.equal(proofData.provider,"stripe");
   assert.equal(proofData.mode,"live");assert.equal(proofData.amountMinor,1234);assert.equal(proofData.orderId,main);
+  const gatewayReviewPayload={invoiceId:mainInvoice,reason:"Gateway-paid invoice requires a refund investigation",reviewAcknowledged:true};
+  const gatewayReview=await fetch(origin+"/api/restaurant/payments/refund-reviews",{method:"POST",headers,body:JSON.stringify(gatewayReviewPayload)});
+  assert.equal(gatewayReview.status,201,await gatewayReview.clone().text());
+  assert.equal((await gatewayReview.json()).financialEffect,"none");
+  const [[gatewayReviewRow]]=await db.execute("SELECT data,status FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_refund_review' AND lookup_key=?",[account.tenant,mainInvoice]);
+  const gatewayReviewData=typeof gatewayReviewRow.data==="string"?JSON.parse(gatewayReviewRow.data):gatewayReviewRow.data;
+  assert.equal(gatewayReviewRow.status,"review_pending");
+  assert.equal(gatewayReviewData.source,"gateway");
+  assert.equal(gatewayReviewData.originalAmountMinor,1234);
+  assert.equal(gatewayReviewData.currency,"SAR");
+  assert.equal(gatewayReviewData.provider,"stripe");
+  assert.equal((await invoiceStatus(mainInvoice)).status,"paid","a refund review never reverses a gateway payment");
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
   assert.equal((await paymentStatus(main)).version,version);
   assert.equal((await invoiceStatus(mainInvoice)).version,invoiceVersion);
