@@ -332,6 +332,12 @@ test("all 14 activities expose their own tools; service orders work in three lan
      await navigation.getByRole('button',{name:activity==="grocery"?'هوية واجهة السوبر ماركت':'هوية واجهة النشاط',exact:true}).click();
      await expect(page.locator('.restaurantResourceForm')).toHaveCount(0);
     }
+    if(!dining){
+     await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
+     await expect(page.locator('select[name="channel"] option[value="dine_in"]')).toHaveCount(0);
+     await expect(page.locator('.restaurantListTools')).toHaveCount(0);
+     await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
+    }
     if(services.has(activity)&&activity!=="laundry"){
      await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
      await expect(page.locator('.foonServiceOrders')).toBeVisible();
