@@ -164,3 +164,28 @@ test("service orders validate required fields and accepted quotation references"
  assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{customerName:"Customer",serviceDescription:"Repair equipment",amount:-1}}));
  assert.throws(()=>validateResource("serviceOrders",{name:"Repair",status:"new",data:{quotationId:"foreign",customerName:"Customer",serviceDescription:"Repair equipment",amount:120}}));
 });
+
+
+test("customer and internal invoice amounts reject fractional minor units",()=>{
+ for(const [module,data] of [
+  ["customerInvoices",{subtotal:10}],
+  ["internalInvoices",{invoiceNumber:"INV-TEST",subtotal:10}]
+ ]){
+  for(const key of ["subtotal","taxAmount","serviceFee"]){
+   const body={name:"Precision regression",status:"draft",data};
+   assert.equal(validateResource(module,{...body,data:{...data,[key]:10.01}}).data[key],10.01);
+   assert.equal(validateResource(module,{...body,data:{...data,[key]:0.1+0.2}}).data[key],0.1+0.2);
+   for(const invalid of [10.001,9.999,0.0001])
+    assert.throws(()=>validateResource(module,{...body,data:{...data,[key]:invalid}}),{code:"INVALID_AMOUNT_PRECISION"});
+  }
+ }
+});
+
+test("quotation and service order source amounts reject fractional minor units",()=>{
+ for(const [module,status] of [["quotations","draft"],["serviceOrders","new"]]){
+  const base={name:"Precision regression",status,data:{customerName:"Customer",serviceDescription:"Service",amount:10}};
+  assert.equal(validateResource(module,{...base,data:{...base.data,amount:10.01}}).data.amount,10.01);
+  for(const invalid of [10.001,9.999,0.0001])
+   assert.throws(()=>validateResource(module,{...base,data:{...base.data,amount:invalid}}),{code:"INVALID_AMOUNT_PRECISION"});
+ }
+});
