@@ -12,9 +12,9 @@ export async function runActivityEntitlementGateChecks({db,call,resource,restaur
  for(const {activity,owner} of activities){
   await db.execute("UPDATE tenant_subscriptions SET plan_id=?,starts_at=NULL,ends_at=NULL WHERE tenant_id=?",[plan,owner.tenant]);
   const dining=activity==="restaurant"||activity==="cafe";
-  for(const module of ["sections","tables","reservations","waitlist","waiterCalls","kds"]){
-   const r=await resource(owner,module,undefined,"GET");
-   assert.equal(r.status,dining?200:403,activity+":"+module+":"+JSON.stringify(r.body));
+  for(const moduleKey of ["sections","tables","reservations","waitlist","waiterCalls","kds"]){
+   const r=await resource(owner,moduleKey,undefined,"GET");
+   assert.equal(r.status,dining?200:403,activity+":"+moduleKey+":"+JSON.stringify(r.body));
    if(!dining)assert.equal(r.body.code,"ACTIVITY_MODULE_UNAVAILABLE");
   }
   const section=await resource(owner,"sections",{name:"Activity gate section",status:"active",branchId:owner.branch,data:{}});
@@ -22,8 +22,8 @@ export async function runActivityEntitlementGateChecks({db,call,resource,restaur
   if(dining)sections.set(activity,section.body.id);
   else{
    assert.equal(section.body.code,"ACTIVITY_MODULE_UNAVAILABLE");
-   for(const [module,data,status] of [["tables",{number:1,capacity:2},"available"],["reservations",{partySize:2,scheduledAt:new Date(Date.now()+86400000).toISOString()},"pending"],["waitlist",{partySize:2},"waiting"],["waiterCalls",{tableId:randomUUID()},"pending"]]){
-    const denied=await resource(owner,module,{name:"Blocked dining write",status,branchId:owner.branch,data});
+   for(const [moduleKey,data,status] of [["tables",{number:1,capacity:2},"available"],["reservations",{partySize:2,scheduledAt:new Date(Date.now()+86400000).toISOString()},"pending"],["waitlist",{partySize:2},"waiting"],["waiterCalls",{tableId:randomUUID()},"pending"]]){
+    const denied=await resource(owner,moduleKey,{name:"Blocked dining write",status,branchId:owner.branch,data});
     assert.equal(denied.status,403,JSON.stringify(denied.body));assert.equal(denied.body.code,"ACTIVITY_MODULE_UNAVAILABLE");
    }
   }
