@@ -47,3 +47,14 @@ export function canUseActivityFeature(activity:string,feature:string,grants:read
  return resolveActivityEntitlements(activity,grants,permissions).some(x=>x.key===feature&&x.available);
 }
 
+
+
+/** Additional server restriction only: true never grants subscription/RBAC access.
+ * Only audited dining feature keys are enforced in this batch. Missing/unknown
+ * legacy profiles retain existing subscription behavior until explicitly migrated.
+ */
+const SERVER_RESTRICTED_FEATURES=new Set(["tables","reservations","waitlist","kds","waiter_call"]);
+export function passesServerActivityRestriction(activity:unknown,featureKey:string):boolean{
+ if(!SERVER_RESTRICTED_FEATURES.has(featureKey)||typeof activity!=="string"||!isActivityType(activity))return true;
+ return activityFeatureSupport(activity,featureKey)==="supported";
+}
