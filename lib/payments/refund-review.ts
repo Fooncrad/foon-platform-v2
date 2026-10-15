@@ -97,7 +97,7 @@ export async function decideInvoiceRefundReview(db:PoolConnection,input:{
   if(review.status===next&&original.decidedBy===input.actor&&original.decisionNote===note)return {id:input.reviewId,invoiceId,status:next,existing:true};
   reject("REFUND_DECISION_ALREADY_FINAL");
  }
- const [originalSettlements]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='invoice_settlement' AND archived=FALSE FOR UPDATE",[input.tenantId,original.settlementId]);
+ const [originalSettlements]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='invoice_settlement' AND archived=FALSE FOR UPDATE",[input.tenantId,String(original.settlementId)]);
  const originalProof=parse(originalSettlements[0]?.data);
  if(originalSettlements.length!==1||originalProof.invoiceId!==invoiceId)reject("REFUND_EVIDENCE_MISMATCH");
  const updated={...original,decidedBy:input.actor,decision:input.decision,decisionNote:note,decidedAt:new Date().toISOString(),warning:"REVIEW_ONLY_NOT_REFUNDED"};
