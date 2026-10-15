@@ -210,6 +210,36 @@ export async function convertAcceptedQuotation(db:PoolConnection,tenantId:string
  return {...saved,existing:false};
 }
 
+/** Produce an unissued invoice draft from a completed service order.
+ * The client supplies only the source ID and optional authorized branch;
+ * amounts and customer source are read under row lock on the server.
+ */
+export async function draftInvoiceForCompletedService(db:PoolConnection,tenantId:string,actor:string,role:string,serviceOrderId:string,requestedBranch:string|null){
+ if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(serviceOrderId))throw new ResourceError("INVALID_INPUT");
+ const [orders]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[serviceOrderId,tenantId]);
+ if(!orders.length)throw new ResourceError("REFERENCE_NOT_FOUND");
+ const order=orders[0],sourceBranch=order.branch_id?String(order.branch_id):null;
+ if(sourceBranch&&requestedBranch&&sourceBranch!==requestedBranch)throw new ResourceError("REFERENCE_NOT_FOUND");
+ const branchId=sourceBranch??requestedBranch;
+ await branchExists(db,tenantId,branchId);
+ if(order.status!=="completed")throw new ResourceError("SERVICE_ORDER_NOT_COMPLETED");
+ const [invoices]=await db.execute<RowDataPacket[]>("SELECT id,archived,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 2 FOR UPDATE",[tenantId,serviceOrderId]);
+ if(invoices.length){
+  if(invoices.length!==1||Number(invoices[0].archived))throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
+  if(branchId&&invoices[0].branch_id&&String(invoices[0].branch_id)!==branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
+  return {id:String(invoices[0].id),existing:true};
+ }
+ const details=parseData(order.data),amount=Number(details.amount);
+ if(!Number.isFinite(amount)||amount<0||amount>100000000)throw new ResourceError("INVALID_SERVICE_ORDER_AMOUNT");
+ const quotationId=typeof details.quotationId==="string"&&details.quotationId?details.quotationId:null;
+ const saved=await saveResource(db,tenantId,actor,role,"customerInvoices",{
+  name:"فاتورة خدمة: "+String(order.name),status:"draft",branchId,
+  data:{serviceOrderId,quotationId,subtotal:amount,taxAmount:0,serviceFee:0}
+ });
+ await audit(db,tenantId,actor,"service_order.invoice_draft",saved.id,{serviceOrderId,quotationId});
+ return {...saved,existing:false};
+}
+
 export async function ordersRows(db:PoolConnection,tenantId:string,role:string,branchId?:string|null){
  const financial=["owner","manager","cashier","accountant"].includes(role);
  const values:string[]=[tenantId];let filter="";
