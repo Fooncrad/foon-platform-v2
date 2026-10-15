@@ -198,6 +198,47 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.notEqual(foreignInvoice.status,201,JSON.stringify(foreignInvoice.body));
   const [[invoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
   assert.equal(Number(invoiceCount.n),1);
+  // Quote conversion must read the saved server-side terms and serialize duplicate clicks.
+  const convertQuote=await resource(a,"quotations",{name:"Conversion source",status:"sent",branchId:a.branch,data:{customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5,notes:"Accepted scope"}});
+  assert.equal(convertQuote.status,201,JSON.stringify(convertQuote.body));
+  const conversionId=convertQuote.body.id;
+  const notYetAccepted=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch});
+  assert.equal(notYetAccepted.body.code,"QUOTATION_NOT_ACCEPTED");
+  const source=(await resource(a,"quotations",undefined,"GET")).body.resources.find(row=>row.id===conversionId);
+  assert.ok(source);
+  const approved=await resource(a,"quotations",{id:conversionId,version:source.version,name:source.name,status:"accepted",branchId:a.branch,data:source.data},"PATCH");
+  assert.equal(approved.status,200,JSON.stringify(approved.body));
+  const wrongBranchConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:b.branch});
+  assert.equal(wrongBranchConversion.body.code,"REFERENCE_NOT_FOUND");
+  const tamperedConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch,data:{amount:0}});
+  assert.equal(tamperedConversion.body.code,"INVALID_INPUT");
+  const conversionPayload={convertQuotationId:conversionId,branchId:a.branch};
+  const [firstConversion,secondConversion]=await Promise.all([resource(a,"serviceOrders",conversionPayload),resource(a,"serviceOrders",conversionPayload)]);
+  assert.equal(firstConversion.status,201,JSON.stringify(firstConversion.body));
+  assert.equal(secondConversion.status,201,JSON.stringify(secondConversion.body));
+  assert.equal(firstConversion.body.id,secondConversion.body.id);
+  assert.equal(Number(Boolean(firstConversion.body.existing))+Number(Boolean(secondConversion.body.existing)),1);
+  const [[conversionCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=?",[a.tenant,conversionId]);
+  assert.equal(Number(conversionCount.n),1);
+  const storedConversion=(await resource(a,"serviceOrders",undefined,"GET")).body.resources.find(row=>row.id===firstConversion.body.id);
+  assert.ok(storedConversion);
+  assert.equal(storedConversion.status,"new");
+  assert.equal(storedConversion.branch_id,a.branch);
+  assert.equal(storedConversion.data.quotationId,conversionId);
+  assert.equal(storedConversion.data.customerName,"Converted customer");
+  assert.equal(storedConversion.data.customerPhone,"0551234567");
+  assert.equal(storedConversion.data.serviceDescription,"Fixed-price service");
+  assert.equal(Number(storedConversion.data.amount),47.5);
+  const forbiddenArchive=await resource(a,"serviceOrders",{id:storedConversion.id,version:storedConversion.version},"DELETE");
+  assert.equal(forbiddenArchive.body.code,"SERVICE_ORDER_LINKED_ARCHIVE_FORBIDDEN");
+  const replayConversion=await resource(a,"serviceOrders",conversionPayload);
+  assert.equal(replayConversion.body.id,firstConversion.body.id);
+  assert.equal(replayConversion.body.existing,true);
+  const foreignConversion=await resource(b,"serviceOrders",conversionPayload);
+  assert.notEqual(foreignConversion.status,201,JSON.stringify(foreignConversion.body));
+  const directDuplicate=await resource(a,"serviceOrders",{name:"Manual duplicate",status:"new",branchId:a.branch,data:{quotationId:conversionId,customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5}});
+  assert.equal(directDuplicate.body.code,"SERVICE_ORDER_ALREADY_CREATED");
+
   // Service activities can bill an accepted quotation without a restaurant menu order.
   const serviceQuote=await resource(a,"quotations",{name:"Standalone service quotation",status:"sent",branchId:a.branch,data:{customerName:"Service client",serviceDescription:"Repair service",amount:35}});
   assert.equal(serviceQuote.status,201,JSON.stringify(serviceQuote.body));
