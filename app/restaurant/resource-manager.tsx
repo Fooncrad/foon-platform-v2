@@ -94,13 +94,13 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
  const quoteText=(ar:string,en:string,fr:string)=>quoteLanguage==="en"?en:quoteLanguage==="fr"?fr:ar;
  const [rows,setRows]=useState<StoredResource[]>([]),[refs,setRefs]=useState<Record<string,StoredResource[]>>({}),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[editing,setEditing]=useState<StoredResource|null>(null),[showForm,setShowForm]=useState(false),[filter,setFilter]=useState("");
  const [serviceTestLinks,setServiceTestLinks]=useState<Record<string,string>>({});
- const [refundReviews,setRefundReviews]=useState<Record<string,{id:string;status:string}>>({});
+ const [refundReviews,setRefundReviews]=useState<Record<string,{id:string;status:string;canDecide:boolean}>>({});
  useEffect(()=>{
   if(module!=="customerInvoices"||!fullAccess)return;
   let active=true;
   fetch("/api/restaurant/payments/refund-reviews",{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
    .then(async response=>{const data=await response.json();if(!response.ok)throw Error(String(data.code));return data;})
-   .then(data=>{if(active)setRefundReviews(Object.fromEntries((data.reviews??[]).map((r:{invoiceId:string;id:string;status:string})=>[r.invoiceId,{id:r.id,status:r.status}])));})
+   .then(data=>{if(active)setRefundReviews(Object.fromEntries((data.reviews??[]).map((r:{invoiceId:string;id:string;status:string;canDecide:boolean})=>[r.invoiceId,{id:r.id,status:r.status,canDecide:r.canDecide}])));})
    .catch(()=>{});
   return()=>{active=false;};
  },[module,tenantId,fullAccess]);
@@ -235,9 +235,23 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
    const response=await fetch("/api/restaurant/payments/refund-reviews",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({invoiceId:row.id,reason,reviewAcknowledged:true})});
    const result=await response.json();
    if(!response.ok)throw Error(String(result.code??"REFUND_REVIEW_UNAVAILABLE"));
-   setRefundReviews(previous=>({...previous,[row.id]:{id:result.id,status:result.status}}));
+   setRefundReviews(previous=>({...previous,[row.id]:{id:result.id,status:result.status,canDecide:false}}));
    setMessage(quoteText("سُجّل طلب مراجعة الاسترداد فقط. لم يُعد أي مبلغ للعميل.","Refund review recorded only. No money has been returned.","Demande d'examen enregistrée uniquement. Aucun remboursement effectué."));
   }catch(error){setMessage(error instanceof Error?error.message:"REFUND_REVIEW_UNAVAILABLE");}
+  finally{setBusy(false);}
+ }
+ async function decideRefundReview(row:StoredResource,event:FormEvent<HTMLFormElement>){
+  event.preventDefault();
+  const review=refundReviews[row.id];if(busy||!review?.canDecide||review.status!=="review_pending")return;
+  const form=new FormData(event.currentTarget),decision=String(form.get("decision")),note=String(form.get("note")??"").trim();
+  if(decision!=="approve"&&decision!=="reject")return;
+  setBusy(true);setMessage("");
+  try{
+   const response=await fetch("/api/restaurant/payments/refund-reviews",{method:"PATCH",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({reviewId:review.id,decision,note,acknowledgeNoRefund:true})});
+   const result=await response.json();if(!response.ok)throw Error(String(result.code??"REFUND_DECISION_UNAVAILABLE"));
+   setRefundReviews(previous=>({...previous,[row.id]:{id:review.id,status:result.status,canDecide:false}}));
+   setMessage(decision==="approve"?quoteText("اعتمدت مراجعة الاسترداد، لكن لم يُنفَّذ رد أموال.","Refund review approved; no funds have been returned.","Examen approuvé ; aucun remboursement exécuté."):quoteText("رُفض طلب مراجعة الاسترداد دون حركة مالية.","Refund review rejected with no financial movement.","Demande d'examen rejetée sans mouvement financier."));
+  }catch(error){setMessage(error instanceof Error?error.message:"REFUND_DECISION_UNAVAILABLE");}
   finally{setBusy(false);}
  }
  async function archive(row:StoredResource){if(busy)return;setBusy(true);setMessage("");try{await operationApi(tenantId,module,"DELETE",{id:row.id,version:row.version});await refresh();setMessage("تمت أرشفة العنصر بنجاح.");onChanged?.();}catch(error){setMessage(error instanceof Error?error.message:"تعذر الأرشفة.");}finally{setBusy(false);}}
@@ -279,7 +293,15 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   <button type="button" onClick={()=>void navigator.clipboard.writeText(serviceTestLinks[row.id]).then(()=>setMessage(quoteText("تم نسخ رابط الاختبار.","Sandbox link copied.","Lien de test copié."))).catch(()=>setMessage("COPY_FAILED"))}>{quoteText("نسخ الرابط التجريبي","Copy sandbox link","Copier le lien test")}</button>
  </div>}
  </details>}{module==="customerInvoices"&&row.status==="paid"&&fullAccess&&<div className="restaurantResourceForm" style={{marginBlock:10}}>
- {refundReviews[row.id]?<p role="status">{quoteText("طلب مراجعة الاسترداد مسجّل — لا يعني إعادة الأموال.","Refund review pending — no funds have been returned.","Examen du remboursement enregistré — aucun fonds retourné.")}</p>:<details>
+ {refundReviews[row.id]?<div style={{display:"grid",gap:10}}>
+  <p role="status">{refundReviews[row.id].status==="approved_pending_execution"?quoteText("موافقة داخلية بانتظار التنفيذ، ولا تعني رد الأموال.","Internally approved; payout not executed.","Approbation interne, remboursement non exécuté."):refundReviews[row.id].status==="rejected"?quoteText("رُفضت مراجعة الاسترداد، دون حركة مالية.","Refund review rejected; no funds moved.","Examen rejeté, aucun montant remboursé."):quoteText("طلب مراجعة الاسترداد معلّق — لم يُعد أي مبلغ.","Refund review pending — no funds returned.","Demande en attente — aucun fonds retourné.")}</p>
+  {refundReviews[row.id].canDecide&&refundReviews[row.id].status==="review_pending"&&<form onSubmit={event=>void decideRefundReview(row,event)} style={{display:"grid",gap:10}}>
+   <p className="restaurantFinePrint">{quoteText("للمالك الآخر فقط: قرار المراجعة لا ينفذ رد المبلغ. لا يمكن الاعتماد الذاتي.","For a different owner only: review decisions never move money. Self-approval is forbidden.","Réservé à un autre propriétaire : aucune somme n'est transférée.")}</p>
+   <label>{quoteText("القرار","Decision","Décision")}<select name="decision" required><option value="approve">{quoteText("موافقة داخلية بانتظار التنفيذ","Approve for later execution","Approuver pour exécution ultérieure")}</option><option value="reject">{quoteText("رفض المراجعة","Reject review","Rejeter l'examen")}</option></select></label>
+   <label>{quoteText("ملاحظات القرار (سبب الرفض إلزامي)","Decision note (required on rejection)","Motif requis en cas de rejet")}<textarea name="note" maxLength={1000}/></label>
+   <button type="submit" className="restaurantOutline" disabled={busy}>{quoteText("حفظ قرار المراجعة فقط","Record review decision only","Enregistrer uniquement la décision")}</button>
+  </form>}
+ </div>:<details>
   <summary style={{cursor:"pointer",fontWeight:700}}>{quoteText("طلب مراجعة استرداد","Request refund review","Demander un examen de remboursement")}</summary>
   <p className="restaurantFinePrint">{quoteText("هذا طلب مراجعة داخلي فقط. لن يرد الأموال آليًا أو يغيّر حالة الفاتورة إلى مستردة.","Internal review request only. No money is refunded and the paid invoice stays unchanged.","Demande interne uniquement. Aucun remboursement ni changement de statut de facture.")}</p>
   <form onSubmit={event=>void submitRefundReview(row,event)} style={{display:"grid",gap:10}}>
