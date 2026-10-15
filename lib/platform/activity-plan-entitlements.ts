@@ -14,12 +14,13 @@ export function resolveActivityEntitlements(
 ):ActivityEntitlement[]{
  if(!isActivityType(activity)) throw new Error("UNSUPPORTED_ACTIVITY_TYPE");
  const supported=new Set<string>(ACTIVITY_PRESETS[activity]);
+ const shared=new Set(["pos","delivery"]);
  const byKey=new Map(grants.map(g=>[g.feature_key,g]));
  const keys=new Set([...supported,...byKey.keys()]);
  const allowed=permissions===null?null:new Set(permissions);
  return [...keys].map(key=>{
   const grant=byKey.get(key);
-  const reason:ActivityEntitlement["reason"]=!supported.has(key)?"unsupported_activity":
+  const reason:ActivityEntitlement["reason"]=!supported.has(key)&&!shared.has(key)?"unsupported_activity":
    !grant?.enabled?"not_granted":
    allowed!==null&&!allowed.has(key)?"permission_denied":"available";
   return {key,available:reason==="available",limit:grant?.limit_value??null,reason};
