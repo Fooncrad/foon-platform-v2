@@ -27,10 +27,10 @@ export async function activityPosOptions(db:PoolConnection,tenantId:string,ids:s
  for(const g of groups)(result[String(g.product_id)]??=[]).push({id:String(g.id),name:String(g.name_ar),type:String(g.selection_type),required:Boolean(g.required),min:Number(g.min_select),max:Number(g.max_select),values:values.filter(v=>String(v.group_id)===String(g.id)).map(v=>({id:String(v.id),name:String(v.name_ar),price:Number(v.price_delta)}))});
  return result;
 }
-export async function activitySaleItem(db:PoolConnection,tenantId:string,branch:string,id:string){
+export async function activitySaleItem(db:PoolConnection,tenantId:string,branch:string,id:string):Promise<RowDataPacket>{
  const [rows]=await db.execute<RowDataPacket[]>("SELECT p.*,c.name_ar AS category_name,c.branch_id AS category_branch FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.id=? AND p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE FOR UPDATE",[id,tenantId]);
  const p=rows[0];if(!p||p.branch_id&&p.branch_id!==branch||p.category_branch&&p.category_branch!==branch)throw new ResourceError("ITEM_UNAVAILABLE");
- return {...p,name:String(p.name_ar)};
+ return Object.assign(p,{name:String(p.name_ar)});
 }
 export async function debitActivityStock(db:PoolConnection,tenantId:string,kind:StockDebit["kind"],id:string,quantity:number,debits:StockDebit[]){
  const table=kind==="product"?"catalog_products":"catalog_option_values";
