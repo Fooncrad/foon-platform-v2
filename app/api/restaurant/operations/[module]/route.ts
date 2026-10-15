@@ -265,11 +265,12 @@ async function mutate(request:Request,module:string,method:string){
   // acquire order -> invoice, and the inverse ordering could deadlock. A late
   // invoice is durable before the catch-up attempt starts.
   let gatewayReconciliation:"reconciled"|"not_applicable"|"retry_required"|undefined;
-  if(module==="customerInvoices"&&body.status==="issued"&&typeof result?.id==="string"){
+  const issuedInvoiceId=result&&typeof result==="object"&&"id" in result&&typeof result.id==="string"?result.id:null;
+  if(module==="customerInvoices"&&body.status==="issued"&&issuedInvoiceId){
    try{
     await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
     await db.beginTransaction();
-    gatewayReconciliation=(await reconcileLateIssuedInvoice(db,ctx.tenantId,result.id)).status;
+    gatewayReconciliation=(await reconcileLateIssuedInvoice(db,ctx.tenantId,issuedInvoiceId)).status;
     await db.commit();
    }catch(error){
     await db.rollback();
