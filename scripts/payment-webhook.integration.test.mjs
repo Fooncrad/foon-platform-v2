@@ -4,7 +4,7 @@ import {randomUUID,randomBytes,createHmac} from "node:crypto";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 import {countryRegions} from "../lib/tenant/country-catalog.ts";
-import {registerPaymentAttempt} from "../lib/payments/webhook-settlement.ts";
+import {registerPaymentAttempt,registerServiceInvoicePaymentAttempt} from "../lib/payments/webhook-settlement.ts";
 
 test("webhook routes verify signatures, settle mapped live orders exactly once and expose scoped metadata",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
@@ -135,11 +135,67 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
 
   const foreignInvoiceAttempt=await merchantInvoice({name:"Foreign tenant invoice",status:"issued",branchId:branch.id,data:{orderId:foreign,subtotal:12.34,taxAmount:0,serviceFee:0}});
   assert.notEqual(foreignInvoiceAttempt.status,201);
+  // Standalone service invoices: only an already-created provider charge can be
+  // bound server-side, and only its authentic signed callback settles that invoice.
+  async function serviceInvoice(value=34.5,tenant=account.tenant,branchId=branch.id){
+   const serviceId=randomUUID(),id=randomUUID();
+   await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,?,?,?,?,?)",[serviceId,tenant,branchId,"service_order","Completed repair","completed",JSON.stringify({customerName:"Service guest",serviceDescription:"Repair",amount:value})]);
+   await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,?,?,?,?,?)",[id,tenant,branchId,"customer_invoice","Service payment","issued",JSON.stringify({serviceOrderId:serviceId,subtotal:value,taxAmount:0,serviceFee:0})]);
+   return {serviceId,id};
+  }
+  async function bindService(invoiceId,paymentId,mode="live",scope="tenant",tenantId=account.tenant){
+   await db.beginTransaction();
+   try{const saved=await registerServiceInvoicePaymentAttempt(db,{tenantId,scope,invoiceId,provider:"stripe",mode,paymentId});await db.commit();return saved;}catch(error){await db.rollback();throw error;}
+  }
+  const service=await serviceInvoice();
+  await assert.rejects(()=>bindService(service.id,"pi_wrong_scope","live",foreignBranch.id),/PAYMENT_CONFIGURATION_CHANGED|INVOICE_NOT_PAYABLE/);
+  await assert.rejects(()=>bindService(randomUUID(),"pi_unknown_invoice"),/INVOICE_NOT_PAYABLE/);
+  await assert.rejects(()=>bindService(service.id,"pi_other_tenant_service","live","tenant",other.tenant),/INVOICE_NOT_PAYABLE/);
+  await bindService(service.id,"pi_service_verified");
+  const [[serviceAttemptBefore]]=await db.execute("SELECT status,amount_minor FROM tenant_service_invoice_payment_attempts WHERE tenant_id=? AND invoice_id=?",[account.tenant,service.id]);
+  assert.equal(serviceAttemptBefore.status,"pending");assert.equal(Number(serviceAttemptBefore.amount_minor),3450);
+  assert.equal((await send(event("evt_service_bad_signature","pi_service_verified",3450),webhook,false)).status,400);
+  assert.equal((await invoiceStatus(service.id)).status,"issued");
+  assert.equal((await send(event("evt_service_wrong_amount","pi_service_verified",3400))).status,200);
+  assert.equal((await invoiceStatus(service.id)).status,"issued");
+  const liveRotation=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}})});
+  assert.equal(liveRotation.status,409);
+  assert.equal((await liveRotation.json()).code,"PAYMENT_ATTEMPTS_PENDING","open service attempt must block credential rotation");
+  assert.equal((await send(event("evt_service_paid","pi_service_verified",3450))).status,200);
+  assert.equal((await invoiceStatus(service.id)).status,"paid");
+  assert.equal(await invoiceReceiptCount(service.id),1);
+  const [[serviceProofRow]]=await db.execute("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=?",[account.tenant,service.id]);
+  const serviceProof=typeof serviceProofRow.data==="string"?JSON.parse(serviceProofRow.data):serviceProofRow.data;
+  assert.equal(serviceProof.source,"provider_verified_webhook");
+  assert.equal(serviceProof.providerPaymentId,"pi_service_verified");
+  assert.equal(serviceProof.serviceOrderId,service.serviceId);
+  assert.equal(serviceProof.amountMinor,3450);
+  const paidServiceVersion=(await invoiceStatus(service.id)).version;
+  assert.equal((await send(event("evt_service_paid","pi_service_verified",3450))).status,200);
+  assert.equal((await send(event("evt_service_duplicate_event","pi_service_verified",3450))).status,200);
+  assert.equal((await invoiceStatus(service.id)).version,paidServiceVersion);
+  assert.equal(await invoiceReceiptCount(service.id),1);
+  const secondService=await serviceInvoice(12.34);
+  await assert.rejects(()=>bindService(secondService.id,"pi_service_verified"),/PROVIDER_PAYMENT_ALREADY_BOUND/);
+  await assert.rejects(()=>bindService(secondService.id,"pi_late_invoice"),/PROVIDER_PAYMENT_ALREADY_BOUND/);
+  // An authenticated callback can precede provider attempt binding.
+  assert.equal((await send(event("evt_service_early","pi_service_early",1234))).status,200);
+  assert.equal((await invoiceStatus(secondService.id)).status,"issued");
+  await bindService(secondService.id,"pi_service_early");
+  assert.equal((await invoiceStatus(secondService.id)).status,"paid");
+  assert.equal(await invoiceReceiptCount(secondService.id),1);
   config=(await settings())[0];assert.ok(config.webhook.last_received_at);assert.equal(config.webhook.ready,true);
   const wrongTenant=await fetch(origin+"/api/restaurant/payments/settings",{headers:{...headers,"x-foon-tenant":other.tenant}});assert.equal(wrongTenant.status,403);
   await configure({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}});
   const testConfig=(await settings())[0];assert.notEqual(testConfig.webhook.url,webhook);
   assert.equal((await send(event("evt_old","pi_live_synthetic"))).status,404);
+  const sandboxService=await serviceInvoice(12.34);
+  await bindService(sandboxService.id,"pi_service_sandbox","test");
+  assert.equal((await send(event("evt_service_sandbox","pi_service_sandbox",1234,false),testConfig.webhook.url)).status,200);
+  assert.equal((await invoiceStatus(sandboxService.id)).status,"issued","sandbox service callbacks must never mark invoices paid");
+  assert.equal(await invoiceReceiptCount(sandboxService.id),0);
+  const [[testServiceStatus]]=await db.execute("SELECT status FROM tenant_service_invoice_payment_attempts WHERE tenant_id=? AND invoice_id=?",[account.tenant,sandboxService.id]);
+  assert.equal(testServiceStatus.status,"test_completed");
   const testOrder=await order(),sandboxInvoice=await invoice(testOrder);
   await db.execute("INSERT INTO tenant_payment_attempts(id,tenant_id,scope_key,order_id,branch_id,provider,mode,provider_payment_id,amount_minor,currency) VALUES (?,?,'tenant',?,?,'stripe','test','pi_test_synthetic',1234,'SAR')",[randomUUID(),account.tenant,testOrder,branch.id]);
   assert.equal((await send(event("evt_test","pi_test_synthetic",1234,false),testConfig.webhook.url)).status,200);
