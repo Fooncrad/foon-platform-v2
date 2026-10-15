@@ -6,7 +6,7 @@ let server;
 const origin="http://localhost:3102";
 test.beforeAll(async()=>{
  const url=new URL(process.env.DATABASE_URL||"");expect(url.hostname).toBe("127.0.0.1");expect(url.pathname).toBe("/foon_migration_test");
- server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3102"],{env:{...process.env,APP_URL:origin},stdio:"ignore"});
+ server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3102"],{env:{...process.env,APP_URL:origin},stdio:"ignore"});
  for(let i=0;i<60;i++){try{await fetch(origin+"/login");return;}catch{await new Promise(resolve=>setTimeout(resolve,500));}}
  throw Error("Test server did not start");
 });
@@ -346,6 +346,32 @@ test("all 14 activities expose their own tools; service orders work in three lan
      const productName="POS product "+activity;
      const productResponse=await context.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"product",name:productName,categoryId:category,price:7.25}});
      expect(productResponse.status(),await productResponse.text()).toBe(201);
+     if(activity==="grocery"){
+      await navigation.getByRole('button',{name:'المنتجات والأقسام',exact:true}).click();
+      const row=page.locator('.foonCatalogRow').filter({hasText:productName});
+      await row.getByRole('button',{name:'إدارة الصور',exact:true}).click();
+      const gallery=row.getByRole('region',{name:'صور المنتج',exact:true});
+      const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
+      for(let i=0;i<4;i++){
+       await gallery.locator('input[type="file"]').setInputFiles({name:'catalog-'+i+'.png',mimeType:'image/png',buffer:png});
+       await expect(gallery.locator('img')).toHaveCount(i+1);
+      }
+      await expect(gallery.locator('input[type="file"]')).toBeDisabled();
+      const previous=await gallery.locator('img').nth(3).getAttribute('src');
+      await gallery.getByRole('button',{name:'اجعلها الرئيسية',exact:true}).nth(3).click();
+      await expect(gallery.locator('img').first()).toHaveAttribute('src',previous);
+      await gallery.getByRole('button',{name:'إزالة الصورة',exact:true}).first().click();
+      await expect(gallery.locator('img')).toHaveCount(3);
+      await expect(gallery.locator('input[type="file"]')).toBeEnabled();
+      for(const [locale,title] of [['en','Product images'],['fr','Images du produit'],['ar','صور المنتج']]){
+       await page.evaluate(language=>{localStorage.setItem('foon-language',language);window.dispatchEvent(new Event('foon:language-change'));},locale);
+       await page.setViewportSize({width:320,height:900});
+       await expect(row.getByRole('region',{name:title,exact:true})).toBeVisible();
+       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+       await page.screenshot({path:'work/merchant-catalog-images-'+locale+'-320.png',fullPage:true});
+      }
+      await page.setViewportSize({width:1440,height:1000});
+     }
      await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
      await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
      const product=page.locator('.restaurantPosProduct').filter({hasText:productName});

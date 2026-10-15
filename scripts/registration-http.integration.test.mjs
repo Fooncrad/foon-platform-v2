@@ -8,7 +8,7 @@ test("production registration routes activate owners and isolate store customers
  assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
  const db=await mysql.createConnection(url.href);await db.query("SET time_zone='+00:00'");
  const origin="http://127.0.0.1:3101";
- const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3101"],{env:{...process.env,APP_URL:origin},stdio:["ignore","pipe","pipe"]});
+ const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3101"],{env:{...process.env,APP_URL:origin},stdio:["ignore","pipe","pipe"]});
  let output="";server.stdout.on("data",chunk=>{output+=chunk;});server.stderr.on("data",chunk=>{output+=chunk;});
  const post=(path,body,source=origin)=>fetch(origin+path,{method:"POST",headers:{"content-type":"application/json",origin:source},body:JSON.stringify(body)});
  try{
