@@ -1,19 +1,19 @@
 /** Registration-time activity defaults. Keep capabilities separate from plan grants and RBAC. */
 export const ACTIVITY_PRESETS = {
-  restaurant: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments"],
-  cafe: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments"],
-  sweets: ["catalog","orders","pos","inventory","payments"],
+  restaurant: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments","delivery"],
+  cafe: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments","delivery"],
+  sweets: ["catalog","orders","pos","inventory","payments","delivery"],
   grocery: ["catalog","orders","pos","inventory","barcode","suppliers","delivery","pickup","payments"],
   clothing: ["catalog","orders","pos","inventory","variants","delivery","pickup","payments"],
   perfume: ["catalog","orders","pos","inventory","variants","delivery","payments"],
   accessories: ["catalog","orders","pos","inventory","variants","delivery","payments"],
   gifts: ["catalog","orders","pos","inventory","delivery","payments"],
   ecommerce: ["catalog","orders","pos","inventory","delivery","pickup","payments"],
-  carwash: ["services","bookings","orders","pos","payments"],
+  carwash: ["services","bookings","orders","pos","payments","delivery"],
   laundry: ["services","orders","pos","delivery","pickup","payments"],
-  automotive: ["services","bookings","orders","pos","inventory","payments"],
-  salon: ["services","bookings","orders","pos","staff","payments"],
-  publicworks: ["services","quotes","bookings","orders","pos","invoices","payments"]
+  automotive: ["services","bookings","orders","pos","inventory","payments","delivery"],
+  salon: ["services","bookings","orders","pos","staff","payments","delivery"],
+  publicworks: ["services","quotes","bookings","orders","pos","invoices","payments","delivery"]
 } as const;
 export type ActivityType = keyof typeof ACTIVITY_PRESETS;
 export type ActivityModule = (typeof ACTIVITY_PRESETS)[ActivityType][number];

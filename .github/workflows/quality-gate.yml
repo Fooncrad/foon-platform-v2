@@ -33,6 +33,8 @@ jobs:
         run: npm run test:admin-policy
       - name: Validate LAN persistence, authentication and backups
         run: node --test scripts/foon-lan-gateway.test.mjs scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
+      - name: Validate activity plan entitlements
+        run: node --experimental-strip-types --test scripts/activity-plan-entitlements.test.mjs
       - name: Validate lint
         run: npm run lint
       - name: Validate TypeScript
