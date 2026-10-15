@@ -298,22 +298,55 @@ test("all 14 activities expose their own tools; service orders work in three lan
  const db=await mysql.createConnection(process.env.DATABASE_URL);
  try{
   for(const activity of activities){
+   console.info("Activity workspace:",activity);
    const context=await browser.newContext({viewport:{width:1440,height:1000}});
    try{
+    context.setDefaultTimeout(12000);
     const slug="service-ui-"+activity;
     const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
     expect(created.status(),await created.text()).toBe(201);
     const account=await created.json();
     await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
     const page=await context.newPage();
+    const assignedRequests=[];
+    page.on('request',request=>{if(request.url().includes('/assigned-service'))assignedRequests.push(request.url());});
     await page.goto(origin+"/restaurant?tenant="+account.tenant.id);
     await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
     await expect(page.locator('.foonActivityTools')).toBeVisible();
     await expect(page.locator('.foonActivityTools a[href*="/restaurant/payments?"]')).toBeVisible();
     const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
+    const dining=activity==="restaurant"||activity==="cafe";
+    if(activity!=="restaurant"){
+     await expect(page.locator('.restaurantHero')).not.toContainText('المطعم');
+     await expect(page.locator('.restaurantHero h2')).not.toHaveText('لوحة التشغيل المباشر');
+    }
+    if(!dining){
+     if(services.has(activity))await expect(page.locator('.restaurantMetrics')).toHaveCount(0);
+     else await expect(page.locator('.restaurantMetrics')).not.toContainText('الطاولات');
+     await expect(navigation.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
+     expect(assignedRequests).toHaveLength(0);
+    }
+    if(activity!=="restaurant"){
+     await navigation.getByRole('button',{name:services.has(activity)?'دليل الخدمات':activity==="cafe"?'قائمة المشروبات والمأكولات':'المنتجات والأقسام',exact:true}).click();
+     await expect(page.getByLabel(services.has(activity)?'اسم الخدمة':activity==="cafe"?'اسم المشروب أو الصنف':'اسم المنتج',{exact:true})).toBeVisible();
+     await navigation.getByRole('button',{name:activity==="grocery"?'هوية واجهة السوبر ماركت':'هوية واجهة النشاط',exact:true}).click();
+     await expect(page.locator('.restaurantResourceForm')).toHaveCount(0);
+    }
+    if(!dining){
+     await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
+     await expect(page.locator('select[name="channel"] option[value="dine_in"]')).toHaveCount(0);
+     await expect(page.locator('.restaurantListTools')).toHaveCount(0);
+     await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
+    }
+    if(services.has(activity)&&activity!=="laundry"){
+     await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
+     await expect(page.locator('.foonServiceOrders')).toBeVisible();
+     await expect(page.getByRole('button',{name:'قائمة الانتظار',exact:true})).toHaveCount(0);
+    }
     const serviceLink=navigation.getByRole('button',{name:'أوامر الخدمة',exact:true});
     if(!services.has(activity)){await expect(serviceLink).toHaveCount(0);continue;}
     await expect(serviceLink).toBeVisible();
+    await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
     await page.locator('.foonActivityTools').getByRole('link',{name:'أوامر الخدمة',exact:false}).click();
     const workspace=page.locator('.foonServiceOrders');
     await expect(workspace.getByRole('heading',{name:'أوامر الخدمة',exact:true})).toBeVisible();
@@ -359,4 +392,5 @@ test("all 14 activities expose their own tools; service orders work in three lan
  }finally{await db.end();}
 });
 test.setTimeout(180000);
+
 
