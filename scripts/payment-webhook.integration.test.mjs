@@ -5,10 +5,13 @@ import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 import {countryRegions} from "../lib/tenant/country-catalog.ts";
 import {registerPaymentAttempt,registerServiceInvoicePaymentAttempt} from "../lib/payments/webhook-settlement.ts";
+import {startServiceInvoiceSandboxCheckout} from "../lib/payments/service-invoice-checkout.ts";
+import {encryptPaymentCredentials} from "../lib/payments/credential-vault.mjs";
 
 test("webhook routes verify signatures, settle mapped live orders exactly once and expose scoped metadata",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
  const db=await mysql.createConnection(url.href),origin="http://127.0.0.1:3120",vault=randomBytes(32).toString("base64");
+ process.env.FOON_PAYMENT_VAULT_KEY=vault;
  const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3120"],{env:{...process.env,APP_URL:origin,FOON_PAYMENT_VAULT_KEY:vault},stdio:["ignore","pipe","pipe"]});
  let output="";server.stdout.on("data",c=>output+=c);server.stderr.on("data",c=>output+=c);
  try{
@@ -228,5 +231,60 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   await configure({...payload,version:3});
   assert.equal((await settings())[0].mode,"live","completed sandbox attempts must allow switching to live");
   assert.equal((await fetch(testConfig.webhook.url,{method:"POST",body:"x".repeat(131073)})).status,413);
+  // Merchant-initiated Tap sandbox checkout for a standalone issued service invoice.
+  // No real payment provider API calls occur: the network adapter is mocked.
+  const tapSecret="sk_test_synthetic";
+  const tapEndpoint=randomBytes(24).toString("hex");
+  const encryptedTap=encryptPaymentCredentials({secret_key:tapSecret},{tenantId:account.tenant,scope:"tenant",provider:"tap",mode:"test"});
+  await db.execute("UPDATE tenant_payment_settings SET provider='tap',enabled=TRUE,currency='SAR' WHERE tenant_id=? AND scope_key='tenant'",[account.tenant]);
+  await db.execute("UPDATE tenant_payment_gateway_credentials SET provider='tap',mode='test',credentials_ciphertext=?,secret_key_set=TRUE,webhook_secret_set=FALSE WHERE tenant_id=? AND scope_key='tenant'",[encryptedTap,account.tenant]);
+  await db.execute("UPDATE tenant_payment_webhook_endpoints SET endpoint_id=?,provider='tap',mode='test' WHERE tenant_id=? AND scope_key='tenant'",[tapEndpoint,account.tenant]);
+  const checkoutService=await serviceInvoice(23.45);
+  const checkoutPool=mysql.createPool({uri:url.href,connectionLimit:4});
+  try{
+   let gatewayCalls=0;
+   const fakeTap=async(urlTarget,options)=>{
+    gatewayCalls++;
+    assert.equal(urlTarget,"https://api.tap.company/v2/charges/");
+    assert.ok(String(options.headers.Authorization).includes(tapSecret));
+    const request=JSON.parse(options.body);
+    assert.equal(request.amount,23.45);
+    assert.equal(request.reference.order,checkoutService.id);
+    assert.equal(request.post.url,"https://foon-test.example/api/payments/webhooks/"+tapEndpoint);
+    assert.equal(request.customer.email,"service-customer@example.test");
+    return new Response(JSON.stringify({id:"chg_service_sandbox_2026",object:"charge",status:"INITIATED",live_mode:false,currency:"SAR",amount:23.45,transaction:{url:"https://test.tap.company/sandbox/invoice-service-1"}}),{status:200,headers:{"content-type":"application/json"}});
+   };
+   const params={tenantId:account.tenant,userId:account.user,invoiceId:checkoutService.id,customerEmail:"service-customer@example.test",appUrl:"https://foon-test.example"};
+   const started=await startServiceInvoiceSandboxCheckout(checkoutPool,params,fakeTap);
+   assert.equal(started.state,"ready");assert.equal(started.mode,"test");assert.equal(gatewayCalls,1);
+   assert.equal(started.url,"https://test.tap.company/sandbox/invoice-service-1");
+   assert.equal((await invoiceStatus(checkoutService.id)).status,"issued");
+   const [[checkoutRecord]]=await db.execute("SELECT state,provider_payment_id,payload_hash,hosted_url FROM tenant_service_invoice_checkouts WHERE tenant_id=? AND invoice_id=?",[account.tenant,checkoutService.id]);
+   assert.equal(checkoutRecord.state,"ready");
+   assert.equal(checkoutRecord.provider_payment_id,"chg_service_sandbox_2026");
+   assert.equal(checkoutRecord.payload_hash.length,64);
+   assert.equal(await invoiceReceiptCount(checkoutService.id),0);
+   const replay=await startServiceInvoiceSandboxCheckout(checkoutPool,params,()=>{throw Error("DUPLICATE_PROVIDER_REQUEST");});
+   assert.equal(replay.url,started.url);assert.equal(gatewayCalls,1);
+   await assert.rejects(()=>startServiceInvoiceSandboxCheckout(checkoutPool,{...params,customerEmail:"different@example.test"},fakeTap),error=>error.message==="CHECKOUT_REVIEW_REQUIRED");
+   assert.equal(gatewayCalls,1);
+   const invalidRoute=await fetch(origin+"/api/restaurant/payments/service-checkout",{method:"POST",headers,body:JSON.stringify({invoiceId:checkoutService.id,customerEmail:params.customerEmail,consentConfirmed:false})});
+   assert.equal(invalidRoute.status,400);
+   // CI deliberately uses a local HTTP origin; hosted checkout creation must fail closed.
+   const insecureRoute=await fetch(origin+"/api/restaurant/payments/service-checkout",{method:"POST",headers,body:JSON.stringify({invoiceId:checkoutService.id,customerEmail:params.customerEmail,consentConfirmed:true})});
+   assert.equal(insecureRoute.status,503);
+   assert.equal((await insecureRoute.json()).code,"CHECKOUT_HTTPS_REQUIRED");
+   const tapEvent={id:"chg_service_sandbox_2026",object:"charge",status:"CAPTURED",amount:23.45,currency:"SAR",live_mode:false,reference:{gateway:"",payment:""},transaction:{created:"2026-10-15T01:00:00Z"}};
+   const signedText="x_id"+tapEvent.id+"x_amount23.45x_currencySARx_gateway_referencex_payment_referencex_statusCAPTUREDx_created"+tapEvent.transaction.created;
+   const hash=createHmac("sha256",tapSecret).update(signedText).digest("hex");
+   const tapWebhook=await fetch(origin+"/api/payments/webhooks/"+tapEndpoint,{method:"POST",headers:{"content-type":"application/json",hashstring:hash},body:JSON.stringify(tapEvent)});
+   assert.equal(tapWebhook.status,200,await tapWebhook.clone().text());
+   assert.equal((await invoiceStatus(checkoutService.id)).status,"issued","test checkout must never settle real invoices");
+   const [[attempt]]=await db.execute("SELECT status FROM tenant_service_invoice_payment_attempts WHERE tenant_id=? AND invoice_id=?",[account.tenant,checkoutService.id]);
+   assert.equal(attempt.status,"test_completed");
+   const replayCompleted=await startServiceInvoiceSandboxCheckout(checkoutPool,params,()=>{throw Error("REPEATED_CHARGE");});
+   assert.equal(replayCompleted.state,"test_completed");
+  }finally{await checkoutPool.end();}
+
  }finally{server.kill();await db.end();}
 });
