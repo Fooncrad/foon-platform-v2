@@ -78,7 +78,7 @@ export async function runActivityPosChecks({db,call,resource,register}){
  const secondActor={...owner,cookie:b.owner.cookie};
  await db.execute("UPDATE catalog_products SET stock_quantity=1 WHERE id=?",[product]);
  const race=await Promise.all([resource(owner,"pos",request({items:[{id:product,quantity:1}]})),resource(secondActor,"pos",request({items:[{id:product,quantity:1}]}))]);
- assert.deepEqual(race.map(r=>r.status).sort(),[201,409]);assert.equal(await stock(product),0);
+ assert.deepEqual(race.map(r=>r.status).sort(),[201,409]);assert.ok(["CONFLICT","INSUFFICIENT_STOCK"].includes(race.find(r=>r.status===409)?.body.code),JSON.stringify(race.map(r=>({status:r.status,code:r.body.code}))));assert.equal(await stock(product),0);
  // Required catalog options use their own prices and finite stock, with rollback on failure.
  const group=randomUUID(),option=randomUUID();
  await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,required,min_select,max_select) VALUES (?,?,?,'Size',TRUE,1,1)",[group,owner.tenant,product]);
