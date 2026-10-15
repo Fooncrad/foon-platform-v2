@@ -60,6 +60,9 @@ export async function PUT(req:Request){
   if(old&&(old.provider!==b.provider||old.mode!==mode||clear.length>0||Object.values(provided).some(v=>typeof v==="string"&&v.trim())||String(settingRows[0]?.merchant_reference??"")!==b.merchant_reference.trim()||settingRows[0]?.currency!==b.currency||Boolean(settingRows[0]?.enabled)!==b.enabled)){
    const [pending]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_payment_attempts WHERE tenant_id=? AND scope_key=? AND status='pending' LIMIT 1 FOR UPDATE",[a.tenantId,scope]);
    if(pending.length){await db.rollback();return failure("PAYMENT_ATTEMPTS_PENDING",409);}
+   // A standalone service invoice has the same provider keys and endpoint.
+   const [servicePending]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_service_invoice_payment_attempts WHERE tenant_id=? AND scope_key=? AND status='pending' LIMIT 1 FOR UPDATE",[a.tenantId,scope]);
+   if(servicePending.length){await db.rollback();return failure("PAYMENT_ATTEMPTS_PENDING",409);}
   }
   if((old?Number(old.version):null)!==(b.version??null)){await db.rollback();return failure("PAYMENT_SETTINGS_CONFLICT",409);}
   const context={tenantId:a.tenantId!,scope,provider:b.provider,mode};
