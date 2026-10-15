@@ -10,6 +10,7 @@ import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoiceForCompletedService,confirmManualInvoiceReceipt,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
 import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
+import {reconcileLateIssuedInvoice} from "@/lib/payments/webhook-settlement";
 import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
 
@@ -259,7 +260,24 @@ async function mutate(request:Request,module:string,method:string){
    const [found]=await db.execute<RowDataPacket[]>("SELECT id FROM auth_sessions WHERE id=? AND user_id=? FOR UPDATE",[body.id,ctx.user]);if(!found.length)throw new ResourceError("RESOURCE_NOT_FOUND");
    await db.execute("DELETE FROM auth_sessions WHERE id=? AND user_id=?",[body.id,ctx.user]);result={id:body.id};
   }else throw new ResourceError("METHOD_NOT_ALLOWED");
-  await db.commit();return NextResponse.json({ok:true,...result},{status:method==="POST"?201:200});
+  await db.commit();
+  // Do not hold invoice -> order locks across the first transaction: webhooks
+  // acquire order -> invoice, and the inverse ordering could deadlock. A late
+  // invoice is durable before the catch-up attempt starts.
+  let gatewayReconciliation:"reconciled"|"not_applicable"|"retry_required"|undefined;
+  if(module==="customerInvoices"&&body.status==="issued"&&typeof result?.id==="string"){
+   try{
+    await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+    await db.beginTransaction();
+    gatewayReconciliation=(await reconcileLateIssuedInvoice(db,ctx.tenantId,result.id)).status;
+    await db.commit();
+   }catch(error){
+    await db.rollback();
+    gatewayReconciliation="retry_required";
+    console.error("[FOON invoice catchup]",{incidentId:randomUUID().slice(0,8),error});
+   }
+  }
+  return NextResponse.json({ok:true,...result,...(gatewayReconciliation?{gatewayReconciliation}:{})},{status:method==="POST"?201:200});
  }catch(error){if(db)await db.rollback();return failure(error);}finally{db?.release();}
 }
 export async function POST(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"POST");}
