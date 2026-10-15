@@ -340,7 +340,8 @@ test("all 14 activities expose their own tools; service orders work in three lan
     await expect(card.getByRole('button',{name:'تعديل',exact:true})).toHaveCount(0);
     await expect(card.getByRole('button',{name:'أرشفة',exact:true})).toHaveCount(0);
     await card.getByRole('button',{name:'عرض التفاصيل',exact:true}).click();
-    await expect(form.locator('fieldset')).toBeDisabled();
+    await expect(form.locator('fieldset')).toHaveAttribute('disabled','');
+    for(const control of await form.locator('input,select,textarea').all())await expect(control).toBeDisabled();
     await expect(form.getByRole('button',{name:'حفظ',exact:true})).toHaveCount(0);
     await form.getByRole('button',{name:'إغلاق',exact:true}).click();
     await page.setViewportSize({width:320,height:720});
