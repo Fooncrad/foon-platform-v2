@@ -1,10 +1,10 @@
 import {createHash,randomUUID} from "node:crypto";
 import type {Pool,PoolConnection,RowDataPacket} from "mysql2/promise";
-import {CheckoutError} from "./customer-checkout";
+import {CheckoutError} from "./customer-checkout.ts";
 import {decryptPaymentCredentials} from "./credential-vault.mjs";
 import {createTapHostedCheckout,type TapCheckoutInput} from "./tap-hosted-checkout.mjs";
 import {majorToMinor,currencyDecimals} from "./webhook-verification.mjs";
-import {registerServiceInvoicePaymentAttempt} from "./webhook-settlement";
+import {registerServiceInvoicePaymentAttempt} from "./webhook-settlement.ts";
 
 function refuse(code:string,status=409):never{throw new CheckoutError(code,status);}
 function secureOrigin(value:string){
