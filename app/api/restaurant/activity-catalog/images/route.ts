@@ -60,7 +60,7 @@ async function mutate(request:Request){
   await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[ctx.tenantId]);
   const [products]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND id=? FOR UPDATE",[ctx.tenantId,body.product]);
   if(!products.length){await db.rollback();return failure("PRODUCT_NOT_FOUND",404);}
-  const [images]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_images WHERE tenant_id=? AND product_id=? ORDER BY sort_order,id FOR UPDATE",[ctx.tenantId,body.product]);
+  const [images]=await db.execute<RowDataPacket[]>("SELECT id,sort_order FROM catalog_images WHERE tenant_id=? AND product_id=? ORDER BY sort_order,id FOR UPDATE",[ctx.tenantId,body.product]);
   if(request.method==="POST"){
    if(images.length>=4){await db.rollback();return failure("IMAGE_LIMIT_REACHED",409);}
    if(bytes&&mime){
@@ -71,7 +71,8 @@ async function mutate(request:Request){
     await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,'asset.upload',?,?)",[ctx.tenantId,ctx.user,asset,JSON.stringify({mime,size:bytes.length,product:body.product})]);
    }
    const id=randomUUID();
-   await db.execute("INSERT INTO catalog_images(id,tenant_id,product_id,image_url,alt_ar,sort_order) VALUES (?,?,?,?,?,?)",[id,ctx.tenantId,body.product,imageUrl,typeof body.alt==="string"?body.alt.slice(0,250):null,images.length]);
+   const nextSort=images.reduce((maximum,image)=>Math.max(maximum,Number(image.sort_order)), -1)+1;
+   await db.execute("INSERT INTO catalog_images(id,tenant_id,product_id,image_url,alt_ar,sort_order) VALUES (?,?,?,?,?,?)",[id,ctx.tenantId,body.product,imageUrl,typeof body.alt==="string"?body.alt.slice(0,250):null,nextSort]);
    await db.commit();return NextResponse.json({ok:true,id},{status:201});
   }
   let ordered=images.map(i=>String(i.id));
