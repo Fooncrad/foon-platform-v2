@@ -17,7 +17,7 @@ async function invoiceSnapshot(db:PoolConnection,tenantId:string,invoiceId:strin
  if(!invoice||invoice.status!=="issued")refuse("SERVICE_INVOICE_NOT_ISSUED",404);
  const data=parse(invoice.data);
  if(typeof data.serviceOrderId!=="string"||data.orderId)refuse("SERVICE_INVOICE_REQUIRED",400);
- return {...invoice,data};
+ return {id:String(invoice.id),name:String(invoice.name),branch_id:invoice.branch_id===null?null:String(invoice.branch_id),status:String(invoice.status),data};
 }
 async function paymentScope(db:PoolConnection,tenantId:string,branchId:string|null){
  const [rows]=await db.execute<RowDataPacket[]>("SELECT s.scope_key,s.provider,s.enabled,s.currency,g.mode,g.credentials_ciphertext,e.endpoint_id FROM tenant_payment_settings s JOIN tenant_payment_gateway_credentials g ON g.tenant_id=s.tenant_id AND g.scope_key=s.scope_key AND g.provider=s.provider LEFT JOIN tenant_payment_webhook_endpoints e ON e.tenant_id=s.tenant_id AND e.scope_key=s.scope_key AND e.provider=s.provider AND e.mode=g.mode WHERE s.tenant_id=? AND s.scope_key IN ('tenant',?) ORDER BY s.scope_key FOR UPDATE",[tenantId,branchId??"tenant"]);
@@ -25,7 +25,7 @@ async function paymentScope(db:PoolConnection,tenantId:string,branchId:string|nu
  if(!cfg||!cfg.enabled||cfg.provider!=="tap"||cfg.mode!=="test"||!cfg.credentials_ciphertext||!cfg.endpoint_id)refuse("CHECKOUT_NOT_ENABLED");
  return cfg;
 }
-function invoiceMinor(invoice:RowDataPacket,serviceData:Record<string,unknown>,currency:string){
+function invoiceMinor(invoice:{data:Record<string,unknown>},serviceData:Record<string,unknown>,currency:string){
  const precision=10**currencyDecimals(currency);
  const values=[invoice.data.subtotal,invoice.data.taxAmount??0,invoice.data.serviceFee??0].map(Number);
  if(values.some(v=>!Number.isFinite(v)||v<0||Math.abs(v*precision-Math.round(v*precision))>0.000001))refuse("CHECKOUT_AMOUNT_INVALID",400);
@@ -49,7 +49,7 @@ export async function startServiceInvoiceSandboxCheckout(pool:Pool,input:Input,f
   const setting=await paymentScope(db,input.tenantId,branchId);
   const invoice=await invoiceSnapshot(db,input.tenantId,input.invoiceId,true);
   if((invoice.branch_id?String(invoice.branch_id):null)!==branchId)refuse("CHECKOUT_REVIEW_REQUIRED");
-  const [serviceRows]=await db.execute<RowDataPacket[]>("SELECT status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[invoice.data.serviceOrderId,input.tenantId]);
+  const [serviceRows]=await db.execute<RowDataPacket[]>("SELECT status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[String(invoice.data.serviceOrderId),input.tenantId]);
   const service=serviceRows[0];
   if(!service||service.status!=="completed"||service.branch_id&&String(service.branch_id)!==branchId)refuse("SERVICE_NOT_COMPLETED");
   const [proof]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=? LIMIT 1 FOR UPDATE",[input.tenantId,input.invoiceId]);
