@@ -369,7 +369,11 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(beforeCompletion.body.code,"SERVICE_ORDER_NOT_COMPLETED");
   const draftSource=(await resource(a,"serviceOrders",undefined,"GET")).body.resources.find(row=>row.id===invoiceSourceId);
   assert.ok(draftSource);
-  const completedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:draftSource.version,name:draftSource.name,status:"completed",branchId:a.branch,data:draftSource.data},"PATCH");
+  const startedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:draftSource.version,name:draftSource.name,status:"in_progress",branchId:a.branch,data:draftSource.data},"PATCH");
+  assert.equal(startedSourceInvoice.status,200,JSON.stringify(startedSourceInvoice.body));
+  const startedInvoiceRow=(await resource(a,"serviceOrders",undefined,"GET")).body.resources.find(row=>row.id===invoiceSourceId);
+  assert.ok(startedInvoiceRow);
+  const completedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:startedInvoiceRow.version,name:startedInvoiceRow.name,status:"completed",branchId:a.branch,data:startedInvoiceRow.data},"PATCH");
   assert.equal(completedSourceInvoice.status,200,JSON.stringify(completedSourceInvoice.body));
   const wrongBranchInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:b.branch});
   assert.equal(wrongBranchInvoice.body.code,"REFERENCE_NOT_FOUND");
