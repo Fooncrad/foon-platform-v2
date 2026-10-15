@@ -56,7 +56,8 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   assert.equal(await invoiceReceiptCount(mainInvoice),1);
   assert.equal((await send(event("evt_paid_other_id","pi_live_synthetic"))).status,200);
   assert.equal(await invoiceReceiptCount(mainInvoice),1,"alternate signed events for the same provider payment must not duplicate settlement");
-  assert.equal((await db.execute("SELECT COUNT(*) AS n FROM tenant_payment_webhook_receipts WHERE payment_id='pi_live_synthetic'"))[0][0].n,1);
+  // Each distinct authenticated event is preserved, while the financial settlement is unique.
+  assert.equal((await db.execute("SELECT COUNT(*) AS n FROM tenant_payment_webhook_receipts WHERE payment_id='pi_live_synthetic'"))[0][0].n,2);
   const wrongInvoiceOrder=await order(),wrongInvoiceId=await invoice(wrongInvoiceOrder,12.33);
   await bind(wrongInvoiceOrder,"pi_invoice_mismatch");
   assert.equal((await send(event("evt_invoice_mismatch","pi_invoice_mismatch"))).status,200);
