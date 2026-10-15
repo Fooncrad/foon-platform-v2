@@ -320,7 +320,7 @@ test("all 14 activities expose their own tools; service orders work in three lan
     }
     if(!dining){
      await expect(page.locator('.restaurantMetrics')).not.toContainText('الطاولات');
-     await expect(navigation.getByRole('button',{name:'الطاولات والأقسام',exact:true})).toHaveCount(0);
+     await expect(navigation.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
      expect(assignedRequests).toHaveLength(0);
     }
     if(services.has(activity)&&activity!=="laundry"){
