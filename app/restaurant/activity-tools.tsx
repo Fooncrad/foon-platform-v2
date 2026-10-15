@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {isActivityType,localizedActivityModules,type ActivityLanguage} from "@/lib/platform/activity-presets";
-const destinations:Record<string,string>={serviceOrders:"serviceOrders",orders:"orders",pos:"pos",tables:"tables",reservations:"reservations",waitlist:"reservations",kitchen:"kds",waiter:"tables",inventory:"inventory",barcode:"inventory",suppliers:"inventory",delivery:"orders",pickup:"orders",variants:"menu",bookings:"reservations",quotes:"quotes",staff:"team",invoices:"printers",reports:"reports",branches:"branches",customers:"customers",marketing:"marketing",security:"security"};
+const destinations:Record<string,string>={serviceOrders:"serviceOrders",orders:"orders",pos:"pos",tables:"tables",reservations:"reservations",waitlist:"reservations",kitchen:"kds",waiter:"tables",inventory:"inventory",barcode:"inventory",suppliers:"inventory",delivery:"orders",pickup:"orders",variants:"menu",bookings:"serviceOrders",quotes:"quotes",staff:"team",invoices:"printers",reports:"reports",branches:"branches",customers:"customers",marketing:"marketing",security:"security"};
 export default function ActivityTools({tenantId,activity,language}:{tenantId:string;activity:string;language?:ActivityLanguage}){
  const [local,setLocal]=useState<ActivityLanguage>("ar"),lang=language??local;
  const t=(ar:string,en:string,fr:string)=>lang==="ar"?ar:lang==="en"?en:fr;
@@ -21,4 +21,5 @@ export default function ActivityTools({tenantId,activity,language}:{tenantId:str
   </div>
  </section>;
 }
+
 

@@ -10,7 +10,7 @@ const origin="http://localhost:3103";
 test("restaurant operations preserve tenant, role, plan, pricing and transactional integrity",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
  const db=await mysql.createConnection(url.href);await db.query("SET time_zone='+00:00'");
- const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:["ignore","ignore","pipe"]});let serverErrors="";server.stderr.setEncoding("utf8");server.stderr.on("data",chunk=>{serverErrors=(serverErrors+chunk).slice(-12000);});
+ const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:["ignore","ignore","pipe"]});let serverErrors="";server.stderr.setEncoding("utf8");server.stderr.on("data",chunk=>{serverErrors=(serverErrors+chunk).slice(-12000);});
  const password="a-strong-test-password";
  const call=async(path,method,body,cookie,tenant)=>{
   const r=await fetch(origin+path,{method,headers:{origin,"content-type":"application/json",...(cookie?{cookie}:{}),...(tenant?{"x-foon-tenant":tenant}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
