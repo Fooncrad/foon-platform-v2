@@ -367,6 +367,9 @@ test("all 14 activities expose their own tools; service orders work in three lan
        await page.evaluate(language=>{localStorage.setItem('foon-language',language);window.dispatchEvent(new Event('foon:language-change'));},locale);
        await page.setViewportSize({width:320,height:900});
        await expect(row.getByRole('region',{name:title,exact:true})).toBeVisible();
+       const bounds=await row.getByRole('region',{name:title,exact:true}).boundingBox();
+       expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);
+       expect(await row.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
        expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
        await page.screenshot({path:'work/merchant-catalog-images-'+locale+'-320.png',fullPage:true});
       }
