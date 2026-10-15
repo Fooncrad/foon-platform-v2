@@ -340,6 +340,7 @@ test("all 14 activities expose their own tools; service orders work in three lan
     const serviceLink=navigation.getByRole('button',{name:'أوامر الخدمة',exact:true});
     if(!services.has(activity)){await expect(serviceLink).toHaveCount(0);continue;}
     await expect(serviceLink).toBeVisible();
+    await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
     await page.locator('.foonActivityTools').getByRole('link',{name:'أوامر الخدمة',exact:false}).click();
     const workspace=page.locator('.foonServiceOrders');
     await expect(workspace.getByRole('heading',{name:'أوامر الخدمة',exact:true})).toBeVisible();
