@@ -29,3 +29,12 @@ test("every defined activity only enables explicitly supported modules",()=>{
   if(activity!=="restaurant"&&activity!=="cafe")assert.equal(canUseActivityFeature(activity,"waiter",[...grants,{feature_key:"waiter",enabled:true,limit_value:null}]),false);
  }
 });
+
+test("POS and delivery are supported for every activity but still require an active grant",()=>{
+ for(const activity of Object.keys(ACTIVITY_PRESETS)){
+  const grants=["pos","delivery"].map(feature_key=>({feature_key,enabled:true,limit_value:10}));
+  assert.equal(canUseActivityFeature(activity,"pos",grants),true,activity+" POS");
+  assert.equal(canUseActivityFeature(activity,"delivery",grants),true,activity+" delivery");
+  assert.equal(canUseActivityFeature(activity,"delivery",[{feature_key:"delivery",enabled:false,limit_value:null}]),false,activity+" disabled delivery");
+ }
+});
