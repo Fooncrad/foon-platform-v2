@@ -91,4 +91,6 @@ export async function runActivityPosChecks({db,call,resource,register}){
  ok(await resource(owner,"orders",{id:variant.id,version:variantRow.version,status:"cancelled"},"PATCH"),200);assert.equal(await stock(product),4);
  const [[restoredOption]]=await db.execute("SELECT stock_quantity FROM catalog_option_values WHERE id=?",[option]);assert.equal(Number(restoredOption.stock_quantity),1);
  console.info("Activity POS: 13 catalogs, server prices/currencies, invoices, idempotency, isolation, rollback, stock race and variant restoration verified");
+ return fixtures;
 }
+

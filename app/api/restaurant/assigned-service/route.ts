@@ -3,6 +3,8 @@ import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
+import {tenantEntitlement} from "@/lib/plans/entitlements";
+import {assertSameOrigin} from "@/lib/security/origin";
 export const runtime="nodejs";
 export async function GET(request:Request){
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
@@ -10,6 +12,8 @@ export async function GET(request:Request){
  if(!/^[a-f0-9-]{36}$/i.test(tenantId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(user,tenantId,["owner","manager","waiter","cashier","kitchen","driver","accountant"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  try{
+  const entitlement=await tenantEntitlement(tenantId,"tables");
+  if(!entitlement.enabled)return NextResponse.json({ok:false,code:entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED"},{status:403});
   const db=database();
   const [employees]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='employee' AND archived=FALSE AND (JSON_UNQUOTE(JSON_EXTRACT(data,'$.userId'))=? OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(data,'$.email')))=(SELECT LOWER(email) FROM users WHERE id=? LIMIT 1))",[tenantId,user,user]);
   if(!employees.length)return NextResponse.json({ok:true,tables:[],calls:[],assignmentStatus:"EMPLOYEE_PROFILE_NOT_LINKED"});
@@ -42,6 +46,7 @@ export async function GET(request:Request){
 }
 
 export async function POST(request:Request){
+ try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const user=await currentUserId();
  if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null) as {tenantId?:string;callId?:string;action?:string}|null;
@@ -65,3 +70,4 @@ export async function POST(request:Request){
   return NextResponse.json({ok:true,status:next});
  }catch{return NextResponse.json({ok:false,code:"CALL_UPDATE_FAILED"},{status:503});}
 }
+

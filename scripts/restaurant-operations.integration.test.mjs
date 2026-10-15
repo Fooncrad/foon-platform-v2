@@ -1,4 +1,5 @@
 import test from "node:test";
+import {runActivityEntitlementGateChecks} from "./activity-entitlement-gates.integration.mjs";
 import {runActivityPosChecks} from "./activity-pos.integration.mjs";
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
@@ -496,7 +497,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"security",{id:current.id},"DELETE")).status,400);
   const foreignSessions=await resource(b,"security",undefined,"GET");assert.equal((await resource(a,"security",{id:foreignSessions.body.sessions[0].id},"DELETE")).status,404);
   assert.equal((await resource(a,"health",undefined,"GET")).body.database,"connected");
-  await runActivityPosChecks({db,call,resource,register});
+  const activityFixtures=await runActivityPosChecks({db,call,resource,register});
+  await runActivityEntitlementGateChecks({db,call,resource,restaurant:a,staff,fixtures:activityFixtures});
   const admin=await register("operations-platform-admin");
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,200);
@@ -504,5 +506,6 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
  }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await db.end();}
 });
+
 
 

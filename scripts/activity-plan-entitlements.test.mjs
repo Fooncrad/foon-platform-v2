@@ -1,7 +1,7 @@
 import {ACTIVITY_PRESETS} from "../lib/platform/activity-presets.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
-import {resolveActivityEntitlements,canUseActivityFeature,activityFeatureCapability,activityFeatureSupport} from "../lib/platform/activity-plan-entitlements.ts";
+import {resolveActivityEntitlements,canUseActivityFeature,activityFeatureCapability,activityFeatureSupport,passesServerActivityRestriction} from "../lib/platform/activity-plan-entitlements.ts";
 
 test("restaurant tables are unavailable to carwash regardless of grant",()=>{
  const grants=[{feature_key:"tables",enabled:true,limit_value:null},{feature_key:"services",enabled:true,limit_value:100}];
@@ -73,4 +73,19 @@ test("admin classification and resolver share the same alias policy",()=>{
   assert.equal(activityFeatureSupport(activity,"future_feature"),"unclassified");
  }
  assert.throws(()=>activityFeatureSupport("unknown","pos"),/UNSUPPORTED_ACTIVITY_TYPE/);
+});
+
+
+test("server dining restrictions cover every registered activity without granting shared features",()=>{
+ for(const activity of Object.keys(ACTIVITY_PRESETS)){
+  const dining=activity==="restaurant"||activity==="cafe";
+  for(const key of ["tables","reservations","waitlist","kds","waiter_call"])assert.equal(passesServerActivityRestriction(activity,key),dining,activity+":"+key);
+  for(const key of ["pos","delivery","customer_invoices","quotes","variants"])assert.equal(passesServerActivityRestriction(activity,key),true,"existing entitlement remains mandatory for "+key);
+ }
+});
+test("server restriction preserves legacy profile behavior while strict resolver still rejects unknown types",()=>{
+ for(const activity of [null,undefined,"","legacy-unknown"]){
+  assert.equal(passesServerActivityRestriction(activity,"tables"),true);
+ }
+ assert.throws(()=>resolveActivityEntitlements("legacy-unknown",[]),/UNSUPPORTED_ACTIVITY_TYPE/);
 });
