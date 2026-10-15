@@ -14,7 +14,7 @@ export default function PlanFeatures({planId,canEdit}:{planId:string;canEdit:boo
  const supported=new Set<string>(ACTIVITY_PRESETS[activity]);
  const aliases:Record<string,string>={waiter_call:"waiter",kds:"kitchen",service_catalog:"services",appointments:"bookings",takeaway:"pickup",digital_menu:"catalog",qr_menu:"catalog"};
  const allModules=new Set<string>(Object.values(ACTIVITY_PRESETS).flatMap(modules=>[...modules]));
- const filtered=features.filter(f=>{const module=aliases[f.feature_key]??f.feature_key;return !allModules.has(module)||supported.has(module);});
+ const filtered=features.filter(f=>{const capabilityCode=aliases[f.feature_key]??f.feature_key;return !allModules.has(capabilityCode)||supported.has(capabilityCode);});
  return <details><summary>المميزات وحدود الباقة ({features.filter(f=>Boolean(f.enabled)).length}/{features.length})</summary>
  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",margin:"12px 0"}}><label htmlFor={"plan-activity-"+planId}>عرض مميزات النشاط</label><select id={"plan-activity-"+planId} value={activity} onChange={e=>setActivity(e.target.value as ActivityType)}>{(Object.keys(ACTIVITY_PRESETS) as ActivityType[]).map(code=><option key={code} value={code}>{code}</option>)}</select><small>المميزات المشتركة تظهر لجميع الأنشطة؛ هذا العرض لا يغيّر منح الباقة.</small></div>
  {loading?<p>جارٍ التحميل…</p>:<div style={{maxHeight:360,overflowY:"auto"}}>{filtered.map(f=><div key={f.feature_key} style={{padding:"8px 0",borderBottom:"1px solid #7774"}}>
