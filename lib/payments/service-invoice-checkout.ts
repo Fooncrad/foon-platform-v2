@@ -3,7 +3,7 @@ import type {Pool,PoolConnection,RowDataPacket} from "mysql2/promise";
 import {CheckoutError} from "./customer-checkout";
 import {decryptPaymentCredentials} from "./credential-vault.mjs";
 import {createTapHostedCheckout,type TapCheckoutInput} from "./tap-hosted-checkout.mjs";
-import {majorToMinor} from "./webhook-verification.mjs";
+import {majorToMinor,currencyDecimals} from "./webhook-verification.mjs";
 import {registerServiceInvoicePaymentAttempt} from "./webhook-settlement";
 
 function refuse(code:string,status=409):never{throw new CheckoutError(code,status);}
@@ -26,10 +26,11 @@ async function paymentScope(db:PoolConnection,tenantId:string,branchId:string|nu
  return cfg;
 }
 function invoiceMinor(invoice:RowDataPacket,serviceData:Record<string,unknown>,currency:string){
+ const precision=10**currencyDecimals(currency);
  const values=[invoice.data.subtotal,invoice.data.taxAmount??0,invoice.data.serviceFee??0].map(Number);
- if(values.some(v=>!Number.isFinite(v)||v<0||Math.abs(v*100-Math.round(v*100))>0.000001))refuse("CHECKOUT_AMOUNT_INVALID",400);
+ if(values.some(v=>!Number.isFinite(v)||v<0||Math.abs(v*precision-Math.round(v*precision))>0.000001))refuse("CHECKOUT_AMOUNT_INVALID",400);
  // The provider checkout adapter requires the verified total, not merchant/browser amounts.
- const amountMinor=values.reduce((sum,v)=>sum+Math.round(v*100),0);
+ const amountMinor=values.reduce((sum,v)=>sum+Math.round(v*precision),0);
  if(!Number.isSafeInteger(amountMinor)||amountMinor<=0||amountMinor>9999999999||amountMinor!==majorToMinor(String(serviceData.amount),currency))refuse("CHECKOUT_AMOUNT_INVALID",400);
  return amountMinor;
 }
@@ -61,7 +62,7 @@ export async function startServiceInvoiceSandboxCheckout(pool:Pool,input:Input,f
   const checkout=existing[0];checkoutId=checkout?String(checkout.id):randomUUID();
   const customerName=String(parse(service.data).customerName??"").trim();
   if(!customerName||customerName.length>100)refuse("CHECKOUT_CUSTOMER_REQUIRED",400);
-  request={mode:"test",secretKey:credentials.secret_key,amountMinor,currency,orderReference:input.invoiceId,idempotencyKey:checkoutId,webhookUrl:origin+"/api/payments/webhooks/"+setting.endpoint_id,returnUrl:origin+"/restaurant?payment_return=1",customer:{name:customerName,email:input.customerEmail}};
+  request={mode:"test",secretKey:credentials.secret_key,amountMinor,currency,orderReference:input.invoiceId,idempotencyKey:checkoutId,webhookUrl:origin+"/api/payments/webhooks/"+setting.endpoint_id,returnUrl:origin+"/customer?payment_return=1",customer:{name:customerName,email:input.customerEmail}};
   const {secretKey:_secret,...publicRequest}=request;void _secret;
   payloadHash=createHash("sha256").update(JSON.stringify(publicRequest)).digest("hex");
   if(checkout){
