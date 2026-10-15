@@ -96,8 +96,8 @@ test("catalog update and delete report missing records instead of false success"
 
 test("catalog image deletion reports missing records",()=>{
  const route=readFileSync(new URL("../app/api/restaurant/activity-catalog/images/route.ts",import.meta.url),"utf8");
- assert.ok(route.includes('code:"IMAGE_NOT_FOUND"'));
- assert.ok(route.includes("if(!deleted)return NextResponse.json"));
+ assert.ok(route.includes('failure("IMAGE_NOT_FOUND",404)'));
+ assert.ok(route.includes("!ordered.includes(String(body.id))"));
 });
 test("catalog browsing surfaces request failures",()=>{
  const editor=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
@@ -136,3 +136,4 @@ test("public works quotation capability reaches a real merchant resource workspa
  assert.match(workspace,/quotes:\[\{key:"quotations",label:"عروض أسعار الخدمات"\}\]/);
  assert.match(schema,/quotations:\{kind:"service_quotation"/);
 });
+
