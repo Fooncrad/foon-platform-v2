@@ -50,7 +50,12 @@ export function validateResource(module,body){
  for(const f of config.fields){
   let value=source[f.key];
   if(value===undefined||value===null||value===""){if(f.required)throw new ResourceError("REQUIRED_"+f.key);data[f.key]=null;continue;}
-  if(f.type==="number"){if(typeof value!=="number"||!Number.isFinite(value)||value<(f.min??0)||value>(f.max??1000000)||f.integer&&!Number.isInteger(value))throw new ResourceError("INVALID_"+f.key);}
+  if(f.type==="number"){
+   if(typeof value!=="number"||!Number.isFinite(value)||value<(f.min??0)||value>(f.max??1000000)||f.integer&&!Number.isInteger(value))throw new ResourceError("INVALID_"+f.key);
+   // Invoice components and their quoted/service sources currently use two-decimal amounts.
+   // Validate each component before comparing totals so fractional halalas cannot be rounded away.
+   if((["customerInvoices","internalInvoices"].includes(module)&&["subtotal","taxAmount","serviceFee"].includes(f.key)||["quotations","serviceOrders"].includes(module)&&f.key==="amount")&&(!Number.isSafeInteger(Math.round(value*100))||Math.abs(value*100-Math.round(value*100))>1e-7))throw new ResourceError("INVALID_AMOUNT_PRECISION");
+  }
   else{
    if(typeof value!=="string"||value.length>(f.maxLength??(f.type==="textarea"?3000:500)))throw new ResourceError("INVALID_"+f.key);
    value=value.trim();

@@ -4,7 +4,14 @@
  * This module does not change order persistence or production invoices.
  */
 export type TaxBreakdown = {net:number;tax:number;gross:number};
-const money=(value:number)=>{if(!Number.isFinite(value)||value<0)throw new RangeError("INVALID_AMOUNT");return Math.round((value+Number.EPSILON)*100)};
+const money=(value:number)=>{
+ if(!Number.isFinite(value)||value<0)throw new RangeError("INVALID_AMOUNT");
+ const scaled=value*100,minor=Math.round(scaled);
+ // Reject fractions of a minor unit rather than silently changing the checkout base.
+ // Allow tiny binary floating-point drift in otherwise valid two-decimal values.
+ if(!Number.isSafeInteger(minor)||Math.abs(scaled-minor)>1e-7)throw new RangeError("INVALID_AMOUNT_PRECISION");
+ return minor;
+};
 const percent=(value:number)=>{if(!Number.isFinite(value)||value<0||value>100)throw new RangeError("INVALID_TAX_RATE");return value};
 export function calculateTax(amount:number,rate:number,inclusive=false):TaxBreakdown {
  const minor=money(amount),r=percent(rate);

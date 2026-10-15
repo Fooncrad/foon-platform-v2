@@ -46,3 +46,25 @@ test('VAT totals agree with payment minor units for inclusive and exclusive orde
   }
  }
 });
+
+
+test('rejects fractional halalas before tax or discount calculation',()=>{
+ for(const value of [0.001,0.005,1.005,10.075,99.999]){
+  assert.throws(()=>calculateTax(value,15),{name:'RangeError',message:'INVALID_AMOUNT_PRECISION'});
+  assert.throws(()=>calculateOrderTax(value,0,15),{name:'RangeError',message:'INVALID_AMOUNT_PRECISION'});
+  assert.throws(()=>calculateOrderTax(100,value,15),{name:'RangeError',message:'INVALID_AMOUNT_PRECISION'});
+ }
+});
+
+test('accepts exact halalas despite binary floating point noise',()=>{
+ assert.deepEqual(calculateTax(0.1+0.2,15),{net:0.3,tax:0.05,gross:0.35});
+ assert.deepEqual(calculateOrderTax(0.3,0.1+0.2,15),{net:0,tax:0,gross:0});
+ for(let cents=0;cents<=10000;cents++){
+  const amount=cents/100;
+  assert.equal(Math.round(calculateTax(amount,0).gross*100),cents);
+ }
+});
+
+test('rejects unsafe integer minor amounts',()=>{
+ assert.throws(()=>calculateTax(Number.MAX_SAFE_INTEGER,15),RangeError);
+});
