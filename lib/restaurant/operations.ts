@@ -1,6 +1,7 @@
 import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {resourceModules,validateResource,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
+import {serviceOrderTransitionAllowed,serviceOrderArchiveAllowed} from "./service-order-policy";
 import {diningTable,prepareDiningResource} from "./dining";
 import {canonicalMenuModules,canonicalMenuRows,saveCanonicalMenu,menuOptions} from "./menu";
 
@@ -27,6 +28,11 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(body.id!==undefined){const [rows]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id,version,lookup_key FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE FOR UPDATE",[id,tenantId,config.kind]);previous=rows[0];if(!previous)throw new ResourceError("RESOURCE_NOT_FOUND");if(!Number.isInteger(body.version)||Number(body.version)!==Number(previous.version))throw new ResourceError("CONFLICT");}
  if(archive&&!previous)throw new ResourceError("INVALID_INPUT");
  if(archive){
+  if(module==="serviceOrders"){
+   if(!serviceOrderArchiveAllowed(String(previous!.status)))throw new ResourceError("SERVICE_ORDER_ARCHIVE_FORBIDDEN");
+   const [invoices]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id]);
+   if(invoices.length)throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
+  }
   if(module==="quotations"&&previous?.status!=="draft")throw new ResourceError("QUOTATION_ARCHIVE_FORBIDDEN");
   if(module==="customerInvoices"&&previous?.status!=="draft")throw new ResourceError("INVOICE_ARCHIVE_FORBIDDEN");
   if(["sections","tables"].includes(module)){const field=module==="sections"?"sectionId":"tableId";const [[used]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,?))=? AND (kind='dining_table' OR status IN ('pending','confirmed','seated','in_progress'))",[tenantId,id,"$."+field,id]) as [RowDataPacket[],unknown];if(Number(used.n))throw new ResourceError("SECTION_IN_USE");}
@@ -47,9 +53,8 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
  if(module==="serviceOrders"){
   const inputOrder=validateResource(module,body);
+  if(!serviceOrderTransitionAllowed(previous?String(previous.status):null,String(inputOrder.status)))throw new ResourceError("INVALID_SERVICE_ORDER_TRANSITION");
   if(previous){
-   const transitions:Record<string,string[]>={new:["new","scheduled","in_progress","cancelled"],scheduled:["scheduled","in_progress","cancelled"],in_progress:["in_progress","completed","cancelled"],completed:["completed"],cancelled:["cancelled"]};
-   if(!transitions[String(previous.status)]?.includes(String(inputOrder.status)))throw new ResourceError("INVALID_SERVICE_ORDER_TRANSITION");
    const old=parseData(previous.data);
    if(old.quotationId!==inputOrder.data.quotationId)throw new ResourceError("SERVICE_ORDER_QUOTATION_IMMUTABLE");
    if(["completed","cancelled"].includes(String(previous.status))&&(JSON.stringify(old)!==JSON.stringify(inputOrder.data)||String(previous.name)!==String(inputOrder.name)||String(previous.branch_id??"")!==String(inputOrder.branchId??"")))throw new ResourceError("SERVICE_ORDER_FINAL_IMMUTABLE");
@@ -268,3 +273,4 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  // Keep the table occupied until staff explicitly confirms departure.
  await audit(db,tenantId,actor,"order.update",String(order.id),{status,paymentStatus:payment});return {id:order.id};
 }
+
