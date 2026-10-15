@@ -56,6 +56,10 @@ export async function PUT(req:Request){
   // disable the scope, change its currency, or create a branch override underneath it.
   const [openCheckouts]=await db.execute<RowDataPacket[]>("SELECT c.id FROM tenant_payment_checkouts c LEFT JOIN tenant_payment_attempts p ON p.tenant_id=c.tenant_id AND p.provider=c.provider AND p.mode=c.mode AND p.provider_payment_id=c.provider_payment_id WHERE c.tenant_id=? AND (c.scope_key=? OR c.branch_id=?) AND (c.state IN ('creating','uncertain','review') OR c.state='ready' AND (p.id IS NULL OR p.status='pending')) LIMIT 1 FOR UPDATE",[a.tenantId,scope,branch]);
   if(openCheckouts.length){await db.rollback();return failure("PAYMENT_ATTEMPTS_PENDING",409);}
+  // Service checkouts may be in flight before the provider payment ID is available.
+  // Keep the gateway keys/endpoint stable until provider certainty or resolution.
+  const [openServiceCheckouts]=await db.execute<RowDataPacket[]>("SELECT c.id FROM tenant_service_invoice_checkouts c LEFT JOIN tenant_service_invoice_payment_attempts p ON p.tenant_id=c.tenant_id AND p.invoice_id=c.invoice_id AND p.mode=c.mode AND BINARY p.provider_payment_id=BINARY c.provider_payment_id WHERE c.tenant_id=? AND (c.scope_key=? OR c.branch_id=?) AND (c.state IN ('creating','uncertain','review') OR c.state='ready' AND (p.id IS NULL OR p.status='pending')) LIMIT 1 FOR UPDATE",[a.tenantId,scope,branch]);
+  if(openServiceCheckouts.length){await db.rollback();return failure("PAYMENT_ATTEMPTS_PENDING",409);}
 
   if(old&&(old.provider!==b.provider||old.mode!==mode||clear.length>0||Object.values(provided).some(v=>typeof v==="string"&&v.trim())||String(settingRows[0]?.merchant_reference??"")!==b.merchant_reference.trim()||settingRows[0]?.currency!==b.currency||Boolean(settingRows[0]?.enabled)!==b.enabled)){
    const [pending]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_payment_attempts WHERE tenant_id=? AND scope_key=? AND status='pending' LIMIT 1 FOR UPDATE",[a.tenantId,scope]);

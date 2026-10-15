@@ -243,6 +243,8 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   const checkoutPool=mysql.createPool({uri:url.href,connectionLimit:4});
   try{
    let gatewayCalls=0;
+   const [[gatewayVersion]]=await db.execute("SELECT version FROM tenant_payment_gateway_credentials WHERE tenant_id=? AND scope_key='tenant'",[account.tenant]);
+   const rotateGateway=()=>fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,branch_id:null,provider:"tap",mode:"test",enabled:false,public_key:"pk_test_synthetic",version:Number(gatewayVersion.version),credentials:{}})});
    const fakeTap=async(urlTarget,options)=>{
     gatewayCalls++;
     assert.equal(urlTarget,"https://api.tap.company/v2/charges/");
@@ -252,6 +254,11 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
     assert.equal(request.reference.order,checkoutService.id);
     assert.equal(request.post.url,"https://foon-test.example/api/payments/webhooks/"+tapEndpoint);
     assert.equal(request.customer.email,"service-customer@example.test");
+    const [[creating]]=await db.execute("SELECT state,provider_payment_id FROM tenant_service_invoice_checkouts WHERE tenant_id=? AND invoice_id=?",[account.tenant,checkoutService.id]);
+    assert.equal(creating.state,"creating");assert.equal(creating.provider_payment_id,null);
+    const whileCreating=await rotateGateway();
+    assert.equal(whileCreating.status,409,"gateway keys must stay fixed before Tap returns payment ID");
+    assert.equal((await whileCreating.json()).code,"PAYMENT_ATTEMPTS_PENDING");
     return new Response(JSON.stringify({id:"chg_service_sandbox_2026",object:"charge",status:"INITIATED",live_mode:false,currency:"SAR",amount:23.45,transaction:{url:"https://test.tap.company/sandbox/invoice-service-1"}}),{status:200,headers:{"content-type":"application/json"}});
    };
    const params={tenantId:account.tenant,userId:account.user,invoiceId:checkoutService.id,customerEmail:"service-customer@example.test",appUrl:"https://foon-test.example"};
@@ -264,6 +271,9 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
    assert.equal(checkoutRecord.provider_payment_id,"chg_service_sandbox_2026");
    assert.equal(checkoutRecord.payload_hash.length,64);
    assert.equal(await invoiceReceiptCount(checkoutService.id),0);
+   const whileReady=await rotateGateway();
+   assert.equal(whileReady.status,409,"a ready checkout with a pending payment still locks credentials");
+   assert.equal((await whileReady.json()).code,"PAYMENT_ATTEMPTS_PENDING");
    const replay=await startServiceInvoiceSandboxCheckout(checkoutPool,params,()=>{throw Error("DUPLICATE_PROVIDER_REQUEST");});
    assert.equal(replay.url,started.url);assert.equal(gatewayCalls,1);
    await assert.rejects(()=>startServiceInvoiceSandboxCheckout(checkoutPool,{...params,customerEmail:"different@example.test"},fakeTap),error=>error.message==="CHECKOUT_REVIEW_REQUIRED");
@@ -284,6 +294,8 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
    assert.equal(attempt.status,"test_completed");
    const replayCompleted=await startServiceInvoiceSandboxCheckout(checkoutPool,params,()=>{throw Error("REPEATED_CHARGE");});
    assert.equal(replayCompleted.state,"test_completed");
+   const completedRotation=await rotateGateway();
+   assert.equal(completedRotation.status,200,"settled sandbox attempts should no longer pin gateway configuration");
   }finally{await checkoutPool.end();}
 
  }finally{server.kill();await db.end();}
