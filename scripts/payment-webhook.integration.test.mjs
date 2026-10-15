@@ -16,6 +16,14 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   async function owner(){const suffix=randomUUID().slice(0,8);const r=await fetch(origin+"/api/auth/register",{method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify({email:"webhook-"+suffix+"@test.example",password:"synthetic-long-password-2026",name:"Webhook owner",storeName:"Webhook "+suffix,slug:"webhook-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});assert.equal(r.status,201,await r.clone().text());const data=await r.json();return {tenant:data.tenant.id,cookie:r.headers.get("set-cookie").split(";")[0],user:data.user.id};}
   const account=await owner(),other=await owner();
   const headers={cookie:account.cookie,"x-foon-tenant":account.tenant,origin,"content-type":"application/json"};
+  // Explicitly grant invoice access to the disposable test tenant only.
+  // Production/free-plan entitlement checks stay unchanged.
+  const invoicePlan="webhook-invoice-"+randomUUID().slice(0,8);
+  await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,'اختبار الفواتير','Invoice Test','Test facture')",[invoicePlan,invoicePlan]);
+  await db.execute("INSERT IGNORE INTO package_features(feature_key,name_ar,name_en,category) VALUES ('customer_invoices','فواتير العملاء','Customer invoices','test')");
+  await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled) VALUES (?,'customer_invoices',TRUE)",[invoicePlan]);
+  await db.execute("UPDATE tenant_subscriptions SET plan_id=? WHERE tenant_id=?",[invoicePlan,account.tenant]);
+
   const settings=async()=>{const r=await fetch(origin+"/api/restaurant/payments/settings",{headers});assert.equal(r.status,200);return (await r.json()).settings;};
   const secret="whsec_synthetic",payload={provider:"stripe",mode:"live",branch_id:null,version:null,enabled:false,currency:"SAR",merchant_reference:"",public_key:"pk_live_synthetic",credentials:{secret_key:"sk_live_synthetic",webhook_secret:secret}};
   const configure=async body=>{const r=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify(body)});assert.equal(r.status,200,await r.clone().text());};
