@@ -16,6 +16,7 @@ const activityNames:Record<string,Record<ActivityLanguage,string>>={
  clothing:{ar:"أزياء وملابس",en:"Clothing & fashion",fr:"Mode et vêtements"},
  perfume:{ar:"العطور",en:"Perfumes",fr:"Parfums"},
  accessories:{ar:"الإكسسوارات",en:"Accessories",fr:"Accessoires"},
+ watches:{ar:"الساعات",en:"Watches",fr:"Montres"},
  gifts:{ar:"الهدايا",en:"Gifts",fr:"Cadeaux"},
  ecommerce:{ar:"المتجر الإلكتروني",en:"Online shop",fr:"Boutique en ligne"},
  carwash:{ar:"غسيل السيارات",en:"Car wash",fr:"Lavage auto"},

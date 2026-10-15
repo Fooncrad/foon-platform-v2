@@ -10,7 +10,7 @@ import { provisionStore } from "@/scripts/provision-store.mjs";
 import {currencyForCountry,countryRegions} from "@/lib/tenant/country-catalog";
 
 const restaurantActivities=new Set(["restaurant","cafe","sweets"]);
-const storeActivities=new Set(["grocery","clothing","perfume","accessories","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]);
+const storeActivities=new Set(["grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]);
 export const runtime="nodejs";
 export async function POST(request:Request){
   try{

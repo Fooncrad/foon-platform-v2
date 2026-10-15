@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 
 export async function runActivityPosChecks({db,call,resource,register}){
- const activities=["cafe","sweets","grocery","clothing","perfume","accessories","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
+ const activities=["cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
  const services=new Set(["carwash","laundry","automotive","salon","publicworks"]);
  const fixtures=[];
  const ok=(r,status=201)=>{assert.equal(r.status,status,JSON.stringify(r.body));return r.body;};

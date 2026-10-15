@@ -7,7 +7,7 @@ export async function runActivityEntitlementGateChecks({db,call,resource,restaur
  await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,'Activity guard','Activity guard')",[plan,plan,"اختبار قيود النشاط"]);
  await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) SELECT ?,feature_key,enabled,limit_value FROM package_plan_features WHERE plan_id='operations-enterprise'",[plan]);
  const activities=[{activity:"restaurant",owner:restaurant},...fixtures.map(f=>({activity:f.owner.email.slice("catalog-pos-".length).split("@")[0],owner:f.owner}))];
- assert.equal(activities.length,14);
+ assert.equal(activities.length,15);
  const sections=new Map();
  for(const {activity,owner} of activities){
   await db.execute("UPDATE tenant_subscriptions SET plan_id=?,starts_at=NULL,ends_at=NULL WHERE tenant_id=?",[plan,owner.tenant]);
@@ -79,5 +79,5 @@ export async function runActivityEntitlementGateChecks({db,call,resource,restaur
  assert.equal((await resource(cafe,"tables",undefined,"GET")).status,200);
  await db.execute("DELETE FROM tenant_business_profiles WHERE tenant_id=?",[cafe.tenant]);
  assert.equal((await resource(cafe,"tables",undefined,"GET")).status,200);
- console.info("Server activity gates: 14 activities, owner/employee/branch isolation, read/write denial, zero limits, disabled/missing grants and subscription dates verified");
+ console.info("Server activity gates: 15 activities, owner/employee/branch isolation, read/write denial, zero limits, disabled/missing grants and subscription dates verified");
 }

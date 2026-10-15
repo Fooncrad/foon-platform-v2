@@ -9,6 +9,7 @@ export const ACTIVITY_TEMPLATES={
  clothing:["fashion-editorial","fashion-grid"],
  perfume:["fragrance-boutique","fragrance-collection"],
  accessories:["accessories-grid","watch-showcase"],
+ watches:["watch-showcase","accessories-grid"],
  gifts:["gift-gallery","gift-occasion"],
  ecommerce:["commerce-grid","commerce-featured"],
  carwash:["wash-services","wash-packages"],
