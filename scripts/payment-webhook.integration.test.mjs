@@ -24,20 +24,52 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   const [[branch]]=await db.execute("SELECT id FROM branches WHERE tenant_id=? LIMIT 1",[account.tenant]);
   const [[foreignBranch]]=await db.execute("SELECT id FROM branches WHERE tenant_id=? LIMIT 1",[other.tenant]);
   async function order(tenant=account.tenant,branchId=branch.id,user=account.user,total=12.34){const id=randomUUID();await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,created_by,channel,status,payment_status,subtotal,discount,total,currency) VALUES (?,?,?,?,'takeaway','new','unpaid',?,0,?,'SAR')",[id,tenant,branchId,user,total,total]);return id;}
+  async function invoice(orderId,amount=12.34,status="issued",tenantId=account.tenant,branchId=branch.id){
+   const id=randomUUID();
+   await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,?,?,?,?,?)",[id,tenantId,branchId,"customer_invoice","Gateway invoice "+id,status,JSON.stringify({orderId,subtotal:amount,taxAmount:0,serviceFee:0})]);
+   return id;
+  }
+  const invoiceStatus=async id=>(await db.execute("SELECT status,version FROM restaurant_resources WHERE id=?",[id]))[0][0];
+  const invoiceReceiptCount=async id=>Number((await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=?",[account.tenant,id]))[0][0].n);
   async function bind(orderId,paymentId){await db.beginTransaction();try{await registerPaymentAttempt(db,{tenantId:account.tenant,scope:"tenant",orderId,provider:"stripe",mode:"live",paymentId});await db.commit();}catch(e){await db.rollback();throw e;}}
   const paymentStatus=async id=>(await db.execute("SELECT payment_status,version FROM restaurant_orders WHERE id=?",[id]))[0][0];
   function event(eventId,paymentId,amount=1234,live=true){return {id:eventId,type:"payment_intent.succeeded",livemode:live,data:{object:{id:paymentId,object:"payment_intent",status:"succeeded",amount_received:amount,currency:"sar"}}};}
   async function send(e,url=webhook,valid=true){const raw=JSON.stringify(e),timestamp=Math.floor(Date.now()/1000),sig=createHmac("sha256",valid?secret:"wrong-secret").update(timestamp+"."+raw).digest("hex");return fetch(url,{method:"POST",headers:{"content-type":"application/json","stripe-signature":"t="+timestamp+",v1="+sig},body:raw});}
-  const main=await order();await bind(main,"pi_live_synthetic");
+  const main=await order(),mainInvoice=await invoice(main);await bind(main,"pi_live_synthetic");
   const blockedChange=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}})});assert.equal(blockedChange.status,409);assert.equal((await blockedChange.json()).code,"PAYMENT_ATTEMPTS_PENDING");
   assert.equal((await send(event("evt_invalid","pi_live_synthetic"),webhook,false)).status,400);
   assert.equal((await paymentStatus(main)).payment_status,"unpaid");
+  assert.equal((await invoiceStatus(mainInvoice)).status,"issued");assert.equal(await invoiceReceiptCount(mainInvoice),0);
   assert.equal((await send(event("evt_case_sensitive","pi_LIVE_synthetic"))).status,200);assert.equal((await paymentStatus(main)).payment_status,"unpaid");
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
   assert.equal((await paymentStatus(main)).payment_status,"paid");const version=(await paymentStatus(main)).version;
+  assert.equal((await invoiceStatus(mainInvoice)).status,"paid","an issued order invoice follows the verified live payment");
+  const invoiceVersion=(await invoiceStatus(mainInvoice)).version;
+  assert.equal(await invoiceReceiptCount(mainInvoice),1);
+  const [[proof]]=await db.execute("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=?",[account.tenant,mainInvoice]);
+  const proofData=typeof proof.data==="string"?JSON.parse(proof.data):proof.data;
+  assert.equal(proofData.source,"provider_verified_webhook");assert.equal(proofData.provider,"stripe");
+  assert.equal(proofData.mode,"live");assert.equal(proofData.amountMinor,1234);assert.equal(proofData.orderId,main);
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
   assert.equal((await paymentStatus(main)).version,version);
-  assert.equal((await db.execute("SELECT COUNT(*) AS n FROM tenant_payment_webhook_receipts WHERE payment_id='pi_live_synthetic'"))[0][0].n,1);
+  assert.equal((await invoiceStatus(mainInvoice)).version,invoiceVersion);
+  assert.equal(await invoiceReceiptCount(mainInvoice),1);
+  assert.equal((await send(event("evt_paid_other_id","pi_live_synthetic"))).status,200);
+  assert.equal(await invoiceReceiptCount(mainInvoice),1,"alternate signed events for the same provider payment must not duplicate settlement");
+  // Each distinct authenticated event is preserved, while the financial settlement is unique.
+  assert.equal((await db.execute("SELECT COUNT(*) AS n FROM tenant_payment_webhook_receipts WHERE payment_id='pi_live_synthetic'"))[0][0].n,2);
+  const wrongInvoiceOrder=await order(),wrongInvoiceId=await invoice(wrongInvoiceOrder,12.33);
+  await bind(wrongInvoiceOrder,"pi_invoice_mismatch");
+  assert.equal((await send(event("evt_invoice_mismatch","pi_invoice_mismatch"))).status,200);
+  assert.equal((await paymentStatus(wrongInvoiceOrder)).payment_status,"paid");
+  assert.equal((await invoiceStatus(wrongInvoiceId)).status,"issued","a mismatching invoice must not be marked paid");
+  assert.equal(await invoiceReceiptCount(wrongInvoiceId),0);
+  const draftOrder=await order(),draftInvoice=await invoice(draftOrder,12.34,"draft");
+  await bind(draftOrder,"pi_draft_invoice");
+  assert.equal((await send(event("evt_draft_invoice","pi_draft_invoice"))).status,200);
+  assert.equal((await paymentStatus(draftOrder)).payment_status,"paid");
+  assert.equal((await invoiceStatus(draftInvoice)).status,"draft","never issue or settle an unfinished draft through a callback");
+  assert.equal(await invoiceReceiptCount(draftInvoice),0);
   const mismatch=await order();await bind(mismatch,"pi_wrong_amount");
   assert.equal((await send(event("evt_amount","pi_wrong_amount",100))).status,200);assert.equal((await paymentStatus(mismatch)).payment_status,"unpaid");
   // Remove this intentionally inconsistent fixture from the disposable database before mode-rotation assertions.
@@ -56,10 +88,11 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   await configure({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}});
   const testConfig=(await settings())[0];assert.notEqual(testConfig.webhook.url,webhook);
   assert.equal((await send(event("evt_old","pi_live_synthetic"))).status,404);
-  const testOrder=await order();
+  const testOrder=await order(),sandboxInvoice=await invoice(testOrder);
   await db.execute("INSERT INTO tenant_payment_attempts(id,tenant_id,scope_key,order_id,branch_id,provider,mode,provider_payment_id,amount_minor,currency) VALUES (?,?,'tenant',?,?,'stripe','test','pi_test_synthetic',1234,'SAR')",[randomUUID(),account.tenant,testOrder,branch.id]);
   assert.equal((await send(event("evt_test","pi_test_synthetic",1234,false),testConfig.webhook.url)).status,200);
   assert.equal((await paymentStatus(testOrder)).payment_status,"unpaid");assert.equal((await settings())[0].webhook.last_status,"test_received");
+  assert.equal((await invoiceStatus(sandboxInvoice)).status,"issued");assert.equal(await invoiceReceiptCount(sandboxInvoice),0,"sandbox evidence must not settle live invoices");
 
   const attemptStatus=async paymentId=>(await db.execute("SELECT status FROM tenant_payment_attempts WHERE tenant_id=? AND provider_payment_id=?",[account.tenant,paymentId]))[0][0]?.status;
   assert.equal(await attemptStatus("pi_test_synthetic"),"test_completed");
