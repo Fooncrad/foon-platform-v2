@@ -12,10 +12,10 @@ async function scope(request:Request){
  const tenant=request.headers.get("x-foon-tenant");if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
   const ctx=await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET");
-  const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
+  const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
   const activity=String(rows[0]?.activity_code??"");
   if(!isActivityType(activity)||activity==="restaurant")return {error:NextResponse.json({ok:false,code:"ACTIVITY_NOT_SUPPORTED"},{status:409})};
-  return {tenantId:ctx.tenantId,activity};
+  return {tenantId:ctx.tenantId,activity,currency:String(rows[0]?.currency??"SAR")};
  }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
 }
 function validName(v:unknown){return typeof v==="string"&&v.trim().length>=2&&v.trim().length<=180}
@@ -35,7 +35,7 @@ export async function GET(request:Request){
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p WHERE "+where.join(" AND "),values),
    database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
   ]);
-  return NextResponse.json({ok:true,activity:ctx.activity,categories,products,page,pageSize,total:Number(counts[0]?.total??0)});
+  return NextResponse.json({ok:true,activity:ctx.activity,currency:ctx.currency,categories,products,page,pageSize,total:Number(counts[0]?.total??0)});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UNAVAILABLE"},{status:503})}
 }
 export async function POST(request:Request){
@@ -54,7 +54,7 @@ export async function POST(request:Request){
    const price=Number(body.price);
    if(!Number.isFinite(price)||price<0||price>9999999999)return NextResponse.json({ok:false,code:"INVALID_PRICE"},{status:400});
    const service=["carwash","laundry","automotive","salon","publicworks"].includes(ctx.activity!);
-   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,typeof body.description==="string"?body.description.slice(0,5000):null,price,"SAR"]);
+   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,typeof body.description==="string"?body.description.slice(0,5000):null,price,ctx.currency]);
   }else return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
   return NextResponse.json({ok:true,id},{status:201});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_SAVE_FAILED"},{status:503})}
@@ -112,3 +112,4 @@ export async function DELETE(request:Request){
   return NextResponse.json({ok:true,deleted});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_DELETE_FAILED"},{status:503})}
 }
+

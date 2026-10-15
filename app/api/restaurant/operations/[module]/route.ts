@@ -10,6 +10,7 @@ import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {parseData,resourceRows,saveResource,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
 import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
+import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
 
 export const runtime="nodejs";
@@ -63,8 +64,9 @@ async function authorize(request:Request,module:string,write:boolean){
 }
 function failure(error:unknown){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
- const code=error instanceof ResourceError?error.code:(error as {code?:string})?.code==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":(error as {code?:string})?.code==="ER_LOCK_DEADLOCK"?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"?403:code.endsWith("_NOT_FOUND")?404:code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const databaseCode=(error as {code?:string})?.code;
+ const code=error instanceof ResourceError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
+ const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"?403:code.endsWith("_NOT_FOUND")?404:code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  if(status>=500)console.error("[FOON operations]",{incidentId,code,error});
  return NextResponse.json({ok:false,code,incidentId},{status});
 }
@@ -136,9 +138,13 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
    let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
    if(module==="reservations"){const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");if(from||to){const a=Date.parse(from||""),b=Date.parse(to||"");if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>93*86400000)throw new ResourceError("INVALID_DATE_RANGE");const [found]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))>=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))<? ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt')) LIMIT 1001",[ctx.tenantId,...(branch?[branch]:[]),new Date(a).toISOString(),new Date(b).toISOString()]);truncated=found.length>1000;resources=found.slice(0,1000).map(r=>({id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),data:parseData(r.data),version:Number(r.version),created_at:String(r.created_at)}));}}
    if(module==="storefront"&&resources.length){const [appearance]=await db.execute<RowDataPacket[]>("SELECT template_key FROM restaurant_menu_appearance WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);resources[0].data.menuTheme=String(appearance[0]?.template_key??resources[0].data.menuTheme??"sufra");}
+   if(module==="customerInvoices"){
+    const ids=resources.map(r=>r.data.orderId).filter((id):id is string=>typeof id==="string"&&Boolean(id));
+    if(ids.length){const [orders]=await db.execute<RowDataPacket[]>("SELECT id,currency FROM restaurant_orders WHERE tenant_id=? AND id IN ("+ids.map(()=>"?").join(",")+")",[ctx.tenantId,...ids]);resources=resources.map(r=>({...r,currency:String(orders.find(o=>o.id===r.data.orderId)?.currency??"SAR")}));}
+   }
    return NextResponse.json({ok:true,resources,references:refs,truncated});
   }
-  if(["orders","pos","kds"].includes(module)){const menu=module==="pos"?await resourceRows(db,ctx.tenantId,"menu",branch):[];return NextResponse.json({ok:true,orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,options:module==="pos"?await menuOptions(db,ctx.tenantId,menu.map(i=>i.id)):{},tables:module==="pos"&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
+  if(["orders","pos","kds"].includes(module)){const profile=await salesProfile(db,ctx.tenantId);const menu=module==="pos"?(profile.catalog?await activityPosMenu(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,"menu",branch)):[];return NextResponse.json({ok:true,currency:profile.currency,catalogSource:profile.catalog?"activity":"restaurant",orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,options:module==="pos"?(profile.catalog?await activityPosOptions(db,ctx.tenantId,menu.map(i=>i.id)):await menuOptions(db,ctx.tenantId,menu.map(i=>i.id))):{},tables:module==="pos"&&profile.dining&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
   if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch)});
   if(module==="reports"){
    const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");
@@ -250,3 +256,4 @@ async function mutate(request:Request,module:string,method:string){
 export async function POST(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"POST");}
 export async function PATCH(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"PATCH");}
 export async function DELETE(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"DELETE");}
+

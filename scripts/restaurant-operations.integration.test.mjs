@@ -1,4 +1,5 @@
 import test from "node:test";
+import {runActivityPosChecks} from "./activity-pos.integration.mjs";
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
@@ -8,13 +9,13 @@ const origin="http://localhost:3103";
 test("restaurant operations preserve tenant, role, plan, pricing and transactional integrity",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
  const db=await mysql.createConnection(url.href);await db.query("SET time_zone='+00:00'");
- const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:"ignore"});
+ const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:["ignore","ignore","pipe"]});let serverErrors="";server.stderr.setEncoding("utf8");server.stderr.on("data",chunk=>{serverErrors=(serverErrors+chunk).slice(-12000);});
  const password="a-strong-test-password";
  const call=async(path,method,body,cookie,tenant)=>{
   const r=await fetch(origin+path,{method,headers:{origin,"content-type":"application/json",...(cookie?{cookie}:{}),...(tenant?{"x-foon-tenant":tenant}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
   return{status:r.status,body:await r.json(),cookie:r.headers.get("set-cookie")?.split(";")[0]};
  };
- const register=async(name)=>{const r=await call("/api/auth/register","POST",{name,storeName:name,slug:name,email:name+"@test.example",password,kind:"restaurant",activity:"restaurant",countryCode:"SA",currency:"SAR",region:"الرياض"});assert.equal(r.status,201,JSON.stringify(r.body));return{tenant:r.body.tenant.id,branch:r.body.branch.id,user:r.body.user.id,cookie:r.cookie,email:name+"@test.example"};};
+ const register=async(name,activity="restaurant")=>{const r=await call("/api/auth/register","POST",{name,storeName:name,slug:name,email:name+"@test.example",password,kind:"restaurant",activity,countryCode:"SA",currency:"SAR",region:"الرياض"});assert.equal(r.status,201,JSON.stringify(r.body));return{tenant:r.body.tenant.id,branch:r.body.branch.id,user:r.body.user.id,cookie:r.cookie,email:name+"@test.example"};};
  const resource=async(owner,module,body,method="POST")=>call("/api/restaurant/operations/"+module,method,body,owner.cookie,owner.tenant);
  const save=async(owner,module,name,data,status="active")=>{const r=await resource(owner,module,{name,status,data,branchId:owner.branch});assert.equal(r.status,201,JSON.stringify(r.body));return r.body.id;};
  try{
@@ -322,11 +323,13 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"security",{id:current.id},"DELETE")).status,400);
   const foreignSessions=await resource(b,"security",undefined,"GET");assert.equal((await resource(a,"security",{id:foreignSessions.body.sessions[0].id},"DELETE")).status,404);
   assert.equal((await resource(a,"health",undefined,"GET")).body.database,"connected");
+  await runActivityPosChecks({db,call,resource,register});
   const admin=await register("operations-platform-admin");
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,200);
   await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
- }finally{server.kill();await db.end();}
+ }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await db.end();}
 });
+
 
