@@ -31,6 +31,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(archive){
   if(module==="serviceOrders"){
    if(!serviceOrderArchiveAllowed(String(previous!.status)))throw new ResourceError("SERVICE_ORDER_ARCHIVE_FORBIDDEN");
+   if(parseData(previous!.data).quotationId)throw new ResourceError("SERVICE_ORDER_LINKED_ARCHIVE_FORBIDDEN");
    const [invoices]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id]);
    if(invoices.length)throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
   }
