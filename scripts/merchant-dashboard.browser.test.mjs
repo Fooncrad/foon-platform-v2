@@ -338,6 +338,23 @@ test("all 14 activities expose their own tools; service orders work in three lan
      await expect(page.locator('.restaurantListTools')).toHaveCount(0);
      await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
     }
+    if(activity!=="restaurant"){
+     const headers={origin,"x-foon-tenant":account.tenant.id};
+     const categoryResponse=await context.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"category",name:"POS category "+activity}});
+     expect(categoryResponse.status(),await categoryResponse.text()).toBe(201);
+     const category=(await categoryResponse.json()).id;
+     const productName="POS product "+activity;
+     const productResponse=await context.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"product",name:productName,categoryId:category,price:7.25}});
+     expect(productResponse.status(),await productResponse.text()).toBe(201);
+     await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
+     await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
+     const product=page.locator('.restaurantPosProduct').filter({hasText:productName});
+     await expect(product).toContainText('7.25');
+     await product.getByRole('button',{name:'+ إضافة إلى الطلب',exact:true}).click();
+     await page.locator('.restaurantPosCheckout').getByRole('button',{name:'إنشاء الطلب',exact:true}).click();
+     await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('7.25');
+     await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('SAR');
+    }
     if(services.has(activity)&&activity!=="laundry"){
      await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
      await expect(page.locator('.foonServiceOrders')).toBeVisible();

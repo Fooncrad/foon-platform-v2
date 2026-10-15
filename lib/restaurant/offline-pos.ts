@@ -99,7 +99,7 @@ export async function importPendingPosOrders(json:string,tenantId:string):Promis
 export function isNetworkFailure(error:unknown){return typeof navigator!=="undefined"&&!navigator.onLine||error instanceof TypeError&&/fetch|network|failed/i.test(error.message);}
 
 const SNAPSHOT_STORE="snapshots";
-export type PosSnapshot={id:string;tenantId:string;branchId:string;savedAt:string;menu:unknown[];tables:unknown[];options:Record<string,unknown>};
+export type PosSnapshot={currency?:string;id:string;tenantId:string;branchId:string;savedAt:string;menu:unknown[];tables:unknown[];options:Record<string,unknown>};
 export async function savePosSnapshot(snapshot:PosSnapshot){await transactionStore<void>(SNAPSHOT_STORE,"readwrite",store=>store.put(snapshot));}
 export async function loadPosSnapshot(tenantId:string,branchId:string):Promise<PosSnapshot|undefined>{return transactionStore<PosSnapshot|undefined>(SNAPSHOT_STORE,"readonly",store=>store.get(tenantId+":"+branchId));}
 function transactionStore<T>(name:string,mode:IDBTransactionMode,operation:(store:IDBObjectStore)=>IDBRequest):Promise<T>{
@@ -121,3 +121,4 @@ export async function getOfflineStorageStatus(){
  const estimate=storage?.estimate?await storage.estimate().catch(()=>null):null;
  return {available:true,persistent,used:estimate?.usage??null,quota:estimate?.quota??null};
 }
+
