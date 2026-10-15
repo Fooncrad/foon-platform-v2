@@ -363,10 +363,18 @@ test("all 14 activities expose their own tools; service orders work in three lan
       await gallery.getByRole('button',{name:'إزالة الصورة',exact:true}).first().click();
       await expect(gallery.locator('img')).toHaveCount(3);
       await expect(gallery.locator('input[type="file"]')).toBeEnabled();
+      await page.getByLabel('اسم المنتج',{exact:true}).fill('Unsaved product');
+      await page.getByLabel('السعر',{exact:true}).fill('12.34');
       for(const [locale,title] of [['en','Product images'],['fr','Images du produit'],['ar','صور المنتج']]){
        await page.evaluate(language=>{localStorage.setItem('foon-language',language);window.dispatchEvent(new Event('foon:language-change'));},locale);
        await page.setViewportSize({width:320,height:900});
        await expect(row.getByRole('region',{name:title,exact:true})).toBeVisible();
+       await expect(page.getByRole('heading',{name:locale==='ar'?'إدارة المنتجات':locale==='en'?'Manage products':'Gérer les produits',exact:true})).toBeVisible();
+       await expect(page.getByLabel(locale==='ar'?'اسم المنتج':locale==='en'?'Product name':'Nom du produit',{exact:true})).toBeVisible();
+       await expect(page.getByLabel(locale==='ar'?'السعر':locale==='en'?'Price':'Prix',{exact:true})).toHaveAttribute('dir','ltr');
+       await expect(row).toContainText(productName);
+       await expect(page.getByLabel(locale==='ar'?'اسم المنتج':locale==='en'?'Product name':'Nom du produit',{exact:true})).toHaveValue('Unsaved product');
+       await expect(page.getByLabel(locale==='ar'?'السعر':locale==='en'?'Price':'Prix',{exact:true})).toHaveValue('12.34');
        const bounds=await row.getByRole('region',{name:title,exact:true}).boundingBox();
        expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);
        expect(await row.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
