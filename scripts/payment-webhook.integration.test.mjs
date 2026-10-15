@@ -73,6 +73,25 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   assert.equal(gatewayReviewData.currency,"SAR");
   assert.equal(gatewayReviewData.provider,"stripe");
   assert.equal((await invoiceStatus(mainInvoice)).status,"paid","a refund review never reverses a gateway payment");
+  // Independent second-owner rejection of a live-gateway-backed case.
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'owner','active')",[randomUUID(),account.tenant,other.user]);
+  const gatewayDecision={reviewId:(await db.execute("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_refund_review' AND lookup_key=?",[account.tenant,mainInvoice]))[0][0].id,decision:"reject",note:"Gateway refund request is outside the merchant return policy",acknowledgeNoRefund:true};
+  const selfDenied=await fetch(origin+"/api/restaurant/payments/refund-reviews",{method:"PATCH",headers,body:JSON.stringify(gatewayDecision)});
+  assert.equal(selfDenied.status,403);
+  const approverHeaders={...headers,cookie:other.cookie,"x-foon-tenant":account.tenant};
+  const missingRejectionReason=await fetch(origin+"/api/restaurant/payments/refund-reviews",{method:"PATCH",headers:approverHeaders,body:JSON.stringify({...gatewayDecision,note:"short"})});
+  assert.equal((await missingRejectionReason.json()).code,"REFUND_REJECTION_REASON_REQUIRED");
+  const [firstRejection,secondRejection]=await Promise.all([fetch(origin+"/api/restaurant/payments/refund-reviews",{method:"PATCH",headers:approverHeaders,body:JSON.stringify(gatewayDecision)}),fetch(origin+"/api/restaurant/payments/refund-reviews",{method:"PATCH",headers:approverHeaders,body:JSON.stringify(gatewayDecision)})]);
+  assert.equal(firstRejection.status,200,await firstRejection.clone().text());
+  assert.equal(secondRejection.status,200,await secondRejection.clone().text());
+  const r1=await firstRejection.json(),r2=await secondRejection.json();
+  assert.equal(r1.status,"rejected");assert.equal(r2.status,"rejected");
+  assert.equal(Number(Boolean(r1.existing))+Number(Boolean(r2.existing)),1);
+  assert.equal(r1.financialEffect,"none");
+  assert.equal((await invoiceStatus(mainInvoice)).status,"paid");
+  const [[rejectAudit]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='customer_invoice.refund_review_reject'",[account.tenant,mainInvoice]);
+  assert.equal(Number(rejectAudit.n),1);
+
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
   assert.equal((await paymentStatus(main)).version,version);
   assert.equal((await invoiceStatus(mainInvoice)).version,invoiceVersion);
