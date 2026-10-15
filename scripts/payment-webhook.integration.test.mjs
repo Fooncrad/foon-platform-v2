@@ -16,6 +16,14 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   async function owner(){const suffix=randomUUID().slice(0,8);const r=await fetch(origin+"/api/auth/register",{method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify({email:"webhook-"+suffix+"@test.example",password:"synthetic-long-password-2026",name:"Webhook owner",storeName:"Webhook "+suffix,slug:"webhook-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});assert.equal(r.status,201,await r.clone().text());const data=await r.json();return {tenant:data.tenant.id,cookie:r.headers.get("set-cookie").split(";")[0],user:data.user.id};}
   const account=await owner(),other=await owner();
   const headers={cookie:account.cookie,"x-foon-tenant":account.tenant,origin,"content-type":"application/json"};
+  // Explicitly grant invoice access to the disposable test tenant only.
+  // Production/free-plan entitlement checks stay unchanged.
+  const invoicePlan="webhook-invoice-"+randomUUID().slice(0,8);
+  await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,'اختبار الفواتير','Invoice Test','Test facture')",[invoicePlan,invoicePlan]);
+  await db.execute("INSERT IGNORE INTO package_features(feature_key,name_ar,name_en,category) VALUES ('customer_invoices','فواتير العملاء','Customer invoices','test')");
+  await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled) VALUES (?,'customer_invoices',TRUE)",[invoicePlan]);
+  await db.execute("UPDATE tenant_subscriptions SET plan_id=? WHERE tenant_id=?",[invoicePlan,account.tenant]);
+
   const settings=async()=>{const r=await fetch(origin+"/api/restaurant/payments/settings",{headers});assert.equal(r.status,200);return (await r.json()).settings;};
   const secret="whsec_synthetic",payload={provider:"stripe",mode:"live",branch_id:null,version:null,enabled:false,currency:"SAR",merchant_reference:"",public_key:"pk_live_synthetic",credentials:{secret_key:"sk_live_synthetic",webhook_secret:secret}};
   const configure=async body=>{const r=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify(body)});assert.equal(r.status,200,await r.clone().text());};
@@ -83,6 +91,50 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   assert.equal((await paymentStatus(foreign)).payment_status,"unpaid");
   const early=await order();assert.equal((await send(event("evt_early","pi_early"))).status,200);assert.equal((await paymentStatus(early)).payment_status,"unpaid");
   await bind(early,"pi_early");assert.equal((await paymentStatus(early)).payment_status,"paid");
+  // A gateway can settle the order BEFORE the merchant creates or issues its invoice.
+  // Only the independently verified live payment evidence may catch it up.
+  const lateOrder=await order();await bind(lateOrder,"pi_late_invoice");
+  assert.equal((await send(event("evt_late_invoice","pi_late_invoice"))).status,200);
+  assert.equal((await paymentStatus(lateOrder)).payment_status,"paid");
+  async function merchantInvoice(body,method="POST"){
+   const response=await fetch(origin+"/api/restaurant/operations/customerInvoices",{method,headers,body:JSON.stringify(body)});
+   return {status:response.status,body:await response.json()};
+  }
+  const late=await merchantInvoice({name:"Invoice issued after confirmed payment",status:"issued",branchId:branch.id,data:{orderId:lateOrder,subtotal:12.34,taxAmount:0,serviceFee:0}});
+  assert.equal(late.status,201,JSON.stringify(late.body));
+  assert.equal(late.body.gatewayReconciliation,"reconciled",JSON.stringify(late.body));
+  assert.equal((await invoiceStatus(late.body.id)).status,"paid");
+  assert.equal(await invoiceReceiptCount(late.body.id),1);
+  const [[lateProof]]=await db.execute("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=?",[account.tenant,late.body.id]);
+  const lateProofData=typeof lateProof.data==="string"?JSON.parse(lateProof.data):lateProof.data;
+  assert.equal(lateProofData.providerPaymentId,"pi_late_invoice");assert.equal(lateProofData.source,"provider_verified_webhook");
+  assert.equal((await send(event("evt_late_second","pi_late_invoice"))).status,200);
+  assert.equal(await invoiceReceiptCount(late.body.id),1);
+
+  const draftFirstOrder=await order();
+  const draftFirst=await merchantInvoice({name:"Prepayment draft",status:"draft",branchId:branch.id,data:{orderId:draftFirstOrder,subtotal:12.34,taxAmount:0,serviceFee:0}});
+  assert.equal(draftFirst.status,201,JSON.stringify(draftFirst.body));
+  await bind(draftFirstOrder,"pi_draft_later");
+  assert.equal((await send(event("evt_draft_later","pi_draft_later"))).status,200);
+  assert.equal((await invoiceStatus(draftFirst.body.id)).status,"draft");
+  assert.equal(await invoiceReceiptCount(draftFirst.body.id),0);
+  const draftRecord=(await db.execute("SELECT name,version,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=?",[draftFirst.body.id,account.tenant]))[0][0];
+  const issuedLate=await merchantInvoice({id:draftFirst.body.id,version:draftRecord.version,name:draftRecord.name,status:"issued",branchId:draftRecord.branch_id,data:typeof draftRecord.data==="string"?JSON.parse(draftRecord.data):draftRecord.data},"PATCH");
+  assert.equal(issuedLate.status,200,JSON.stringify(issuedLate.body));
+  assert.equal(issuedLate.body.gatewayReconciliation,"reconciled");
+  assert.equal((await invoiceStatus(draftFirst.body.id)).status,"paid");
+  assert.equal(await invoiceReceiptCount(draftFirst.body.id),1);
+
+  const merchantMarked=await order();
+  await db.execute("UPDATE restaurant_orders SET payment_status='paid' WHERE id=? AND tenant_id=?",[merchantMarked,account.tenant]);
+  const noTrustedProof=await merchantInvoice({name:"Manual-only order",status:"issued",branchId:branch.id,data:{orderId:merchantMarked,subtotal:12.34,taxAmount:0,serviceFee:0}});
+  assert.equal(noTrustedProof.status,201,JSON.stringify(noTrustedProof.body));
+  assert.equal(noTrustedProof.body.gatewayReconciliation,"not_applicable","a plain paid flag must not impersonate gateway evidence");
+  assert.equal((await invoiceStatus(noTrustedProof.body.id)).status,"issued");
+  assert.equal(await invoiceReceiptCount(noTrustedProof.body.id),0);
+
+  const foreignInvoiceAttempt=await merchantInvoice({name:"Foreign tenant invoice",status:"issued",branchId:branch.id,data:{orderId:foreign,subtotal:12.34,taxAmount:0,serviceFee:0}});
+  assert.notEqual(foreignInvoiceAttempt.status,201);
   config=(await settings())[0];assert.ok(config.webhook.last_received_at);assert.equal(config.webhook.ready,true);
   const wrongTenant=await fetch(origin+"/api/restaurant/payments/settings",{headers:{...headers,"x-foon-tenant":other.tenant}});assert.equal(wrongTenant.status,403);
   await configure({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}});

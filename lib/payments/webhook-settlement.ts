@@ -48,6 +48,44 @@ async function settleIssuedOrderInvoice(
  await db.execute("UPDATE restaurant_resources SET status='paid',version=version+1 WHERE tenant_id=? AND id=? AND kind='customer_invoice' AND status='issued'",[endpoint.tenant_id,invoice.id]);
 }
 
+/** Catch up a late-issued invoice using ONLY an already settled live attempt
+ * and its authenticated receipt. Called in a NEW transaction after the invoice
+ * mutation commits, to follow the same order -> invoice lock ordering as webhooks.
+ * A merchant's paid flag alone is never trusted.
+ */
+export async function reconcileLateIssuedInvoice(db:PoolConnection,tenantId:string,invoiceId:string){
+ const [preview]=await db.execute<RowDataPacket[]>("SELECT status,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND archived=FALSE LIMIT 1",[invoiceId,tenantId]);
+ if(preview[0]?.status!=="issued")return {status:"not_applicable" as const};
+ const details=typeof preview[0].data==="string"?JSON.parse(preview[0].data):preview[0].data;
+ if(!details||typeof details.orderId!=="string"||details.serviceOrderId)return {status:"not_applicable" as const};
+ const orderId=details.orderId;
+ // The webhook also locks the order first, then its invoice.
+ const [orders]=await db.execute<RowDataPacket[]>("SELECT branch_id,total,currency,status,payment_status FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[orderId,tenantId]);
+ const order=orders[0];
+ if(!order||order.payment_status!=="paid"||["cancelled","refunded","rejected"].includes(String(order.status)))return {status:"not_applicable" as const};
+ const [invoices]=await db.execute<RowDataPacket[]>("SELECT status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND archived=FALSE FOR UPDATE",[invoiceId,tenantId]);
+ const invoice=invoices[0];
+ if(!invoice||invoice.status!=="issued")return {status:"not_applicable" as const};
+ const current=typeof invoice.data==="string"?JSON.parse(invoice.data):invoice.data;
+ if(current?.orderId!==orderId||current.serviceOrderId||invoice.branch_id&&String(invoice.branch_id)!==String(order.branch_id))return {status:"not_applicable" as const};
+ const [attempts]=await db.execute<RowDataPacket[]>("SELECT scope_key,provider,mode,provider_payment_id,amount_minor,currency FROM tenant_payment_attempts WHERE tenant_id=? AND order_id=? AND mode='live' AND status='paid' LIMIT 2",[tenantId,orderId]);
+ if(attempts.length!==1)return {status:"not_applicable" as const};
+ const attempt=attempts[0];
+ const total=majorToMinor(String(order.total),String(order.currency));
+ if(attempt.currency!==order.currency||Number(attempt.amount_minor)!==total||attempt.scope_key!=="tenant"&&attempt.scope_key!==order.branch_id)return {status:"not_applicable" as const};
+ const [receipts]=await db.execute<RowDataPacket[]>("SELECT endpoint_id,event_key,amount_minor,currency,event_type FROM tenant_payment_webhook_receipts WHERE tenant_id=? AND scope_key=? AND provider=? AND mode='live' AND BINARY payment_id=BINARY ? AND status='paid' ORDER BY sequence_id LIMIT 1",[tenantId,attempt.scope_key,attempt.provider,attempt.provider_payment_id]);
+ const receipt=receipts[0];
+ if(!receipt||Number(receipt.amount_minor)!==total||receipt.currency!==order.currency)return {status:"not_applicable" as const};
+ await settleIssuedOrderInvoice(db,{
+  tenant_id:tenantId,scope_key:String(attempt.scope_key),endpoint_id:String(receipt.endpoint_id),provider:String(attempt.provider),mode:"live"
+ },{
+  eventKey:String(receipt.event_key),eventType:String(receipt.event_type),paymentId:String(attempt.provider_payment_id),
+  amountMinor:total,currency:String(order.currency),paid:true
+ },orderId,String(order.branch_id),String(order.currency));
+ const [after]=await db.execute<RowDataPacket[]>("SELECT status FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice'",[invoiceId,tenantId]);
+ return {status:after[0]?.status==="paid"?"reconciled" as const:"not_applicable" as const};
+}
+
 export async function persistPaymentWebhook(db:PoolConnection,endpoint:Endpoint,event:VerifiedPaymentWebhook){
  // Caller holds the endpoint lock and commits only after this function persists the receipt.
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id,status FROM tenant_payment_webhook_receipts WHERE endpoint_id=? AND event_key=?",[endpoint.endpoint_id,event.eventKey]);
