@@ -1,0 +1,31 @@
+import {ACTIVITY_PRESETS, isActivityType} from "./activity-presets";
+
+/**
+ * Capability = activity support; grant = subscription entitlement;
+ * permission = current employee authorization. Never conflate them.
+ */
+export type PlanGrant = {feature_key:string; enabled:boolean; limit_value:number|null};
+export type ActivityEntitlement = {key:string; available:boolean; limit:number|null; reason:"available"|"unsupported_activity"|"not_granted"|"permission_denied"};
+
+export function resolveActivityEntitlements(
+ activity:string,
+ grants:readonly PlanGrant[],
+ permissions:readonly string[]|null=null,
+):ActivityEntitlement[]{
+ if(!isActivityType(activity)) throw new Error("UNSUPPORTED_ACTIVITY_TYPE");
+ const supported=new Set<string>(ACTIVITY_PRESETS[activity]);
+ const byKey=new Map(grants.map(g=>[g.feature_key,g]));
+ const keys=new Set([...supported,...byKey.keys()]);
+ const allowed=permissions===null?null:new Set(permissions);
+ return [...keys].map(key=>{
+  const grant=byKey.get(key);
+  const reason:ActivityEntitlement["reason"]=!supported.has(key)?"unsupported_activity":
+   !grant?.enabled?"not_granted":
+   allowed!==null&&!allowed.has(key)?"permission_denied":"available";
+  return {key,available:reason==="available",limit:grant?.limit_value??null,reason};
+ });
+}
+
+export function canUseActivityFeature(activity:string,feature:string,grants:readonly PlanGrant[],permissions:readonly string[]|null=null):boolean{
+ return resolveActivityEntitlements(activity,grants,permissions).some(x=>x.key===feature&&x.available);
+}
