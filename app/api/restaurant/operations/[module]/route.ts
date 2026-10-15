@@ -8,7 +8,7 @@ import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
-import {parseData,resourceRows,saveResource,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
+import {parseData,resourceRows,saveResource,convertAcceptedQuotation,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
 import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
 import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
@@ -201,7 +201,10 @@ async function mutate(request:Request,module:string,method:string){
    }
    if(method==="POST"&&resourceModules[module].feature){const grant=await tenantEntitlement(ctx.tenantId,resourceModules[module].feature!);if(grant.limit!==null){await db.execute("SELECT tenant_id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[ctx.tenantId]);const [[used]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE",[ctx.tenantId,resourceModules[module].kind]);if((canonicalMenuModules.includes(module)?(await resourceRows(db,ctx.tenantId,module)).length:Number(used.n))>=grant.limit)throw new ResourceError("PLAN_LIMIT_REACHED");}}
    if(module==="purchases"&&!(await tenantEntitlement(ctx.tenantId,"inventory")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
-   result=await saveResource(db,ctx.tenantId,ctx.user,ctx.role,module,body,method==="DELETE");
+   if(module==="serviceOrders"&&method==="POST"&&body.convertQuotationId!==undefined){
+    if(typeof body.convertQuotationId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
+    result=await convertAcceptedQuotation(db,ctx.tenantId,ctx.user,ctx.role,body.convertQuotationId,body.branchId?String(body.branchId):null);
+   }else result=await saveResource(db,ctx.tenantId,ctx.user,ctx.role,module,body,method==="DELETE");
    if(module==="reservations"&&method==="PATCH"&&body.status&&typeof body.id==="string"){
     const [previous]=await db.execute<RowDataPacket[]>("SELECT status,data,name FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='reservation' LIMIT 1",[body.id,ctx.tenantId]);
     const item=previous[0];
