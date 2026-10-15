@@ -1,6 +1,6 @@
-import {randomUUID} from "node:crypto";
+import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
-import {majorToMinor,type VerifiedPaymentWebhook} from "./webhook-verification.mjs";
+import {majorToMinor,currencyDecimals,type VerifiedPaymentWebhook} from "./webhook-verification.mjs";
 type Endpoint={tenant_id:string;scope_key:string;endpoint_id:string;provider:string;mode:string};
 /** Called only by a trusted server-side gateway initiation adapter after it creates the provider transaction. */
 export async function registerPaymentAttempt(db:PoolConnection,input:{tenantId:string;scope:string;orderId:string;provider:string;mode:"test"|"live";paymentId:string}){
@@ -16,6 +16,38 @@ export async function registerPaymentAttempt(db:PoolConnection,input:{tenantId:s
  const [early]=await db.execute<RowDataPacket[]>("SELECT endpoint_id,event_key,event_type,payment_id,amount_minor,currency FROM tenant_payment_webhook_receipts WHERE tenant_id=? AND scope_key=? AND provider=? AND mode=? AND payment_id=? AND status IN ('unmatched','test_received') ORDER BY sequence_id",[input.tenantId,input.scope,input.provider,input.mode,input.paymentId]);
  for(const row of early)await persistPaymentWebhook(db,{tenant_id:input.tenantId,scope_key:input.scope,endpoint_id:String(row.endpoint_id),provider:input.provider,mode:input.mode},{eventKey:String(row.event_key),eventType:String(row.event_type),paymentId:String(row.payment_id),amountMinor:Number(row.amount_minor),currency:String(row.currency),paid:true});
 }
+/** A signed live callback may settle a previously ISSUED generic order invoice.
+ * Do not issue a draft, overwrite a manually paid invoice or infer payment from
+ * callback metadata. The order is already locked and matched to a server-created
+ * provider attempt before this function is called.
+ */
+async function settleIssuedOrderInvoice(
+ db:PoolConnection,endpoint:Endpoint,event:VerifiedPaymentWebhook,
+ orderId:string,orderBranch:string,currency:string
+){
+ const [invoices]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? FOR UPDATE",[endpoint.tenant_id,orderId]);
+ if(!invoices.length)return;
+ // Unexpected duplicate invoices must not create duplicate receipts.
+ if(invoices.length!==1)return;
+ const invoice=invoices[0];
+ if(invoice.status!=="issued"||invoice.branch_id&&String(invoice.branch_id)!==orderBranch)return;
+ const data=typeof invoice.data==="string"?JSON.parse(invoice.data):invoice.data;
+ if(!data||typeof data!=="object"||data.serviceOrderId)return;
+ const precision=10**currencyDecimals(currency);
+ const parts=[data.subtotal,data.taxAmount??0,data.serviceFee??0].map(Number);
+ if(parts.some(value=>!Number.isFinite(value)||value<0||Math.abs(value*precision-Math.round(value*precision))>0.000001))return;
+ const invoiceMinor=parts.reduce((total,value)=>total+Math.round(value*precision),0);
+ if(!Number.isSafeInteger(invoiceMinor)||invoiceMinor!==event.amountMinor)return;
+ const [prior]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=? LIMIT 1 FOR UPDATE",[endpoint.tenant_id,invoice.id]);
+ if(prior.length)return; // Other evidence, including a manual receipt, must not be overwritten.
+ const paymentKey=createHash("sha256").update(JSON.stringify(["verified_gateway",endpoint.provider,endpoint.mode,event.paymentId])).digest("hex");
+ const [reused]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND lookup_key=? LIMIT 1 FOR UPDATE",[endpoint.tenant_id,paymentKey]);
+ if(reused.length)return;
+ const settlementId=randomUUID(),proof={invoiceId:String(invoice.id),orderId,source:"provider_verified_webhook",provider:endpoint.provider,mode:endpoint.mode,providerPaymentId:event.paymentId,eventKey:event.eventKey,amountMinor:event.amountMinor,currency,confirmedAt:new Date().toISOString()};
+ await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[settlementId,endpoint.tenant_id,invoice.branch_id??orderBranch,"invoice_settlement","Verified gateway payment: "+String(invoice.name),"confirmed",JSON.stringify(proof),paymentKey]);
+ await db.execute("UPDATE restaurant_resources SET status='paid',version=version+1 WHERE tenant_id=? AND id=? AND kind='customer_invoice' AND status='issued'",[endpoint.tenant_id,invoice.id]);
+}
+
 export async function persistPaymentWebhook(db:PoolConnection,endpoint:Endpoint,event:VerifiedPaymentWebhook){
  // Caller holds the endpoint lock and commits only after this function persists the receipt.
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id,status FROM tenant_payment_webhook_receipts WHERE endpoint_id=? AND event_key=?",[endpoint.endpoint_id,event.eventKey]);
@@ -40,6 +72,7 @@ export async function persistPaymentWebhook(db:PoolConnection,endpoint:Endpoint,
    else{
     await db.execute("UPDATE restaurant_orders SET payment_status='paid',version=version+1 WHERE tenant_id=? AND id=? AND payment_status='unpaid'",[endpoint.tenant_id,attempt.order_id]);
     await db.execute("UPDATE tenant_payment_attempts SET status='paid' WHERE tenant_id=? AND id=?",[endpoint.tenant_id,attempt.id]);
+    await settleIssuedOrderInvoice(db,endpoint,event,String(attempt.order_id),String(order.branch_id),String(order.currency));
     status="paid";
    }
   }
