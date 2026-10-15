@@ -298,8 +298,10 @@ test("all 14 activities expose their own tools; service orders work in three lan
  const db=await mysql.createConnection(process.env.DATABASE_URL);
  try{
   for(const activity of activities){
+   console.info("Activity workspace:",activity);
    const context=await browser.newContext({viewport:{width:1440,height:1000}});
    try{
+    context.setDefaultTimeout(12000);
     const slug="service-ui-"+activity;
     const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
     expect(created.status(),await created.text()).toBe(201);
