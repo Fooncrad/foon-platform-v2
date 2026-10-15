@@ -37,7 +37,7 @@ function invoiceMinor(invoice:{data:Record<string,unknown>},serviceData:Record<s
 type Input={tenantId:string;userId:string;invoiceId:string;customerEmail:string;appUrl:string};
 export async function startServiceInvoiceSandboxCheckout(pool:Pool,input:Input,fetcher?:typeof fetch){
  const origin=secureOrigin(input.appUrl);
- if(typeof input.customerEmail!=="string"||input.customerEmail.length>254||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input.customerEmail))refuse("CHECKOUT_CUSTOMER_EMAIL_REQUIRED",400);
+ if(typeof input.customerEmail!=="string"||input.customerEmail.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.customerEmail))refuse("CHECKOUT_CUSTOMER_EMAIL_REQUIRED",400);
  let request:TapCheckoutInput|undefined;
  let checkoutId="",scope="",amountMinor=0,currency="",branchId:string|null=null,payloadHash="";
  const db=await pool.getConnection();
@@ -57,7 +57,7 @@ export async function startServiceInvoiceSandboxCheckout(pool:Pool,input:Input,f
   scope=String(setting.scope_key);currency=String(setting.currency);
   amountMinor=invoiceMinor(invoice,parse(service.data),currency);
   const credentials=decryptPaymentCredentials(String(setting.credentials_ciphertext),{tenantId:input.tenantId,scope,provider:"tap",mode:"test"});
-  if(typeof credentials.secret_key!=="string"||!credentials.secret_key.startsWith("sk_test_")||/[\\r\\n]/.test(credentials.secret_key))refuse("PAYMENT_SETUP_INCOMPLETE");
+  if(typeof credentials.secret_key!=="string"||!credentials.secret_key.startsWith("sk_test_")||/[\r\n]/.test(credentials.secret_key))refuse("PAYMENT_SETUP_INCOMPLETE");
   const [existing]=await db.execute<RowDataPacket[]>("SELECT *,TIMESTAMPDIFF(SECOND,created_at,NOW()) AS age_seconds FROM tenant_service_invoice_checkouts WHERE tenant_id=? AND invoice_id=? AND mode='test' FOR UPDATE",[input.tenantId,input.invoiceId]);
   const checkout=existing[0];checkoutId=checkout?String(checkout.id):randomUUID();
   const customerName=String(parse(service.data).customerName??"").trim();
