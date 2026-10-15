@@ -20,7 +20,7 @@ const orderUi={
 } as const;
 export default function OrderWorkspace({tenantId,module,branch,branches,role,onChanged,dining=true}:{dining?:boolean;tenantId:string;module:string;branch:string;branches:{id:string;name:string}[];role:string;onChanged:()=>void}){
  const locale=resolvePrintLocale(typeof document==="undefined"?"ar":document.documentElement.lang);
- const labels=dining?printLocales[locale]:{...printLocales[locale],preparing:locale==="en"?"Being fulfilled":locale==="fr"?"En traitement":"قيد التجهيز",takeaway:locale==="en"?"Collection":locale==="fr"?"Retrait":"استلام",ticket:locale==="en"?"Work ticket":locale==="fr"?"Bon de travail":"تذكرة تشغيل"};
+ const labels=dining?printLocales[locale]:{...printLocales[locale],preparing:locale==="en"?"Being fulfilled":locale==="fr"?"En traitement":"قيد التجهيز",takeaway:locale==="en"?"Collection":locale==="fr"?"Retrait":"استلام",ticket:locale==="en"?"Work ticket":locale==="fr"?"Bon de travail":"تذكرة تشغيل",kitchenNote:locale==="en"?"Operations ticket — not a tax invoice.":locale==="fr"?"Bon de travail — pas une facture fiscale.":"تذكرة تشغيل — ليست فاتورة ضريبية."};
  const ui=dining?orderUi[locale]:{...orderUi[locale],subtitle:locale==="en"?"Sales orders · automatically refreshed every 15 seconds":locale==="fr"?"Commandes de vente · actualisation toutes les 15 secondes":"طلبات البيع · تحديث تلقائي كل 15 ثانية",order:locale==="en"?"Sales order":locale==="fr"?"Commande de vente":"طلب بيع",noMenu:locale==="en"?"No sale items available.":locale==="fr"?"Aucun article disponible à la vente.":"لا توجد أصناف متاحة للبيع.",guest:locale==="en"?"Customer":locale==="fr"?"Client":"عميل"};
  const [orders,setOrders]=useState<Order[]>([]),[menu,setMenu]=useState<{id:string;name:string;status:string;data:{price:number;categoryName?:string;category_name?:string}}[]>([]),[tables,setTables]=useState<{id:string;name:string;status:string;data:{capacity:number;sectionId?:string}}[]>([]),[cart,setCart]=useState<Record<string,CartLine>>({}),[filter,setFilter]=useState("all"),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[orderBranch,setOrderBranch]=useState(branch||branches[0]?.id||"");
  const [options,setOptions]=useState<Record<string,MenuGroup[]>>({});
@@ -107,7 +107,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   if(finalInvoice&&order.customer_name)line(t.customer,order.customer_name);
   el("h2",t.items);
   for(const item of order.items)line(item.name,"× "+item.quantity);
-  if(!finalInvoice)for(const note of kitchenTicketNotes(order,locale))line(note.label,note.value);
+  if(!finalInvoice){const notes=dining?kitchenTicketNotes(order,locale):[{label:locale==="en"?"Fulfilment instructions":locale==="fr"?"Instructions de traitement":"تعليمات التجهيز",value:order.kitchen_notes},{label:locale==="en"?"Order notes":locale==="fr"?"Notes de commande":"ملاحظات الطلب",value:order.order_notes}];for(const note of notes)if(note.value)line(note.label,note.value);}
   if(finalInvoice)line(t.paidAmount,Number(order.total??0).toFixed(2)+" "+(order.currency??"SAR"),"total");
   el("div",finalInvoice?t.notTaxInvoice:t.kitchenNote,"note");
   const controls=doc.createElement("div");controls.className="controls";
