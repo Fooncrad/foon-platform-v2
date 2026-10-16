@@ -11,6 +11,10 @@ test("watches are a separate retail activity with a watch storefront and no dini
  for(const capability of ["tables","reservations","waiter","kitchen","waitlist"])assert.ok(!defaultActivityModules("watches").includes(capability));
  assert.ok(!isTemplateForActivity("watches","sufra"));
 });
+test("adding watches preserves the accessories storefront choices and default",()=>{
+ assert.deepEqual(ACTIVITY_TEMPLATES.accessories,["accessories-grid","watch-showcase"]);
+ assert.equal(defaultTemplateForActivity("accessories"),"accessories-grid");
+});
 test("every registered activity has a storefront template",()=>{
  assert.equal(activities.length,15);
  assert.deepEqual(Object.keys(ACTIVITY_TEMPLATES).sort(),activities.slice().sort());
