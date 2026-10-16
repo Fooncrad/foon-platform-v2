@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {calculateTax,calculateOrderTax} from '../lib/restaurant/tax-calculation.ts';
 import {majorToMinor} from '../lib/payments/webhook-verification.mjs';
+import {validateResource} from './restaurant-resource-schema.mjs';
 
 const minor=value=>Math.round(value*100);
 
@@ -67,4 +68,28 @@ test('accepts exact halalas despite binary floating point noise',()=>{
 
 test('rejects unsafe integer minor amounts',()=>{
  assert.throws(()=>calculateTax(Number.MAX_SAFE_INTEGER,15),RangeError);
+});
+
+// Pure contract coverage: this does not persist an order or settle a payment.
+test('discounted VAT previews survive invoice validation with the exact SAR checkout amount',()=>{
+ const cases=[
+  {subtotal:100,discount:10,inclusive:false,net:90,tax:13.5,gross:103.5,fee:2.25,checkout:10575},
+  {subtotal:115,discount:15,inclusive:true,net:86.96,tax:13.04,gross:100,fee:0,checkout:10000},
+  {subtotal:0.04,discount:0,inclusive:false,net:0.04,tax:0.01,gross:0.05,fee:0.01,checkout:6},
+  {subtotal:0.3,discount:0.1+0.2,inclusive:true,net:0,tax:0,gross:0,fee:0,checkout:0}
+ ];
+ for(const c of cases){
+  const preview=calculateOrderTax(c.subtotal,c.discount,15,c.inclusive);
+  assert.deepEqual(preview,{net:c.net,tax:c.tax,gross:c.gross});
+  for(const resourceModule of ['customerInvoices','internalInvoices']){
+   const invoice=validateResource(resourceModule,{
+    name:'VAT checkout contract',status:'draft',
+    data:{invoiceNumber:'CONTRACT-ONLY',subtotal:preview.net,taxAmount:preview.tax,serviceFee:c.fee}
+   }).data;
+   const invoiceMinor=['subtotal','taxAmount','serviceFee']
+    .reduce((sum,key)=>sum+majorToMinor(String(invoice[key]),'SAR'),0);
+   assert.equal(invoiceMinor,c.checkout,`${resourceModule}: net + VAT + fee must equal checkout`);
+   assert.equal(majorToMinor((invoice.subtotal+invoice.taxAmount+invoice.serviceFee).toFixed(2),'SAR'),c.checkout);
+  }
+ }
 });
