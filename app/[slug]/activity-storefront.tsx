@@ -1,4 +1,5 @@
 import Link from "next/link";
+import StorefrontQr from "./storefront-qr";
 import StorefrontCart,{StorefrontAddButton} from "./storefront-cart";
 import {customerCartAvailable,customerCheckout} from "@/lib/platform/customer-checkout";
 import StorefrontLanguageSwitcher from "./storefront-language-switcher";
@@ -46,7 +47,7 @@ export default function ActivityStorefront({name,slug,activity,template,signedIn
  return <main className={"foonActivityStorefront foonActivityStorefront-"+layout} data-activity={isActivityType(activity)?activity:"unknown"} data-template={chosen??"unassigned"} dir={language==="ar"?"rtl":"ltr"} lang={language} style={{minHeight:"100vh",background:"#f8fafc",color:"#172033",fontFamily:"inherit",["--activity-accent" as string]:accent}}>
   <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",padding:"18px clamp(16px,4vw,64px)",background:"#fff",borderBottom:"1px solid #e2e8f0"}}>
    <Link href={"/"+encodeURIComponent(slug)} style={{fontWeight:800,color:"inherit",textDecoration:"none"}}>{name}</Link>
-   <nav aria-label={t.shop} style={{display:"flex",gap:18,alignItems:"center",flexWrap:"wrap"}}><StorefrontLanguageSwitcher language={language}/><Link href={"/"+encodeURIComponent(slug)+"/login"}>{t.account}</Link><Link href={"/"+encodeURIComponent(slug)+"/register"}>{t.register}</Link></nav>
+   <nav aria-label={t.shop} style={{display:"flex",gap:18,alignItems:"center",flexWrap:"wrap"}}><StorefrontQr slug={slug} name={name} language={language}/><StorefrontLanguageSwitcher language={language}/><Link href={"/"+encodeURIComponent(slug)+"/login"}>{t.account}</Link><Link href={"/"+encodeURIComponent(slug)+"/register"}>{t.register}</Link></nav>
   </header>
   <section className="foonActivityHero">
    <p style={{fontSize:14,letterSpacing:1,margin:0}}>{title}</p>

@@ -11,3 +11,6 @@
 .manager :global(.foonCatalogRow)>span:first-child { font-size:1.1rem; font-weight:700; }
 .manager dialog form { grid-template-columns:1fr; }
 .manager :is(button,input,select,textarea):focus-visible { outline:3px solid #b88732; outline-offset:2px; }
+
+.manager fieldset { min-width:0; max-width:100%; display:grid; gap:12px; border:1px solid var(--border,#d9e2ee); border-radius:12px; padding:12px; }
+.manager fieldset :is(input,textarea) { width:100%; max-width:100%; box-sizing:border-box; }

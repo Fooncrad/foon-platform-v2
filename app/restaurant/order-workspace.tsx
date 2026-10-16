@@ -11,7 +11,7 @@ import {kitchenTicketNotes} from "@/lib/restaurant/print-notes";
 import {queuePosOrder,retryReviewedPosOrder,pendingPosOrders,removePosOrder,markPosOrder,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import MenuChoices,{cartKey,choicePrice,choicesValid,type CartLine} from "./menu-choices";
-type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;version:number;channel:string;table_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;kitchen_notes?:string|null;order_notes?:string|null;created_at:string;items:{name:string;quantity:number}[]};
+type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;subtotal:number|null;discount:number|null;version:number;channel:string;table_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;kitchen_notes?:string|null;order_notes?:string|null;created_at:string;items:{name:string;quantity:number;price:number|null;line_total:number|null}[]};
 const statuses:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي"};
 const channels:Record<string,string>={dine_in:"داخل المطعم",takeaway:"سفري",delivery:"توصيل",pickup:"نقطة استلام",room_service:"خدمة الغرف",hotel_service:"خدمة الفندق",reservation:"حجز مع طلب",preorder:"طلب مسبق"};
 const payments:Record<string,string>={paid:"مدفوع",unpaid:"غير مدفوع",refunded:"تم رد المبلغ"};
@@ -114,7 +114,17 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   if(order.party_size)line(t.guests,String(order.party_size));
   if(finalInvoice&&order.customer_name)line(t.customer,order.customer_name);
   el("h2",t.items);
-  for(const item of order.items)line(item.name,"× "+item.quantity);
+  for(const item of order.items){
+   line(item.name,"× "+item.quantity);
+   if(finalInvoice&&item.price!==null&&item.line_total!==null)line(
+    (locale==="ar"?"سعر الوحدة":locale==="en"?"Unit price":"Prix unitaire")+" "+Number(item.price).toFixed(2),
+    Number(item.line_total).toFixed(2)+" "+(order.currency??"SAR"));
+  }
+  if(finalInvoice){
+   const money=(value:number)=>Number(value).toFixed(2)+" "+(order.currency??"SAR");
+   if(order.subtotal!==null)line(locale==="ar"?"المجموع قبل الخصم":locale==="en"?"Subtotal before discount":"Sous-total avant remise",money(order.subtotal));
+   if(order.discount!==null&&order.discount>0)line(locale==="ar"?"الخصم":locale==="en"?"Discount":"Remise","− "+money(order.discount));
+  }
   if(!finalInvoice){const notes=dining?kitchenTicketNotes(order,locale):[{label:locale==="en"?"Fulfilment instructions":locale==="fr"?"Instructions de traitement":translateUi("تعليمات التجهيز"),value:order.kitchen_notes},{label:locale==="en"?"Order notes":locale==="fr"?"Notes de commande":translateUi("ملاحظات الطلب"),value:order.order_notes}];for(const note of notes)if(note.value)line(note.label,note.value);}
   if(finalInvoice)line(t.paidAmount,Number(order.total??0).toFixed(2)+" "+(order.currency??"SAR"),"total");
   el("div",finalInvoice?t.notTaxInvoice:t.kitchenNote,"note");
