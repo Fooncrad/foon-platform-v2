@@ -102,8 +102,8 @@ test('fractional VAT order totals match both invoice schemas and SAR payment min
    for(const discountMinor of new Set([0,Math.floor(subtotalMinor/3),subtotalMinor])){
     const {net,tax,gross}=calculateOrderTax(subtotalMinor/100,discountMinor/100,rate,inclusive);
     assert.equal(toMinor(inclusive?gross:net),subtotalMinor-discountMinor);
-    for(const feeMinor of [0,1,225])for(const module of ['customerInvoices','internalInvoices']){
-     const invoice=validateResource(module,{
+    for(const feeMinor of [0,1,225])for(const invoiceModule of ['customerInvoices','internalInvoices']){
+     const invoice=validateResource(invoiceModule,{
       name:'Fractional VAT contract',status:'draft',
       data:{invoiceNumber:'TEST-ONLY',subtotal:net,taxAmount:tax,serviceFee:feeMinor/100}
      }).data;
