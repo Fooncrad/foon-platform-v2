@@ -492,3 +492,57 @@ test("dashboard currencies follow the store and each order in three languages",a
   }
  }finally{await db.end();await context.close();}
 });
+
+test('storefront carts support retail variants and laundry collection without leaving checkout',async({browser})=>{
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ const merchant=await browser.newContext(),customer=await browser.newContext({viewport:{width:320,height:900}});
+ merchant.setDefaultTimeout(15000);customer.setDefaultTimeout(15000);
+ merchant.setDefaultNavigationTimeout(20000);customer.setDefaultNavigationTimeout(20000);
+ try{
+  const create=async(activity)=>{
+   const slug='public-cart-'+activity+'-'+randomUUID().slice(0,8);
+   const r=await merchant.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Cart merchant',storeName:'Cart '+activity,slug,email:slug+'@test.example',password:'a-strong-test-password',activity,countryCode:'SA',currency:'SAR',region:'الرياض'}});
+   expect(r.status(),await r.text()).toBe(201);const owner=await r.json();
+   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
+   await db.execute("UPDATE tenant_business_profiles SET currency='USD' WHERE tenant_id=?",[owner.tenant.id]);
+   const headers={origin,'x-foon-tenant':owner.tenant.id};
+   const c=await merchant.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'category',name:'Cart category'}});expect(c.status()).toBe(201);
+   const p=await merchant.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'product',categoryId:(await c.json()).id,name:'Cart item '+activity,price:7.25}});expect(p.status()).toBe(201);const id=(await p.json()).id;
+   const u=await merchant.request.patch(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'product',id,stockQuantity:5}});expect(u.status()).toBe(200);
+   return{slug,id,owner};
+  };
+  const grocery=await create('grocery'),group=randomUUID(),option=randomUUID();
+  await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,required,min_select,max_select) VALUES (?,?,?,'Size',TRUE,1,1)",[group,grocery.owner.tenant.id,grocery.id]);
+  await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,price_delta,stock_quantity) VALUES (?,?,?,'Large',2.5,5)",[option,grocery.owner.tenant.id,group]);
+  const page=await customer.newPage();await page.goto(origin+'/'+grocery.slug);
+  await page.getByRole('button',{name:'إضافة إلى السلة',exact:true}).click();
+  const cart=page.locator('.foonStorefrontCart');await expect(cart.getByRole('button',{name:'تأكيد الإضافة',exact:true})).toBeDisabled();
+  await cart.getByRole('radio',{name:/Large/}).check();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();
+  await cart.getByLabel('الكمية',{exact:true}).fill('2');await expect(cart).toContainText('19.50 USD');await expect(cart).toContainText('Large');
+  for(const [language,title] of [['en','Shopping cart'],['fr','Panier'],['ar','سلة المشتريات']]){
+   await customer.addCookies([{name:'foon_language',value:language,url:origin}]);await page.goto(origin+'/'+grocery.slug+'?q=Cart');
+   await expect(page.getByRole('complementary',{name:title})).toBeVisible();await expect(cart).toContainText('19.50 USD');
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   const bounds=await cart.boundingBox();expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);
+  }
+  await cart.getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
+  const auth=cart.locator('.publicMenuInlineAuth form');await auth.getByLabel('الاسم',{exact:true}).fill('Cart customer');await auth.getByLabel('البريد الإلكتروني',{exact:true}).fill(randomUUID()+'@test.example');await auth.getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+  await auth.getByRole('button',{name:'متابعة الطلب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeVisible();await expect(cart).toContainText('19.50 USD');
+  const result=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
+  const response=await result;expect(response.status(),await response.text()).toBe(201);const order=await response.json();expect(order.total).toBe(19.5);expect(order.currency).toBe('USD');await expect(cart.getByRole('status')).toContainText('19.50 USD');
+  const [[stock]]=await db.execute('SELECT stock_quantity FROM catalog_products WHERE id=?',[grocery.id]);expect(Number(stock.stock_quantity)).toBe(3);
+  const [[optionStock]]=await db.execute('SELECT stock_quantity FROM catalog_option_values WHERE id=?',[option]);expect(Number(optionStock.stock_quantity)).toBe(3);
+  const [[payment]]=await db.execute('SELECT payment_status FROM restaurant_orders WHERE id=?',[order.id]);expect(payment.payment_status).toBe('unpaid');
+  const laundry=await create('laundry');await page.goto(origin+'/'+laundry.slug);await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await expect(cart.getByRole('heading',{name:/سلة الخدمات/})).toBeVisible();
+  await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByRole('button',{name:'متابعة بهذا الحساب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeDisabled();
+  await cart.getByLabel('رقم التواصل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await cart.getByLabel(/^عنوان الاستلام والتوصيل/).fill('Test street, building 12');
+  const laundryResult=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();const delivery=await laundryResult;expect(delivery.status(),await delivery.text()).toBe(201);
+  const [[saved]]=await db.execute('SELECT channel,order_notes FROM restaurant_orders WHERE id=?',[(await delivery.json()).id]);expect(saved.channel).toBe('delivery');expect(saved.order_notes).toContain('Test street, building 12');
+  await page.reload();await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');
+  await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await expect(cart.getByLabel(/^عنوان الاستلام والتوصيل/)).toHaveValue('Test street, building 12');
+  const stored=await page.evaluate(()=>Object.keys(sessionStorage).filter(k=>k.startsWith('foon-public-cart:')).map(k=>sessionStorage.getItem(k)).join(' '));expect(stored).not.toContain('Test street');expect(stored).not.toContain('0500004321');
+  await db.execute("UPDATE tenant_subscriptions SET status='cancelled' WHERE tenant_id=?",[grocery.owner.tenant.id]);await page.goto(origin+'/'+grocery.slug);await expect(page.locator('.foonStorefrontCart')).toHaveCount(0);await expect(page.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toHaveCount(0);
+  const unavailable=await customer.request.get(origin+'/api/customer/cart?store='+grocery.slug+'&product='+grocery.id);expect(unavailable.status()).toBe(403);
+  const carwash=await create('carwash');await page.goto(origin+'/'+carwash.slug);await expect(page.locator('.foonStorefrontCart')).toHaveCount(0);await expect(page.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toHaveCount(0);
+ }catch(error){console.error('Customer cart browser failure:',error);throw error;}finally{await db.end();await Promise.all([merchant.close(),customer.close()]);}
+});

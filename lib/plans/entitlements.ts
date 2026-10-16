@@ -1,10 +1,10 @@
-import type { RowDataPacket } from "mysql2/promise";
+import type { PoolConnection,RowDataPacket } from "mysql2/promise";
 import { database } from "@/lib/db/mysql";
 import {passesServerActivityRestriction} from "@/lib/platform/activity-plan-entitlements";
 export type Entitlement={enabled:boolean;limit:number|null;reason:"ACTIVE"|"NOT_GRANTED"|"NO_ACTIVE_SUBSCRIPTION"|"UNSUPPORTED_ACTIVITY"};
 /** Fail closed: no active subscription means no paid feature grants. */
-export async function tenantEntitlement(tenantId:string,featureKey:string):Promise<Entitlement>{
- const [rows]=await database().execute<RowDataPacket[]>(
+export async function tenantEntitlement(tenantId:string,featureKey:string,connection:Pick<PoolConnection,"execute">=database()):Promise<Entitlement>{
+ const [rows]=await connection.execute<RowDataPacket[]>(
   "SELECT p.code AS plan_code,pf.enabled,pf.limit_value,business.activity_code FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id AND p.enabled=TRUE JOIN package_features f ON f.feature_key=? LEFT JOIN package_plan_features pf ON pf.plan_id=p.id AND pf.feature_key=f.feature_key LEFT JOIN tenant_business_profiles business ON business.tenant_id=s.tenant_id WHERE s.tenant_id=? AND s.status='active' AND (s.starts_at IS NULL OR s.starts_at<=NOW()) AND (s.ends_at IS NULL OR s.ends_at>NOW()) LIMIT 1",
   [featureKey,tenantId]);
  if(!rows.length)return {enabled:false,limit:null,reason:"NO_ACTIVE_SUBSCRIPTION"};

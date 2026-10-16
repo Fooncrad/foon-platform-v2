@@ -68,7 +68,7 @@ export type MenuGroup={id:string;name:string;type:string;required:boolean;min:nu
 export async function menuOptions(db:PoolConnection,tenantId:string,itemIds:string[]){
  const result:Record<string,MenuGroup[]>={};
  if(!itemIds.length)return result;
- if(!(await tenantEntitlement(tenantId,"variants")).enabled)return result;
+ if(!(await tenantEntitlement(tenantId,"variants",db)).enabled)return result;
  const [groups]=await db.execute<RowDataPacket[]>("SELECT id,item_id,name,selection_type,required,min_select,max_select FROM restaurant_menu_option_groups WHERE tenant_id=? AND enabled=TRUE AND item_id IN ("+itemIds.map(()=>"?").join(",")+") ORDER BY sort_order,id",[tenantId,...itemIds]);
  if(!groups.length)return result;
  const [values]=await db.execute<RowDataPacket[]>("SELECT id,group_id,name,price_delta FROM restaurant_menu_option_values WHERE tenant_id=? AND enabled=TRUE AND group_id IN ("+groups.map(()=>"?").join(",")+") ORDER BY sort_order,id",[tenantId,...groups.map(g=>g.id)]);
