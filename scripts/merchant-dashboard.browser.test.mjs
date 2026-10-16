@@ -2,6 +2,13 @@ import {test,expect} from "@playwright/test";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 import {randomUUID} from "node:crypto";
+// Screenshot artifacts are optional; all functional and layout assertions still run.
+// Default behavior retains visual captures. Set FOON_BROWSER_SCREENSHOTS=0 only
+// when the local browser cannot capture images; report visual QA separately.
+async function captureScreenshot(target,options){
+ if(process.env.FOON_BROWSER_SCREENSHOTS==="0")return;
+ await target.screenshot(options);
+}
 let server;
 const origin="http://localhost:3102";
 test.beforeAll(async()=>{
@@ -28,7 +35,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByText("لا توجد طلبات نشطة الآن",{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.evaluate(()=>window.scrollTo(0,0));
- await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
+ await captureScreenshot(page,{path:"work/merchant-desktop.png",fullPage:true});
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"الباقة والمميزات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"اشتراك المطعم",exact:true})).toBeVisible();
  await page.keyboard.press("Control+k");
@@ -86,7 +93,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const afterReplay=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});expect((await afterReplay.json()).orders).toHaveLength(2);
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 SAR",{exact:true})).toBeVisible();
- await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
+ await captureScreenshot(page,{path:"work/merchant-desktop.png",fullPage:true});
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
  await page.getByRole("button",{name:"القوالب والمظهر",exact:true}).click();
  const menuResponse=await page.request.get(origin+"/api/restaurant/operations/menu",{headers:{"x-foon-tenant":visualTenant.tenant}});
@@ -125,23 +132,23 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await publicPage.getByRole("button",{name:"إضافة قهوة المعاينة إلى السلة",exact:true}).click();
   await expect(publicPage.getByLabel("كمية قهوة المعاينة",{exact:true})).toHaveValue("1");
   await publicPage.evaluate(()=>window.scrollTo(0,0));
-  await publicPage.screenshot({path:"work/menu-"+template+"-desktop.png",fullPage:true});
+  await captureScreenshot(publicPage,{path:"work/menu-"+template+"-desktop.png",fullPage:true});
   expect(await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>nodes.every(n=>{const c=n.getBoundingClientRect(),p=n.querySelector('.publicMenuProductPrice strong').getBoundingClientRect(),b=n.querySelector('.publicMenuCardCart').getBoundingClientRect();return p.left>=c.left-1&&p.right<=c.right+1&&!(p.left<b.right&&p.right>b.left&&p.top<b.bottom&&p.bottom>b.top)}))).toBeTruthy();
   await publicPage.setViewportSize({width:390,height:844});
   await mobileDock.getByRole('button',{name:/السلة/}).click();await expect(publicPage.getByLabel('كمية قهوة المعاينة',{exact:true})).toBeInViewport();
   expect(await mobileDock.evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>=0&&r.left>=0&&r.right<=innerWidth})).toBeTruthy();
   await mobileDock.getByRole('link',{name:'القائمة',exact:true}).click();
   expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
-  await publicPage.screenshot({path:"work/menu-"+template+"-mobile.png",fullPage:true});
+  await captureScreenshot(publicPage,{path:"work/menu-"+template+"-mobile.png",fullPage:true});
   const gridBounds=await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>nodes.slice(0,4).map(n=>{const r=n.getBoundingClientRect();return {top:r.top,width:r.width}}));expect(gridBounds.length).toBe(4);expect(Math.max(...gridBounds.map(r=>r.top))-Math.min(...gridBounds.map(r=>r.top)),JSON.stringify(gridBounds)).toBeLessThan(2);expect(gridBounds.every(r=>r.width>55&&r.width<100)).toBeTruthy();
   const coffeeCard=publicPage.locator('.publicMenuItem').filter({has:publicPage.getByRole('heading',{name:'قهوة المعاينة',exact:true})});await expect(coffeeCard.getByRole('img',{name:'قهوة المعاينة',exact:true})).toHaveJSProperty('naturalWidth',1);await expect(coffeeCard.locator('del')).toContainText('14.00');await expect(coffeeCard.locator('.publicMenuProductPrice strong')).toContainText('10.00');expect(await coffeeCard.locator('p').evaluate(n=>n.scrollHeight>n.clientHeight)).toBeTruthy();
-  await publicPage.screenshot({path:"work/menu-"+template+"-mobile.png",fullPage:true});
+  await captureScreenshot(publicPage,{path:"work/menu-"+template+"-mobile.png",fullPage:true});
  }
  await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>Math.max(...nodes.slice(0,4).map(n=>n.getBoundingClientRect().top))-Math.min(...nodes.slice(0,4).map(n=>n.getBoundingClientRect().top)))).toBeLessThan(2);
  expect(await publicPage.locator('.publicMenuMobileDock').evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>=0&&r.left>=0&&r.right<=innerWidth})).toBeTruthy();
  await publicPage.setViewportSize({width:390,height:844});
  await publicPage.getByRole('button',{name:'تفاصيل قهوة المعاينة',exact:true}).click();const details=publicPage.getByRole('dialog',{name:'قهوة المعاينة',exact:true});await expect(details).toBeVisible();await expect(details.getByText(fullDescription,{exact:true})).toBeVisible();await expect(details.getByText('مسببات الحساسية',{exact:true})).toBeVisible();await expect(details.getByText('بروتين 3 غرام · كربوهيدرات 10 غرام',{exact:true})).toBeVisible();await expect(details.getByText('120 kcal',{exact:true})).toBeVisible();await expect(details.locator('del')).toContainText('14.00');
- await details.getByRole('button',{name:'الصورة 4',exact:true}).click();await expect(details.getByRole('button',{name:'الصورة 4',exact:true})).toHaveAttribute('aria-pressed','true');await expect(details.locator('.publicMenuProductPhoto img')).not.toHaveAttribute('src',imageUrls[0]);await details.screenshot({path:'work/menu-product-details-mobile.png'});
+ await details.getByRole('button',{name:'الصورة 4',exact:true}).click();await expect(details.getByRole('button',{name:'الصورة 4',exact:true})).toHaveAttribute('aria-pressed','true');await expect(details.locator('.publicMenuProductPhoto img')).not.toHaveAttribute('src',imageUrls[0]);await captureScreenshot(details,{path:'work/menu-product-details-mobile.png'});
  await details.press('Escape');await expect(details).toHaveCount(0);await expect(publicPage.getByRole('button',{name:'تفاصيل قهوة المعاينة',exact:true})).toBeFocused();
  await publicPage.getByRole('button',{name:'إضافة لاتيه الشوفان إلى السلة',exact:true}).click();const latteDetails=publicPage.getByRole('dialog',{name:'لاتيه الشوفان',exact:true});await expect(latteDetails.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toBeDisabled();await latteDetails.getByLabel('خيارات الحجم',{exact:true}).selectOption(largeOption);await expect(latteDetails.locator('.publicMenuProductPrice strong')).toContainText('20.00');await latteDetails.getByRole('button',{name:'إضافة إلى السلة',exact:true}).click();await expect(latteDetails).toHaveCount(0);await expect(publicPage.getByLabel('كمية لاتيه الشوفان',{exact:true})).toHaveValue('1');
  await publicPage.locator('.publicMenuCategoryTrigger').click();
@@ -155,7 +162,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole('button',{name:'إنشاء الدفعة',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('تم إنشاء 3 طاولة');
  const floors=await page.request.get(origin+'/api/restaurant/operations/sections',{headers:{'x-foon-tenant':visualTenant.tenant}});const familySection=(await floors.json()).resources.find(r=>r.name==='صالة العائلات').id;
- await page.screenshot({path:'work/merchant-dining-batch-desktop.png',fullPage:true});
+ await captureScreenshot(page,{path:'work/merchant-dining-batch-desktop.png',fullPage:true});
  const dining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة 7',branchId:visualTenant.branch,status:'available',data:{sectionId:familySection,number:7,capacity:4}}});expect(dining.status()).toBe(201);
  const tableId=(await dining.json()).id;
  const occupiedDining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة مشغولة 8',branchId:visualTenant.branch,status:'occupied',data:{sectionId:familySection,number:8,capacity:4}}});expect(occupiedDining.status()).toBe(201);
@@ -168,7 +175,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
  await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true})).toBeVisible();
- await publicPage.getByRole('dialog').screenshot({path:'work/menu-waiter-mobile.png'});
+ await captureScreenshot(publicPage.getByRole('dialog'),{path:'work/menu-waiter-mobile.png'});
  await publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true}).selectOption(occupiedTableId);
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
@@ -188,7 +195,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByLabel('رقم التواصل',{exact:true}).fill('0500000000');
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('ينتظر التأكيد');
- await publicPage.getByRole('dialog').screenshot({path:'work/menu-booking-mobile.png'});
+ await captureScreenshot(publicPage.getByRole('dialog'),{path:'work/menu-booking-mobile.png'});
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
  const calls=await page.request.get(origin+'/api/restaurant/operations/waiterCalls',{headers:{'x-foon-tenant':visualTenant.tenant}});expect((await calls.json()).resources.some(row=>row.data.tableId===occupiedTableId&&row.status==='pending')).toBeTruthy();
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطاولات',exact:true}).click();
@@ -205,7 +212,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
  await expect(page.getByRole('heading',{name:'تقويم الحجوزات',exact:true})).toBeVisible();
  await expect(page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'})).toBeVisible();
- await page.screenshot({path:'work/merchant-reservations-calendar-desktop.png',fullPage:true});
+ await captureScreenshot(page,{path:'work/merchant-reservations-calendar-desktop.png',fullPage:true});
  await page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'}).click();
  await expect(page.getByRole('dialog',{name:'تفاصيل الحجز'}).getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');
  await page.getByRole('dialog',{name:'تفاصيل الحجز'}).getByLabel('الحالة',{exact:true}).selectOption('confirmed');
@@ -215,17 +222,17 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const bookingDay=new Date(nextDay.getTime()+3*3600000).toISOString().slice(0,10);await page.getByRole('button',{name:'عرض حجوزات '+bookingDay,exact:true}).click();
  await page.getByRole('button',{name:'أسبوع',exact:true}).click();await expect(page.locator('.calendarGrid-week')).toBeVisible();
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await page.screenshot({path:'work/merchant-reservations-calendar-mobile.png',fullPage:true});
+ await captureScreenshot(page,{path:'work/merchant-reservations-calendar-mobile.png',fullPage:true});
  await page.getByRole('button',{name:'يوم',exact:true}).click();await expect(page.locator('.calendarGrid-day')).toBeVisible();
  await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('button',{name:'قائمة الحجوزات',exact:true}).click();
  const reservationCard=page.locator('.restaurantResourceList article').filter({hasText:'ضيف المعاينة'});await expect(reservationCard).toHaveAttribute('data-status','confirmed');await expect(reservationCard.locator('time')).toHaveAttribute('datetime',/\d{4}-\d{2}-\d{2}T/);await expect(reservationCard).toContainText('صالة العائلات');
- await page.screenshot({path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
- await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
+ await captureScreenshot(page,{path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await captureScreenshot(page,{path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
  await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
- await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await page.screenshot({path:'work/merchant-order-cards-desktop.png',fullPage:true});
- await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();const smallOrderActions=await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.map(n=>({label:(n.textContent||'').trim(),height:n.getBoundingClientRect().height,display:getComputedStyle(n).display,visibility:getComputedStyle(n).visibility})).filter(n=>n.height<44&&n.display!=='none'&&n.visibility!=='hidden'));expect(smallOrderActions,'Order buttons below 44px: '+JSON.stringify(smallOrderActions)).toEqual([]);await page.screenshot({path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
- await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await publicPage.screenshot({path:'work/menu-customer-orders-mobile.png',fullPage:true});
+ await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await captureScreenshot(page,{path:'work/merchant-order-cards-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();const smallOrderActions=await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.map(n=>({label:(n.textContent||'').trim(),height:n.getBoundingClientRect().height,display:getComputedStyle(n).display,visibility:getComputedStyle(n).visibility})).filter(n=>n.height<44&&n.display!=='none'&&n.visibility!=='hidden'));expect(smallOrderActions,'Order buttons below 44px: '+JSON.stringify(smallOrderActions)).toEqual([]);await captureScreenshot(page,{path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
+ await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await captureScreenshot(publicPage,{path:'work/menu-customer-orders-mobile.png',fullPage:true});
  await publicPage.goto(origin+'/visual-dashboard');
  await expect(publicPage.getByText(/المنيو محفوظ للتصفح دون اتصال/)).toBeVisible();
  await publicContext.setOffline(true);
@@ -236,7 +243,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.locator('#notice')).toContainText('للتصفح فقط');
  await expect(publicPage.locator('article').first()).toBeVisible();
  expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await publicPage.screenshot({path:'work/menu-offline-mobile.png',fullPage:true});
+ await captureScreenshot(publicPage,{path:'work/menu-offline-mobile.png',fullPage:true});
  await publicContext.setOffline(false);
  await publicPage.close();
  await publicContext.close();
@@ -272,13 +279,13 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-color-mode","light");
  const unchanged=await page.request.get(origin+"/api/restaurant/menu/appearance",{headers:{"x-foon-tenant":visualTenant.tenant}});expect((await unchanged.json()).colorMode).toBe("template");
  await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("template");
- await page.locator(".menuTemplateEditor").screenshot({path:"work/menu-studio-preview.png"});
+ await captureScreenshot(page.locator(".menuTemplateEditor"),{path:"work/menu-studio-preview.png"});
  await page.getByRole("button",{name:"إغلاق المعاينة",exact:true}).click();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await page.setViewportSize({width:390,height:844});
  await expect(page.getByRole("button",{name:"فتح قائمة النشاط",exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await page.screenshot({path:"work/merchant-mobile.png",fullPage:true});
+ await captureScreenshot(page,{path:"work/merchant-mobile.png",fullPage:true});
  await page.getByRole("button",{name:"فتح قائمة النشاط",exact:true}).click();
  await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
@@ -385,7 +392,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
        expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);
        expect(await row.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
        expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
-       await page.screenshot({path:'work/merchant-catalog-images-'+locale+'-320.png',fullPage:true});
+       await captureScreenshot(page,{path:'work/merchant-catalog-images-'+locale+'-320.png',fullPage:true});
       }
       await page.setViewportSize({width:1440,height:1000});
      }
@@ -439,13 +446,13 @@ test("all 15 activities expose their own tools; service orders work in three lan
     await form.getByRole('button',{name:'إغلاق',exact:true}).click();
     await page.setViewportSize({width:320,height:720});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
-    await page.screenshot({path:'work/merchant-service-orders-ar-mobile.png',fullPage:true});
+    await captureScreenshot(page,{path:'work/merchant-service-orders-ar-mobile.png',fullPage:true});
     for(const [language,title] of [["en","Service orders"],["fr","Ordres de service"]]){
      await page.locator('.restaurantLanguageSelector select').selectOption(language);
      await expect(workspace.getByRole('heading',{name:title,exact:true})).toBeVisible();
      await expect(workspace).toHaveAttribute('dir','ltr');
      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
-     await page.screenshot({path:'work/merchant-service-orders-'+language+'-mobile.png',fullPage:true});
+     await captureScreenshot(page,{path:'work/merchant-service-orders-'+language+'-mobile.png',fullPage:true});
     }
    }finally{await context.close();}
   }
