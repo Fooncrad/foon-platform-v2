@@ -1,12 +1,13 @@
 "use client";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
 import { FormEvent,useEffect,useState } from "react";
 import {useRouter} from "next/navigation";
 type Tenant={id:string;name:string;slug:string;kind:string;status:string;plan_name?:string|null;subscription_status?:string|null};
 async function api(url:string,init:RequestInit){const response=await fetch(url,init);const body=await response.json().catch(()=>({}));if(!response.ok||!body.ok)throw new Error(String(body.code??"HTTP_"+response.status));return body;}
 export default function TenantManager({initial,canManage,canAccessAll}:{initial:Tenant[];canManage:boolean;canAccessAll:boolean}){
  const router=useRouter();
- const [language,setLanguage]=useState<"ar"|"en"|"fr">("ar");
- useEffect(()=>{const sync=()=>{const saved=window.localStorage.getItem("foon-language");setLanguage(saved==="en"||saved==="fr"?saved:"ar");};sync();window.addEventListener("foon:language-change",sync);return()=>window.removeEventListener("foon:language-change",sync);},[]);
+ const language=useUiLanguage();
+
  const tr=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
  const [items,setItems]=useState(initial),[message,setMessage]=useState(""),[busy,setBusy]=useState("");
  const [source,setSource]=useState(initial);

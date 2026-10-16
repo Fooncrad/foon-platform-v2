@@ -1,3 +1,4 @@
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
@@ -33,6 +34,6 @@ export async function POST(request:Request){
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
-  await db.commit();return NextResponse.json({ok:true,...result},{status:201});
+  await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
  }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"?403:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }

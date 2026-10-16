@@ -1,3 +1,4 @@
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
@@ -17,7 +18,7 @@ export async function PATCH(req:Request){
  if(!body||typeof body.id!=="string"||!/^[0-9a-f-]{36}$/i.test(body.id))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
  try{await db.beginTransaction();const [rows]=await db.execute<RowDataPacket[]>("SELECT status FROM platform_notification_outbox WHERE id=? FOR UPDATE",[body.id]);if(!rows.length||rows[0].status!=="failed"){await db.rollback();return NextResponse.json({ok:false,code:"NOT_RETRYABLE"},{status:409});}
- await db.execute("UPDATE platform_notification_outbox SET status='pending',next_attempt_at=NOW(),last_error=NULL WHERE id=?",[body.id]);
- await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,'notification.retry','outbox',?)",[auth.id,body.id]);await db.commit();return NextResponse.json({ok:true});
+ await db.execute("UPDATE platform_notification_outbox SET status='pending',attempts=0,next_attempt_at=NOW(),last_error=NULL WHERE id=?",[body.id]);
+ await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,'notification.retry','outbox',?)",[auth.id,body.id]);await db.commit();dispatchNotifications();return NextResponse.json({ok:true});
  }catch{await db.rollback();return NextResponse.json({ok:false,code:"RETRY_FAILED"},{status:503});}finally{db.release();}
 }

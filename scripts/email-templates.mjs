@@ -18,10 +18,11 @@ export function renderEmailTemplate(template,variables) {
  const replace=value=>value.replace(/{{\s*([^}]+?)\s*}}/g,(_,key)=>String(variables[key]??""));
  const subject=replace(template.subject_template).replace(/[\r\n]/g," ").slice(0,250);
  const text=replace(template.body_template)+"\n\nFOON · info@nfoodz.com";
- const html='<!doctype html><html lang="ar" dir="rtl"><body style="margin:0;background:#f4f5f7;font-family:Arial,sans-serif;line-height:1.8;color:#172033"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px"><table role="presentation" style="max-width:600px;width:100%;background:white;border-radius:16px"><tr><td style="padding:28px;border-bottom:3px solid #e76f3c"><strong style="font-size:26px">FOON</strong><p>'+escapeHtml(variables.tenant_name||"منصة FOON")+'</p></td></tr><tr><td style="padding:28px"><h1 style="font-size:21px">'+escapeHtml(subject)+'</h1><div style="white-space:pre-line">'+escapeHtml(text)+'</div></td></tr></table></td></tr></table></body></html>';
+ const language=variables.language==='en'||variables.language==='fr'?variables.language:'ar';
+ const html='<!doctype html><html lang="'+language+'" dir="'+(language==='ar'?'rtl':'ltr')+'"><body style="margin:0;background:#f4f5f7;font-family:Arial,sans-serif;line-height:1.8;color:#172033"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px"><table role="presentation" style="max-width:600px;width:100%;background:white;border-radius:16px"><tr><td style="padding:28px;border-bottom:3px solid #e76f3c"><strong style="font-size:26px">FOON</strong><p>'+escapeHtml(variables.tenant_name||"منصة FOON")+'</p></td></tr><tr><td style="padding:28px"><h1 style="font-size:21px">'+escapeHtml(subject)+'</h1><div style="white-space:pre-line">'+escapeHtml(text)+'</div></td></tr></table></td></tr></table></body></html>';
  return {subject,text,html};
 }
 export function renderQueuedEmail(job,templates=defaultEmailTemplates) {
- const template=templates.find(t=>t.template_key===job.event_key)||{template_key:"subscription_renewal",subject_template:"{{subject}}",body_template:"{{message}}"};
- return renderEmailTemplate(template,{subject:job.subject,message:job.body_text,tenant_name:job.tenant_name||"منشأتكم"});
+ const template=(job.language!=="en"&&job.language!=="fr"?templates.find(t=>t.template_key===job.event_key):null)||{template_key:"subscription_renewal",subject_template:"{{subject}}",body_template:"{{message}}"};
+ return renderEmailTemplate(template,{subject:job.subject,message:job.body_text,tenant_name:job.tenant_name||"FOON",language:job.language});
 }

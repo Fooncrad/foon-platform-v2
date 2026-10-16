@@ -25,8 +25,9 @@ export async function GET(){
    reservationsAvailable=false;
    console.error("CUSTOMER_RESERVATION_REVISION_UNAVAILABLE",error);
   }
-  const revision=createHash("sha256").update(JSON.stringify({orders:rows.map(row=>[row.id,row.status,row.payment_status,String(row.total),String(row.updated_at)]),reservations:reservations.map(row=>[row.id,row.status,row.version])})).digest("hex");
-  return NextResponse.json({revision,reservationsAvailable},{headers:{"Cache-Control":"no-store, private"}});
+  const [notifications]=await database().execute<RowDataPacket[]>("SELECT id,read_at FROM customer_notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 30",[userId]);
+  const revision=createHash("sha256").update(JSON.stringify({notifications:notifications.map(n=>[n.id,n.read_at]),orders:rows.map(row=>[row.id,row.status,row.payment_status,String(row.total),String(row.updated_at)]),reservations:reservations.map(row=>[row.id,row.status,row.version])})).digest("hex");
+  return NextResponse.json({revision,reservationsAvailable,notificationId:notifications[0]?.id??null,unread:notifications.filter(n=>!n.read_at).length},{headers:{"Cache-Control":"no-store, private"}});
  }catch{
   return NextResponse.json({code:"CUSTOMER_ACTIVITY_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});
  }

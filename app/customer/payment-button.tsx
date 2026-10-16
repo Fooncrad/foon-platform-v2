@@ -1,8 +1,10 @@
 "use client";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 export default function PaymentButton({orderId,completed=false}:{orderId:string;completed?:boolean}){
- const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[done,setDone]=useState(completed),[lang,setLang]=useState("ar");
- useEffect(()=>{const update=()=>setLang(localStorage.getItem("foon-language")??"ar");queueMicrotask(update);window.addEventListener("foon:language-change",update);return()=>window.removeEventListener("foon:language-change",update);},[]);
+ const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[done,setDone]=useState(completed);
+ const lang=useUiLanguage();
+
  const t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
  async function pay(){
   if(busy||done)return;setBusy(true);setMessage("");

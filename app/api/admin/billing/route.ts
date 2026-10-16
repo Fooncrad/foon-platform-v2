@@ -1,3 +1,5 @@
+import {notificationCopy} from "@/scripts/customer-notification-copy.mjs";
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -34,11 +36,11 @@ export async function PATCH(request:Request){
  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,?,?,?)",[a.user,"platform.payment."+b.status,"payment_request",b.id]);
  if(b.status==="approved"){
  const [rule]=await db.execute<RowDataPacket[]>("SELECT enabled,email_enabled FROM platform_notification_rules WHERE event_key='subscription_renewal' LIMIT 1");
- if(rule[0]?.enabled&&rule[0]?.email_enabled){
- const [owners]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email FROM memberships m INNER JOIN users u ON u.id=m.user_id WHERE m.tenant_id=? AND m.role='owner' AND m.status='active' AND u.status='active' AND u.email_verified_at IS NOT NULL",[rows[0].tenant_id]);
- for(const owner of owners)await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'subscription_renewal',?,?,?,?)",[randomUUID(),rows[0].tenant_id,owner.email,"تأكيد تجديد اشتراك FOON","تم اعتماد طلب الدفع وتحديث اشتراك منشأتك. مرجع الطلب: "+b.id]);
+ if(!rule[0]||rule[0].enabled&&rule[0].email_enabled){
+ const [owners]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email,u.default_locale FROM memberships m INNER JOIN users u ON u.id=m.user_id WHERE m.tenant_id=? AND m.role='owner' AND m.status='active' AND u.status='active'",[rows[0].tenant_id]);
+ for(const owner of owners){const copy=notificationCopy(String(owner.default_locale),"subscription_renewal",{reference:String(b.id)});await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'subscription_renewal',?,?,?,?)",[randomUUID(),rows[0].tenant_id,owner.email,copy.subject,copy.text]);}
  }
  }
- await db.commit();return NextResponse.json({ok:true});}
+ await db.commit();dispatchNotifications();return NextResponse.json({ok:true});}
  catch{await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_REVIEW_FAILED"},{status:503});}finally{db.release();}
 }

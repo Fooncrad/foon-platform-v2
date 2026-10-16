@@ -1,3 +1,4 @@
+import {UiLanguageProvider} from "@/lib/i18n/ui-language";
 import "./globals.css";
 import "./action-card-effects.css";
 import "./experience.css";
@@ -6,5 +7,5 @@ export const metadata={title:"FOON",description:"FOON multi-tenant commerce plat
 export default async function RootLayout({children}:{children:React.ReactNode}){
  const stored=(await cookies()).get("foon_language")?.value;
  const language=stored==="en"||stored==="fr"?stored:"ar";
- return <html lang={language} dir={language==="ar"?"rtl":"ltr"}><body>{children}</body></html>;
+ return <html lang={language} dir={language==="ar"?"rtl":"ltr"}><body><UiLanguageProvider language={language}>{children}</UiLanguageProvider></body></html>;
 }

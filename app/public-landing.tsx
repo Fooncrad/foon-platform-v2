@@ -1,4 +1,5 @@
 "use client";
+import {useLanguagePreference} from "@/lib/i18n/ui-language";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
 import Link from "next/link";
 import {useEffect} from "react";
@@ -12,9 +13,9 @@ const copy={
  fr:{market:"Explorer le marché",nav:"Fonctionnalités",how:"Comment ça marche",login:"Mon compte / Connexion",start:"Commencer gratuitement",badge:"Plateforme FOON",title:"Votre activité. Un seul espace.",lead:"De votre vitrine aux commandes, établissements et expériences clients — des outils connectés pour grandir.",explore:"Découvrir les fonctions",features:"Une plateforme. Plus de possibilités.",featuresText:"Un espace flexible pour les restaurants, commerces et services.",cards:[["Gestion unifiée","Gérez établissements, équipes et opérations au même endroit."],["Parcours client rapide","Une expérience mobile fluide pour découvrir et commander."],["Souplesse et sécurité","Des accès et autorisations organisés pour chaque activité."]],stepsTitle:"De l'inscription au lancement",steps:[["Créer un compte","Inscrivez-vous et configurez votre activité."],["Préparer votre boutique","Ajoutez vos informations, services et équipe."],["Démarrer","Partagez votre vitrine et accueillez vos clients."]],footer:"Une plateforme moderne pour les entreprises",customer:"Espace client",language:"Langue",theme:"Changer l’apparence"}
 } as const;
 export default function PublicLanding({pages,plans=[]}:{pages:PageLink[];plans?:Plan[]}){
- const [lang,setLang]=useSavedPreference<Language>("foon-public-lang",["ar","en","fr"],"ar");
+ const [lang,setLang]=useLanguagePreference();
  const [theme,setTheme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
- useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";return()=>{document.documentElement.lang="ar";document.documentElement.dir="rtl"}},[lang]);
+ useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";},[lang]);
  const t=copy[lang];
  const changeLanguage=(next:Language)=>{setLang(next);localStorage.setItem("foon-public-lang",next)};
  const toggleTheme=()=>{const next=theme==="light"?"dark":"light";setTheme(next);localStorage.setItem("foon-public-theme",next)};

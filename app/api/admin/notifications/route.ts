@@ -4,7 +4,7 @@ import {database} from "@/lib/db/mysql";
 import {currentActiveAdminUserId} from "@/lib/auth/session";
 import {requirePlatformRole} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
-const events=["order_received","order_confirmed","order_ready","order_cancelled","reservation_created","reservation_cancelled","waitlist_joined","waiter_called","subscription_renewal"] as const;
+const events=["account_welcome","order_completed","order_payment_paid","order_payment_refunded","reservation_confirmed","reservation_seated","reservation_completed","order_received","order_confirmed","order_ready","order_cancelled","reservation_created","reservation_cancelled","waitlist_joined","waiter_called","subscription_renewal"] as const;
 async function auth(write:boolean){const user=await currentActiveAdminUserId();if(!user)return {status:401,user:null};try{await requirePlatformRole(user,write?["super_admin","admin"]:["super_admin","admin","support"]);return {status:200,user};}catch{return {status:403,user:null};}}
 export async function GET(){
  const a=await auth(false);if(a.status!==200)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:a.status});

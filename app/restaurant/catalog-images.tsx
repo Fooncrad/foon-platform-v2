@@ -1,10 +1,12 @@
 "use client";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 type Picture={id:string;image_url:string};
 export default function CatalogImages({tenantId,product}:{tenantId:string;product:string}){
- const [open,setOpen]=useState(false),[images,setImages]=useState<Picture[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[lang,setLang]=useState("ar");
+ const [open,setOpen]=useState(false),[images,setImages]=useState<Picture[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
- useEffect(()=>{const update=()=>setLang(localStorage.getItem("foon-language")??"ar");queueMicrotask(update);window.addEventListener("foon:language-change",update);return()=>window.removeEventListener("foon:language-change",update);},[]);
+ const lang=useUiLanguage();
+
  async function refresh(){const r=await fetch("/api/restaurant/activity-catalog/images?product="+encodeURIComponent(product),{headers:{"x-foon-tenant":tenantId},cache:"no-store"});const d=await r.json();if(!r.ok||!Array.isArray(d.images))throw Error();setImages(d.images);}
  async function action(method:string,body:FormData|Record<string,unknown>){setBusy(true);setMessage("");try{
   const r=await fetch("/api/restaurant/activity-catalog/images",{method,headers:{"x-foon-tenant":tenantId,...(body instanceof FormData?{}:{"content-type":"application/json"})},body:body instanceof FormData?body:JSON.stringify({product,...body})});
