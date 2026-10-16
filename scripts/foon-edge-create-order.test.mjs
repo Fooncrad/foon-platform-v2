@@ -12,6 +12,7 @@ function fake(){
   if(sql.startsWith("SELECT u.id"))return [[{id:actorUserId}]];
   if(sql.startsWith("SELECT id FROM branches"))return [[{id:"branch-1"}]];
   if(sql.startsWith("SELECT mi.id"))return [[{id:itemId,name:"Coffee",price:"9.95",currency:"SAR"}]];
+  if(sql.startsWith("SELECT data FROM restaurant_resources"))return [[]];
   writes.push({sql,params});return [{affectedRows:1}];
  }};
  return {writes,connection};
@@ -75,4 +76,11 @@ test("rejects primitive and array cart entries before any SQL",async()=>{
   await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,items:[invalid]}},context),/EDGE_UNSUPPORTED_ITEM_FIELDS/);
  }
  assert.equal(writes.length,0);
+});
+
+test("configured tax or fees block legacy edge creation without an untaxed write",async()=>{
+ for(const data of [{vatEnabled:"yes",vatRate:15},{checkoutServiceFee:5},{checkoutDeliveryFee:10}]){
+  const {connection,writes}=fake(),execute=connection.execute.bind(connection);connection.execute=async(sql,params)=>sql.startsWith("SELECT data FROM restaurant_resources")?[[{data}]]:execute(sql,params);
+  await assert.rejects(()=>insertPricedEdgeOrder(connection,event,context),/EDGE_CHARGES_NOT_SUPPORTED/);assert.equal(writes.length,0);
+ }
 });
