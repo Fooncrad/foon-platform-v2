@@ -32,7 +32,7 @@ export async function GET(request:Request){
  if(q){where.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");values.push("%"+q+"%","%"+q+"%","%"+q+"%")}
  try{
   const [[categories],[counts],[products]]=await Promise.all([
-   database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,description_ar,description_en,description_fr,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
+   database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,description_ar,description_en,description_fr,image_url,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p WHERE "+where.join(" AND "),values),
    database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity,p.attributes,p.description_ar,p.description_en,p.description_fr FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
   ]);
@@ -93,6 +93,14 @@ export async function PATCH(request:Request){
  }
  if(body.kind==="product"&&body.measurements!==undefined){
   try{const measurements=parseCatalogMeasurements(body.measurements);columns.push("attributes=JSON_SET(COALESCE(attributes,JSON_OBJECT()),'$.measurements',JSON_EXTRACT(?,'$'))");values.push(JSON.stringify(measurements))}catch{return NextResponse.json({ok:false,code:"INVALID_MEASUREMENTS"},{status:400})}
+ }
+ if(body.kind==="category"&&body.imageUrl!==undefined){
+  if(body.imageUrl!==null){
+   if(typeof body.imageUrl!=="string"||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.imageUrl))return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});
+   const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE tenant_id=? AND id=?",[ctx.tenantId,body.imageUrl.split("/").pop()]);
+   if(!assets.length)return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});
+  }
+  columns.push("image_url=?");values.push(body.imageUrl);
  }
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{

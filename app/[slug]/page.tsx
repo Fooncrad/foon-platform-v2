@@ -6,6 +6,7 @@ import {cookies} from "next/headers";
 import type {ActivityLanguage} from "@/lib/platform/activity-presets";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
+import {parseData} from "@/lib/restaurant/operations";
 import PublicMenu from "./public-menu";
 import ActivityStorefront from "./activity-storefront";
 import {isTemplateForActivity} from "@/lib/platform/activity-templates";
@@ -56,7 +57,7 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  let catalogError=false;
  let categories:RowDataPacket[]=[];
  let counts:RowDataPacket[]=[];
- try{const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE ORDER BY sort_order,created_at",[String(tenant.id)]);categories=rows;}
+ try{const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,description_ar,description_en,description_fr,image_url FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE ORDER BY sort_order,created_at",[String(tenant.id)]);categories=rows;}
  catch(error){console.error("[FOON_STOREFRONT_CATEGORIES]",{slug,tenantId:String(tenant.id),error});}
  try{const [rows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where,filterValues);counts=rows;}
  catch(error){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"count",error});}
@@ -68,13 +69,13 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  // A missing optional theme must never hide an otherwise available catalog.
  try{const [themeRows]=await database().execute<RowDataPacket[]>("SELECT template_key FROM activity_storefront_templates WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);themes=themeRows;}catch(error){console.error("[FOON_STOREFRONT_THEME]",{slug,tenantId:String(tenant.id),error});}
  if(!catalogError)try{
-  const [productRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,p.attributes,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
+  const [productRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.description_ar,p.description_en,p.description_fr,p.price,p.currency,p.product_type,p.attributes,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,(SELECT i.image_url FROM catalog_images i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id ORDER BY i.sort_order LIMIT 1) AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
   products=productRows;
  }catch(error){
   // Image metadata is optional. A missing catalog_images table must not hide products.
   console.error("[FOON_STOREFRONT_IMAGES]",{slug,tenantId:String(tenant.id),error});
   try{
-   const [fallbackRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.product_type,p.attributes,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,NULL AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
+   const [fallbackRows]=await database().execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.description_ar,p.description_en,p.description_fr,p.price,p.currency,p.product_type,p.attributes,c.name_ar AS category_name,c.name_en AS category_name_en,c.name_fr AS category_name_fr,NULL AS image_url FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE "+where+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...filterValues,limit,safeOffset]);
    products=fallbackRows;
   }catch(fallbackError){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"products",error:fallbackError});}
  }
@@ -96,6 +97,7 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  const [contactRows]=cartUser?await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[cartUser]):[[]];
  const [lastDelivery]=cartUser?await database().execute<RowDataPacket[]>("SELECT order_notes FROM restaurant_orders WHERE customer_user_id=? AND channel='delivery' AND order_notes LIKE 'Delivery address: %' ORDER BY created_at DESC LIMIT 1",[cartUser]):[[]];
  const savedAddress=String(lastDelivery[0]?.order_notes??"").replace(/^Delivery address: /,"");
- return <ActivityStorefront checkoutEnabled={checkoutEnabled} customerPhone={String(contactRows[0]?.phone??"")} deliveryAddress={savedAddress} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ const [brandingRows]=await database().execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND status='active' AND archived=FALSE LIMIT 1",[String(tenant.id)]);
+ return <ActivityStorefront branding={brandingRows.length?parseData(brandingRows[0].data):{}} checkoutEnabled={checkoutEnabled} customerPhone={String(contactRows[0]?.phone??"")} deliveryAddress={savedAddress} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??""),description:language==="en"?String(c.description_en??""):language==="fr"?String(c.description_fr??""):String(c.description_ar??""),imageUrl:c.image_url?String(c.image_url):null}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),description:language==="en"?String(p.description_en??""):language==="fr"?String(p.description_fr??""):String(p.description_ar??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
 }
