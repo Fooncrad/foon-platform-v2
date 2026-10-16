@@ -3,6 +3,7 @@ import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {resourceModules,validateResource,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {serviceOrderTransitionAllowed,serviceOrderArchiveAllowed} from "./service-order-policy";
+import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {diningTable,prepareDiningResource} from "./dining";
 import {canonicalMenuModules,canonicalMenuRows,saveCanonicalMenu,menuOptions} from "./menu";
 import {catalogQuantityPolicy,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
@@ -54,6 +55,14 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
+ if(module==="reservations"){
+  const previousStatus=previous?String(previous.status):null,nextStatus=String(input.status);
+  if(!reservationTransitionAllowed(previousStatus,nextStatus))throw new ResourceError("INVALID_RESERVATION_TRANSITION");
+  if(nextStatus==="no_show"&&previousStatus==="confirmed"){
+   const previousData=parseData(previous!.data);
+   if(!reservationNoShowDue(previousData.scheduledAt,previousData.durationMinutes))throw new ResourceError("RESERVATION_NOT_DUE");
+  }
+ }
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
  if(module==="serviceOrders"){
   const inputOrder=validateResource(module,body);

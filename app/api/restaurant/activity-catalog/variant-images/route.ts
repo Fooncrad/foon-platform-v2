@@ -61,7 +61,7 @@ async function mutate(request:Request){
   let order=images.map(i=>String(i.id));
   if(request.method==="DELETE"){
    if(!order.includes(String(body.id))){await db.rollback();return fail("IMAGE_NOT_FOUND",404)}
-   await db.execute("DELETE FROM catalog_variant_images WHERE tenant_id=? AND product_id=? AND variant_id=? AND id=?",[ctx.tenantId,body.product,body.variant,body.id]);
+   await db.execute("DELETE FROM catalog_variant_images WHERE tenant_id=? AND product_id=? AND variant_id=? AND id=?",[ctx.tenantId,body.product,body.variant,String(body.id)]);
    order=order.filter(id=>id!==body!.id);
   }else{
    const ids=body.ids as string[];

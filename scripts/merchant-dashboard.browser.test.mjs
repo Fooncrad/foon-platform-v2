@@ -542,9 +542,10 @@ test('storefront carts support retail variants and laundry collection without le
   await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByRole('button',{name:'متابعة بهذا الحساب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeDisabled();
   await cart.getByLabel('رقم التواصل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await cart.getByLabel(/^عنوان الاستلام والتوصيل/).fill('Test street, building 12');
   const laundryResult=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();const delivery=await laundryResult;expect(delivery.status(),await delivery.text()).toBe(201);
-  const [[saved]]=await db.execute('SELECT channel,order_notes FROM restaurant_orders WHERE id=?',[(await delivery.json()).id]);expect(saved.channel).toBe('delivery');expect(saved.order_notes).toContain('Test street, building 12');
+    const [[saved]]=await db.execute('SELECT channel,order_notes,customer_user_id FROM restaurant_orders WHERE id=?',[(await delivery.json()).id]);expect(saved.channel).toBe('delivery');expect(saved.order_notes).toContain('Test street, building 12');
+    await db.execute("INSERT INTO customer_delivery_addresses(id,user_id,label,country_code,city,street_address,building,is_default) VALUES (?,?,'Home','SA','Riyadh','Test street','building 12',TRUE)",[randomUUID(),saved.customer_user_id]);
   await page.reload();await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');
-  await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await expect(cart.getByLabel(/^عنوان الاستلام والتوصيل/)).toHaveValue('Test street, building 12');
+    await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await expect(cart.getByLabel(/^عنوان الاستلام والتوصيل/)).toHaveValue('Riyadh، Test street، building 12');
   const stored=await page.evaluate(()=>Object.keys(sessionStorage).filter(k=>k.startsWith('foon-public-cart:')).map(k=>sessionStorage.getItem(k)).join(' '));expect(stored).not.toContain('Test street');expect(stored).not.toContain('0500004321');
   await db.execute("UPDATE tenant_subscriptions SET status='cancelled' WHERE tenant_id=?",[grocery.owner.tenant.id]);await page.goto(origin+'/'+grocery.slug);await expect(page.locator('.foonStorefrontCart')).toHaveCount(0);await expect(page.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toHaveCount(0);
   const unavailable=await customer.request.get(origin+'/api/customer/cart?store='+grocery.slug+'&product='+grocery.id);expect(unavailable.status()).toBe(403);
@@ -572,6 +573,9 @@ test('customer and catalog interfaces use cookie locale without Arabic interface
   await context.clearCookies();await context.addCookies([{name:'foon_language',value:'en',url:origin}]);
   const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Customer',email:slug+'-customer@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);
   await page.goto(origin+'/customer');await expect(page.getByRole('heading',{name:'My orders',exact:true})).toBeVisible();
+  const addressPanel=page.locator('.customerAddresses');await expect(addressPanel.getByRole('heading',{name:'Delivery addresses',exact:true})).toBeVisible();
+  await addressPanel.getByRole('button',{name:'Add address',exact:true}).click();await addressPanel.getByLabel('Address label').fill('Home');await addressPanel.getByLabel('City').fill('Riyadh');await addressPanel.getByLabel('Street address').fill('King Fahd Road');await addressPanel.getByRole('button',{name:'Save address',exact:true}).click();
+  await expect(addressPanel.getByText('King Fahd Road')).toBeVisible();await expect(addressPanel.getByText('Default address')).toBeVisible();
   const text=await page.locator('main').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.end();await context.close();}
