@@ -14,7 +14,8 @@ const nextConfig = {
       {key:"Content-Security-Policy",value:"default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; upgrade-insecure-requests"},
       {key:"Strict-Transport-Security",value:"max-age=31536000; includeSubDomains"}
     ];
-    return [{source:"/:path*",headers:securityHeaders}];
+    const receiptHeaders=securityHeaders.map(header=>header.key==="X-Frame-Options"?{...header,value:"SAMEORIGIN"}:header.key==="Content-Security-Policy"?{...header,value:header.value.replace("frame-ancestors 'none'","frame-ancestors 'self'")}:header.key==="Referrer-Policy"?{...header,value:"no-referrer"}:header);
+    return [{source:"/:path*",headers:securityHeaders},{source:"/receipts/:path*",headers:receiptHeaders},{source:"/login",headers:receiptHeaders}];
   }
 };
 

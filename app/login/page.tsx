@@ -21,7 +21,7 @@ export default function LoginPage(){
    const res=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:data.get("email"),password:data.get("password")})});
    const body=await res.json().catch(()=>({}));
    if(!res.ok){const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
-   router.replace("/account");router.refresh();
+   const next=new URLSearchParams(window.location.search).get("next");router.replace(next&&/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)?next:"/account");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
  }
  return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><Link href="/" className="auth-brand">FOON</Link><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>

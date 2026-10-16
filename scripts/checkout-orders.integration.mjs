@@ -35,14 +35,34 @@ test('authoritative tax and fees persist across activities, replay and settings 
    const delivery=ok(await op('pos','POST',{...payload,requestKey:randomUUID(),channel:'delivery'}));assert.equal(delivery.total,115);const delivered=ok(await op('orders','GET'),200).orders.find(o=>o.id===delivery.id);assert.equal(delivered.checkout_snapshot.deliveryFee,10);assert.equal(delivered.checkout_snapshot.serviceFee,5);assert.equal(delivered.checkout_snapshot.tax,4.76);
    if(activity==='clothing'){
     ok(await op('orders','PATCH',{id:sale.id,version:latest.version,paymentStatus:'paid'}),200);
+    const shared=ok(await call('/api/restaurant/receipts','POST',{id:sale.id},owner),200);assert.match(shared.path,new RegExp('^/receipts/'+sale.id+'\\?key=[a-f0-9]{64}$'));
+    assert.equal(ok(await call('/api/restaurant/receipts','POST',{id:sale.id},owner),200).path,shared.path);
+    const guestPage=await fetch(origin+shared.path);assert.equal(guestPage.status,200);assert.ok((await guestPage.text()).includes('Saved seller'));
+    assert.equal((await fetch(origin+shared.path.slice(0,shared.path.indexOf('?'))+'?key='+'0'.repeat(64))).status,404);
+    const ownReceipt=await fetch(origin+'/receipts/'+sale.id,{headers:{cookie:owner.cookie}});assert.equal(ownReceipt.status,200);assert.ok((await ownReceipt.text()).includes('Saved seller'));
+    const anonymous=await fetch(origin+'/receipts/'+sale.id,{redirect:'manual'});assert.equal(anonymous.status,307);assert.ok(anonymous.headers.get('location').includes('/login?next='));
+    const strangerName='other-'+randomUUID().slice(0,10),stranger=await call('/api/auth/register','POST',{name:strangerName,storeName:strangerName,slug:strangerName,email:strangerName+'@test.example',password:'a-strong-test-password',kind:'restaurant',activity:'clothing',countryCode:'SA',currency:'SAR',region:'الرياض'});ok(stranger);assert.equal((await fetch(origin+'/receipts/'+sale.id,{headers:{cookie:stranger.cookie}})).status,404);assert.equal((await call('/api/restaurant/receipts','POST',{id:sale.id},{cookie:stranger.cookie,tenant:owner.tenant})).status,404);
+    const setDestination=async destination=>{const [[current]]=await db.execute('SELECT version,data FROM restaurant_resources WHERE id=?',[settings.id]);const data=typeof current.data==='string'?JSON.parse(current.data):current.data;ok(await op('storefront','PATCH',{id:settings.id,version:Number(current.version),name:'Changed identity',status:'active',data:{...data,receiptQrDestination:destination}}),200);};
+    await setDestination('storefront');const storeLink=ok(await call('/api/restaurant/receipts','POST',{id:sale.id},owner),200);assert.ok(storeLink.path.startsWith('/'+slug+'#receipt='+sale.id+'&key='));
+    assert.equal((await fetch(origin+shared.path+'&store=wrong-store')).status,404);
+    await setDestination('pos');const posLink=ok(await call('/api/restaurant/receipts','POST',{id:sale.id},owner),200);assert.equal(posLink.path,'/receipts/'+sale.id+'?view=pos');
+    const posAnonymous=await fetch(origin+posLink.path,{redirect:'manual'});assert.equal(posAnonymous.status,307);assert.ok(posAnonymous.headers.get('location').includes('/login?next='));
+    const posOwner=await fetch(origin+posLink.path,{headers:{cookie:owner.cookie},redirect:'manual'});assert.equal(posOwner.status,307);assert.ok(posOwner.headers.get('location').includes('section=pos'));assert.equal((await fetch(origin+posLink.path,{headers:{cookie:stranger.cookie}})).status,404);
+    await setDestination('receipt');
     if(process.env.FOON_BROWSER_EXECUTABLE){
      const browser=await chromium.launch({executablePath:process.env.FOON_BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
      try{const context=await browser.newContext({viewport:{width:320,height:740}});const separator=owner.cookie.indexOf('=');await context.addCookies([{name:owner.cookie.slice(0,separator),value:owner.cookie.slice(separator+1),url:origin}]);await context.addInitScript(()=>{window.print=()=>{}});
       const page=await context.newPage();await page.goto(origin+'/restaurant?tenant='+owner.tenant+'&section=orders');
       const print=page.getByRole('button',{name:/طباعة.*إيصال دفع نهائي/});await print.waitFor({state:'visible',timeout:20000});const popupPromise=page.waitForEvent('popup');await print.click();const popup=await popupPromise;
       const qr=popup.getByAltText('Receipt QR');await qr.waitFor({state:'visible',timeout:15000});assert.ok((await qr.getAttribute('src')).startsWith('data:image/png;base64,'));
-      const text=await popup.locator('body').innerText();assert.ok(text.includes('Saved seller'));assert.ok(text.includes('15.00'));assert.ok(!text.includes('Changed seller'));assert.equal(await popup.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
-      console.log('Paid receipt and local QR browser check passed at 320px');
+      const text=await popup.locator('body').innerText();assert.ok(text.includes('Saved seller'));assert.ok(text.includes('15.00'));assert.ok(!text.includes('Changed seller'));
+      const receiptLink=popup.getByRole('link',{name:'عرض الإيصال',exact:true});assert.equal(await receiptLink.getAttribute('href'),origin+shared.path);
+      const receipt=await page.request.get(origin+'/receipts/'+sale.id);assert.equal(receipt.status(),200);assert.ok((await receipt.text()).includes('Saved seller'));
+      assert.equal(await popup.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+      const visitorContext=await browser.newContext({viewport:{width:320,height:740}}),visitor=await visitorContext.newPage();
+      await visitor.goto(origin+storeLink.path);const modal=visitor.getByRole('dialog');await modal.waitFor({state:'visible'});const frame=visitor.frameLocator('iframe');await frame.getByRole('heading',{name:/إيصال الدفع/}).waitFor();assert.ok((await frame.locator('body').innerText()).includes('Saved seller'));assert.equal(await visitor.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);await visitor.getByRole('button',{name:/إغلاق الإيصال وتصفح المتجر/}).click();assert.equal(await modal.isVisible(),false);assert.equal(new URL(visitor.url()).pathname,'/'+slug);assert.equal(new URL(visitor.url()).hash,'');
+      await visitor.goto(origin+shared.path);assert.ok((await visitor.locator('body').innerText()).includes('Saved seller'));await visitor.goto(origin+'/receipts/'+sale.id);assert.ok(visitor.url().includes('/login?next='));await visitor.locator('input[name="email"]').fill(slug+'@test.example');await visitor.locator('input[name="password"]').fill('a-strong-test-password');await visitor.getByRole('button',{name:'تسجيل الدخول',exact:true}).click();await visitor.waitForURL(origin+'/receipts/'+sale.id);assert.ok((await visitor.locator('body').innerText()).includes('Saved seller'));assert.equal(await visitor.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);await visitorContext.close();
+      console.log('Paid receipt, local QR link and login return browser checks passed at 320px');
      }finally{await browser.close();}
     }
    }
@@ -52,6 +72,8 @@ test('authoritative tax and fees persist across activities, replay and settings 
     const discountedOrder=ok(await op('orders','GET'),200).orders.find(o=>o.id===discounted.id);assert.equal(discountedOrder.discount,10);assert.equal(discountedOrder.checkout_snapshot.tax,4.29);
     const customer=await call('/api/customer/register','POST',{name:'Tax customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug});ok(customer);
     const purchase=ok(await call('/api/customer/orders','POST',{storeSlug:slug,branchId:registration.branch.id,channel:'takeaway',requestKey:randomUUID(),items:[{id:product,quantity:1}],total:0},{cookie:customer.cookie,tenant:owner.tenant}));assert.equal(purchase.total,105);
+    const customerOrder=ok(await op('orders','GET'),200).orders.find(o=>o.id===purchase.id);ok(await op('orders','PATCH',{id:purchase.id,version:customerOrder.version,paymentStatus:'paid'}),200);
+    assert.equal((await fetch(origin+'/receipts/'+purchase.id,{headers:{cookie:customer.cookie}})).status,200);assert.equal(ok(await call('/api/restaurant/receipts','POST',{id:purchase.id},owner),200).path,'/receipts/'+purchase.id);
    }
   }
  }finally{await db.end();server.kill('SIGTERM');}
