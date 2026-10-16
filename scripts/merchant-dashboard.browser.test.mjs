@@ -310,7 +310,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
    const context=await browser.newContext({viewport:{width:1440,height:1000}});
    try{
     context.setDefaultTimeout(12000);
-    const slug="service-ui-"+activity;
+    const slug="service-ui-"+activity+"-"+randomUUID().slice(0,8);
     const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
     expect(created.status(),await created.text()).toBe(201);
     const account=await created.json();
@@ -419,6 +419,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
     const workspace=page.locator('.foonServiceOrders');
     await expect(workspace.getByRole('heading',{name:'أوامر الخدمة',exact:true})).toBeVisible();
     if(activity!=="carwash")continue;
+    await expect(workspace.getByText('جارٍ التحميل…',{exact:true})).toHaveCount(0);
     await workspace.getByRole('button',{name:'إنشاء أمر خدمة',exact:true}).click();
     const form=workspace.locator('form');
     await expect(form.locator('select[name="status"] option')).toHaveCount(2);
