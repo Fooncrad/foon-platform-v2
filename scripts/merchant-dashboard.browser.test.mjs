@@ -85,7 +85,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const replay=await page.request.post(origin+'/api/restaurant/operations/pos',{headers:posHeaders,data:offlinePayload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(offlineOrder.id);
  const afterReplay=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});expect((await afterReplay.json()).orders).toHaveLength(2);
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
- await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 ر.س",{exact:true})).toBeVisible();
+ await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 SAR",{exact:true})).toBeVisible();
  await page.screenshot({path:"work/merchant-desktop.png",fullPage:true});
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
  await page.getByRole("button",{name:"القوالب والمظهر",exact:true}).click();
@@ -454,3 +454,34 @@ test("all 15 activities expose their own tools; service orders work in three lan
 test.setTimeout(180000);
 
 
+
+
+test("dashboard currencies follow the store and each order in three languages",async({browser})=>{
+ const context=await browser.newContext();
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ try{
+  const slug='currency-overview-'+randomUUID().slice(0,8);
+  const response=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Currency owner',storeName:'Currency store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'watches',countryCode:'SA',currency:'SAR',region:'الرياض'}});
+  expect(response.status(),await response.text()).toBe(201);
+  const account=await response.json();
+  await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
+  await db.execute("UPDATE tenant_business_profiles SET currency='USD' WHERE tenant_id=?",[account.tenant.id]);
+  const page=await context.newPage();
+  await page.route('**/api/restaurant/operations/overview**',async route=>{
+   const response=await route.fetch(),body=await response.json();
+   expect(response.status()).toBe(200);
+   body.summary.sales=1234.5;body.summary.average=12.34;
+   body.orders=[{id:'currency-preview',order_number:1,channel:'takeaway',status:'new',payment_status:'unpaid',total:9.75,currency:'EUR',dining_snapshot:null,party_size:null,items:[{name:'Currency preview',quantity:1}]}];
+   await route.fulfill({response,json:body});
+  });
+  await page.goto(origin+'/restaurant?tenant='+account.tenant.id);
+  for(const language of ['ar','en','fr']){
+   await page.evaluate(language=>{localStorage.setItem('foon-language',language);window.dispatchEvent(new Event('foon:language-change'));},language);
+   await expect(page.locator('.restaurantMetrics')).toContainText('1234.50 USD');
+   await expect(page.locator('.restaurantMetrics')).toContainText('12.34 USD');
+   await expect(page.locator('.restaurantOverviewGrid footer')).toContainText('1234.50 USD');
+   await expect(page.locator('.restaurantOrders')).toContainText('9.75 EUR');
+   await expect(page.locator('.restaurantContent')).not.toContainText('ر.س');
+  }
+ }finally{await db.end();await context.close();}
+});
