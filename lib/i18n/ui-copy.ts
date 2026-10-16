@@ -1,5 +1,19 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+"رابط الموقع على الخريطة":["Map location URL", "Lien de localisation"],
+"رابط Instagram":["Instagram URL", "Lien Instagram"],
+"رابط Facebook":["Facebook URL", "Lien Facebook"],
+"رابط TikTok":["TikTok URL", "Lien TikTok"],
+"رابط WhatsApp":["WhatsApp URL", "Lien WhatsApp"],
+"الشروط والأحكام بالعربية":["Terms and conditions — Arabic", "Conditions générales — arabe"],
+"الشروط والأحكام بالإنجليزية":["Terms and conditions — English", "Conditions générales — anglaise"],
+"الشروط والأحكام بالفرنسية":["Terms and conditions — French", "Conditions générales — française"],
+"سياسة الاسترجاع بالعربية":["Returns and refunds — Arabic", "Retours et remboursements — arabe"],
+"سياسة الاسترجاع بالإنجليزية":["Returns and refunds — English", "Retours et remboursements — anglaise"],
+"سياسة الاسترجاع بالفرنسية":["Returns and refunds — French", "Retours et remboursements — française"],
+"سياسة الخصوصية بالعربية":["Privacy policy — Arabic", "Politique de confidentialité — arabe"],
+"سياسة الخصوصية بالإنجليزية":["Privacy policy — English", "Politique de confidentialité — anglaise"],
+"سياسة الخصوصية بالفرنسية":["Privacy policy — French", "Politique de confidentialité — française"],
  "سلة الخدمات": [
   "Service basket",
   "Panier de services"
