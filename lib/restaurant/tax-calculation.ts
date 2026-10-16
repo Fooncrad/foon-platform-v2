@@ -9,15 +9,20 @@ const money=(value:number)=>{
  const scaled=value*100,minor=Math.round(scaled);
  // Reject fractions of a minor unit rather than silently changing the checkout base.
  // Allow tiny binary floating-point drift in otherwise valid two-decimal values.
- if(!Number.isSafeInteger(minor)||Math.abs(scaled-minor)>1e-7)throw new RangeError("INVALID_AMOUNT_PRECISION");
+ const tolerance=Math.max(1e-7,Math.min(1e-4,Math.abs(scaled)*Number.EPSILON*2));
+ if(!Number.isSafeInteger(minor)||Math.abs(scaled-minor)>tolerance)throw new RangeError("INVALID_AMOUNT_PRECISION");
  return minor;
 };
 const percent=(value:number)=>{if(!Number.isFinite(value)||value<0||value>100)throw new RangeError("INVALID_TAX_RATE");return value};
 export function calculateTax(amount:number,rate:number,inclusive=false):TaxBreakdown {
  const minor=money(amount),r=percent(rate);
  const tax=inclusive?Math.round(minor*r/(100+r)):Math.round(minor*r/100);
- const net=inclusive?minor-tax:minor;
- return {net:net/100,tax:tax/100,gross:(net+tax)/100};
+ const net=inclusive?minor-tax:minor,gross=net+tax;
+ // Input cents can be safe while tax addition overflows or splitting large
+ // inclusive amounts loses minor units when converted back to decimal.
+ if(![net,tax,gross].every(value=>Number.isSafeInteger(value)&&Math.round(value/100*100)===value))
+  throw new RangeError("INVALID_AMOUNT_PRECISION");
+ return {net:net/100,tax:tax/100,gross:gross/100};
 }
 export function calculateOrderTax(subtotal:number,discount:number,rate:number,inclusive=false):TaxBreakdown {
  const sub=money(subtotal),off=money(discount);
