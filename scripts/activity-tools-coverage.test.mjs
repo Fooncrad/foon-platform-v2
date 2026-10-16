@@ -5,8 +5,8 @@ import {ACTIVITY_PRESETS,localizedActivityModules} from "../lib/platform/activit
 
 const tools=readFileSync(new URL("../app/restaurant/activity-tools.tsx",import.meta.url),"utf8");
 const codes=Object.keys(ACTIVITY_PRESETS);
-test("all 14 activity types have translated and unique capability links",()=>{
- assert.equal(codes.length,14);
+test("all 15 activity types have translated and unique capability links",()=>{
+ assert.equal(codes.length,15);
  for(const code of codes){
   for(const locale of ["ar","en","fr"]){
    const modules=localizedActivityModules(code,locale);

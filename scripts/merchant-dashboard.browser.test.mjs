@@ -292,8 +292,8 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.goto(origin+"/restaurant?tenant="+foreignId);
  await expect(page.getByText("Private foreign tenant",{exact:true})).toHaveCount(0);
 });
-test("all 14 activities expose their own tools; service orders work in three languages at 320px",async({browser})=>{
- const activities=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
+test("all 15 activities expose their own tools; service orders work in three languages at 320px",async({browser})=>{
+ const activities=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
  const services=new Set(["carwash","laundry","automotive","salon","publicworks"]);
  const db=await mysql.createConnection(process.env.DATABASE_URL);
  try{
@@ -306,6 +306,12 @@ test("all 14 activities expose their own tools; service orders work in three lan
     const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
     expect(created.status(),await created.text()).toBe(201);
     const account=await created.json();
+    if(activity==="watches"){
+     expect(account.activity).toBe("watches");
+     expect(account.activityModules).toContain("variants");
+     expect(account.activityModules).not.toContain("kitchen");
+     expect(account.activityModules).not.toContain("tables");
+    }
     await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
     const page=await context.newPage();
     const assignedRequests=[];

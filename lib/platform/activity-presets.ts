@@ -7,6 +7,7 @@ export const ACTIVITY_PRESETS = {
   clothing: ["catalog","orders","pos","inventory","variants","delivery","pickup","payments"],
   perfume: ["catalog","orders","pos","inventory","variants","delivery","payments"],
   accessories: ["catalog","orders","pos","inventory","variants","delivery","payments"],
+  watches: ["catalog","orders","pos","inventory","variants","delivery","pickup","payments"],
   gifts: ["catalog","orders","pos","inventory","delivery","payments"],
   ecommerce: ["catalog","orders","pos","inventory","delivery","pickup","payments"],
   carwash: ["services","bookings","orders","pos","payments","delivery"],

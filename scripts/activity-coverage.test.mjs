@@ -4,8 +4,15 @@ import {ACTIVITY_PRESETS, MODULE_LABELS, defaultActivityModules, localizedActivi
 import {ACTIVITY_TEMPLATES, defaultTemplateForActivity, isTemplateForActivity} from "../lib/platform/activity-templates.ts";
 
 const activities=Object.keys(ACTIVITY_PRESETS);
+test("watches are a separate retail activity with a watch storefront and no dining tools",()=>{
+ assert.ok(activities.includes("watches"));
+ assert.equal(defaultTemplateForActivity("watches"),"watch-showcase");
+ for(const capability of ["catalog","orders","pos","inventory","variants","delivery","pickup","payments"])assert.ok(defaultActivityModules("watches").includes(capability));
+ for(const capability of ["tables","reservations","waiter","kitchen","waitlist"])assert.ok(!defaultActivityModules("watches").includes(capability));
+ assert.ok(!isTemplateForActivity("watches","sufra"));
+});
 test("every registered activity has a storefront template",()=>{
- assert.equal(activities.length,14);
+ assert.equal(activities.length,15);
  assert.deepEqual(Object.keys(ACTIVITY_TEMPLATES).sort(),activities.slice().sort());
  for(const activity of activities){
   const template=defaultTemplateForActivity(activity);

@@ -24,5 +24,5 @@ test("activity template API enforces activity-specific choices",()=>{
 test("all activity types are covered by the merchant workspace",()=>{
  const page=read("app/restaurant/page.tsx");
  assert.match(page,/defaultActivityModules\(activityCode\)/);
- assert.equal(Object.keys(ACTIVITY_PRESETS).length,14);
+ assert.equal(Object.keys(ACTIVITY_PRESETS).length,15);
 });
