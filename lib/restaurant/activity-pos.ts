@@ -22,7 +22,7 @@ export async function activityPosOptions(db:PoolConnection,tenantId:string,ids:s
  const result:Record<string,MenuGroup[]>={};if(!ids.length)return result;
  const [groups]=await db.execute<RowDataPacket[]>("SELECT id,product_id,name_ar,selection_type,required,min_select,max_select FROM catalog_option_groups WHERE tenant_id=? AND enabled=TRUE AND product_id IN ("+ids.map(()=>"?").join(",")+") ORDER BY id"+(lock?" FOR UPDATE":""),[tenantId,...ids]);
  if(!groups.length)return result;
- if(!(await tenantEntitlement(tenantId,"variants")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
+ if(!(await tenantEntitlement(tenantId,"variants",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
  const [values]=await db.execute<RowDataPacket[]>("SELECT id,group_id,name_ar,price_delta FROM catalog_option_values WHERE tenant_id=? AND enabled=TRUE AND group_id IN ("+groups.map(()=>"?").join(",")+") ORDER BY id"+(lock?" FOR UPDATE":""),[tenantId,...groups.map(g=>g.id)]);
  for(const g of groups)(result[String(g.product_id)]??=[]).push({id:String(g.id),name:String(g.name_ar),type:String(g.selection_type),required:Boolean(g.required),min:Number(g.min_select),max:Number(g.max_select),values:values.filter(v=>String(v.group_id)===String(g.id)).map(v=>({id:String(v.id),name:String(v.name_ar),price:Number(v.price_delta)}))});
  return result;

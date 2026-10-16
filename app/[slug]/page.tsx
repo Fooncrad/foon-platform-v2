@@ -1,3 +1,5 @@
+import {customerCartAvailable} from "@/lib/platform/customer-checkout";
+import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {notFound} from "next/navigation";
 import {cookies} from "next/headers";
 import type {ActivityLanguage} from "@/lib/platform/activity-presets";
@@ -87,6 +89,12 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
    if(membership.length)selected=previewTemplate;
   }
  }
- return <ActivityStorefront name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ const checkoutEnabled=customerCartAvailable(activity)&&(await tenantEntitlement(String(tenant.id),"orders")).enabled;
+ const cartUser=checkoutEnabled?await currentUserId():null;
+ const [cartLinks]=cartUser?await database().execute<RowDataPacket[]>("SELECT 1 FROM tenant_customers WHERE tenant_id=? AND user_id=? LIMIT 1",[String(tenant.id),cartUser]):[[]];
+ const [contactRows]=cartUser?await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[cartUser]):[[]];
+ const [lastDelivery]=cartUser?await database().execute<RowDataPacket[]>("SELECT order_notes FROM restaurant_orders WHERE customer_user_id=? AND channel='delivery' AND order_notes LIKE 'Delivery address: %' ORDER BY created_at DESC LIMIT 1",[cartUser]):[[]];
+ const savedAddress=String(lastDelivery[0]?.order_notes??"").replace(/^Delivery address: /,"");
+ return <ActivityStorefront checkoutEnabled={checkoutEnabled} customerPhone={String(contactRows[0]?.phone??"")} deliveryAddress={savedAddress} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??"")}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
 }
