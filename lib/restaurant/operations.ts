@@ -1,3 +1,4 @@
+import {notifyOrder} from "@/lib/notifications/customer";
 import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {resourceModules,validateResource,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
@@ -359,6 +360,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
  await audit(db,tenantId,actor,"order.create",id,{total:(subtotal-discount)/100,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
+ await notifyOrder(db,tenantId,id,"new");
  return {id,total:(subtotal-discount)/100,currency:profile.currency};
 }
 export async function updateOrder(db:PoolConnection,tenantId:string,actor:string,role:string,body:Record<string,unknown>){
@@ -383,6 +385,8 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  await db.execute("UPDATE restaurant_orders SET status=?,payment_status=?,version=version+1 WHERE id=? AND tenant_id=?",[status,payment,order.id,tenantId]);
  // A completed order does not prove that the guest has left.
  // Keep the table occupied until staff explicitly confirms departure.
+ if(status!==String(order.status))await notifyOrder(db,tenantId,String(order.id),status);
+ if(payment!==String(order.payment_status))await notifyOrder(db,tenantId,String(order.id),payment,true);
  await audit(db,tenantId,actor,"order.update",String(order.id),{status,paymentStatus:payment});return {id:order.id};
 }
 

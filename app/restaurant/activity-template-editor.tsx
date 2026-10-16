@@ -1,7 +1,10 @@
 "use client";
+import {useUiText} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 import {templatesForActivity} from "@/lib/platform/activity-templates";
 export default function ActivityTemplateEditor({tenantId,activity,slug}:{tenantId:string;activity:string;slug:string}){
+ const translateUi=useUiText();
+
  const choices=templatesForActivity(activity);
  const [selected,setSelected]=useState<string>(choices[0]??"");
  const [saved,setSaved]=useState("");
@@ -11,7 +14,7 @@ export default function ActivityTemplateEditor({tenantId,activity,slug}:{tenantI
  useEffect(()=>{let live=true;fetch("/api/restaurant/activity-template",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{if(live){if(d.activity!==activity){setMessage("نوع النشاط في الاستجابة لا يطابق النشاط الحالي. أعد تحميل الصفحة.");setLoading(false);return}if(typeof d.template==="string"&&choices.includes(d.template)){setSelected(d.template);setSaved(d.template)}else{setSelected(choices[0]??"");setSaved("");setMessage("القالب المحفوظ غير متاح لهذا النشاط. اختر قالبًا مناسبًا ثم احفظه.")}setLoading(false)}}).catch(()=>{if(live){setMessage("تعذر تحميل إعدادات القوالب. تأكد من ترحيل قاعدة البيانات.");setLoading(false)}});return()=>{live=false}},[tenantId,activity]);
  async function save(){if(!choices.includes(selected))return;setBusy(true);setMessage("");try{const r=await fetch("/api/restaurant/activity-template",{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({template:selected})});if(!r.ok)throw Error();setSaved(selected);setMessage("تم حفظ قالب النشاط بنجاح.")}catch{setMessage("تعذر حفظ القالب. حاول مجددًا.")}finally{setBusy(false)}}
  return <section className="restaurantPanel" style={{padding:20}}>
-  <h2>قوالب واجهة النشاط</h2><p>اختر قالبًا مخصصًا لنشاطك. التغيير لا يؤثر على بيانات المنتجات أو العملاء.</p>
+  <h2>{translateUi("قوالب واجهة النشاط")}</h2><p>{translateUi("اختر قالبًا مخصصًا لنشاطك. التغيير لا يؤثر على بيانات المنتجات أو العملاء.")}</p>
   <div role="radiogroup" aria-label="قوالب النشاط" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,220px),1fr))",gap:16}}>
    {choices.map((key,i)=><label key={key} style={{border:selected===key?"2px solid #b88732":"1px solid #ccd5df",borderRadius:14,padding:16,cursor:"pointer"}}>
     <input type="radio" name="activity-template" value={key} checked={selected===key} disabled={busy||loading} onChange={()=>setSelected(key)}/>
@@ -20,8 +23,8 @@ export default function ActivityTemplateEditor({tenantId,activity,slug}:{tenantI
    </label>)}
   </div>
   <div style={{display:"flex",gap:12,alignItems:"center",marginTop:20,flexWrap:"wrap"}}>
-   <button type="button" className="restaurantPrimary" onClick={()=>void save()} disabled={busy||loading||!choices.includes(selected)||selected===saved}>{busy?"جارٍ الحفظ…":"حفظ القالب"}</button>
-   {!loading&&choices.includes(selected)&&slug&&<a href={"/"+encodeURIComponent(slug)+"?previewTemplate="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer">معاينة القالب المحدد قبل الحفظ</a>}
+   <button type="button" className="restaurantPrimary" onClick={()=>void save()} disabled={busy||loading||!choices.includes(selected)||selected===saved}>{busy?translateUi("جارٍ الحفظ…"):translateUi("حفظ القالب")}</button>
+   {!loading&&choices.includes(selected)&&slug&&<a href={"/"+encodeURIComponent(slug)+"?previewTemplate="+encodeURIComponent(selected)} target="_blank" rel="noopener noreferrer">{translateUi("معاينة القالب المحدد قبل الحفظ")}</a>}
   </div>
   {message&&<p role="status">{message}</p>}
  </section>;

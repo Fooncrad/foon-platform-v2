@@ -15,7 +15,7 @@
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "notifications:worker": "node scripts/notification-worker.mjs",
     "test:migrations": "node --test scripts/sql-statements.test.mjs",
-    "test:mail": "node --test scripts/mail.test.mjs",
+    "test:mail": "node --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
     "test:resources": "node --test scripts/restaurant-resource-schema.test.mjs scripts/service-order-policy.test.mjs",
@@ -25,7 +25,8 @@
     "test:activities": "node --experimental-strip-types --test scripts/activity-presets.test.mjs scripts/activity-tools-coverage.test.mjs scripts/activity-plan-entitlements.test.mjs scripts/catalog-copy.test.mjs scripts/customer-checkout.test.mjs",
     "test:payments": "node --experimental-strip-types --test scripts/payment-settings.test.mjs",
     "test:payment-webhooks": "node --experimental-strip-types --test scripts/payment-webhook.test.mjs",
-    "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs scripts/media-oauth-state.test.mjs scripts/media-token-crypto.test.mjs scripts/media-account-access.test.mjs"
+    "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs scripts/media-oauth-state.test.mjs scripts/media-token-crypto.test.mjs scripts/media-account-access.test.mjs",
+    "test:i18n": "node --experimental-strip-types --test scripts/ui-copy.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -46,5 +47,3 @@
     "typescript": "^5.9.0"
   }
 }
-
-

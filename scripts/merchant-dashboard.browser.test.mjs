@@ -9,6 +9,7 @@ async function captureScreenshot(target,options){
  if(process.env.FOON_BROWSER_SCREENSHOTS==="0")return;
  await target.screenshot(options);
 }
+test.use({actionTimeout:15000,navigationTimeout:30000});
 let server;
 const origin="http://localhost:3102";
 test.beforeAll(async()=>{
@@ -379,7 +380,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
       await page.getByLabel('اسم المنتج',{exact:true}).fill('Unsaved product');
       await page.getByLabel('السعر',{exact:true}).fill('12.34');
       for(const [locale,title] of [['en','Product images'],['fr','Images du produit'],['ar','صور المنتج']]){
-       await page.evaluate(language=>{localStorage.setItem('foon-language',language);window.dispatchEvent(new Event('foon:language-change'));},locale);
+       await page.getByRole('combobox',{name:'اللغة / Language / Langue',exact:true}).selectOption(locale);
        await page.setViewportSize({width:320,height:900});
        await expect(row.getByRole('region',{name:title,exact:true})).toBeVisible();
        await expect(page.getByRole('heading',{name:locale==='ar'?'إدارة المنتجات':locale==='en'?'Manage products':'Gérer les produits',exact:true})).toBeVisible();
@@ -483,14 +484,14 @@ test("dashboard currencies follow the store and each order in three languages",a
   });
   await page.goto(origin+'/restaurant?tenant='+account.tenant.id);
   for(const language of ['ar','en','fr']){
-   await page.evaluate(language=>{localStorage.setItem('foon-language',language);window.dispatchEvent(new Event('foon:language-change'));},language);
+   await page.getByRole("combobox",{name:"اللغة / Language / Langue",exact:true}).selectOption(language);
    await expect(page.locator('.restaurantMetrics')).toContainText('1234.50 USD');
    await expect(page.locator('.restaurantMetrics')).toContainText('12.34 USD');
    await expect(page.locator('.restaurantOverviewGrid footer')).toContainText('1234.50 USD');
    await expect(page.locator('.restaurantOrders')).toContainText('9.75 EUR');
    await expect(page.locator('.restaurantContent')).not.toContainText('ر.س');
   }
- }finally{await db.end();await context.close();}
+ }finally{await Promise.all(context.pages().map(page=>page.unrouteAll({behavior:"wait"})));await db.end();await context.close();}
 });
 
 test('storefront carts support retail variants and laundry collection without leaving checkout',async({browser})=>{
@@ -545,4 +546,29 @@ test('storefront carts support retail variants and laundry collection without le
   const unavailable=await customer.request.get(origin+'/api/customer/cart?store='+grocery.slug+'&product='+grocery.id);expect(unavailable.status()).toBe(403);
   const carwash=await create('carwash');await page.goto(origin+'/'+carwash.slug);await expect(page.locator('.foonStorefrontCart')).toHaveCount(0);await expect(page.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toHaveCount(0);
  }catch(error){console.error('Customer cart browser failure:',error);throw error;}finally{await db.end();await Promise.all([merchant.close(),customer.close()]);}
+});
+
+test('customer and catalog interfaces use cookie locale without Arabic interface leakage',async({browser})=>{
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ const context=await browser.newContext({viewport:{width:320,height:900}});context.setDefaultTimeout(15000);
+ try{
+  const slug='locale-notify-'+randomUUID().slice(0,8);
+  const merchant=await context.request.post(origin+'/api/auth/register',{headers:{origin,cookie:'foon_language=en'},data:{name:'Owner',storeName:'Locale store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(merchant.status(),await merchant.text()).toBe(201);
+  const page=await context.newPage();
+  for(const language of ['en','fr']){
+   await context.addCookies([{name:'foon_language',value:language,url:origin}]);await page.goto(origin+'/restaurant');
+   await expect(page.getByRole('heading',{name:language==='en'?'Overview':'Vue d’ensemble',exact:true})).toBeVisible();
+   
+   // Open the catalog with the actual navigation button, retaining an empty localStorage.
+   await page.getByRole('button',{name:language==='en'?'Open business menu':'Ouvrir le menu de l’activité',exact:true}).click();
+   await page.locator('.restaurantDrawer').getByRole('button',{name:language==='en'?'Products and categories':'Produits et catégories',exact:true}).click();
+   await expect(page.getByRole('heading',{name:language==='en'?'Manage products':'Gérer les produits'})).toBeVisible();
+   const text=await page.locator('.restaurantMain').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
+  }
+  await context.clearCookies();await context.addCookies([{name:'foon_language',value:'en',url:origin}]);
+  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Customer',email:slug+'-customer@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);
+  await page.goto(origin+'/customer');await expect(page.getByRole('heading',{name:'My orders',exact:true})).toBeVisible();
+  const text=await page.locator('main').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{await db.end();await context.close();}
 });

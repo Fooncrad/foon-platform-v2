@@ -1,0 +1,57 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import mysql from 'mysql2/promise';import {randomUUID} from 'node:crypto';import {deliverNotifications} from './notification-delivery.mjs';
+test('registered unverified customers receive durable localized order events, isolated read receipts and safe delivery retries',async()=>{
+ const url=new URL(process.env.DATABASE_URL||'');assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/foon_migration_test');
+ const db=await mysql.createConnection(url.href),origin='http://127.0.0.1:3103';
+ const server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','-H','127.0.0.1','-p','3103'],{env:{...process.env,APP_URL:origin},stdio:'ignore'});
+ const request=async(path,method,body,cookie='',tenant='')=>fetch(origin+path,{method,headers:{origin,'content-type':'application/json',cookie,'x-foon-tenant':tenant},body:body===undefined?undefined:JSON.stringify(body)});
+ const cookie=r=>(r.headers.get('set-cookie')||'').split(';')[0];
+ try{
+  for(let i=0;i<60;i++){try{await fetch(origin+'/login');break;}catch{await new Promise(r=>setTimeout(r,300));}}
+  const slug='notify-'+randomUUID().slice(0,8),password='a-strong-test-password';
+  const merchant=await request('/api/auth/register','POST',{email:slug+'@test.example',name:'Owner',password,storeName:'Test store',slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'});assert.equal(merchant.status,201,await merchant.clone().text());const ownerCookie=cookie(merchant),owner=await merchant.json(),tenant=owner.tenant.id;
+  await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[tenant]);
+  const customer=await request('/api/customer/register','POST',{name:'Customer',email:slug+'-customer@test.example',password,storeSlug:slug},'foon_language=en');assert.equal(customer.status,201,await customer.clone().text());const customerCookie=cookie(customer),customerId=(await customer.json()).user.id;
+  const [[welcome]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND event_key='account_welcome'",[customerId]);assert.equal(Number(welcome.n),1);
+  const [[identity]]=await db.execute('SELECT email_verified_at,default_locale FROM users WHERE id=?',[customerId]);assert.equal(identity.email_verified_at,null);assert.equal(identity.default_locale,'en');
+  const reset=await request('/api/auth/request-password-reset','POST',{email:slug+'-customer@test.example'});assert.equal(reset.status,200);assert.equal((await reset.json()).queued,true);
+  assert.equal((await request('/api/auth/request-password-reset','POST',{email:slug+'-customer@test.example'})).status,200);
+  const [[resetJob]]=await db.execute("SELECT COUNT(*) AS n,MAX(body_text) AS body FROM platform_notification_outbox WHERE event_key='password_reset' AND recipient_email=?",[slug+'-customer@test.example']);assert.equal(Number(resetJob.n),1);assert.match(resetJob.body,/one-time link/);assert.match(resetJob.body,/reset-password\?token=/);
+  const category=await request('/api/restaurant/activity-catalog','POST',{kind:'category',name:'Category'},ownerCookie,tenant);assert.equal(category.status,201);const categoryId=(await category.json()).id;
+  const product=await request('/api/restaurant/activity-catalog','POST',{kind:'product',categoryId,name:'Item',price:7.25},ownerCookie,tenant);assert.equal(product.status,201);const productId=(await product.json()).id;
+  const [[branch]]=await db.execute('SELECT id FROM branches WHERE tenant_id=? LIMIT 1',[tenant]);
+  const body={storeSlug:slug,branchId:branch.id,channel:'takeaway',requestKey:randomUUID(),items:[{id:productId,quantity:1,options:[]}],currency:'SAR'};
+  const order=await request('/api/customer/orders','POST',body,customerCookie);assert.equal(order.status,201,await order.clone().text());const id=(await order.json()).id;
+  const replay=await request('/api/customer/orders','POST',body,customerCookie);assert.equal(replay.status,201);
+  const [[received]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND event_key='order_new' AND resource_id=?",[customerId,id]);assert.equal(Number(received.n),1);
+  const revision=await request('/api/customer/order-revision','GET',undefined,customerCookie);const initial=await revision.json();assert.ok(initial.unread>=2);
+  const [[version]]=await db.execute('SELECT version FROM restaurant_orders WHERE id=?',[id]);const update=await request('/api/restaurant/operations/orders','PATCH',{id,version:Number(version.version),status:'preparing'},ownerCookie,tenant);assert.equal(update.status,200,await update.clone().text());
+  const overview=await request('/api/restaurant/operations/overview','GET',undefined,ownerCookie,tenant);assert.equal(overview.status,200);assert.equal((await overview.json()).summary.outstandingOrders,1);
+  const [events]=await db.execute("SELECT subject,body_text FROM customer_notifications WHERE user_id=? AND event_key='order_preparing'",[customerId]);assert.equal(events.length,1);assert.equal(/[\u0600-\u06ff]/.test(events[0].subject+events[0].body_text),false);
+  const next=await (await request('/api/customer/order-revision','GET',undefined,customerCookie)).json();assert.notEqual(next.revision,initial.revision);assert.ok(next.unread>initial.unread);
+  assert.equal((await request('/api/customer/notifications','POST',{all:true},ownerCookie)).status,200);const [[untouched]]=await db.execute('SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND read_at IS NULL',[customerId]);assert.ok(Number(untouched.n)>0);
+  assert.equal((await request('/api/customer/notifications','POST',{all:true},customerCookie)).status,200);const [[read]]=await db.execute('SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND read_at IS NULL',[customerId]);assert.equal(Number(read.n),0);
+  assert.equal((await request('/api/internal/notifications','POST',{})).status,403);
+  const restaurant=await request('/api/auth/register','POST',{email:slug+'-restaurant@test.example',name:'Owner',password,storeName:'Dining store',slug:slug+'-dining',activity:'restaurant',countryCode:'SA',currency:'SAR',region:'الرياض'});assert.equal(restaurant.status,201);const restaurantCookie=cookie(restaurant),restaurantTenant=(await restaurant.json()).tenant.id;
+  await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[restaurantTenant]);
+  const [[restaurantBranch]]=await db.execute('SELECT id FROM branches WHERE tenant_id=? LIMIT 1',[restaurantTenant]);
+  assert.equal((await request('/api/customer/join-store','POST',{storeSlug:slug+'-dining'},customerCookie)).status,200);
+  const section=await request('/api/restaurant/operations/sections','POST',{name:'Main hall',branchId:restaurantBranch.id,status:'active',data:{}},restaurantCookie,restaurantTenant);assert.equal(section.status,201,await section.clone().text());const sectionId=(await section.json()).id;
+  const reservation=await request('/api/customer/services','POST',{storeSlug:slug+'-dining',action:'reservation',branchId:restaurantBranch.id,sectionId,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+3600000).toISOString(),partySize:2,phone:'0500000000'},customerCookie);assert.equal(reservation.status,201,await reservation.clone().text());const reservationId=(await reservation.json()).id;
+  const [[savedReservation]]=await db.execute('SELECT name,data,version FROM restaurant_resources WHERE id=?',[reservationId]);const reservationData=typeof savedReservation.data==='string'?JSON.parse(savedReservation.data):savedReservation.data;
+  delete reservationData.requestFingerprint;delete reservationData.customerUserId;
+  const confirmation={id:reservationId,name:savedReservation.name,branchId:restaurantBranch.id,status:'confirmed',version:Number(savedReservation.version),data:reservationData};
+  const confirmed=await request('/api/restaurant/operations/reservations','PATCH',confirmation,restaurantCookie,restaurantTenant);assert.equal(confirmed.status,200,await confirmed.clone().text());
+  const [reservationNotices]=await db.execute("SELECT subject,body_text FROM customer_notifications WHERE resource_id=? AND event_key='reservation_confirmed'",[reservationId]);assert.equal(reservationNotices.length,1);assert.equal(/[\u0600-\u06ff]/.test(reservationNotices[0].subject+reservationNotices[0].body_text),false);
+  const sameState=await request('/api/restaurant/operations/reservations','PATCH',{...confirmation,version:Number(savedReservation.version)+1},restaurantCookie,restaurantTenant);assert.equal(sameState.status,200,await sameState.clone().text());
+  const [[unchanged]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE resource_id=? AND event_key='reservation_confirmed'",[reservationId]);assert.equal(Number(unchanged.n),1);
+
+  // Exercise the real SQL lease/claim path with a fake transport; no external mail is sent.
+  const [jobs]=await db.execute('SELECT id FROM platform_notification_outbox WHERE tenant_id=?',[tenant]);assert.ok(jobs.length>=3);
+  const ids=jobs.map(j=>j.id),placeholders=ids.map(()=>'?').join(',');
+  await db.execute("UPDATE platform_notification_outbox SET status='pending',attempts=0,next_attempt_at=NOW(),created_at='2000-01-01' WHERE id IN ("+placeholders+')',ids);
+  const sent=[];const result=await deliverNotifications(db,{providerFor:async store=>({send:async message=>{sent.push({store,...message});},close(){}})});assert.ok(result.sent>=jobs.length);assert.ok(sent.some(j=>j.to===slug+'-customer@test.example'&&j.store===tenant));
+  await db.execute("UPDATE platform_notification_outbox SET status='processing',attempts=1,updated_at=DATE_SUB(NOW(),INTERVAL 16 MINUTE) WHERE id=?",[ids[0]]);
+  const recovered=await deliverNotifications(db,{providerFor:async()=>({send:async()=>{},close(){}})});assert.ok(recovered.sent>=1);
+  const [[delivery]]=await db.execute('SELECT status,attempts FROM platform_notification_outbox WHERE id=?',[ids[0]]);assert.equal(delivery.status,'sent');assert.equal(Number(delivery.attempts),2);
+ }finally{await db.end();server.kill();}
+});

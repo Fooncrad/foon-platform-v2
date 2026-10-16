@@ -1,3 +1,6 @@
+import {cookies} from "next/headers";
+import {notifyCustomer} from "@/lib/notifications/customer";
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { database } from "@/lib/db/mysql";
@@ -21,8 +24,11 @@ export async function POST(request:Request){
   try{
    await db.beginTransaction();
    const {tenantId}=await registerCustomer(db,{id,email,passwordHash:hash,name,storeSlug});
+   const locale=(await cookies()).get("foon_language")?.value;
+   await db.execute("UPDATE users SET default_locale=? WHERE id=?",[locale==="en"||locale==="fr"?locale:"ar",id]);
+   await notifyCustomer(db,{userId:id,tenantId:tenantId,event:"account_welcome",resourceId:id});
    await createSession(id,db);
-   await db.commit();
+   await db.commit();dispatchNotifications();
    return NextResponse.json({ok:true,user:{id,email},tenantId,redirect:"/customer"},{status:201});
   }catch(error){await db.rollback();throw error;}finally{db.release();}
  }catch(error){

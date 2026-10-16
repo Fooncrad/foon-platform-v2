@@ -1,12 +1,16 @@
 "use client";
+import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
 import {ACTIVITY_PRESETS, type ActivityType} from "@/lib/platform/activity-presets";
-type Feature={feature_key:string;name_ar:string;category:string;enabled:number|boolean;limit_value:number|null};
+type Feature={feature_key:string;name_ar:string;name_en?:string;category:string;enabled:number|boolean;limit_value:number|null};
 export default function PlanFeatures({planId,canEdit}:{planId:string;canEdit:boolean}){
  return <PlanFeatureEditor key={planId} planId={planId} canEdit={canEdit}/>;
 }
 function PlanFeatureEditor({planId,canEdit}:{planId:string;canEdit:boolean}){
+ const translateUi=useUiText(),language=useUiLanguage();
+ const featureName=(f:Feature)=>language==="en"?f.name_en??translateUi(f.name_ar):translateUi(f.name_ar);
+
  const [activity,setActivity]=useState<ActivityType>("restaurant");
  const [features,setFeatures]=useState<Feature[]>([]),[error,setError]=useState(""),[busy,setBusy]=useState(""),[loading,setLoading]=useState(true);
  useEffect(()=>{let active=true;fetch("/api/admin/plans/"+planId+"/features").then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);if(active)setFeatures(j.features??[]);}).catch(e=>{if(active)setError(String(e));}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[planId]);
@@ -16,13 +20,13 @@ function PlanFeatureEditor({planId,canEdit}:{planId:string;canEdit:boolean}){
   catch(e){setError(String(e));}finally{setBusy("");}
  }
  const filtered=features.filter(f=>activityFeatureSupport(activity,f.feature_key)!=="unsupported");
- return <details><summary>المميزات وحدود الباقة ({features.filter(f=>Boolean(f.enabled)).length}/{features.length})</summary>
- <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",margin:"12px 0"}}><label htmlFor={"plan-activity-"+planId}>عرض مميزات النشاط</label><select id={"plan-activity-"+planId} value={activity} onChange={e=>setActivity(e.target.value as ActivityType)}>{(Object.keys(ACTIVITY_PRESETS) as ActivityType[]).map(code=><option key={code} value={code}>{code}</option>)}</select><small>المميزات المشتركة تظهر لجميع الأنشطة؛ هذا مرشح عرض فقط؛ تغيير الميزة يعدّل الباقة نفسها لجميع مشتركيها.</small></div>
- {loading?<p>جارٍ التحميل…</p>:<div style={{maxHeight:360,overflowY:"auto"}}>{filtered.map(f=><div key={f.feature_key} style={{padding:"8px 0",borderBottom:"1px solid #7774"}}>
- <strong>{f.name_ar}</strong> <small dir="ltr">{f.feature_key}</small>{activityFeatureSupport(activity,f.feature_key)==="unclassified"&&<small> · لم تُصنّف لهذه الأنشطة بعد</small>}
+ return <details><summary>{translateUi("المميزات وحدود الباقة (")}{features.filter(f=>Boolean(f.enabled)).length}/{features.length})</summary>
+ <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",margin:"12px 0"}}><label htmlFor={"plan-activity-"+planId}>{translateUi("عرض مميزات النشاط")}</label><select id={"plan-activity-"+planId} value={activity} onChange={e=>setActivity(e.target.value as ActivityType)}>{(Object.keys(ACTIVITY_PRESETS) as ActivityType[]).map(code=><option key={code} value={code}>{code}</option>)}</select><small>{translateUi("المميزات المشتركة تظهر لجميع الأنشطة؛ هذا مرشح عرض فقط؛ تغيير الميزة يعدّل الباقة نفسها لجميع مشتركيها.")}</small></div>
+ {loading?<p>{translateUi("جارٍ التحميل…")}</p>:<div style={{maxHeight:360,overflowY:"auto"}}>{filtered.map(f=><div key={f.feature_key} style={{padding:"8px 0",borderBottom:"1px solid #7774"}}>
+ <strong>{featureName(f)}</strong> <small dir="ltr">{f.feature_key}</small>{activityFeatureSupport(activity,f.feature_key)==="unclassified"&&<small>  {translateUi("· لم تُصنّف لهذه الأنشطة بعد")}</small>}
  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
- <label><input type="checkbox" disabled={!canEdit||busy===f.feature_key} checked={Boolean(f.enabled)} onChange={e=>save(f,e.target.checked,f.limit_value)}/> مفعّلة</label>
- {canEdit&&<label>الحد <input aria-label={"حد "+f.name_ar} style={{width:90}} type="number" min="0" defaultValue={f.limit_value??""} key={f.feature_key+String(f.limit_value)} onBlur={e=>{const value=e.target.value.trim();const limit=value===""?null:Number(value);if((limit===null||Number.isSafeInteger(limit)&&limit>=0)&&limit!==f.limit_value)save(f,Boolean(f.enabled),limit);}}/></label>}
+ <label><input type="checkbox" disabled={!canEdit||busy===f.feature_key} checked={Boolean(f.enabled)} onChange={e=>save(f,e.target.checked,f.limit_value)}/>  {translateUi("مفعّلة")}</label>
+ {canEdit&&<label>{translateUi("الحد")} <input aria-label={translateUi("الحد")+" "+featureName(f)} style={{width:90}} type="number" min="0" defaultValue={f.limit_value??""} key={f.feature_key+String(f.limit_value)} onBlur={e=>{const value=e.target.value.trim();const limit=value===""?null:Number(value);if((limit===null||Number.isSafeInteger(limit)&&limit>=0)&&limit!==f.limit_value)save(f,Boolean(f.enabled),limit);}}/></label>}
  </div></div>)}</div>}
  {error&&<p role="alert" className="form-error">{error}</p>}</details>;
 }

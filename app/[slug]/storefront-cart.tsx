@@ -1,4 +1,5 @@
 "use client";
+import {useUiText} from "@/lib/i18n/ui-language";
 import {useEffect,useRef,useState,useSyncExternalStore} from "react";
 import {useRouter} from "next/navigation";
 import InlineCustomerAuth from "./inline-customer-auth";
@@ -21,7 +22,9 @@ function storedLines(storage:string):Line[]{
  return [];
 }
 export function StorefrontAddButton({slug,id,language,service=false}:{slug:string;id:string;language:Language;service?:boolean}){
- const text=language==="ar"?(service?"إضافة الخدمة":"إضافة إلى السلة"):language==="fr"?(service?"Ajouter le service":"Ajouter au panier"):(service?"Add service":"Add to cart");
+ const translateUi=useUiText();
+
+ const text=language==="ar"?(service?"إضافة الخدمة":translateUi("إضافة إلى السلة")):language==="fr"?(service?"Ajouter le service":"Ajouter au panier"):(service?"Add service":"Add to cart");
  return <button type="button" className="foonCartAdd" onClick={()=>window.dispatchEvent(new CustomEvent("foon:storefront-cart-add",{detail:{slug,id}}))}>{text}</button>;
 }
 export default function StorefrontCart({slug,language,signedIn=false,linked=false,service=false,customerPhone="",deliveryAddress=""}:{slug:string;language:Language;signedIn?:boolean;linked?:boolean;service?:boolean;customerPhone?:string;deliveryAddress?:string}){

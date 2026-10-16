@@ -1,3 +1,5 @@
+import {cookies as uiCookies} from "next/headers";
+import {uiText} from "@/lib/i18n/ui-copy";
 import UserActions from "./user-actions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -12,6 +14,9 @@ type Account = RowDataPacket & {
 };
 
 export default async function UsersPage({searchParams}:{searchParams:Promise<{q?:string;status?:string}>}){
+ const translationLanguage=(await uiCookies()).get("foon_language")?.value;
+ const translateUi=(value:string)=>uiText(value,translationLanguage==="en"||translationLanguage==="fr"?translationLanguage:"ar");
+
  const params=await searchParams;
  const q=String(params.q??"").trim().slice(0,100);
  const status=["active","pending","suspended"].includes(params.status??"")?params.status!:"";
@@ -31,14 +36,14 @@ export default async function UsersPage({searchParams}:{searchParams:Promise<{q?
  const support=users.filter(u=>u.platform_role==="support").length;
  const storeAccounts=users.filter(u=>Number(u.tenant_count)>0).length;
  return <main className="workspace">
-  <header className="workspace-head"><div><h1>المستخدمون والصلاحيات</h1><p>آخر 200 حساب فعلي، مع الفصل بين أدوار المنصة وعضويات المتاجر.</p></div></header>
-  <section className="adminPanel"><form action="/admin/users" method="get" className="adminUserFilters"><label>بحث الحساب<input type="search" name="q" defaultValue={q} placeholder="البريد أو اسم المستخدم" maxLength={100}/></label><label>الحالة<select name="status" defaultValue={status}><option value="">جميع الحالات</option><option value="active">نشط</option><option value="pending">قيد الانتظار</option><option value="suspended">موقوف</option></select></label><button type="submit">بحث</button><Link href="/admin/users">إعادة تعيين</Link></form><p>النتائج المعروضة: {users.length} حساب (بحد أقصى 200 نتيجة).</p></section>
-  <section className="adminAccessStats"><article><span>مديرو المنصة المعروضون</span><strong>{admins}</strong></article><article><span>الدعم المعروض</span><strong>{support}</strong></article><article><span>حسابات المتاجر المعروضة</span><strong>{storeAccounts}</strong></article></section>
-  <section className="adminPanel"><div className="adminPanelHead"><div><h2>الحسابات</h2><p>إيقاف الحسابات وإعادة تفعيلها متاحان للمشرف الأعلى فقط، مع سجل تدقيق وإلغاء الجلسات عند الإيقاف. تغيير دور المنصة متاح للمشرف الأعلى فقط؛ لا تتغير عضويات المتاجر.</p></div></div>
-   {users.length===0?<div className="adminUsersEmpty"><b>لا توجد حسابات</b></div>:
+  <header className="workspace-head"><div><h1>{translateUi("المستخدمون والصلاحيات")}</h1><p>{translateUi("آخر 200 حساب فعلي، مع الفصل بين أدوار المنصة وعضويات المتاجر.")}</p></div></header>
+  <section className="adminPanel"><form action="/admin/users" method="get" className="adminUserFilters"><label>{translateUi("بحث الحساب")}<input type="search" name="q" defaultValue={q} placeholder="البريد أو اسم المستخدم" maxLength={100}/></label><label>{translateUi("الحالة")}<select name="status" defaultValue={status}><option value="">{translateUi("جميع الحالات")}</option><option value="active">{translateUi("نشط")}</option><option value="pending">{translateUi("قيد الانتظار")}</option><option value="suspended">{translateUi("موقوف")}</option></select></label><button type="submit">{translateUi("بحث")}</button><Link href="/admin/users">{translateUi("إعادة تعيين")}</Link></form><p>{translateUi("النتائج المعروضة:")} {users.length}  {translateUi("حساب (بحد أقصى 200 نتيجة).")}</p></section>
+  <section className="adminAccessStats"><article><span>{translateUi("مديرو المنصة المعروضون")}</span><strong>{admins}</strong></article><article><span>{translateUi("الدعم المعروض")}</span><strong>{support}</strong></article><article><span>{translateUi("حسابات المتاجر المعروضة")}</span><strong>{storeAccounts}</strong></article></section>
+  <section className="adminPanel"><div className="adminPanelHead"><div><h2>{translateUi("الحسابات")}</h2><p>{translateUi("إيقاف الحسابات وإعادة تفعيلها متاحان للمشرف الأعلى فقط، مع سجل تدقيق وإلغاء الجلسات عند الإيقاف. تغيير دور المنصة متاح للمشرف الأعلى فقط؛ لا تتغير عضويات المتاجر.")}</p></div></div>
+   {users.length===0?<div className="adminUsersEmpty"><b>{translateUi("لا توجد حسابات")}</b></div>:
     <div className="adminDataTableWrap"><table className="adminDataTable">
-     <thead><tr><th scope="col">الحساب</th><th scope="col">الحالة</th><th scope="col">دور المنصة</th><th scope="col">عضويات المتاجر</th>{canManage&&<th scope="col">إجراءات</th>}</tr></thead>
-     <tbody>{users.map(user=><tr key={user.id}><td><b>{user.display_name??"—"}</b><div dir="ltr">{user.email}</div></td><td>{user.status}</td><td>{user.platform_role??"—"}</td><td>{Number(user.tenant_count)}</td>{canManage&&<td>{user.id!==userId&&user.platform_role!=="super_admin"?<UserActions userId={user.id} status={user.status} platformRole={user.platform_role}/>:<span>محمي</span>}</td>}</tr>)}</tbody>
+     <thead><tr><th scope="col">{translateUi("الحساب")}</th><th scope="col">{translateUi("الحالة")}</th><th scope="col">{translateUi("دور المنصة")}</th><th scope="col">{translateUi("عضويات المتاجر")}</th>{canManage&&<th scope="col">{translateUi("إجراءات")}</th>}</tr></thead>
+     <tbody>{users.map(user=><tr key={user.id}><td><b>{user.display_name??"—"}</b><div dir="ltr">{user.email}</div></td><td>{user.status}</td><td>{user.platform_role??"—"}</td><td>{Number(user.tenant_count)}</td>{canManage&&<td>{user.id!==userId&&user.platform_role!=="super_admin"?<UserActions userId={user.id} status={user.status} platformRole={user.platform_role}/>:<span>{translateUi("محمي")}</span>}</td>}</tr>)}</tbody>
     </table></div>}
   </section>
  </main>;

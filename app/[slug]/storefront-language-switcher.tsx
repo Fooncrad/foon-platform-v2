@@ -1,14 +1,12 @@
 "use client";
+import {setUiLanguage} from "@/lib/i18n/ui-language";
 import {useRouter} from "next/navigation";
 import type {ActivityLanguage} from "@/lib/platform/activity-presets";
 const labels:Record<ActivityLanguage,string>={ar:"العربية",en:"English",fr:"Français"};
 export default function StorefrontLanguageSwitcher({language}:{language:ActivityLanguage}){
  const router=useRouter();
  function change(next:ActivityLanguage){
-  document.cookie="foon_language="+next+"; Path=/; Max-Age=31536000; SameSite=Lax";
-  try{localStorage.setItem("foon-language",next);}catch{}
-  document.documentElement.lang=next;
-  document.documentElement.dir=next==="ar"?"rtl":"ltr";
+  setUiLanguage(next);
   router.refresh();
  }
  return <label style={{display:"inline-flex",alignItems:"center",gap:6}}>

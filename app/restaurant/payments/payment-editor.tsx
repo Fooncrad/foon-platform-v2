@@ -1,4 +1,5 @@
 "use client";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
 import {PAYMENT_PROVIDERS,paymentMissingFields,type PaymentProvider,type PaymentMode,type PaymentLanguage,type CredentialName} from "@/lib/payments/provider-catalog";
 import "./payments.css";
@@ -8,7 +9,7 @@ const activityNames:Record<string,[string,string,string]>={
  restaurant:["المطعم","Restaurant","Restaurant"],cafe:["المقهى","Café","Café"],sweets:["الحلويات","Sweets","Pâtisserie"],grocery:["البقالة","Grocery","Épicerie"],clothing:["الملابس","Clothing","Vêtements"],perfume:["العطور","Perfume","Parfumerie"],accessories:["الإكسسوارات","Accessories","Accessoires"],watches:["الساعات","Watches","Montres"],gifts:["الهدايا","Gifts","Cadeaux"],ecommerce:["التجارة الإلكترونية","Ecommerce","Commerce électronique"],carwash:["غسيل السيارات","Car wash","Lavage auto"],laundry:["المغسلة","Laundry","Blanchisserie"],automotive:["خدمات السيارات","Automotive services","Services automobiles"],salon:["الصالون","Salon","Salon"],publicworks:["الأعمال العامة","Public works","Travaux publics"]
 };
 export default function PaymentEditor({tenantId,canEdit,branches,activityCode,language,defaultCurrency="SAR"}:{tenantId:string;canEdit:boolean;branches:{id:string;name:string}[];activityCode?:string;language?:PaymentLanguage;defaultCurrency?:string}){
- const [localLanguage,setLocalLanguage]=useState<PaymentLanguage>("ar");
+ const localLanguage=useUiLanguage();
  const lang=language??localLanguage;
  const t=(ar:string,en:string,fr:string)=>lang==="ar"?ar:lang==="en"?en:fr;
  const selectedScope=useRef("");
@@ -40,9 +41,7 @@ export default function PaymentEditor({tenantId,canEdit,branches,activityCode,la
   selectedScope.current=v;
   const found=items.find(s=>(s.branch_id??"")===v);setScope(v);setProvider(found?.provider??"manual");setMode(found?.mode??"test");setEnabled(Boolean(found?.enabled));setCurrency(found?.currency??defaultCurrency);setReference(found?.merchant_reference??"CASH");setPublicKey(found?.public_key??"");setCredentials({secret_key:"",webhook_secret:""});setClear([]);setDirty(false);
  },[defaultCurrency]);
- useEffect(()=>{
-  const update=()=>{const value=localStorage.getItem("foon-language");setLocalLanguage(value==="en"||value==="fr"?value:"ar");};queueMicrotask(update);window.addEventListener("foon:language-change",update);return()=>window.removeEventListener("foon:language-change",update);
- },[]);
+
  useEffect(()=>{
   let active=true;queueMicrotask(()=>{if(active){setLoaded(false);setMessage("");}});
   fetch("/api/restaurant/payments/settings",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);if(active){setAll(j.settings??[]);setVault(Boolean(j.vault_ready));restore(selectedScope.current,j.settings??[]);setLoaded(true);}}).catch(e=>{if(active)setMessage(e instanceof Error?e.message:"REQUEST_FAILED");});return()=>{active=false;};

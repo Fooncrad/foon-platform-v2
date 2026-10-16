@@ -1,3 +1,5 @@
+import {notifyCustomer} from "@/lib/notifications/customer";
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {createHash} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -47,6 +49,7 @@ export async function POST(request:Request){
   // Customers may only create their own pending service requests. They receive no staff role or update permission.
   const result=await saveResource(db,tenant,user,'owner',serviceModule,{name:String(users[0].display_name||'عميل'),branchId:body.branchId,status:'pending',data});
   await db.execute("UPDATE restaurant_resources SET lookup_key=?,data=JSON_SET(data,'$.requestFingerprint',?,'$.customerUserId',?) WHERE id=? AND tenant_id=?",[lookup,fingerprint,user,result.id,tenant]);
-  await db.commit();return NextResponse.json({ok:true,id:result.id},{status:201});
+  if(!waiter)await notifyCustomer(db,{userId:user,tenantId:tenant,event:"reservation_created",resourceId:result.id,reference:String(users[0].display_name??""),status:"pending"});
+  await db.commit();dispatchNotifications();return NextResponse.json({ok:true,id:result.id},{status:201});
  }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:'SERVICE_UNAVAILABLE';return NextResponse.json({ok:false,code},{status:code==='RATE_LIMITED'?429:code==='REFERENCE_NOT_FOUND'||code==='BRANCH_NOT_FOUND'?404:code==='STORE_CUSTOMER_REQUIRED'||code==='PLAN_FEATURE_REQUIRED'?403:code==='SERVICE_UNAVAILABLE'?503:400});}finally{db.release();}
 }

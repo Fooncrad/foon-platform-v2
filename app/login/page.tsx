@@ -1,4 +1,5 @@
 "use client";
+import {useLanguagePreference} from "@/lib/i18n/ui-language";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
 import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
@@ -12,7 +13,7 @@ const strings={
  fr:{tag:"Connexion sécurisée",title:"Bon retour",intro:"Connectez-vous pour accéder à votre espace de travail.",email:"Adresse e-mail",password:"Mot de passe",forgot:"Mot de passe oublié ?",busy:"Connexion…",submit:"Se connecter",noAccount:"Pas encore de compte ?",register:"Créer un compte",home:"Retour à l'accueil",invalid:"Adresse e-mail ou mot de passe incorrect.",rate:"Trop de tentatives. Réessayez plus tard.",failure:"Connexion impossible. Réessayez.",network:"Connexion au serveur impossible. Réessayez.",language:"Langue"}
 } as const;
 export default function LoginPage(){
- const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [lang]=useSavedPreference<Lang>("foon-public-lang",["ar","en","fr"],"ar");const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
+ const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [lang]=useLanguagePreference();const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=strings[lang];
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;setBusy(true);setError("");setErrorCode("");const data=new FormData(e.currentTarget);

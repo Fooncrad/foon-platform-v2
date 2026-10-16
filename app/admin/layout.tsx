@@ -1,4 +1,5 @@
 "use client";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
 import Link from "next/link";
 import {useEffect,useState} from "react";
@@ -9,8 +10,8 @@ const groups=[["التشغيل",[["/admin/plans","الباقات والمميز�
 const translations:Record<string,{en:string;fr:string}>={"نظرة عامة":{en:"Overview",fr:"Vue d’ensemble"},"المتاجر":{en:"Stores",fr:"Boutiques"},"التشغيل":{en:"Operations",fr:"Opérations"},"الباقات والمميزات":{en:"Plans and features",fr:"Offres et fonctionnalités"},"الاشتراكات":{en:"Subscriptions",fr:"Abonnements"},"المدفوعات والفواتير":{en:"Payments and invoices",fr:"Paiements et factures"},"المستخدمون والصلاحيات":{en:"Users and permissions",fr:"Utilisateurs et autorisations"},"التواصل":{en:"Communication",fr:"Communication"},"الإشعارات والرسائل":{en:"Notifications and messages",fr:"Notifications et messages"},"الترجمات":{en:"Translations",fr:"Traductions"},"المنصة":{en:"Platform",fr:"Plateforme"},"صفحات الموقع":{en:"Website pages",fr:"Pages du site"},"إعدادات المنصة":{en:"Platform settings",fr:"Paramètres de la plateforme"},"سجل العمليات":{en:"Audit log",fr:"Journal d’audit"},"إغلاق قائمة الإدارة":{en:"Close admin menu",fr:"Fermer le menu d’administration"},"فتح قائمة الإدارة":{en:"Open admin menu",fr:"Ouvrir le menu d’administration"},"إغلاق القائمة":{en:"Close menu",fr:"Fermer le menu"},"لوحة المنصة":{en:"Platform dashboard",fr:"Tableau de bord de la plateforme"},"مساحة إدارة FOON":{en:"FOON administration workspace",fr:"Espace d’administration FOON"},"تفعيل الوضع الليلي":{en:"Enable dark mode",fr:"Activer le mode sombre"},"تفعيل الوضع النهاري":{en:"Enable light mode",fr:"Activer le mode clair"},"فتح قسم الإشعارات والرسائل":{en:"Open notifications and messages",fr:"Ouvrir les notifications et messages"},"تسجيل الخروج":{en:"Sign out",fr:"Se déconnecter"}};
 export default function AdminLayout({children}:{children:React.ReactNode}){
  const [open,setOpen]=useState(false);
- const [language,setLanguage]=useState<"ar"|"en"|"fr">("ar");
- useEffect(()=>{const sync=()=>{const saved=window.localStorage.getItem("foon-language");const cookie=document.cookie.match(/(?:^|; )foon_language=([^;]*)/)?.[1];const current=saved==="en"||saved==="fr"?saved:cookie==="en"||cookie==="fr"?cookie:"ar";setLanguage(current);};sync();window.addEventListener("foon:language-change",sync);return()=>window.removeEventListener("foon:language-change",sync);},[]);
+ const language=useUiLanguage();
+
  const t=(ar:string)=>language==="ar"?ar:translations[ar]?.[language]??ar;
  const [theme,setTheme]=useSavedPreference<"light"|"dark">("foon-admin-theme",["light","dark"],"light",true);
  const changeTheme=()=>{const next=theme==="light"?"dark":"light";setTheme(next);window.localStorage.setItem("foon-admin-theme",next);};

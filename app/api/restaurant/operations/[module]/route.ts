@@ -1,3 +1,5 @@
+import {notifyCustomer} from "@/lib/notifications/customer";
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
@@ -75,6 +77,7 @@ async function connection(){const db=await database().getConnection();try{await 
 async function overview(db:PoolConnection,tenantId:string,role:string,branch:string|null){
  const filter=branch?" AND branch_id=?":"",params=branch?[tenantId,branch]:[tenantId];
  const [[summary]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS orders,COALESCE(SUM(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total ELSE 0 END),0) AS sales,COALESCE(AVG(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total END),0) AS average,SUM(status='new') AS newOrders,SUM(status='preparing') AS preparing,SUM(status='ready') AS ready FROM restaurant_orders WHERE tenant_id=?"+filter+" AND created_at>=TIMESTAMP(DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR))-INTERVAL 3 HOUR",params);
+ const [[outstanding]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
  const [[tables]]=await db.execute<RowDataPacket[]>("SELECT COUNT(DISTINCT table_id) AS occupied FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
  const [series]=await db.execute<RowDataPacket[]>("SELECT DATE(created_at+INTERVAL 3 HOUR) AS day,SUM(total) AS total FROM restaurant_orders WHERE tenant_id=?"+filter+" AND payment_status='paid' AND status<>'cancelled' AND created_at>=UTC_TIMESTAMP()-INTERVAL 7 DAY GROUP BY day ORDER BY day",params);
  const financial=["owner","manager","cashier","accountant"].includes(role);
@@ -100,7 +103,7 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
   }
   if(section){const allowed=section==="tables"||section==="reservations"?["owner","manager","waiter"]:section==="inventory"?["owner","manager","accountant"]:section==="printers"?["owner","manager","cashier","accountant"]:section==="pos"?["owner","manager","cashier"]:["owner","manager"];if(allowed.includes(role))attention[section]=(attention[section]??0)+1;}
  }
- return {attention,summary:{...serviceCounts,sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
+ return {attention,summary:{...serviceCounts,outstandingOrders:Number(outstanding.n),sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
 }
 async function availableTables(db:PoolConnection,tenantId:string,branch:string|null){
  const tables=await resourceRows(db,tenantId,"tables",branch);
@@ -191,6 +194,10 @@ async function mutate(request:Request,module:string,method:string){
    if(headerBranch&&headerBranch!==body.branchId)throw new ResourceError("FORBIDDEN");
   }
   if(["tables","sections"].includes(module))await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[ctx.tenantId]);
+  let reservationBefore:string|null=null;
+  if(module==="reservations"&&method==="PATCH"&&typeof body.id==="string"){
+   const [before]=await db.execute<RowDataPacket[]>("SELECT status FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='reservation' FOR UPDATE",[ctx.tenantId,body.id]);reservationBefore=before[0]?String(before[0].status):null;
+  }
   let result;
   if(module==="sections"&&method==="POST"&&body.sections){result=await createDiningBatch(db,ctx.tenantId,ctx.user,ctx.role,body);}else if(Object.hasOwn(resourceModules,module)){
    if(method==="POST"&&body.id!==undefined||method!=="POST"&&typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
@@ -215,44 +222,14 @@ async function mutate(request:Request,module:string,method:string){
    if(module==="reservations"&&method==="PATCH"&&body.status&&typeof body.id==="string"){
     const [previous]=await db.execute<RowDataPacket[]>("SELECT status,data,name FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='reservation' LIMIT 1",[body.id,ctx.tenantId]);
     const item=previous[0];
-    const data=body.data&&typeof body.data==="object"?body.data:{};
+    const data=item?parseData(item.data):{};
     const userId=String(data.customerUserId??"");
-    if(item&&userId&&["confirmed","cancelled","seated","completed"].includes(String(body.status))){
-     const [users]=await db.execute<RowDataPacket[]>("SELECT email FROM users WHERE id=? AND status='active' AND email_verified_at IS NOT NULL LIMIT 1",[userId]);
-     const email=String(users[0]?.email??"");
-     if(email){
-      const statusText:Record<string,string>={confirmed:"تم تأكيد حجزك",cancelled:"تم إلغاء حجزك",seated:"تم تسجيل حضورك",completed:"اكتمل حجزك"};
-      const label=statusText[String(body.status)];
-      const [tenantRows]=await db.execute<RowDataPacket[]>("SELECT name FROM tenants WHERE id=? LIMIT 1",[ctx.tenantId]);
-      const store=String(tenantRows[0]?.name??"المتجر");
-      const reason=String(data.notes??"").slice(0,500);
-      const subject=label+" — "+store;
-      const bodyText=label+" لدى "+store+".\\nالحجز: "+String(body.name??item.name??"")+"\\n"+(body.status==="cancelled"&&reason?"الملاحظات: "+reason+"\\n":"")+"راجع التفاصيل من حسابك في FOON.";
-      await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,?,?,?,?,?)",[randomUUID(),"reservation_"+String(body.status),ctx.tenantId,email,subject,bodyText]);
-      await db.execute("INSERT INTO customer_notifications(id,user_id,tenant_id,event_key,subject,body_text,resource_id) VALUES (?,?,?,?,?,?,?)",[randomUUID(),userId,ctx.tenantId,"reservation_"+String(body.status),subject,bodyText,body.id]);
-     }
-    }
+    if(item&&userId&&reservationBefore!==String(body.status)&&["confirmed","cancelled","seated","completed"].includes(String(body.status)))await notifyCustomer(db,{userId,tenantId:ctx.tenantId,event:"reservation_"+String(body.status),resourceId:body.id,reference:String(item.name??""),status:String(body.status)});
    }
   }else if(["orders","pos","kds"].includes(module)){
    if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
    else if(method==="PATCH"){
-    const [before]=await db.execute<RowDataPacket[]>("SELECT status,payment_status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
     result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
-    const changedStatus=body.status!==undefined&&String(body.status)!==String(before[0]?.status);
-    const changedPayment=body.paymentStatus!==undefined&&String(body.paymentStatus)!==String(before[0]?.payment_status);
-    if(changedStatus||changedPayment){
-     const [details]=await db.execute<RowDataPacket[]>("SELECT o.order_number,u.email,t.name AS store_name FROM restaurant_orders o JOIN users u ON u.id=o.customer_user_id AND u.status='active' AND u.email_verified_at IS NOT NULL JOIN tenants t ON t.id=o.tenant_id WHERE o.id=? AND o.tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
-     if(details.length){
-      const row=details[0];const names:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي",paid:"مدفوع",refunded:"تم رد المبلغ"};
-      const event=changedStatus?"order_"+String(body.status):"order_payment_"+String(body.paymentStatus);
-      const description=changedStatus?"حالة الطلب: "+(names[String(body.status)]??String(body.status)):"حالة الدفع: "+(names[String(body.paymentStatus)]??String(body.paymentStatus));
-      const subject="تحديث طلب #"+String(row.order_number)+" — "+String(row.store_name);
-      const message="مرحبًا،\\n"+description+"\\nرقم الطلب: #"+String(row.order_number)+"\\nالمتجر: "+String(row.store_name)+"\\nراجع التفاصيل من حسابك في FOON.";
-      await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,?,?,?,?,?)",[randomUUID(),event,ctx.tenantId,row.email,subject,message]);
-      const [recipient]=await db.execute<RowDataPacket[]>("SELECT customer_user_id FROM restaurant_orders WHERE id=? AND tenant_id=?",[body.id,ctx.tenantId]);
-      if(recipient[0]?.customer_user_id)await db.execute("INSERT INTO customer_notifications(id,user_id,tenant_id,event_key,subject,body_text,resource_id) VALUES (?,?,?,?,?,?,?)",[randomUUID(),recipient[0].customer_user_id,ctx.tenantId,event,subject,message,body.id]);
-     }
-    }
    }
    else throw new ResourceError("METHOD_NOT_ALLOWED");
   }else if(module==="security"&&method==="DELETE"){
@@ -260,7 +237,7 @@ async function mutate(request:Request,module:string,method:string){
    const [found]=await db.execute<RowDataPacket[]>("SELECT id FROM auth_sessions WHERE id=? AND user_id=? FOR UPDATE",[body.id,ctx.user]);if(!found.length)throw new ResourceError("RESOURCE_NOT_FOUND");
    await db.execute("DELETE FROM auth_sessions WHERE id=? AND user_id=?",[body.id,ctx.user]);result={id:body.id};
   }else throw new ResourceError("METHOD_NOT_ALLOWED");
-  await db.commit();
+  await db.commit();dispatchNotifications();
   // Do not hold invoice -> order locks across the first transaction: webhooks
   // acquire order -> invoice, and the inverse ordering could deadlock. A late
   // invoice is durable before the catch-up attempt starts.
@@ -271,7 +248,7 @@ async function mutate(request:Request,module:string,method:string){
     await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
     await db.beginTransaction();
     gatewayReconciliation=(await reconcileLateIssuedInvoice(db,ctx.tenantId,issuedInvoiceId)).status;
-    await db.commit();
+    await db.commit();dispatchNotifications();
    }catch(error){
     await db.rollback();
     gatewayReconciliation="retry_required";
