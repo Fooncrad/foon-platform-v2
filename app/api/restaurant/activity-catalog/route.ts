@@ -32,9 +32,9 @@ export async function GET(request:Request){
  if(q){where.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");values.push("%"+q+"%","%"+q+"%","%"+q+"%")}
  try{
   const [[categories],[counts],[products]]=await Promise.all([
-   database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
+   database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,description_ar,description_en,description_fr,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p WHERE "+where.join(" AND "),values),
-   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity,p.attributes,p.description_ar FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
+   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity,p.attributes,p.description_ar,p.description_en,p.description_fr FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
   ]);
   return NextResponse.json({ok:true,activity:ctx.activity,currency:ctx.currency,categories,products,page,pageSize,total:Number(counts[0]?.total??0)});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UNAVAILABLE"},{status:503})}
@@ -47,7 +47,7 @@ export async function POST(request:Request){
  const name=body.name.trim(),id=randomUUID();
  try{
   if(body.kind==="category"){
-   await database().execute("INSERT INTO catalog_categories(id,tenant_id,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)",[id,ctx.tenantId,name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null]);
+   await database().execute("INSERT INTO catalog_categories(id,tenant_id,name_ar,name_en,name_fr,description_ar,description_en,description_fr) VALUES (?,?,?,?,?,?,?,?)",[id,ctx.tenantId,name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null)]);
   }else if(body.kind==="product"){
    const category=String(body.categoryId??"");
    const [matches]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,category]);
@@ -55,7 +55,7 @@ export async function POST(request:Request){
    const price=Number(body.price);
    if(!Number.isFinite(price)||price<0||price>9999999999)return NextResponse.json({ok:false,code:"INVALID_PRICE"},{status:400});
    const service=["carwash","laundry","automotive","salon","publicworks"].includes(ctx.activity!);
-   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,typeof body.description==="string"?body.description.slice(0,5000):null,price,ctx.currency]);
+   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,description_en,description_fr,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null),price,ctx.currency]);
   }else return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
   return NextResponse.json({ok:true,id},{status:201});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_SAVE_FAILED"},{status:503})}
@@ -86,7 +86,11 @@ export async function PATCH(request:Request){
   if(typeof body[key]!=="string"||body[key].length>180)return NextResponse.json({ok:false,code:"INVALID_TRANSLATION"},{status:400});
   columns.push(column+"=?");values.push(body[key].trim()||null);
  }
- if(body.kind==="product"&&body.description!==undefined){if(typeof body.description!=="string"||body.description.length>5000)return NextResponse.json({ok:false,code:"INVALID_DESCRIPTION"},{status:400});columns.push("description_ar=?");values.push(body.description)}
+ for(const [key,column] of [["description","description_ar"],["descriptionEn","description_en"],["descriptionFr","description_fr"]] as const){
+  if(body[key]===undefined)continue;
+  if(typeof body[key]!=="string"||body[key].length>5000)return NextResponse.json({ok:false,code:"INVALID_DESCRIPTION"},{status:400});
+  columns.push(column+"=?");values.push(body[key].trim()||null);
+ }
  if(body.kind==="product"&&body.measurements!==undefined){
   try{const measurements=parseCatalogMeasurements(body.measurements);columns.push("attributes=JSON_SET(COALESCE(attributes,JSON_OBJECT()),'$.measurements',JSON_EXTRACT(?,'$'))");values.push(JSON.stringify(measurements))}catch{return NextResponse.json({ok:false,code:"INVALID_MEASUREMENTS"},{status:400})}
  }
