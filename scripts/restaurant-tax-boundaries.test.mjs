@@ -93,3 +93,23 @@ test('discounted VAT previews survive invoice validation with the exact SAR chec
   }
  }
 });
+
+// Pure order-preview/payment/invoice contract; no database writes or gateway settlement.
+test('fractional VAT order totals match both invoice schemas and SAR payment minor units',()=>{
+ const toMinor=value=>majorToMinor(value.toFixed(2),'SAR');
+ for(const rate of [2.5,7.5,20])for(const inclusive of [false,true]){
+  for(const subtotalMinor of [0,1,3,4,7,13,99,101,999,10000,100000]){
+   for(const discountMinor of new Set([0,Math.floor(subtotalMinor/3),subtotalMinor])){
+    const {net,tax,gross}=calculateOrderTax(subtotalMinor/100,discountMinor/100,rate,inclusive);
+    assert.equal(toMinor(inclusive?gross:net),subtotalMinor-discountMinor);
+    for(const feeMinor of [0,1,225])for(const module of ['customerInvoices','internalInvoices']){
+     const invoice=validateResource(module,{
+      name:'Fractional VAT contract',status:'draft',
+      data:{invoiceNumber:'TEST-ONLY',subtotal:net,taxAmount:tax,serviceFee:feeMinor/100}
+     }).data;
+     assert.equal(toMinor(invoice.subtotal)+toMinor(invoice.taxAmount)+toMinor(invoice.serviceFee),toMinor(gross)+feeMinor);
+    }
+   }
+  }
+ }
+});
