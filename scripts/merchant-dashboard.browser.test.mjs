@@ -573,6 +573,9 @@ test('customer and catalog interfaces use cookie locale without Arabic interface
   await context.clearCookies();await context.addCookies([{name:'foon_language',value:'en',url:origin}]);
   const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Customer',email:slug+'-customer@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);
   await page.goto(origin+'/customer');await expect(page.getByRole('heading',{name:'My orders',exact:true})).toBeVisible();
+  const addressPanel=page.locator('.customerAddresses');await expect(addressPanel.getByRole('heading',{name:'Delivery addresses',exact:true})).toBeVisible();
+  await addressPanel.getByRole('button',{name:'Add address',exact:true}).click();await addressPanel.getByLabel('Address label').fill('Home');await addressPanel.getByLabel('City').fill('Riyadh');await addressPanel.getByLabel('Street address').fill('King Fahd Road');await addressPanel.getByRole('button',{name:'Save address',exact:true}).click();
+  await expect(addressPanel.getByText('King Fahd Road')).toBeVisible();await expect(addressPanel.getByText('Default address')).toBeVisible();
   const text=await page.locator('main').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.end();await context.close();}
