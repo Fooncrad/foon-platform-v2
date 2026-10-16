@@ -9,7 +9,8 @@ const money=(value:number)=>{
  const scaled=value*100,minor=Math.round(scaled);
  // Reject fractions of a minor unit rather than silently changing the checkout base.
  // Allow tiny binary floating-point drift in otherwise valid two-decimal values.
- if(!Number.isSafeInteger(minor)||Math.abs(scaled-minor)>1e-7)throw new RangeError("INVALID_AMOUNT_PRECISION");
+ const tolerance=Math.max(1e-7,Math.min(1e-4,Math.abs(scaled)*Number.EPSILON*2));
+ if(!Number.isSafeInteger(minor)||Math.abs(scaled-minor)>tolerance)throw new RangeError("INVALID_AMOUNT_PRECISION");
  return minor;
 };
 const percent=(value:number)=>{if(!Number.isFinite(value)||value<0||value>100)throw new RangeError("INVALID_TAX_RATE");return value};
