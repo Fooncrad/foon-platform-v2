@@ -1,10 +1,12 @@
+import {createHash} from "node:crypto";
+import {catalogQuantityPolicy,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {isActivityType} from "@/lib/platform/activity-presets";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import type {MenuGroup} from "./menu";
 
-export type StockDebit={kind:"product"|"option";id:string;quantity:number};
+export type StockDebit={kind:"product"|"option"|"variant";id:string;quantity:number};
 export async function salesProfile(db:PoolConnection,tenantId:string){
  const [rows]=await db.execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
  const activity=String(rows[0]?.activity_code??"");
@@ -15,8 +17,9 @@ export async function salesProfile(db:PoolConnection,tenantId:string){
  return {catalog,currency,dining:!catalog||activity==="cafe"};
 }
 export async function activityPosMenu(db:PoolConnection,tenantId:string,branch:string|null){
- const [rows]=await db.execute<RowDataPacket[]>("SELECT p.id,p.branch_id,p.name_ar,p.price,p.currency,p.product_type,p.stock_quantity,p.created_at,c.name_ar AS category_name FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE"+(branch?" AND (p.branch_id IS NULL OR p.branch_id=?) AND (c.branch_id IS NULL OR c.branch_id=?)":"")+" ORDER BY c.sort_order,p.sort_order,p.id LIMIT 1000",branch?[tenantId,branch,branch]:[tenantId]);
- return rows.map(p=>({id:String(p.id),branch_id:p.branch_id,name:String(p.name_ar),status:p.product_type!=="service"&&p.stock_quantity!==null&&Number(p.stock_quantity)<=0?"unavailable":"active",version:1,created_at:p.created_at,data:{price:Number(p.price),currency:String(p.currency),categoryName:String(p.category_name),stockQuantity:p.stock_quantity===null?null:Number(p.stock_quantity)}}));
+ const [rows]=await db.execute<RowDataPacket[]>("SELECT p.id,p.branch_id,p.name_ar,p.price,p.currency,p.product_type,p.stock_quantity,p.attributes,p.created_at,c.name_ar AS category_name FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE"+(branch?" AND (p.branch_id IS NULL OR p.branch_id=?) AND (c.branch_id IS NULL OR c.branch_id=?)":"")+" ORDER BY c.sort_order,p.sort_order,p.id LIMIT 1000",branch?[tenantId,branch,branch]:[tenantId]);
+ const [variants]=await db.execute<RowDataPacket[]>("SELECT product_id,option_ids,stock_quantity,enabled FROM catalog_variants WHERE tenant_id=?",[tenantId]);
+ return rows.map(p=>({id:String(p.id),branch_id:p.branch_id,name:String(p.name_ar),status:p.product_type!=="service"&&p.stock_quantity!==null&&Number(p.stock_quantity)<=0?"unavailable":"active",version:1,created_at:p.created_at,data:{price:Number(p.price),currency:String(p.currency),categoryName:String(p.category_name),stockQuantity:p.stock_quantity===null?null:Number(p.stock_quantity),...catalogQuantityPolicy(p.attributes),variants:variants.filter(v=>v.product_id===p.id).map(v=>({options:typeof v.option_ids==="string"?JSON.parse(v.option_ids):v.option_ids,stock:v.enabled?(v.stock_quantity===null?null:Number(v.stock_quantity)):0}))}}));
 }
 export async function activityPosOptions(db:PoolConnection,tenantId:string,ids:string[],lock=false){
  const result:Record<string,MenuGroup[]>={};if(!ids.length)return result;
@@ -33,7 +36,7 @@ export async function activitySaleItem(db:PoolConnection,tenantId:string,branch:
  return Object.assign(p,{name:String(p.name_ar)});
 }
 export async function debitActivityStock(db:PoolConnection,tenantId:string,kind:StockDebit["kind"],id:string,quantity:number,debits:StockDebit[]){
- const table=kind==="product"?"catalog_products":"catalog_option_values";
+ const table=kind==="product"?"catalog_products":kind==="variant"?"catalog_variants":"catalog_option_values";
  const [rows]=await db.execute<RowDataPacket[]>("SELECT stock_quantity"+(kind==="product"?",product_type":"")+" FROM "+table+" WHERE id=? AND tenant_id=? FOR UPDATE",[id,tenantId]);
  if(!rows.length)throw new ResourceError("ITEM_UNAVAILABLE");
  if(rows[0].stock_quantity===null||rows[0].product_type==="service")return;
@@ -63,11 +66,20 @@ export async function restoreActivityStock(db:PoolConnection,tenantId:string,ord
  if(!Array.isArray(metadata?.stockDebits))return;
  const debits=metadata.stockDebits as StockDebit[];
  for(const d of [...debits].sort((a,b)=>(a.kind+a.id).localeCompare(b.kind+b.id))){
-  if(!["product","option"].includes(d.kind)||typeof d.id!=="string"||!Number.isSafeInteger(d.quantity)||d.quantity<1)throw new ResourceError("STOCK_RESTORE_CONFLICT");
-  const table=d.kind==="product"?"catalog_products":"catalog_option_values";
+  if(!["product","option","variant"].includes(d.kind)||typeof d.id!=="string"||!validCatalogQuantity(d.quantity))throw new ResourceError("STOCK_RESTORE_CONFLICT");
+  const table=d.kind==="product"?"catalog_products":d.kind==="variant"?"catalog_variants":"catalog_option_values";
   const [rows]=await db.execute<RowDataPacket[]>("SELECT stock_quantity FROM "+table+" WHERE id=? AND tenant_id=? FOR UPDATE",[d.id,tenantId]);
   if(!rows.length||rows[0].stock_quantity===null)continue;
   if(Number(rows[0].stock_quantity)+d.quantity>999999999)throw new ResourceError("STOCK_RESTORE_CONFLICT");
   await db.execute("UPDATE "+table+" SET stock_quantity=stock_quantity+? WHERE id=? AND tenant_id=?",[d.quantity,d.id,tenantId]);
  }
+}
+
+export const combinationKey=(ids:string[])=>createHash("sha256").update([...ids].sort().join(":" )).digest("hex");
+export async function debitCatalogVariant(db:PoolConnection,tenantId:string,product:string,selected:string[],quantity:number,debits:StockDebit[]){
+ const [variants]=await db.execute<RowDataPacket[]>("SELECT id,combination_key,enabled FROM catalog_variants WHERE tenant_id=? AND product_id=? ORDER BY id FOR UPDATE",[tenantId,product]);
+ if(!variants.length)return;
+ const match=variants.find(v=>Boolean(v.enabled)&&v.combination_key===combinationKey(selected));
+ if(!match)throw new ResourceError("INVALID_OPTIONS");
+ await debitActivityStock(db,tenantId,"variant",String(match.id),quantity,debits);
 }

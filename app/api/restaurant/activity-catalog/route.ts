@@ -6,7 +6,7 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {isActivityType} from "@/lib/platform/activity-presets";
-import {parseCatalogMeasurements} from "@/lib/platform/catalog-measurements";
+import {parseCatalogMeasurements,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 export const runtime="nodejs";
 async function scope(request:Request){
  const user=await currentUserId();if(!user)return {error:NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401})};
@@ -78,7 +78,7 @@ export async function PATCH(request:Request){
  }
  if(body.kind==="product"&&body.stockQuantity!==undefined){
   const quantity=body.stockQuantity===null?null:Number(body.stockQuantity);
-  if(quantity!==null&&(typeof body.stockQuantity!=="number"||!Number.isSafeInteger(quantity)||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
+  if(quantity!==null&&(typeof body.stockQuantity!=="number"||!(quantity===0||validCatalogQuantity(quantity,999999999))||quantity<0||quantity>999999999))return NextResponse.json({ok:false,code:"INVALID_STOCK"},{status:400});
   columns.push("stock_quantity=?");values.push(quantity);
  }
  for(const [key,column] of [["nameEn","name_en"],["nameFr","name_fr"]] as const){

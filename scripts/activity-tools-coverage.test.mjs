@@ -35,7 +35,8 @@ test("activity setup fails closed on unknown types and preserves selected langua
  assert.match(setup,/const activity=isActivityType\(stored\)\?stored:null/);
  assert.doesNotMatch(setup,/isActivityType\(stored\)\?stored:"restaurant"/);
  assert.match(setup,/if\(!activity\)return/);
- assert.match(setup,/language=\{lang==="en"\|\|lang==="fr"\?lang:"ar"\}/);
+ assert.ok(setup.includes('dir={lang==="en"||lang==="fr"?"ltr":"rtl"}'));
+ assert.ok(!setup.includes("<ActivityTools"));
 });
 
 test("activity dashboard guards against invalid activity codes before resolving modules",()=>{
@@ -70,21 +71,22 @@ test("merchant catalog validates product prices before sending mutations",()=>{
  const catalog=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
  assert.ok(catalog.includes('Number.isFinite(Number(price))'));
  assert.ok(catalog.includes('Number(price)<0'));
- assert.ok(catalog.includes('Number.isFinite(Number(value))&&Number(value)>=0'));
+ assert.ok(catalog.includes("<CatalogDetails"));
 });
 
 test("merchant catalog enforces server stock and price bounds",()=>{
  const catalog=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
- assert.ok(catalog.includes("Number.isInteger(stock)&&stock>=0&&stock<=999999999"));
- assert.ok(catalog.includes('stockQuantity:trimmed===""?null:stock'));
- assert.ok(catalog.includes("Number(value)<=9999999999"));
+ const details=readFileSync(new URL("../app/restaurant/catalog-details.tsx",import.meta.url),"utf8");
+ assert.ok(details.includes('max="999999999"'));
+ assert.ok(details.includes('stockQuantity:number("stock")'));
+ assert.ok(details.includes('max="9999999999"'));
  assert.ok(catalog.includes("Number(price)>9999999999"));
 });
 
-test("merchant catalog API rejects fractional and coerced stock values",()=>{
+test("merchant catalog API validates precise measured stock and rejects coercion",()=>{
  const route=readFileSync(new URL("../app/api/restaurant/activity-catalog/route.ts",import.meta.url),"utf8");
  assert.ok(route.includes('typeof body.stockQuantity!=="number"'));
- assert.ok(route.includes("Number.isSafeInteger(quantity)"));
+ assert.ok(route.includes("validCatalogQuantity(quantity,999999999)"));
  assert.ok(route.includes('code:"INVALID_STOCK"'));
 });
 

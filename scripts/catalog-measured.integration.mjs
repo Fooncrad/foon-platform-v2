@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+export async function runMeasuredCatalogChecks({db,call,resource,owner,other,category}){
+ const cat=(method,body)=>call('/api/restaurant/activity-catalog',method,body,owner.cookie,owner.tenant);
+ const opt=(method,body)=>call('/api/restaurant/activity-catalog/options'+(method==='GET'?'?product='+product:''),method,body,owner.cookie,owner.tenant);
+ const ok=r=>{assert.equal(r.status,200,JSON.stringify(r.body));return r.body};
+ const created=await cat('POST',{kind:'product',categoryId:category,name:'Measured combinations',price:7.25});assert.equal(created.status,201);const product=created.body.id;
+ ok(await cat('PATCH',{kind:'product',id:product,stockQuantity:2,measurements:{unit:'kg',quantityMode:'measured',weightKg:null,lengthCm:null,widthCm:null,heightCm:null}}));
+ const order=(quantity,options=[],requestKey=randomUUID(),actor=owner)=>resource(actor,'pos',{branchId:owner.branch,currency:'USD',channel:'takeaway',requestKey,items:[{id:product,quantity,options}]});
+ assert.equal((await order(0.0001)).body.code,'INVALID_CART');
+ const fractional=await order(0.125);assert.equal(fractional.status,201,JSON.stringify(fractional.body));assert.equal(fractional.body.total,0.91);
+ const [[line]]=await db.execute('SELECT quantity,line_total FROM restaurant_order_items WHERE order_id=?',[fractional.body.id]);assert.equal(Number(line.quantity),0.125);assert.equal(Number(line.line_total),0.91);
+ let rows=(await resource(owner,'orders',undefined,'GET')).body.orders;const row=rows.find(o=>o.id===fractional.body.id);assert.equal((await resource(owner,'orders',{id:row.id,version:row.version,status:'cancelled'},'PATCH')).status,200);
+ const [[restored]]=await db.execute('SELECT stock_quantity FROM catalog_products WHERE id=?',[product]);assert.equal(Number(restored.stock_quantity),2);
+ ok(await cat('PATCH',{kind:'product',id:product,price:10}));
+ for(const name of ['Color','Size'])ok(await opt('POST',{product,action:'group',name,type:'single',required:true,max:1}));
+ let groups=ok(await opt('GET')).groups;for(const group of groups)for(const name of group.name_ar==='Color'?['Red','Blue']:['S','L'])ok(await opt('POST',{product,action:'value',group:group.id,name,price:0,stock:null}));
+ groups=ok(await opt('GET')).groups;const color=groups.find(g=>g.name_ar==='Color'),size=groups.find(g=>g.name_ar==='Size'),red=color.values.find(v=>v.name_ar==='Red').id,blue=color.values.find(v=>v.name_ar==='Blue').id,small=size.values.find(v=>v.name_ar==='S').id,large=size.values.find(v=>v.name_ar==='L').id;
+ ok(await opt('POST',{product,action:'variant',options:[red,small],sku:'RED-S',stock:0.5}));ok(await opt('POST',{product,action:'variant',options:[blue,large],sku:'BLUE-L',stock:1}));
+ assert.equal((await order(0.1,[red,large])).body.code,'INVALID_OPTIONS');assert.equal((await order(0.501,[red,small])).body.code,'INSUFFICIENT_STOCK');
+ assert.equal((await opt('POST',{product,action:'variant',options:[red,small],sku:'DUP',stock:1})).status,409);
+ assert.equal((await opt('POST',{product,action:'deleteVariant',id:randomUUID()})).status,404);
+ ok(await opt('POST',{product,action:'updateGroup',id:color.id,name:'Color',nameEn:'Color',nameFr:'Couleur',required:true,type:'single',max:1}));
+ ok(await opt('POST',{product,action:'updateValue',id:red,group:color.id,name:'Red',nameEn:'Red',nameFr:'Rouge',price:0,stock:null}));
+ const key=randomUUID(),sale=await order(0.125,[red,small],key);assert.equal(sale.status,201,JSON.stringify(sale.body));assert.equal((await order(0.125,[small,red],key)).body.id,sale.body.id);assert.equal((await order(0.126,[red,small],key)).body.code,'CONFLICT');
+ let variants=ok(await opt('GET')).variants;let variant=variants.find(v=>v.sku==='RED-S');assert.equal(Number(variant.stock_quantity),0.375);
+ rows=(await resource(owner,'orders',undefined,'GET')).body.orders;const sold=rows.find(o=>o.id===sale.body.id);assert.equal((await resource(owner,'orders',{id:sold.id,version:sold.version,status:'cancelled'},'PATCH')).status,200);
+ variants=ok(await opt('GET')).variants;assert.equal(Number(variants.find(v=>v.sku==='RED-S').stock_quantity),0.5);
+ const race=await Promise.all([order(0.3,[red,small]),order(0.3,[red,small],randomUUID(),other)]);assert.deepEqual(race.map(r=>r.status).sort(),[201,409]);variants=ok(await opt('GET')).variants;assert.equal(Number(variants.find(v=>v.sku==='RED-S').stock_quantity),0.2);assert.equal(Number(variants.find(v=>v.sku==='BLUE-L').stock_quantity),1);
+ ok(await opt('POST',{product,action:'deleteVariant',id:variant.id}));assert.equal((await order(0.1,[red,small])).body.code,'INVALID_OPTIONS');
+ ok(await cat('PATCH',{kind:'product',id:product,measurements:{unit:'piece',quantityMode:'whole',weightKg:null,lengthCm:null,widthCm:null,heightCm:null}}));assert.equal((await order(0.1,[blue,large])).body.code,'INVALID_CART');
+ console.info('Measured catalog: fractional persistence, server price rounding, replay, combination stock race, isolated combinations, cancellation and disabled SKU verified');
+}

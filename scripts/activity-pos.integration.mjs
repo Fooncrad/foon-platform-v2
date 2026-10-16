@@ -1,3 +1,4 @@
+import {runMeasuredCatalogChecks} from "./catalog-measured.integration.mjs";
 import {runCustomerCartChecks} from "./customer-cart.integration.mjs";
 import {runCatalogImageChecks} from "./catalog-images.integration.mjs";
 import assert from "node:assert/strict";
@@ -103,6 +104,7 @@ export async function runActivityPosChecks({db,call,resource,register}){
  ok(await resource(owner,"orders",{id:variant.id,version:variantRow.version,status:"cancelled"},"PATCH"),200);assert.equal(await stock(product),4);
  const [[restoredOption]]=await db.execute("SELECT stock_quantity FROM catalog_option_values WHERE id=?",[option]);assert.equal(Number(restoredOption.stock_quantity),1);
  console.info("Activity POS: 13 catalogs, server prices/currencies, invoices, idempotency, isolation, rollback, stock race and variant restoration verified");
+ await runMeasuredCatalogChecks({db,call,resource,owner,other:secondActor,category});
  await runCatalogImageChecks({db,call,owner,product,foreign:fixtures.find(f=>f.owner.email.startsWith("catalog-pos-perfume")).owner});
  await runCustomerCartChecks({db,call,fixtures});
  return fixtures;

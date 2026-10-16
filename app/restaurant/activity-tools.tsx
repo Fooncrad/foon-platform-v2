@@ -14,12 +14,15 @@ export default function ActivityTools({tenantId,activity,language}:{tenantId:str
  if(modules.some(item=>item.code==="services"))modules.push({code:"serviceOrders",label:t("أوامر الخدمة","Service orders","Ordres de service")});
  for(const [code,labels] of Object.entries(shared))if(!modules.some(item=>item.code===code))modules.push({code,label:t(...labels)});
  if(!isActivityType(activity))return <section role="alert" dir={lang==="ar"?"rtl":"ltr"} className="foonActivityTools"><p>{t("نوع النشاط غير معروف. راجع إعدادات نشاطك.","Unknown business activity. Review your business settings.","Type d’activité inconnu. Vérifiez les paramètres de votre activité.")}</p></section>;
+ const linkFor=(module:{code:string})=>module.code==="mediaStudio"?"/restaurant/media-studio?tenant="+tenant:module.code==="payments"?"/restaurant/payments?tenant="+tenant:module.code==="catalog"||module.code==="services"?"/restaurant?tenant="+tenant+"&section=menu":destinations[module.code]?"/restaurant?tenant="+tenant+"&section="+destinations[module.code]:null;
+ const seen=new Set<string>();
  return <section dir={lang==="ar"?"rtl":"ltr"} className="foonActivityTools" style={{marginBlock:24}}>
   <h2>{t("أدوات النشاط","Business tools","Outils de l’activité")}</h2><p>{t("افتح أداة النشاط المطلوبة من مكان واحد. تظل صلاحيات الحساب والباقة مطبقة داخل كل أداة.","Open your business tools from one place. Account and plan permissions apply inside each tool.","Accédez aux outils depuis un seul endroit. Les autorisations du compte et de l’abonnement restent appliquées.")}</p>
   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,180px),1fr))",gap:12}}>
    {modules.map(module=>{
-    const href=module.code==="mediaStudio"?"/restaurant/media-studio?tenant="+tenant:module.code==="payments"?"/restaurant/payments?tenant="+tenant:module.code==="catalog"||module.code==="services"?"/restaurant/activity-setup?tenant="+tenant+"#catalog":destinations[module.code]?"/restaurant?tenant="+tenant+"&section="+destinations[module.code]:null;
-    return href?<a key={module.code} href={href} style={{padding:16,border:"1px solid var(--border,#d9e2ee)",borderRadius:12,color:"inherit",textDecoration:"none",background:"var(--surface,#fff)",overflowWrap:"anywhere"}}>{module.label} ↗</a>:<div key={module.code} style={{padding:16,border:"1px solid var(--border,#d9e2ee)",borderRadius:12}}>{module.label}<small style={{display:"block",marginTop:8}}>{t("قيد إكمال الربط","Integration pending","Intégration en attente")}</small></div>;
+    const href=linkFor(module);if(href&&seen.has(href))return null;if(href)seen.add(href);
+    const label=href?modules.filter(item=>linkFor(item)===href).map(item=>item.label).join(" · "):module.label;
+    return href?<a key={module.code} href={href} style={{padding:16,border:"1px solid var(--border,#d9e2ee)",borderRadius:12,color:"inherit",textDecoration:"none",background:"var(--surface,#fff)",overflowWrap:"anywhere"}}>{label} ↗</a>:<div key={module.code} style={{padding:16,border:"1px solid var(--border,#d9e2ee)",borderRadius:12}}>{module.label}<small style={{display:"block",marginTop:8}}>{t("قيد إكمال الربط","Integration pending","Intégration en attente")}</small></div>;
    })}
   </div>
  </section>;
