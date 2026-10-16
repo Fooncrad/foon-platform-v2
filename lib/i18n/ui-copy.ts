@@ -1,5 +1,8 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "وصف القسم بالإنجليزية":["Category description in English","Description de catégorie en anglais"],
+ "وصف القسم بالفرنسية":["Category description in French","Description de catégorie en français"],
+ "رابط صورة القسم":["Category image URL","URL de l’image de catégorie"],
  "وجهة QR على الإيصال":["Receipt QR destination","Destination du QR du reçu"],
  "رسوم الخدمة لكل طلب":["Service fee per order","Frais de service par commande"],
  "رسوم التوصيل لطلب التوصيل":["Delivery fee for delivery orders","Frais pour commandes en livraison"],

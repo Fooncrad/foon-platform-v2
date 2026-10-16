@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {spawn} from "node:child_process";
+import sharp from "sharp";
 import mysql from "mysql2/promise";
 test("catalog descriptions round-trip in three languages and remain tenant isolated",async()=>{
  const database=new URL(process.env.DATABASE_URL??"");
@@ -34,7 +35,7 @@ test("catalog descriptions round-trip in three languages and remain tenant isola
   assert.equal((await call("PATCH",{kind:"category",id:category.body.id,imageUrl:"/api/restaurant/assets/"+ownAsset},owner)).status,200);
   const withImage=await call("GET",null,owner);assert.equal(withImage.body.categories.find(c=>c.id===category.body.id).image_url,"/api/restaurant/assets/"+ownAsset);
   assert.equal((await call("PATCH",{kind:"category",id:category.body.id,imageUrl:null},owner)).status,200);
-  const upload=new FormData();upload.set("file",new Blob([Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aC3cAAAAASUVORK5CYII=","base64")],{type:"image/png"}),"category.png");
+  const upload=new FormData();upload.set("file",new Blob([await sharp({create:{width:200,height:100,channels:3,background:"#e2a93b"}}).png().toBuffer()],{type:"image/png"}),"category.png");
   const uploaded=await fetch(origin+"/api/restaurant/assets",{method:"POST",headers:{origin,cookie:owner.cookie,"x-foon-tenant":owner.tenant},body:upload});assert.equal(uploaded.status,201);const uploadedImage=await uploaded.json();
   assert.equal((await call("PATCH",{kind:"category",id:category.body.id,imageUrl:uploadedImage.url},owner)).status,200);
   const publicPage=await fetch(origin+"/"+owner.slug,{headers:{cookie:"foon_language=en"}});assert.equal(publicPage.status,200);const publicHtml=await publicPage.text();assert.ok(publicHtml.includes(uploadedImage.url));assert.ok(publicHtml.includes("Updated English"));
