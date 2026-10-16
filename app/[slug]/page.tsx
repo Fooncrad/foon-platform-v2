@@ -1,3 +1,4 @@
+import StorefrontReceipt from "./storefront-receipt";
 import {catalogQuantityPolicy} from "@/lib/platform/catalog-measurements";
 import {customerCartAvailable} from "@/lib/platform/customer-checkout";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
@@ -31,7 +32,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
  }catch{return {title:"FOON",robots:{index:false,follow:false}}}
 }
 
-export default async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:string}>;searchParams:Promise<{previewTemplate?:string;category?:string;page?:string;q?:string}>}){
+async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:string}>;searchParams:Promise<{previewTemplate?:string;category?:string;page?:string;q?:string}>}){
  const {slug:raw}=await params;
  const slug=raw.toLowerCase();
  if(!validStoreSlug(slug))notFound();
@@ -100,4 +101,9 @@ export default async function PublicTenantPage({params,searchParams}:{params:Pro
  const [brandingRows]=await database().execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND status='active' AND archived=FALSE LIMIT 1",[String(tenant.id)]);
  return <ActivityStorefront branding={brandingRows.length?parseData(brandingRows[0].data):{}} checkoutEnabled={checkoutEnabled} customerPhone={String(contactRows[0]?.phone??"")} deliveryAddress={savedAddress} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??""),description:language==="en"?String(c.description_en??""):language==="fr"?String(c.description_fr??""):String(c.description_ar??""),imageUrl:c.image_url?String(c.image_url):null}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),description:language==="en"?String(p.description_en??""):language==="fr"?String(p.description_fr??""):String(p.description_ar??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
+}
+
+export default async function StorePage(props:Parameters<typeof PublicTenantPage>[0]){
+ const content=await PublicTenantPage(props);const {slug}=await props.params;
+ return <>{content}<StorefrontReceipt slug={slug.toLowerCase()} language={(await cookies()).get("foon_language")?.value??"ar"}/></>;
 }

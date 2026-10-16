@@ -1,5 +1,6 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "وجهة QR على الإيصال":["Receipt QR destination","Destination du QR du reçu"],
  "رسوم الخدمة لكل طلب":["Service fee per order","Frais de service par commande"],
  "رسوم التوصيل لطلب التوصيل":["Delivery fee for delivery orders","Frais pour commandes en livraison"],
  "تطبيق ضريبة المتجر على الرسوم":["Apply store tax to fees","Appliquer la taxe du magasin aux frais"],

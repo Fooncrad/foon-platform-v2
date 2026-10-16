@@ -13,7 +13,7 @@ import {kitchenTicketNotes} from "@/lib/restaurant/print-notes";
 import {queuePosOrder,retryReviewedPosOrder,pendingPosOrders,removePosOrder,markPosOrder,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import MenuChoices,{cartKey,choicePrice,choicesValid,type CartLine} from "./menu-choices";
-type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;subtotal:number|null;discount:number|null;checkout_snapshot:(CheckoutTotals&{seller:{name:string;taxNumber:string;address:string;phone:string}})|null;version:number;channel:string;table_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;kitchen_notes?:string|null;order_notes?:string|null;created_at:string;items:{name:string;quantity:number;price:number|null;line_total:number|null}[]};
+type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;subtotal:number|null;discount:number|null;checkout_snapshot:(CheckoutTotals&{version?:number;seller:{name:string;taxNumber:string;address:string;phone:string}})|null;version:number;channel:string;table_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;kitchen_notes?:string|null;order_notes?:string|null;created_at:string;items:{name:string;quantity:number;price:number|null;line_total:number|null}[]};
 const statuses:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي"};
 const channels:Record<string,string>={dine_in:"داخل المطعم",takeaway:"سفري",delivery:"توصيل",pickup:"نقطة استلام",room_service:"خدمة الغرف",hotel_service:"خدمة الفندق",reservation:"حجز مع طلب",preorder:"طلب مسبق"};
 const payments:Record<string,string>={paid:"مدفوع",unpaid:"غير مدفوع",refunded:"تم رد المبلغ"};
@@ -98,8 +98,8 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   const style=doc.createElement("style");
   style.textContent=`@page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{direction:inherit;color:#111;font:12px Arial,Tahoma,sans-serif;width:74mm;margin:0 auto}h1{text-align:center;font-size:21px;margin:8px 0 2px}h2{text-align:center;font-size:15px;margin:4px 0 12px}.hero{font-size:18px;font-weight:800;text-align:center;border:2px solid #111;padding:9px;margin:8px 0}.line{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #bbb}.line span:first-child{flex:1}.line strong{text-align:left;white-space:nowrap}.total{font-size:17px;font-weight:800;border-top:2px solid #111;margin-top:10px}.note{text-align:center;font-size:10px;margin:12px 0;line-height:1.6}.controls{margin:18px auto;text-align:center}@media print{.controls{display:none}}`;
   doc.head.appendChild(style);
-  el("h1",order.checkout_snapshot?.seller.name||"FOON");
-  if(finalInvoice&&order.checkout_snapshot){const seller=order.checkout_snapshot.seller;for(const value of [seller.address,seller.phone,seller.taxNumber])if(value)el("div",value,"note");}
+  el("h1",order.checkout_snapshot?.seller?.name||"FOON");
+  if(finalInvoice&&order.checkout_snapshot?.version===1){const seller=order.checkout_snapshot.seller;for(const value of [seller.address,seller.phone,seller.taxNumber])if(value)el("div",value,"note");}
   el("h2",finalInvoice?t.receipt:t.ticket);
   const type=(t as Record<string,string>)[order.channel]??order.channel;
   const location=order.channel==="dine_in"?" — "+t.table+" "+(order.dining_snapshot?.name??order.table_id??t.unknownTable):"";
@@ -130,7 +130,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
    if(order.discount!==null&&order.discount>0)line(locale==="ar"?"الخصم":locale==="en"?"Discount":"Remise","− "+money(order.discount));
   }
   if(!finalInvoice){const notes=dining?kitchenTicketNotes(order,locale):[{label:locale==="en"?"Fulfilment instructions":locale==="fr"?"Instructions de traitement":translateUi("تعليمات التجهيز"),value:order.kitchen_notes},{label:locale==="en"?"Order notes":locale==="fr"?"Notes de commande":translateUi("ملاحظات الطلب"),value:order.order_notes}];for(const note of notes)if(note.value)line(note.label,note.value);}
-  if(finalInvoice&&order.checkout_snapshot){
+  if(finalInvoice&&order.checkout_snapshot?.version===1){
    const snapshot=order.checkout_snapshot,money=(value:number)=>Number(value).toFixed(2)+" "+(order.currency??"SAR");
    if(snapshot.serviceFee)line(locale==="ar"?"رسوم الخدمة":locale==="en"?"Service fee":"Frais de service",money(snapshot.serviceFee));
    if(snapshot.deliveryFee)line(locale==="ar"?"رسوم التوصيل":locale==="en"?"Delivery fee":"Frais de livraison",money(snapshot.deliveryFee));
@@ -143,7 +143,12 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
    try{
     const QRCode=(await import("qrcode")).default;
     const image=doc.createElement("img");image.alt="Receipt QR";image.width=160;image.height=160;image.style.cssText="display:block;margin:12px auto;max-width:100%";
-    image.src=await QRCode.toDataURL(JSON.stringify({type:"payment_receipt",id:order.id,reference:order.order_number,currency:order.currency??"SAR",total:Number(order.total??0).toFixed(2),tax:order.checkout_snapshot?Number(order.checkout_snapshot.tax).toFixed(2):null}),{width:240,margin:2});
+    const response=await fetch('/api/restaurant/receipts',{method:'POST',headers:{'content-type':'application/json','x-foon-tenant':tenantId},body:JSON.stringify({id:order.id})});
+    const result=await response.json();if(!response.ok||typeof result.path!=='string')throw Error('RECEIPT_LINK_FAILED');
+    const destination=new URL(result.path,window.location.origin);if(destination.origin!==window.location.origin||!['receipt','storefront','pos'].includes(result.destination))throw Error('INVALID_RECEIPT_LINK');
+    const receiptUrl=destination.href;
+    image.src=await QRCode.toDataURL(receiptUrl,{width:240,margin:2});
+    const link=doc.createElement('a');link.href=receiptUrl;link.textContent=result.destination==='storefront'?(locale==='ar'?'فتح المتجر':locale==='en'?'Open storefront':'Ouvrir la boutique'):result.destination==='pos'?(locale==='ar'?'فتح نقطة البيع':locale==='en'?'Open POS':'Ouvrir la caisse'):(locale==='ar'?'عرض الإيصال':locale==='en'?'View receipt':'Voir le reçu');link.style.cssText='display:block;text-align:center;margin:8px';doc.body.appendChild(link);
     doc.body.appendChild(image);await image.decode();
    }catch{el("p",locale==="ar"?"تعذر إنشاء رمز الإيصال. أعد فتح الطباعة.":locale==="en"?"Could not generate receipt QR. Reopen printing.":"Impossible de générer le QR. Rouvrez l’impression.","note");return;}
   }
