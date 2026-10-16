@@ -1,5 +1,9 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "رسوم الخدمة لكل طلب":["Service fee per order","Frais de service par commande"],
+ "رسوم التوصيل لطلب التوصيل":["Delivery fee for delivery orders","Frais pour commandes en livraison"],
+ "تطبيق ضريبة المتجر على الرسوم":["Apply store tax to fees","Appliquer la taxe du magasin aux frais"],
+ "مبالغ الرسوم المدخلة شاملة الضريبة":["Entered fees include tax","Les frais saisis comprennent la taxe"],
 "رابط الموقع على الخريطة":["Map location URL", "Lien de localisation"],
 "رابط Instagram":["Instagram URL", "Lien Instagram"],
 "رابط Facebook":["Facebook URL", "Lien Facebook"],
