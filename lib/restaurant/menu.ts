@@ -9,7 +9,7 @@ const kinds:Record<string,string>={categories:"menu_category",menu:"menu_item",m
 function asResource(module:string,row:RowDataPacket):StoredResource{
  const metadata=row.metadata?parseData(row.metadata):{};
  let data:Record<string,string|number|null>;
- if(module==="categories")data={description:metadata.description??null,nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null};
+ if(module==="categories")data={description:metadata.description??null,descriptionEn:metadata.descriptionEn??null,descriptionFr:metadata.descriptionFr??null,imageUrl:metadata.imageUrl??null,nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null};
  else if(module==="menu")data={categoryId:String(row.category_id),price:Number(row.price),description:row.description?String(row.description):null,imageUrl:row.image_url?String(row.image_url):null,allergens:metadata.allergens??null,nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,descriptionEn:metadata.descriptionEn??null,descriptionFr:metadata.descriptionFr??null,oldPrice:metadata.oldPrice??null,exciseTaxRate:metadata.exciseTaxRate??"0",exciseTaxIncluded:metadata.exciseTaxIncluded??"no",itemTaxDisplay:metadata.itemTaxDisplay??"inherit",calories:metadata.calories??null,nutrition:metadata.nutrition??null,nutritionEn:metadata.nutritionEn??null,nutritionFr:metadata.nutritionFr??null,quantity:metadata.quantity??null};
  else if(module==="menuGroups")data={nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,itemId:String(row.item_id),selectionType:String(row.selection_type),requiredFlag:row.required?"yes":"no",minSelect:Number(row.min_select),maxSelect:Number(row.max_select)};
  else if(module==="menuValues")data={nameEn:metadata.nameEn??null,nameFr:metadata.nameFr??null,groupId:String(row.group_id),priceDelta:Number(row.price_delta),imageUrl:metadata.imageUrl??null};
@@ -63,7 +63,7 @@ export async function saveCanonicalMenu(db:PoolConnection,tenantId:string,actor:
  await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id) VALUES (?,?,?,?)",[tenantId,actor,module+(archive?".archive":".save"),id]);
  return{id};
 }
-export type MenuChoice={id:string;name:string;nameEn?:string;nameFr?:string;price:number};
+export type MenuChoice={id:string;name:string;nameEn?:string;nameFr?:string;imageUrl?:string|null;price:number};
 export type MenuGroup={id:string;name:string;nameEn?:string;nameFr?:string;type:string;required:boolean;min:number;max:number;values:MenuChoice[]};
 export async function menuOptions(db:PoolConnection,tenantId:string,itemIds:string[]){
  const result:Record<string,MenuGroup[]>={};
@@ -71,7 +71,7 @@ export async function menuOptions(db:PoolConnection,tenantId:string,itemIds:stri
  if(!(await tenantEntitlement(tenantId,"variants",db)).enabled)return result;
  const [groups]=await db.execute<RowDataPacket[]>("SELECT id,item_id,name,selection_type,required,min_select,max_select FROM restaurant_menu_option_groups WHERE tenant_id=? AND enabled=TRUE AND item_id IN ("+itemIds.map(()=>"?").join(",")+") ORDER BY sort_order,id",[tenantId,...itemIds]);
  if(!groups.length)return result;
- const [values]=await db.execute<RowDataPacket[]>("SELECT id,group_id,name,price_delta FROM restaurant_menu_option_values WHERE tenant_id=? AND enabled=TRUE AND group_id IN ("+groups.map(()=>"?").join(",")+") ORDER BY sort_order,id",[tenantId,...groups.map(g=>g.id)]);
- for(const g of groups){(result[String(g.item_id)]??=[]).push({id:String(g.id),name:String(g.name),type:String(g.selection_type),required:Boolean(g.required),min:Number(g.min_select),max:Number(g.max_select),values:values.filter(v=>v.group_id===g.id).map(v=>({id:String(v.id),name:String(v.name),price:Number(v.price_delta)}))});}
+ const [values]=await db.execute<RowDataPacket[]>("SELECT v.id,v.group_id,v.name,v.price_delta,r.data AS metadata FROM restaurant_menu_option_values v LEFT JOIN restaurant_resources r ON r.id=v.id AND r.tenant_id=v.tenant_id WHERE v.tenant_id=? AND v.enabled=TRUE AND v.group_id IN ("+groups.map(()=>"?").join(",")+") ORDER BY v.sort_order,v.id",[tenantId,...groups.map(g=>g.id)]);
+ for(const g of groups){(result[String(g.item_id)]??=[]).push({id:String(g.id),name:String(g.name),type:String(g.selection_type),required:Boolean(g.required),min:Number(g.min_select),max:Number(g.max_select),values:values.filter(v=>v.group_id===g.id).map(v=>({id:String(v.id),name:String(v.name),imageUrl:v.metadata?(parseData(v.metadata).imageUrl?String(parseData(v.metadata).imageUrl):null):null,price:Number(v.price_delta)}))});}
  return result;
 }

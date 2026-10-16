@@ -20,7 +20,7 @@ import type {MenuGroup} from "@/lib/restaurant/menu";
 import {isMenuTemplate,menuTemplates} from "@/lib/restaurant/menu-templates";
 import {cartKey,choicePrice,choicesValid,type CartLine} from "../restaurant/menu-choices";
 type MenuItem=ProductItem;
-export type PublicMenuProps={name:string;slug:string;branding:Record<string,string|number|null>;customerEmail?:string;items:MenuItem[];categories:{id:string;name:string;nameEn?:string;nameFr?:string}[];branches:{id:string;name:string}[];signedIn:boolean;linked:boolean;options:Record<string,MenuGroup[]>;services?:MenuServices;tables?:DiningTable[];serviceTables?:DiningTable[];sections?:DiningSection[];preview?:boolean};
+export type PublicMenuProps={name:string;slug:string;branding:Record<string,string|number|null>;customerEmail?:string;items:MenuItem[];categories:{id:string;name:string;nameEn?:string;nameFr?:string;imageUrl?:string|null}[];branches:{id:string;name:string}[];signedIn:boolean;linked:boolean;options:Record<string,MenuGroup[]>;services?:MenuServices;tables?:DiningTable[];serviceTables?:DiningTable[];sections?:DiningSection[];preview?:boolean};
 function contrast(color:string){const parts=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return .2126*parts[0]+.7152*parts[1]+.0722*parts[2]>.179?"#111827":"#ffffff";}
 export default function PublicMenu({name,slug,branding,customerEmail="",items,categories,branches,signedIn,linked,options,services={waiter:false,reservations:false},tables=[],serviceTables=tables,sections=[],preview=false}:PublicMenuProps){
  const translateUi=useUiText();
@@ -41,7 +41,7 @@ export default function PublicMenu({name,slug,branding,customerEmail="",items,ca
  const categoryDialog=useRef<HTMLDialogElement>(null);
  const qrDialog=useRef<HTMLDialogElement>(null);
  const emptyCartDialog=useRef<HTMLDialogElement>(null);
- const categoryButtons=<>{[{id:"",name:t.all},...categories].map(c=><button key={c.id} aria-pressed={category===c.id} onClick={()=>{setCategory(c.id);setSearch("");setVisibleLimit(24);categoryDialog.current?.close();document.getElementById('menu-items')?.scrollIntoView({block:'start'});}}><span>{localizedName(c)}</span><small>{items.filter(item=>(!item.branchId||item.branchId===branch)&&(!c.id||item.categoryId===c.id)).length}</small></button>)}</>;
+ const categoryButtons=<>{[{id:"",name:t.all,imageUrl:null},...categories].map(c=><button key={c.id} aria-pressed={category===c.id} onClick={()=>{setCategory(c.id);setSearch("");setVisibleLimit(24);categoryDialog.current?.close();document.getElementById('menu-items')?.scrollIntoView({block:'start'});}}><span style={{display:"flex",alignItems:"center",gap:8}}>{c.imageUrl&&<Image src={c.imageUrl} alt="" width={40} height={40} unoptimized style={{objectFit:"cover",borderRadius:8,aspectRatio:"1"}}/>}{localizedName(c)}</span><small>{items.filter(item=>(!item.branchId||item.branchId===branch)&&(!c.id||item.categoryId===c.id)).length}</small></button>)}</>;
  const requestRef=useRef<{payload:string;key:string}|null>(null);
  const [selectedItem,setSelectedItem]=useState<MenuItem|null>(null);
  const [activePhoto,setActivePhoto]=useState(0);

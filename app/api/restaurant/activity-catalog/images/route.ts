@@ -1,3 +1,5 @@
+import {squareImage} from "@/lib/media/square-image";
+import {assertTenantMediaSpace} from "@/lib/media/account-quota";
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -36,6 +38,7 @@ async function mutate(request:Request){
   bytes=Buffer.from(await file.arrayBuffer());
   mime=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?"image/png":bytes[0]===255&&bytes[1]===216&&bytes[2]===255?"image/jpeg":bytes.toString("ascii",0,4)==="RIFF"&&bytes.toString("ascii",8,12)==="WEBP"?"image/webp":null;
   if(!mime||file.type!==mime)return failure("INVALID_IMAGE");
+  try{bytes=await squareImage(bytes);mime="image/jpeg";}catch{return failure("INVALID_IMAGE");}
   body={product:form?.get("product"),alt:form?.get("alt")};
  }else body=await request.json().catch(()=>null);
  if(request.method==="DELETE"&&body&&body.product===undefined&&typeof body.id==="string"){
@@ -47,9 +50,7 @@ async function mutate(request:Request){
  let imageUrl="";
  if(request.method==="POST"&&!bytes){
   if(typeof body.url!=="string"||body.url.length>1024)return failure("INVALID_INPUT");
-  let url:URL;try{url=new URL(body.url);}catch{return failure("INVALID_URL");}
-  if(url.protocol!=="https:"||url.username||url.password)return failure("HTTPS_IMAGE_REQUIRED");
-  imageUrl=url.toString();
+  if(/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.url)){const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE tenant_id=? AND id=?",[ctx.tenantId,body.url.split('/').at(-1)!]);if(!assets.length)return failure("IMAGE_NOT_FOUND",404);imageUrl=body.url;}else {let url:URL;try{url=new URL(body.url);}catch{return failure("INVALID_URL");}if(url.protocol!=="https:"||url.username||url.password)return failure("HTTPS_IMAGE_REQUIRED");imageUrl=url.toString();}
  }
  if(request.method==="PATCH"&&(!Array.isArray(body.ids)||body.ids.some(id=>typeof id!=="string")||new Set(body.ids).size!==body.ids.length))return failure("INVALID_IMAGE_ORDER");
  if(request.method==="DELETE"&&typeof body.id!=="string")return failure("INVALID_INPUT");
@@ -64,8 +65,7 @@ async function mutate(request:Request){
   if(request.method==="POST"){
    if(images.length>=4){await db.rollback();return failure("IMAGE_LIMIT_REACHED",409);}
    if(bytes&&mime){
-    const [[used]]=await db.execute<RowDataPacket[]>("SELECT COALESCE(SUM(size_bytes),0) AS total FROM restaurant_assets WHERE tenant_id=?",[ctx.tenantId]);
-    if(Number(used.total)+bytes.length>50*1024*1024){await db.rollback();return failure("IMAGE_STORAGE_LIMIT",409);}
+    try{await assertTenantMediaSpace(db,ctx.tenantId,bytes.length);}catch(e){await db.rollback();return failure(e instanceof Error?e.message:"STORAGE_LIMIT_REACHED",409);}
     const asset=randomUUID();await db.execute("INSERT INTO restaurant_assets(id,tenant_id,mime_type,bytes,size_bytes) VALUES (?,?,?,?,?)",[asset,ctx.tenantId,mime,bytes,bytes.length]);
     imageUrl="/api/restaurant/assets/"+asset;
     await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,'asset.upload',?,?)",[ctx.tenantId,ctx.user,asset,JSON.stringify({mime,size:bytes.length,product:body.product})]);
