@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {cookies} from "next/headers";
-import ActivityTools from "../activity-tools";
 import AccountLanguageSwitcher from "../account-language-switcher";
 import {redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
@@ -34,7 +33,7 @@ export default async function ActivitySetupPage({searchParams}:{searchParams:Pro
  return <main dir={lang==="en"||lang==="fr"?"ltr":"rtl"} style={{maxWidth:1100,margin:"0 auto",padding:"24px 16px"}}>
   <AccountLanguageSwitcher/><Link href={"/restaurant?tenant="+encodeURIComponent(workspace.tenant_id)}>{t("العودة إلى لوحة النشاط","Back to business workspace","Retour au tableau de bord")}</Link>
   <h1>{t("إعداد النشاط","Business setup","Configuration de l’activité")} · {workspace.name}</h1>
-  <ActivityTools tenantId={workspace.tenant_id} activity={activity} language={lang==="en"||lang==="fr"?lang:"ar"}/>
+  <p>{t("إدارة الكتالوج والقالب من مكان واحد. بقية الأدوات داخل لوحة النشاط.","Manage your catalog and template here. Other tools are available in your business workspace.","Gérez ici le catalogue et le modèle. Les autres outils sont dans le tableau de bord.")}</p>
   <section id="catalog"><h2>{service?t("الخدمات والأقسام","Services and categories","Services et catégories"):t("المنتجات والأقسام","Products and categories","Produits et catégories")}</h2>
    {activity==="restaurant"?<Link href={"/restaurant/menu?tenant="+encodeURIComponent(workspace.tenant_id)}>{t("فتح إدارة المنيو","Open menu management","Ouvrir la gestion du menu")}</Link>:<ActivityCatalogEditor tenantId={workspace.tenant_id} service={service} activityCode={activity}/>}
   </section>

@@ -5,7 +5,8 @@ import {resourceModules,validateResource,ResourceError} from "@/scripts/restaura
 import {serviceOrderTransitionAllowed,serviceOrderArchiveAllowed} from "./service-order-policy";
 import {diningTable,prepareDiningResource} from "./dining";
 import {canonicalMenuModules,canonicalMenuRows,saveCanonicalMenu,menuOptions} from "./menu";
-import {salesProfile,activityPosOptions,activitySaleItem,debitActivityStock,ensureActivitySaleReference,restoreActivityStock,type StockDebit} from "./activity-pos";
+import {catalogQuantityPolicy,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
+import {debitCatalogVariant,salesProfile,activityPosOptions,activitySaleItem,debitActivityStock,ensureActivitySaleReference,restoreActivityStock,type StockDebit} from "./activity-pos";
 
 export type StoredResource={currency?:string;id:string;branch_id:string|null;name:string;status:string;data:Record<string,string|number|null>;version:number|string;created_at:string};
 export const parseData=(value:unknown):Record<string,string|number|null>=>typeof value==="string"?JSON.parse(value):value as Record<string,string|number|null>;
@@ -297,7 +298,7 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
 export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
  const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
  if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!["dine_in","takeaway","delivery"].includes(String(body.channel)))throw new ResourceError("INVALID_INPUT");
- if(!cart.every(item=>item&&typeof item.id==="string"&&Number.isInteger(item.quantity)&&item.quantity>=1&&item.quantity<=1000))throw new ResourceError("INVALID_CART");
+ if(!cart.every(item=>item&&typeof item.id==="string"&&validCatalogQuantity(item.quantity)))throw new ResourceError("INVALID_CART");
  if(body.kitchenNotes!=null&&(typeof body.kitchenNotes!=="string"||body.kitchenNotes.length>1000)||body.orderNotes!=null&&(typeof body.orderNotes!=="string"||body.orderNotes.length>1000))throw new ResourceError("INVALID_INPUT");
  if(cart.some(item=>item.id.length>36)||body.customerName!=null&&typeof body.customerName!=="string"||body.customerPhone!=null&&typeof body.customerPhone!=="string"||body.couponCode!=null&&(typeof body.couponCode!=="string"||body.couponCode.length>40))throw new ResourceError("INVALID_INPUT");
  const requestKey=body.requestKey==null?null:String(body.requestKey);
@@ -317,19 +318,20 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const choices=profile.catalog?await activityPosOptions(db,tenantId,cart.map(item=>item.id),true):await menuOptions(db,tenantId,cart.map(item=>item.id));
  const lines:{id:string;name:string;quantity:number;price:number;total:number;options:{name:string;price:number}[]}[]=[];let subtotal=0;
  for(const item of [...cart].sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
-  if(!item||typeof item.id!=="string"||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>1000)throw new ResourceError("INVALID_CART");
+  if(!item||typeof item.id!=="string"||!validCatalogQuantity(item.quantity))throw new ResourceError("INVALID_CART");
   const [rows]=profile.catalog?[[await activitySaleItem(db,tenantId,branchId,item.id)]]:await db.execute<RowDataPacket[]>("SELECT i.id,i.name,i.price,i.currency,m.branch_id FROM restaurant_menu_items i JOIN restaurant_menu_categories c ON c.id=i.category_id AND c.tenant_id=i.tenant_id AND c.enabled=TRUE LEFT JOIN restaurant_resources m ON m.id=i.id AND m.tenant_id=i.tenant_id WHERE i.id=? AND i.tenant_id=? AND i.enabled=TRUE AND COALESCE(m.archived,FALSE)=FALSE LIMIT 1 LOCK IN SHARE MODE",[item.id,tenantId]);
   if(!rows.length||rows[0].branch_id&&rows[0].branch_id!==branchId)throw new ResourceError("ITEM_UNAVAILABLE");
   if(rows[0].currency!==profile.currency)throw new ResourceError("UNSUPPORTED_CURRENCY");
+  if(!Number.isInteger(item.quantity)&&(!profile.catalog||!catalogQuantityPolicy(rows[0].attributes).measured))throw new ResourceError("INVALID_CART");
   const selected=item.options??[],groups=choices[item.id]??[],valid=groups.flatMap(group=>group.values);
   if(new Set(selected).size!==selected.length||selected.some(id=>!valid.some(v=>v.id===id)))throw new ResourceError("INVALID_OPTIONS");
   for(const group of groups){const count=selected.filter(id=>group.values.some(v=>v.id===id)).length;if(count<(group.required?Math.max(1,group.min):group.min)||count>(group.type==="single"?Math.min(1,group.max):group.max))throw new ResourceError("INVALID_OPTIONS");}
   const options=valid.filter(v=>selected.includes(v.id)).map(v=>({name:v.name,price:v.price}));
   const price=Math.round(Number(rows[0].price)*100)+options.reduce((sum,option)=>sum+Math.round(option.price*100),0);
   if(!Number.isFinite(price)||price<0||price>100000000)throw new ResourceError("ITEM_UNAVAILABLE");
-  if(profile.catalog){await debitActivityStock(db,tenantId,"product",item.id,item.quantity,stockDebits);for(const option of selected)await debitActivityStock(db,tenantId,"option",option,item.quantity,stockDebits);await ensureActivitySaleReference(db,tenantId,rows[0]);}
+  if(profile.catalog){await debitCatalogVariant(db,tenantId,item.id,selected,item.quantity,stockDebits);await debitActivityStock(db,tenantId,"product",item.id,item.quantity,stockDebits);for(const option of selected)await debitActivityStock(db,tenantId,"option",option,item.quantity,stockDebits);await ensureActivitySaleReference(db,tenantId,rows[0]);}
   else await db.execute("INSERT IGNORE INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'menu_item',?,'active','{}')",[item.id,tenantId,rows[0].name]);
-  const total=price*item.quantity;subtotal+=total;lines.push({id:item.id,name:String(rows[0].name),quantity:item.quantity,price:price/100,total:total/100,options});
+  const total=Math.round(price*Math.round(item.quantity*1000)/1000);subtotal+=total;lines.push({id:item.id,name:profile.catalog&&catalogQuantityPolicy(rows[0].attributes).measured?String(rows[0].name).slice(0,166)+" / "+catalogQuantityPolicy(rows[0].attributes).unit:String(rows[0].name),quantity:item.quantity,price:price/100,total:total/100,options});
  }
  if(subtotal>999999999999)throw new ResourceError("INVALID_CART");
  const tableId=body.channel==="dine_in"&&body.tableId?String(body.tableId):null;

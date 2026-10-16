@@ -20,14 +20,15 @@ test.beforeAll(async()=>{
 });
 test.afterAll(()=>server?.kill());
 test("reference dashboard: authenticated tenant data, responsive layout and working navigation",async({page,browser})=>{
+ const visualSlug="visual-dashboard-"+randomUUID().slice(0,8);
  await page.setViewportSize({width:1440,height:1000});
  await page.goto(origin+"/register");
  await page.getByLabel("الاسم",{exact:true}).fill("مالك المعاينة");
  await page.getByLabel("اسم النشاط",{exact:true}).fill("مطعم المعاينة");
  await page.locator('select[name="activity"]').selectOption("restaurant");
  await page.getByRole("button",{name:"التالي: بيانات الحساب",exact:true}).click();
- await page.getByLabel("رابط المتجر",{exact:true}).fill("visual-dashboard");
- await page.getByLabel("البريد الإلكتروني",{exact:true}).fill("visual-dashboard@test.example");
+ await page.getByLabel("رابط المتجر",{exact:true}).fill(visualSlug);
+ await page.getByLabel("البريد الإلكتروني",{exact:true}).fill(visualSlug+"@test.example");
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
  await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
  await expect(page.getByRole("heading",{name:"نظرة عامة",exact:true})).toBeVisible();
@@ -46,8 +47,8 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
  await expect(page.getByRole("button",{name:"إضافة الفرع",exact:true})).toBeDisabled();
  const database=await mysql.createConnection(process.env.DATABASE_URL);await database.query("SET time_zone='+00:00'");
- await database.execute("UPDATE tenant_subscriptions s JOIN tenants t ON t.id=s.tenant_id SET s.plan_id='operations-enterprise' WHERE t.slug='visual-dashboard'");
- const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug='visual-dashboard' LIMIT 1");
+ await database.execute("UPDATE tenant_subscriptions s JOIN tenants t ON t.id=s.tenant_id SET s.plan_id='operations-enterprise' WHERE t.slug=?",[visualSlug]);
+ const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug=? LIMIT 1",[visualSlug]);
  await database.end();
  await page.reload();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
@@ -65,6 +66,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
  await page.locator(".restaurantPosMenu article").filter({hasText:"قهوة المعاينة"}).getByRole("button").click();
+ const firstQuantity=page.locator('.restaurantCart input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
@@ -116,7 +118,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await page.getByRole("button",{name:"حفظ القالب",exact:true}).click();
   await expect(page.getByText("تم حفظ القالب والمظهر. يظهر التغيير في منيو مطعمك مباشرة.",{exact:true})).toBeVisible();
   await publicPage.setViewportSize({width:1440,height:1000});
-  await publicPage.goto(origin+"/visual-dashboard");
+  await publicPage.goto(origin+"/"+visualSlug);
   await expect(publicPage.getByRole("heading",{name:"مطعم المعاينة",exact:true})).toHaveCount(1);
   await expect(publicPage.locator(".publicMenu")).toHaveAttribute("data-template",template);
   await expect(publicPage.getByRole("heading",{name:"قهوة المعاينة",exact:true})).toBeVisible();
@@ -172,7 +174,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'نداء النادل',exact:true}).click();
  await publicPage.getByRole('dialog').getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
  await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
- await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill('visual-guest@test.example');
+ await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill(visualSlug+"-guest@test.example");
  await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
  await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true})).toBeVisible();
@@ -234,7 +236,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await captureScreenshot(page,{path:'work/merchant-order-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();const smallOrderActions=await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.map(n=>({label:(n.textContent||'').trim(),height:n.getBoundingClientRect().height,display:getComputedStyle(n).display,visibility:getComputedStyle(n).visibility})).filter(n=>n.height<44&&n.display!=='none'&&n.visibility!=='hidden'));expect(smallOrderActions,'Order buttons below 44px: '+JSON.stringify(smallOrderActions)).toEqual([]);await captureScreenshot(page,{path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
  await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await captureScreenshot(publicPage,{path:'work/menu-customer-orders-mobile.png',fullPage:true});
- await publicPage.goto(origin+'/visual-dashboard');
+ await publicPage.goto(origin+"/"+visualSlug);
  await expect(publicPage.getByText(/المنيو محفوظ للتصفح دون اتصال/)).toBeVisible();
  await publicContext.setOffline(true);
  const offlineFrame=publicPage.frameLocator('iframe[title="المنيو — تصفح دون اتصال"]');
@@ -252,10 +254,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  // Joining on mobile must also unlock the separate desktop service instance.
  const unlinkedContext=await browser.newContext({viewport:{width:390,height:844}});
  try{
-  const registered=await unlinkedContext.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'operations-owner-b',name:'عميل متجر آخر',email:'booking-unlinked@test.example',password:'a-strong-test-password'}});
+  const registered=await unlinkedContext.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'operations-owner-b',name:'عميل متجر آخر',email:visualSlug+"-unlinked@test.example",password:'a-strong-test-password'}});
   expect(registered.status()).toBe(201);
   const customerPage=await unlinkedContext.newPage();
-  await customerPage.goto(origin+'/visual-dashboard');
+  await customerPage.goto(origin+"/"+visualSlug);
   await customerPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
   const joinDialog=customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
   await expect(joinDialog).toBeVisible();
@@ -295,7 +297,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  // A foreign tenant address must not expose its workspace.
  const db=await mysql.createConnection(process.env.DATABASE_URL);
  const foreignId=randomUUID();
- await db.execute("INSERT INTO tenants(id,slug,name,status) VALUES (?,'visual-foreign','Private foreign tenant','active')",[foreignId]);
+ await db.execute("INSERT INTO tenants(id,slug,name,status) VALUES (?,?,'Private foreign tenant','active')",[foreignId,"visual-foreign-"+randomUUID().slice(0,8)]);
  await db.end();
  await page.goto(origin+"/restaurant?tenant="+foreignId);
  await expect(page.getByText("Private foreign tenant",{exact:true})).toHaveCount(0);
@@ -327,6 +329,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
     await page.goto(origin+"/restaurant?tenant="+account.tenant.id);
     await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
     await expect(page.locator('.foonActivityTools')).toBeVisible();
+    const destinations=await page.locator('.foonActivityTools a').evaluateAll(links=>links.map(link=>link.href));expect(new Set(destinations).size).toBe(destinations.length);
     await expect(page.locator('.foonActivityTools a[href*="/restaurant/payments?"]')).toBeVisible();
     const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
     const dining=activity==="restaurant"||activity==="cafe";
@@ -581,10 +584,11 @@ test('merchant configures weight options and selling measurements in mobile dial
   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
   const headers={origin,'x-foon-tenant':owner.tenant.id},c=await context.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'category',name:'Measures'}}),p=await context.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'product',name:'Rice pack',price:10,categoryId:(await c.json()).id}});expect(p.status()).toBe(201);const product=(await p.json()).id;
   await context.addCookies([{name:'foon_language',value:'en',url:origin}]);const page=await context.newPage();await page.goto(origin+'/restaurant');await page.getByRole('button',{name:'Open business menu',exact:true}).click();await page.locator('.restaurantDrawer').getByRole('button',{name:'Products and categories',exact:true}).click();
-  await page.getByRole('button',{name:'Edit details & measurements',exact:true}).click();let dialog=page.locator('dialog[open]');await dialog.getByLabel('Selling unit',{exact:true}).selectOption('kg');await dialog.getByLabel('Weight in kg',{exact:true}).fill('0.5');await dialog.getByLabel('Width in cm',{exact:true}).fill('12');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0);
+  await page.getByRole('button',{name:'Edit details & measurements',exact:true}).click();let dialog=page.locator('dialog[open]');await dialog.getByLabel('Selling unit',{exact:true}).selectOption('kg');await dialog.getByLabel('Weight in kg',{exact:true}).fill('0.5');await dialog.getByLabel('Allow measured quantity to 0.001 for weight, volume and length units').check();await dialog.getByLabel('Width in cm',{exact:true}).fill('12');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0);
   await page.getByRole('button',{name:'Variants & selling units',exact:true}).click();dialog=page.locator('dialog[open]');await dialog.getByLabel('Activity template').selectOption('3');await dialog.getByRole('button',{name:'Add group',exact:true}).click();await expect(dialog.getByLabel('Group',{exact:true})).toBeVisible();await dialog.getByLabel('Arabic value (e.g. 1 kg)').fill('نصف كيلو');await dialog.getByLabel('English',{exact:true}).last().fill('0.5 kg');await dialog.getByLabel('Français',{exact:true}).last().fill('0.5 kg');await dialog.getByLabel('Price adjustment').fill('2');await dialog.getByLabel('Pack stock (blank = unlimited)').fill('4');await dialog.getByRole('button',{name:'Add value',exact:true}).click();await expect(dialog).toContainText('نصف كيلو');
   const box=await dialog.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(320);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
-  await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await page.getByRole('button',{name:'Confirm addition',exact:true}).click();await expect(page.locator('.foonStorefrontCart')).toContainText('12.00');
-  const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);
+  await dialog.getByRole('radio',{name:'نصف كيلو',exact:true}).check();await dialog.getByLabel('SKU',{exact:true}).fill('HALF-KG');await dialog.getByLabel('Combination stock (blank = unlimited)',{exact:true}).fill('0.375');await dialog.getByRole('button',{name:'Add combination',exact:true}).click();await expect(dialog).toContainText('HALF-KG');await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await page.getByRole('button',{name:'Confirm addition',exact:true}).click();await expect(page.locator('.foonStorefrontCart')).toContainText('12.00');await page.getByLabel('Quantity (kg)',{exact:true}).fill('0.125');await expect(page.locator('.foonStorefrontCart')).toContainText('1.50');
+  const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);expect(attributes.measurements.quantityMode).toBe('measured');
+  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
  }finally{await db.end();await context.close()}
 });

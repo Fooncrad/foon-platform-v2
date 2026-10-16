@@ -1,0 +1,13 @@
+.manager { min-width:0; padding:clamp(16px,3vw,28px); border:1px solid var(--border,#d9e2ee); border-radius:20px; background:var(--surface,#fff); }
+.manager *, .manager *::before, .manager *::after { box-sizing:border-box; min-width:0; }
+.manager h2 { margin-top:0; }
+.manager form { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); margin-block:24px; }
+.manager label { display:grid; gap:8px; font-weight:600; }
+.manager :is(input,textarea,select) { width:100%; max-width:100%; padding:12px; border:1px solid var(--border,#d9e2ee); border-radius:12px; font:inherit; color:inherit; background:var(--surface,#fff); }
+.manager button { padding:10px 14px; border:1px solid var(--border,#d9e2ee); border-radius:10px; min-height:42px; background:var(--surface,#fff); color:inherit; font:inherit; white-space:normal; cursor:pointer; }
+.manager button[type=submit] { background:#e3aa34; color:#172033; font-weight:700; }
+.manager button:disabled { opacity:.55; cursor:default; }
+.manager :global(.foonCatalogRow) { border:1px solid var(--border,#d9e2ee); border-radius:14px; padding:16px; margin-block:12px; overflow-wrap:anywhere; background:var(--surface,#fff); }
+.manager :global(.foonCatalogRow)>span:first-child { font-size:1.1rem; font-weight:700; }
+.manager dialog form { grid-template-columns:1fr; }
+.manager :is(button,input,select,textarea):focus-visible { outline:3px solid #b88732; outline-offset:2px; }
