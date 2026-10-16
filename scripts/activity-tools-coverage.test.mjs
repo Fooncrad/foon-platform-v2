@@ -20,7 +20,7 @@ test("all 15 activity types have translated and unique capability links",()=>{
 test("business tool shortcuts include payment settings and shared media studio",()=>{
  assert.match(tools,/module\.code==="payments"\?"\/restaurant\/payments\?tenant="/);
  assert.match(tools,/module\.code==="mediaStudio"\?"\/restaurant\/media-studio\?tenant="/);
- assert.match(tools,/mediaStudio:\["إدارة الميديا","Media Studio","Studio média"\]/);
+ assert.match(tools,/mediaStudio:\[(?:translateUi\()?"إدارة الميديا"\)?,"Media Studio","Studio média"\]/);
 });
 test("service activities do not accidentally receive restaurant tables and waiter tools",()=>{
  for(const code of ["carwash","laundry","automotive","salon","publicworks"]){

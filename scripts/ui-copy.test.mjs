@@ -3,7 +3,7 @@ import {uiText,uiCopy} from '../lib/i18n/ui-copy.ts';
 import {referenceFeatures} from '../lib/plans/reference-catalog.ts';
 import {resourceModules,fieldLabels} from './restaurant-resource-schema.mjs';
 test('every resource module, field and status has English and French interface copy',()=>{
- const labels=new Set(Object.values(fieldLabels));for(const module of Object.values(resourceModules)){labels.add(module.label);for(const field of module.fields)labels.add(field.label);}
+ const labels=new Set(Object.values(fieldLabels));for(const resourceModule of Object.values(resourceModules)){labels.add(resourceModule.label);for(const field of resourceModule.fields)labels.add(field.label);}
  for(const language of ['en','fr'])for(const label of labels)assert.equal(/[\u0600-\u06ff]/.test(uiText(label,language)),false,language+': '+label);
 });
 test('copy is complete in both target languages and preserves Arabic and merchant content',()=>{

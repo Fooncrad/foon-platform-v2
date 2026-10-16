@@ -310,7 +310,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
    const context=await browser.newContext({viewport:{width:1440,height:1000}});
    try{
     context.setDefaultTimeout(12000);
-    const slug="service-ui-"+activity;
+    const slug="service-ui-"+activity+"-"+randomUUID().slice(0,8);
     const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
     expect(created.status(),await created.text()).toBe(201);
     const account=await created.json();
@@ -419,6 +419,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
     const workspace=page.locator('.foonServiceOrders');
     await expect(workspace.getByRole('heading',{name:'أوامر الخدمة',exact:true})).toBeVisible();
     if(activity!=="carwash")continue;
+    await expect(workspace.getByText('جارٍ التحميل…',{exact:true})).toHaveCount(0);
     await workspace.getByRole('button',{name:'إنشاء أمر خدمة',exact:true}).click();
     const form=workspace.locator('form');
     await expect(form.locator('select[name="status"] option')).toHaveCount(2);
@@ -571,4 +572,19 @@ test('customer and catalog interfaces use cookie locale without Arabic interface
   const text=await page.locator('main').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  }finally{await db.end();await context.close();}
+});
+
+test('merchant configures weight options and selling measurements in mobile dialogs',async({browser})=>{
+ const db=await mysql.createConnection(process.env.DATABASE_URL),context=await browser.newContext({viewport:{width:320,height:900}});
+ try{
+  const slug='measure-'+randomUUID().slice(0,8),r=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Measure owner',storeName:'Measures',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(r.status()).toBe(201);const owner=await r.json();
+  await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
+  const headers={origin,'x-foon-tenant':owner.tenant.id},c=await context.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'category',name:'Measures'}}),p=await context.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'product',name:'Rice pack',price:10,categoryId:(await c.json()).id}});expect(p.status()).toBe(201);const product=(await p.json()).id;
+  await context.addCookies([{name:'foon_language',value:'en',url:origin}]);const page=await context.newPage();await page.goto(origin+'/restaurant');await page.getByRole('button',{name:'Open business menu',exact:true}).click();await page.locator('.restaurantDrawer').getByRole('button',{name:'Products and categories',exact:true}).click();
+  await page.getByRole('button',{name:'Edit details & measurements',exact:true}).click();let dialog=page.locator('dialog[open]');await dialog.getByLabel('Selling unit',{exact:true}).selectOption('kg');await dialog.getByLabel('Weight in kg',{exact:true}).fill('0.5');await dialog.getByLabel('Width in cm',{exact:true}).fill('12');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0);
+  await page.getByRole('button',{name:'Variants & selling units',exact:true}).click();dialog=page.locator('dialog[open]');await dialog.getByLabel('Activity template').selectOption('3');await dialog.getByRole('button',{name:'Add group',exact:true}).click();await expect(dialog.getByLabel('Group',{exact:true})).toBeVisible();await dialog.getByLabel('Arabic value (e.g. 1 kg)').fill('نصف كيلو');await dialog.getByLabel('English',{exact:true}).last().fill('0.5 kg');await dialog.getByLabel('Français',{exact:true}).last().fill('0.5 kg');await dialog.getByLabel('Price adjustment').fill('2');await dialog.getByLabel('Pack stock (blank = unlimited)').fill('4');await dialog.getByRole('button',{name:'Add value',exact:true}).click();await expect(dialog).toContainText('نصف كيلو');
+  const box=await dialog.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(320);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+  await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await page.getByRole('button',{name:'Confirm addition',exact:true}).click();await expect(page.locator('.foonStorefrontCart')).toContainText('12.00');
+  const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);
+ }finally{await db.end();await context.close()}
 });
