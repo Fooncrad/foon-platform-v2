@@ -6,6 +6,7 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {isActivityType} from "@/lib/platform/activity-presets";
+import {parseCatalogMeasurements} from "@/lib/platform/catalog-measurements";
 export const runtime="nodejs";
 async function scope(request:Request){
  const user=await currentUserId();if(!user)return {error:NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401})};
@@ -33,7 +34,7 @@ export async function GET(request:Request){
   const [[categories],[counts],[products]]=await Promise.all([
    database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p WHERE "+where.join(" AND "),values),
-   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
+   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity,p.attributes,p.description_ar FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
   ]);
   return NextResponse.json({ok:true,activity:ctx.activity,currency:ctx.currency,categories,products,page,pageSize,total:Number(counts[0]?.total??0)});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UNAVAILABLE"},{status:503})}
@@ -84,6 +85,10 @@ export async function PATCH(request:Request){
   if(body[key]===undefined)continue;
   if(typeof body[key]!=="string"||body[key].length>180)return NextResponse.json({ok:false,code:"INVALID_TRANSLATION"},{status:400});
   columns.push(column+"=?");values.push(body[key].trim()||null);
+ }
+ if(body.kind==="product"&&body.description!==undefined){if(typeof body.description!=="string"||body.description.length>5000)return NextResponse.json({ok:false,code:"INVALID_DESCRIPTION"},{status:400});columns.push("description_ar=?");values.push(body.description)}
+ if(body.kind==="product"&&body.measurements!==undefined){
+  try{const measurements=parseCatalogMeasurements(body.measurements);columns.push("attributes=JSON_SET(COALESCE(attributes,JSON_OBJECT()),'$.measurements',JSON_EXTRACT(?,'$'))");values.push(JSON.stringify(measurements))}catch{return NextResponse.json({ok:false,code:"INVALID_MEASUREMENTS"},{status:400})}
  }
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{

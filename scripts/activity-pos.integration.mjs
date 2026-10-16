@@ -82,9 +82,19 @@ export async function runActivityPosChecks({db,call,resource,register}){
  const race=await Promise.all([resource(owner,"pos",request({items:[{id:product,quantity:1}]})),resource(secondActor,"pos",request({items:[{id:product,quantity:1}]}))]);
  assert.deepEqual(race.map(r=>r.status).sort(),[201,409]);assert.ok(["CONFLICT","INSUFFICIENT_STOCK"].includes(race.find(r=>r.status===409)?.body.code),JSON.stringify(race.map(r=>({status:r.status,code:r.body.code}))));assert.equal(await stock(product),0);
  // Required catalog options use their own prices and finite stock, with rollback on failure.
- const group=randomUUID(),option=randomUUID();
- await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,required,min_select,max_select) VALUES (?,?,?,'Size',TRUE,1,1)",[group,owner.tenant,product]);
- await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,price_delta,stock_quantity) VALUES (?,?,?,'Large',2.50,1)",[option,owner.tenant,group]);
+ const options=(method,body,actor=owner)=>call("/api/restaurant/activity-catalog/options"+(method==="GET"?"?product="+product:""),method,body,actor.cookie,actor.tenant);
+ ok(await options("POST",{product,action:"group",name:"الوزن",nameEn:"Weight",nameFr:"Poids",required:true,type:"single",max:1}),200);
+ const group=ok(await options("GET"),200).groups[0].id;
+ ok(await options("POST",{product,action:"value",group,name:"1 كيلو",nameEn:"1 kg",nameFr:"1 kg",price:2.5,stock:1}),200);
+ const option=ok(await options("GET"),200).groups[0].values[0].id;
+ const foreign=fixtures.find(f=>f.owner.email.startsWith("catalog-pos-perfume")).owner;
+ assert.equal((await options("GET",undefined,foreign)).status,404);
+ assert.equal((await options("POST",{product,action:"deleteGroup",id:group},foreign)).status,404);
+ assert.equal((await options("POST",{product,action:"value",group:randomUUID(),name:"bad",price:0,stock:null})).status,404);
+ assert.equal((await options("POST",{product,action:"value",group,name:"bad",price:-1,stock:null})).status,400);
+ ok(await catalog("PATCH",{kind:"product",id:product,measurements:{unit:"kg",weightKg:1,lengthCm:20,widthCm:10,heightCm:null}}),200);
+ const measured=ok(await catalog("GET"),200).products.find(p=>p.id===product);const attrs=typeof measured.attributes==="string"?JSON.parse(measured.attributes):measured.attributes;assert.equal(attrs.measurements.unit,"kg");assert.equal(attrs.measurements.widthCm,10);
+ assert.equal((await catalog("PATCH",{kind:"product",id:product,measurements:{unit:"invalid",weightKg:1,lengthCm:0,widthCm:0,heightCm:0}})).status,400);
  await db.execute("UPDATE catalog_products SET stock_quantity=4 WHERE id=?",[product]);
  assert.equal((await resource(owner,"pos",request({items:[{id:product,quantity:1}]}))).body.code,"INVALID_OPTIONS");
  assert.equal((await resource(owner,"pos",request({items:[{id:product,quantity:2,options:[option]}]}))).body.code,"INSUFFICIENT_STOCK");assert.equal(await stock(product),4);
