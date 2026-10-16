@@ -45,3 +45,16 @@ test('minor-unit invariants hold across 1001 sample prices',()=>{
     }
   }
 });
+
+test('fractional VAT rates retain exact minor-unit totals for discounted orders',()=>{
+  for(const rate of [2.5,7.5,20]){
+    for(const inclusive of [true,false]){
+      for(let subtotalMinor=0;subtotalMinor<=1000;subtotalMinor+=7){
+        const discountMinor=Math.floor(subtotalMinor/3);
+        const result=calculateOrderTax(subtotalMinor/100,discountMinor/100,rate,inclusive);
+        assert.equal(cents(result.net)+cents(result.tax),cents(result.gross));
+        assert.equal(cents(inclusive?result.gross:result.net),subtotalMinor-discountMinor);
+      }
+    }
+  }
+});
