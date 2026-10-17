@@ -1,4 +1,5 @@
 import {checkoutSettings} from "./checkout-settings";
+import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
 import {randomUUID,createHash} from "node:crypto";
@@ -56,6 +57,16 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
  const input=validateResource(module,body);
+ if(module==="reservations"){
+  const oldStatus=previous?String(previous.status):null;
+  if(!reservationTransitionAllowed(oldStatus,String(input.status)))throw new ResourceError("INVALID_RESERVATION_TRANSITION");
+  if(input.status==="no_show"){
+   if(!previous)throw new ResourceError("INVALID_RESERVATION_TRANSITION");
+   const original=parseData(previous.data);
+   if(!reservationNoShowDue(original.scheduledAt,original.durationMinutes))throw new ResourceError("RESERVATION_NO_SHOW_NOT_DUE");
+   if(JSON.stringify(original)!==JSON.stringify(input.data)||String(previous.name)!==String(input.name)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("RESERVATION_NO_SHOW_DATA_IMMUTABLE");
+  }
+ }
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
  if(module==="serviceOrders"){
   const inputOrder=validateResource(module,body);
