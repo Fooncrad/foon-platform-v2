@@ -72,7 +72,7 @@ export default function ActivityStorefront({name,slug,activity,template,branding
  {service&&!serviceCart&&phone&&<a className="foonActivityServicePhone" href={"tel:"+phone}>{contactLabel}</a>}</div></article>)}</div>:<div className="foonActivityEmpty"><span aria-hidden="true">{service?"◷":"▦"}</span><p>{t.coming}</p></div>}
    {pages>1&&<nav className="foonActivityPagination" aria-label={language==="ar"?"صفحات المنتجات":language==="fr"?"Pages des produits":"Product pages"}>{visiblePage>1&&<Link href={url(selectedCategory,visiblePage-1)}>{language==="ar"?"السابق":language==="fr"?"Précédent":"Previous"}</Link>}<span>{visiblePage.toLocaleString("en-US")} / {pages.toLocaleString("en-US")}</span>{visiblePage<pages&&<Link href={url(selectedCategory,visiblePage+1)}>{language==="ar"?"التالي":language==="fr"?"Suivant":"Next"}</Link>}</nav>}
   </section>
-  {service&&requestMode&&<ServiceRequestHistory slug={slug} language={language} visible={signedIn&&linked}/>}
+  {service&&requestMode&&<ServiceRequestHistory slug={slug} language={language} visible={signedIn}/>}
   {cart&&<StorefrontCart checkoutPolicy={checkoutPolicy(branding)} key={slug} slug={slug} language={language} signedIn={signedIn} linked={linked} customerPhone={customerPhone} deliveryAddress={deliveryAddress} service={serviceCart}/>}
  <StorefrontInfo slug={slug} branding={branding} language={language}/></main>;
 }
