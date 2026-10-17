@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import {randomUUID} from "node:crypto";
 import mysql from "mysql2/promise";
 import {provisionStore} from "./provision-store.mjs";
 import {registerCustomer} from "./register-customer.mjs";
@@ -35,7 +36,7 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     // defined later, then replay 0094 to verify correct additive grants.
     for(const [code,enabled] of [['starter',0],['professional',1],['enterprise',1]]){
      await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)",
-      ['migration-'+code,code,code,code,code]);
+      [randomUUID(),code,code,code,code]);
     }
     await db.execute("DELETE FROM schema_migrations WHERE id='0094_quotation_plan_grants.sql'");
     successfulRun();
