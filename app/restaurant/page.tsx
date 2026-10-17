@@ -16,14 +16,15 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
  const tenantId=workspace.tenant_id,canManage=["owner","manager"].includes(workspace.role);
  const db=database();
- const [activityRows]=await db.execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
+ const [activityRows]=await db.execute<RowDataPacket[]>("SELECT t.kind,bp.activity_code,bp.currency FROM tenants t LEFT JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE t.id=? LIMIT 1",[tenantId]);
  // Legacy restaurant tenants may not yet have a business profile. Restore their
  // restaurant navigation without overriding an explicitly configured activity.
  const storedActivityCode=String(activityRows[0]?.activity_code??"").trim();
  // Shared activity workspace: an absent or legacy unknown activity code
  // must not hide restaurant tools. Explicitly supported other activities retain
  // their own module presets; RBAC and subscription checks remain unchanged.
- const activityCode=isActivityType(storedActivityCode)?storedActivityCode:"restaurant";
+ const activityCode=isActivityType(storedActivityCode)?storedActivityCode:activityRows[0]?.kind==="restaurant"?"restaurant":null;
+ if(!activityCode)redirect("/business?tenant="+encodeURIComponent(tenantId));
  const activityModules=[...defaultActivityModules(activityCode)];
  const [[branches],[subscriptions],[features],[tenants],[choices],[identity]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
