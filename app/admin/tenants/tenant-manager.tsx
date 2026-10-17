@@ -20,7 +20,7 @@ export default function TenantManager({initial,canManage,canAccessAll}:{initial:
 
  const tr=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
  const [countryCode,setCountryCode]=useState("SA"),[region,setRegion]=useState("الرياض");
- const activityLabel=(activity:string)=>activity in activityNames?tr(...activityNames[activity as ActivityType]):activity;
+ const activityLabel=(activity:string)=>Object.hasOwn(activityNames,activity)?tr(...activityNames[activity as ActivityType]):activity;
  const [items,setItems]=useState(initial),[message,setMessage]=useState(""),[busy,setBusy]=useState("");
  const [source,setSource]=useState(initial);
  if(source!==initial){setSource(initial);setItems(initial);}
