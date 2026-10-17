@@ -13,6 +13,22 @@ test('registered unverified customers receive durable localized order events, is
   const customer=await request('/api/customer/register','POST',{name:'Customer',email:slug+'-customer@test.example',password,storeSlug:slug},'foon_language=en');assert.equal(customer.status,201,await customer.clone().text());const customerCookie=cookie(customer),customerId=(await customer.json()).user.id;
   const [[welcome]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND event_key='account_welcome'",[customerId]);assert.equal(Number(welcome.n),1);
   const [[identity]]=await db.execute('SELECT email_verified_at,default_locale FROM users WHERE id=?',[customerId]);assert.equal(identity.email_verified_at,null);assert.equal(identity.default_locale,'en');
+    const addressPath='/api/account/addresses',address={label:'Home',recipientName:'Customer',phone:'0501234567',countryCode:'SA',city:'Riyadh',district:'Olaya',streetAddress:'King Fahd Road'};
+    assert.equal((await request(addressPath,'GET')).status,401);
+    assert.equal((await request(addressPath,'POST',{...address,latitude:25.1},customerCookie)).status,400);
+    const firstAddress=await request(addressPath,'POST',address,customerCookie);assert.equal(firstAddress.status,201,await firstAddress.clone().text());const firstAddressId=(await firstAddress.json()).id;
+    const storefront=await request('/'+slug,'GET',undefined,customerCookie);assert.equal(storefront.status,200);assert.ok((await storefront.text()).includes('King Fahd Road'));
+    const secondAddress=await request(addressPath,'POST',{...address,label:'Office',streetAddress:'Business district'},customerCookie);assert.equal(secondAddress.status,201);const secondAddressId=(await secondAddress.json()).id;
+    let savedAddresses=await (await request(addressPath,'GET',undefined,customerCookie)).json();
+    assert.equal(savedAddresses.addresses.length,2);assert.equal(savedAddresses.addresses.filter(row=>Boolean(row.is_default)).length,1);assert.equal(savedAddresses.addresses.find(row=>row.id===firstAddressId).is_default,1);
+    const stranger=await request('/api/customer/register','POST',{name:'Other customer',email:slug+'-other@test.example',password,storeSlug:slug});assert.equal(stranger.status,201);const strangerCookie=cookie(stranger);
+    assert.deepEqual((await (await request(addressPath,'GET',undefined,strangerCookie)).json()).addresses,[]);
+    assert.equal((await request(addressPath,'PATCH',{...address,id:secondAddressId},strangerCookie)).status,404);
+    assert.equal((await request(addressPath,'DELETE',{id:secondAddressId},strangerCookie)).status,404);
+    assert.equal((await request(addressPath,'PATCH',{...address,id:secondAddressId,label:'Office',streetAddress:'Business district',isDefault:true},customerCookie)).status,200);
+    savedAddresses=await (await request(addressPath,'GET',undefined,customerCookie)).json();assert.equal(savedAddresses.addresses.find(row=>row.id===secondAddressId).is_default,1);assert.equal(savedAddresses.addresses.find(row=>row.id===firstAddressId).is_default,0);
+    assert.equal((await request(addressPath,'DELETE',{id:secondAddressId},customerCookie)).status,200);
+    savedAddresses=await (await request(addressPath,'GET',undefined,customerCookie)).json();assert.equal(savedAddresses.addresses.length,1);assert.equal(savedAddresses.addresses[0].id,firstAddressId);assert.equal(savedAddresses.addresses[0].is_default,1);
   const reset=await request('/api/auth/request-password-reset','POST',{email:slug+'-customer@test.example'});assert.equal(reset.status,200);assert.equal((await reset.json()).queued,true);
   assert.equal((await request('/api/auth/request-password-reset','POST',{email:slug+'-customer@test.example'})).status,200);
   const [[resetJob]]=await db.execute("SELECT COUNT(*) AS n,MAX(body_text) AS body FROM platform_notification_outbox WHERE event_key='password_reset' AND recipient_email=?",[slug+'-customer@test.example']);assert.equal(Number(resetJob.n),1);assert.match(resetJob.body,/one-time link/);assert.match(resetJob.body,/reset-password\?token=/);
@@ -44,6 +60,15 @@ test('registered unverified customers receive durable localized order events, is
   const [reservationNotices]=await db.execute("SELECT subject,body_text FROM customer_notifications WHERE resource_id=? AND event_key='reservation_confirmed'",[reservationId]);assert.equal(reservationNotices.length,1);assert.equal(/[\u0600-\u06ff]/.test(reservationNotices[0].subject+reservationNotices[0].body_text),false);
   const sameState=await request('/api/restaurant/operations/reservations','PATCH',{...confirmation,version:Number(savedReservation.version)+1},restaurantCookie,restaurantTenant);assert.equal(sameState.status,200,await sameState.clone().text());
   const [[unchanged]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE resource_id=? AND event_key='reservation_confirmed'",[reservationId]);assert.equal(Number(unchanged.n),1);
+  const [[confirmedRow]]=await db.execute('SELECT data,version FROM restaurant_resources WHERE id=? AND tenant_id=?',[reservationId,restaurantTenant]);
+  const noShowPayloadData=typeof confirmedRow.data==='string'?JSON.parse(confirmedRow.data):confirmedRow.data;delete noShowPayloadData.requestFingerprint;delete noShowPayloadData.customerUserId;
+  const premature=await request('/api/restaurant/operations/reservations','PATCH',{...confirmation,status:'no_show',version:Number(confirmedRow.version),data:noShowPayloadData},restaurantCookie,restaurantTenant);assert.equal(premature.status,400);assert.equal((await premature.json()).code,'RESERVATION_NOT_DUE');
+  const pastSlot=new Date(Date.now()-2*3600000).toISOString();await db.execute("UPDATE restaurant_resources SET data=JSON_SET(data,'$.scheduledAt',?) WHERE id=? AND tenant_id=?",[pastSlot,reservationId,restaurantTenant]);
+  const [[dueRow]]=await db.execute('SELECT data,version FROM restaurant_resources WHERE id=? AND tenant_id=?',[reservationId,restaurantTenant]);
+  const dueData=typeof dueRow.data==='string'?JSON.parse(dueRow.data):dueRow.data;delete dueData.requestFingerprint;delete dueData.customerUserId;
+  const markedNoShow=await request('/api/restaurant/operations/reservations','PATCH',{...confirmation,status:'no_show',version:Number(dueRow.version),data:dueData},restaurantCookie,restaurantTenant);assert.equal(markedNoShow.status,200,await markedNoShow.clone().text());
+  const [noShowNotice]=await db.execute("SELECT subject,body_text FROM customer_notifications WHERE resource_id=? AND event_key='reservation_no_show'",[reservationId]);assert.equal(noShowNotice.length,1);assert.match(noShowNotice[0].body_text,/No-show/);
+  const reopen=await request('/api/restaurant/operations/reservations','PATCH',{...confirmation,status:'confirmed',version:Number(dueRow.version)+1,data:dueData},restaurantCookie,restaurantTenant);assert.equal(reopen.status,400);assert.equal((await reopen.json()).code,'INVALID_RESERVATION_TRANSITION');
 
   // Exercise the real SQL lease/claim path with a fake transport; no external mail is sent.
   const [jobs]=await db.execute('SELECT id FROM platform_notification_outbox WHERE tenant_id=?',[tenant]);assert.ok(jobs.length>=3);

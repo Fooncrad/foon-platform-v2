@@ -53,8 +53,8 @@ test("gateway readiness reports actual missing credential fields",()=>{
  assert.deepEqual(paymentMissingFields("stripe","pk_test_synthetic",null,{secret_key:true,webhook_secret:true}),[]);
  assert.equal(Object.keys(PAYMENT_PROVIDERS).length,6);
 });
-test("all 14 activities expose payment settings in three languages",()=>{
- assert.equal(Object.keys(ACTIVITY_PRESETS).length,14);
+test("all 15 activities expose payment settings in three languages",()=>{
+ assert.equal(Object.keys(ACTIVITY_PRESETS).length,15);
  for(const [activity,modules] of Object.entries(ACTIVITY_PRESETS)){
   assert.ok(modules.includes("payments"),activity);
   for(const language of ["ar","en","fr"]){

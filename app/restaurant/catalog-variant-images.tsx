@@ -11,7 +11,32 @@ export default function CatalogVariantImages({tenantId,product,variant}:{tenantI
   const r=await fetch(url+"?"+new URLSearchParams({product,variant}),{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
   const d=await r.json();if(!r.ok||!Array.isArray(d.images))throw Error(d.code??"LOAD_FAILED");setImages(d.images);
  }
- useEffect(()=>{void refresh().catch(()=>setError(t("تعذر جلب الصور","Could not load images","Chargement impossible")))},[tenantId,product,variant]);
+ useEffect(()=>{
+  let cancelled = false;
+  const params = new URLSearchParams({product,variant});
+
+  fetch("/api/restaurant/activity-catalog/variant-images?"+params,{
+    headers:{"x-foon-tenant":tenantId},
+    cache:"no-store"
+  })
+    .then(async response=>{
+      const data = await response.json();
+      if(!response.ok || !Array.isArray(data.images))
+        throw Error(data.code??"LOAD_FAILED");
+      return data.images as Photo[];
+    })
+    .then(data=>{
+      if(!cancelled) setImages(data);
+    })
+    .catch(()=>{
+      if(!cancelled)
+        setError(lang==="ar"?"تعذر جلب الصور":
+                 lang==="en"?"Could not load images":
+                 "Chargement impossible");
+    });
+
+  return ()=>{cancelled=true};
+},[tenantId,product,variant,lang]);
  async function mutate(method:"POST"|"PATCH"|"DELETE",payload:FormData|Record<string,unknown>){
   setBusy(true);setError("");
   try{

@@ -12,14 +12,15 @@ Clean rebuild of the FOON multi-tenant commerce and restaurant platform.
 - Unified authentication, sessions and roles
 - Separate public menu, customer, restaurant/store and super-admin surfaces
 
-## Production branch
-`production`
+## Branches
+- `main` is the GitHub default branch and contains the application and CI workflows.
+- `production` currently contains only this README; do not configure it as a deployment source until it is intentionally synchronized and reviewed.
 
 ## Stack
 - Next.js 16
 - TypeScript
 - Node.js 24
-- pnpm
+- npm
 - MySQL
 
 ## Registration and administration

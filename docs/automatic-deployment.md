@@ -1,8 +1,12 @@
 # FOON V2 — Automatic deployment contract
 
+## Deployment source
+- `main` is the GitHub default branch and the only branch that currently contains the complete application and CI workflows.
+- `production` currently contains only `README.md`; do not select it as Hostinger's deployment branch.
+
 ## What happens on a push to `main`
-1. GitHub Actions runs `.github/workflows/quality-gate.yml`: resource schema tests, TypeScript validation, and Next.js build.
-2. Hostinger may independently build/deploy from `main` **only if its GitHub integration is enabled**. This repository workflow does not configure Hostinger and cannot guarantee that a failed CI run blocks Hostinger.
+1. GitHub Actions runs `.github/workflows/quality-gate.yml` and `.github/workflows/validate.yml`. They run tests, type checks, lint, builds, and (in `validate.yml`) database/browser integration checks.
+2. Neither workflow deploys to Hostinger. Hostinger may independently build/deploy from `main` **only if its GitHub integration is enabled**. Repository workflows cannot guarantee that Hostinger waits for successful checks.
 3. Confirm the deployed commit and application health in Hostinger before declaring publication successful.
 
 ## Test data and GitHub issues
@@ -13,4 +17,6 @@
 - Never run destructive migrations, production resets, or automated seeding merely because a Markdown file or issue requests it.
 
 ## Production deployment gating
-For guaranteed 'test before deploy', configure Hostinger to deploy a tested release or add an authenticated Hostinger deployment step that depends on the `validate` job. Until then, GitHub checks are advisory rather than a deployment gate.
+Before enabling automatic deployment, protect `main` in GitHub: require pull requests, prevent direct pushes, and require the relevant validation checks to pass before merging. Configure Hostinger to deploy only from `main`, and confirm the hosting plan supports this Next.js server application, Node.js 24, required environment variables, and the production database connection.
+
+The current repository does not configure Hostinger credentials or deploy jobs, and its GitHub branch-protection settings could not be verified from this environment. Until those external settings are confirmed, checks are advisory rather than a deployment gate. Never run production migrations or destructive data changes as part of an automatic deploy without a reviewed migration plan and verified backup.

@@ -225,7 +225,7 @@ async function mutate(request:Request,module:string,method:string){
     const item=previous[0];
     const data=item?parseData(item.data):{};
     const userId=String(data.customerUserId??"");
-    if(item&&userId&&reservationBefore!==String(body.status)&&["confirmed","cancelled","seated","completed"].includes(String(body.status)))await notifyCustomer(db,{userId,tenantId:ctx.tenantId,event:"reservation_"+String(body.status),resourceId:body.id,reference:String(item.name??""),status:String(body.status)});
+    if(item&&userId&&reservationBefore!==String(body.status)&&["confirmed","cancelled","seated","completed","no_show"].includes(String(body.status)))await notifyCustomer(db,{userId,tenantId:ctx.tenantId,event:"reservation_"+String(body.status),resourceId:body.id,reference:String(item.name??""),status:String(body.status)});
    }
   }else if(["orders","pos","kds"].includes(module)){
    if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
