@@ -15,10 +15,11 @@ async function scope(request:Request){
  const tenant=request.headers.get("x-foon-tenant");if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
   const ctx=await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET");
-  if(!(await tenantEntitlement(ctx.tenantId,"digital_menu")).enabled)return {error:NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403})};
   const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
   const activity=String(rows[0]?.activity_code??"");
   if(!isActivityType(activity)||activity==="restaurant")return {error:NextResponse.json({ok:false,code:"ACTIVITY_NOT_SUPPORTED"},{status:409})};
+  const services=["carwash","laundry","automotive","salon","publicworks"].includes(activity);
+  if(!(await tenantEntitlement(ctx.tenantId,services?"catalog":"digital_menu")).enabled)return {error:NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403})};
   return {tenantId:ctx.tenantId,activity,currency:String(rows[0]?.currency??"SAR")};
  }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
 }
