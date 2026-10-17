@@ -23,6 +23,9 @@ export async function runCustomerCartChecks({db,call,fixtures}){
   assert.equal((await call('/api/customer/cart?store='+slug+'&product='+foreign.product,'GET')).status,404);
   const delivery={...payload,channel:'delivery',requestKey:randomUUID()};
   assert.equal((await call('/api/customer/orders','POST',delivery,customer.cookie)).body.code,'DELIVERY_DETAILS_REQUIRED');
+  const noDriver=await call('/api/customer/orders','POST',{...delivery,requestKey:randomUUID(),customerPhone:'+966500000000',deliveryAddress:'Test address, Riyadh'},customer.cookie);
+  assert.equal(noDriver.status,409,JSON.stringify(noDriver.body));assert.equal(noDriver.body.code,'DELIVERY_DRIVER_UNAVAILABLE');
+  const [[driverAlert]]=await db.execute("SELECT COUNT(*) AS n FROM platform_notification_outbox WHERE tenant_id=? AND event_key='delivery_driver_unavailable' AND recipient_email=?",[owner.tenant,owner.email]);assert.ok(Number(driverAlert.n)>=1,'the merchant is notified when delivery has no available driver');
   if(activity==='cafe'){const reads=await Promise.all(Array.from({length:20},()=>call(path,'GET')));assert.ok(reads.every(r=>r.status===200));}
   const attempts=await Promise.all(Array.from({length:12},()=>call('/api/customer/orders','POST',payload,customer.cookie)));
   const [created,replay]=attempts;assert.ok(attempts.every(r=>r.status===201&&r.body.id===created.body.id),JSON.stringify(attempts.map(r=>r.body)));
