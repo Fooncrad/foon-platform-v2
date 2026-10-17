@@ -593,3 +593,23 @@ test('merchant configures weight options and selling measurements in mobile dial
   const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
  }finally{await db.end();await context.close()}
 });
+
+
+test("existing accounts create activity-specific businesses without administrator approval",async({browser})=>{
+ for(const [locale,activity] of [["ar","cafe"],["en","clothing"],["fr","salon"]]){
+  const context=await browser.newContext({viewport:{width:320,height:740}});
+  try{
+   await context.addCookies([{name:"foon_language",value:locale,url:origin}]);
+   const slug="self-service-"+randomUUID().slice(0,8);
+   const registered=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Owner",storeName:"Original business",email:slug+"@test.example",password:"synthetic-long-password",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"}});expect(registered.status()).toBe(201);
+   const page=await context.newPage();await page.goto(origin+"/restaurant/register");
+   await page.locator('select[name="activity"]').selectOption(activity);
+   await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+   const response=page.waitForResponse(r=>r.url().endsWith("/api/restaurant/onboard")&&r.request().method()==="POST");
+   await page.locator('button[type="submit"],form button:not([type])').click();const result=await response;expect(result.status()).toBe(201);const body=await result.json();expect(body.activity).toBe(activity);
+   await expect(page).toHaveURL(origin+"/restaurant?tenant="+body.tenant.id);await expect(page.locator('main')).toBeVisible();
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  }finally{await context.close();}
+ }
+});
