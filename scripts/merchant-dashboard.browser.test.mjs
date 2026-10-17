@@ -52,8 +52,13 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug=? LIMIT 1",[visualSlug]);
  await database.end();
  await page.reload();
+ let releaseCategories;const categoriesReady=new Promise(resolve=>{releaseCategories=resolve;});
+ const categoryRoute=/\/api\/restaurant\/operations\/categories(?:\?|$)/;
+ await page.route(categoryRoute,async route=>{if(route.request().method()==='GET')await categoriesReady;await route.continue();});
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
  await page.getByRole("button",{name:"التصنيفات",exact:true}).click();
+ await expect(page.getByRole('button',{name:'إضافة قسم جديد',exact:true})).toBeDisabled();releaseCategories();
+ await expect(page.getByRole('button',{name:'إضافة قسم جديد',exact:true})).toBeEnabled();await page.unroute(categoryRoute);
  await page.getByRole("button",{name:"إضافة قسم جديد",exact:true}).click();
  await page.getByLabel("اسم القسم",{exact:true}).fill("مشروبات المعاينة");
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
@@ -620,9 +625,9 @@ test('administrator customizes one activity without changing another activity in
   await context.addCookies([{name:'foon_language',value:'en',url:origin}]);const slug='plan-ui-'+randomUUID().slice(0,8);
   const registered=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Admin test',email:slug+'@test.example',password:'synthetic-long-password',storeName:slug,slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(registered.status()).toBe(201);const account=await registered.json();
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'admin',TRUE)",[account.user.id]);
-  const plan=randomUUID();await db.execute('INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)',[plan,slug,'اختبار النشاط','Activity isolation test','Test activité']);
+  const plan=randomUUID(),planName='Activity isolation '+slug;await db.execute('INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)',[plan,slug,'اختبار النشاط',planName,'Test activité']);
   await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,'digital_menu',TRUE,8)",[plan]);
-  const page=await context.newPage();await page.goto(origin+'/admin/plans');const card=page.locator('.adminPlanCatalogCard').filter({has:page.getByText('Activity isolation test',{exact:true})});
+  const page=await context.newPage();await page.goto(origin+'/admin/plans');const card=page.locator('.adminPlanCatalogCard').filter({has:page.getByText(planName,{exact:true})});
   const details=card.locator('details').filter({has:page.getByText('Plan features and limits by activity',{exact:true})});await details.locator('summary').click();await details.locator('select').selectOption('grocery');
   const row=details.locator('strong').filter({hasText:'Catalog management and item/service limit'}).locator('..');await expect(row.getByRole('spinbutton')).toHaveValue('8');
   await row.getByRole('spinbutton').fill('3');await row.getByRole('spinbutton').press('Tab');await expect(row.getByText(/Customized/)).toBeVisible();

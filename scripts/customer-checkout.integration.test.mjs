@@ -11,10 +11,10 @@ test("customer checkout persists before HTTP, isolates ownership, survives retri
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
  const pool=mysql.createPool(url.href),local="http://127.0.0.1:3121",app="https://checkout.test.example";
  const vault=randomBytes(32).toString("base64");process.env.FOON_PAYMENT_VAULT_KEY=vault;
- const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3121"],{env:{...process.env,APP_URL:app},stdio:["ignore","pipe","pipe"]});
+ const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3121"],{env:{...process.env,APP_URL:app},stdio:["ignore","pipe","pipe"]});
  let output="";server.stdout.on("data",c=>output+=c);server.stderr.on("data",c=>output+=c);
  try{
-  let ready=false;for(let i=0;i<60;i++){try{await fetch(local+"/login");ready=true;break;}catch{await new Promise(r=>setTimeout(r,500));}}assert.ok(ready,output);
+  let ready=false;for(let i=0;i<60;i++){try{await fetch(local+"/login",{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,500));}}assert.ok(ready,output);
   const suffix=randomUUID().slice(0,8),password="synthetic-long-password-2026";
   const r=await fetch(local+"/api/auth/register",{method:"POST",headers:{origin:app,"content-type":"application/json"},body:JSON.stringify({email:"checkout-owner-"+suffix+"@test.example",password,name:"Owner",storeName:"Checkout "+suffix,slug:"checkout-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});
   assert.equal(r.status,201,await r.clone().text());const owner=await r.json(),tenant=owner.tenant.id,ownerCookie=r.headers.get("set-cookie").split(";")[0];
