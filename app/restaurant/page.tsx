@@ -1,4 +1,5 @@
 import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
+import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
@@ -50,7 +51,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),
   branches:branches.filter(b=>canManage||assignedBranchIds?.has(String(b.id))).map(b=>({id:String(b.id),name:String(b.name),slug:String(b.slug),enabled:Boolean(b.enabled),version:branchVersion({name:b.name,slug:b.slug,enabled:b.enabled})})),
-  features:features.map(f=>({key:String(f.feature_key),name:String(f.name_ar),nameEn:String(f.name_en),enabled:Boolean(f.enabled),limit:f.limit_value==null?null:Number(f.limit_value)})),
+  features:features.filter(f=>activityFeatureSupport(activityCode,String(f.feature_key))==="supported").map(f=>({key:String(f.feature_key),name:String(f.name_ar),nameEn:String(f.name_en),enabled:Boolean(f.enabled),limit:f.limit_value==null?null:Number(f.limit_value)})),
   subscription:subscription?{name:String(subscription.plan_name),nameEn:String(subscription.plan_name_en),nameFr:String(subscription.plan_name_fr),status:String(subscription.status),endsAt:subscription.ends_at?new Date(subscription.ends_at).toISOString().slice(0,10):null}:null,
   customerCount
  };

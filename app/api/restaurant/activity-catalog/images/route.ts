@@ -29,7 +29,9 @@ export async function GET(request:Request){
 async function mutate(request:Request){
  try{assertSameOrigin(request);}catch{return failure("FORBIDDEN",403);}
  const ctx=await authorize(request);if(!ctx)return failure("FORBIDDEN",403);
- if(!(await tenantEntitlement(ctx.tenantId,"digital_menu")).enabled)return failure("PLAN_FEATURE_REQUIRED",403);
+ const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
+ const services=["carwash","laundry","automotive","salon","publicworks"].includes(String(profiles[0]?.activity_code??""));
+ if(!(await tenantEntitlement(ctx.tenantId,services?"catalog":"digital_menu")).enabled)return failure("PLAN_FEATURE_REQUIRED",403);
  if(Number(request.headers.get("content-length")??0)>3*1024*1024)return failure("IMAGE_TOO_LARGE",413);
  let body:Record<string,unknown>|null=null,bytes:Buffer|null=null,mime:string|null=null;
  if(request.method==="POST"&&request.headers.get("content-type")?.startsWith("multipart/form-data")){

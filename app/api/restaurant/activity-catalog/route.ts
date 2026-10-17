@@ -15,10 +15,11 @@ async function scope(request:Request){
  const tenant=request.headers.get("x-foon-tenant");if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
   const ctx=await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET");
-  if(!(await tenantEntitlement(ctx.tenantId,"digital_menu")).enabled)return {error:NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403})};
   const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
   const activity=String(rows[0]?.activity_code??"");
   if(!isActivityType(activity)||activity==="restaurant")return {error:NextResponse.json({ok:false,code:"ACTIVITY_NOT_SUPPORTED"},{status:409})};
+  const services=["carwash","laundry","automotive","salon","publicworks"].includes(activity);
+  if(!(await tenantEntitlement(ctx.tenantId,services?"catalog":"digital_menu")).enabled)return {error:NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403})};
   return {tenantId:ctx.tenantId,activity,currency:String(rows[0]?.currency??"SAR")};
  }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
 }
@@ -52,7 +53,7 @@ export async function POST(request:Request){
  try{
   await db.beginTransaction();
   if(body.kind!=="category"&&body.kind!=="product")return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
-  await assertCatalogCapacity(db,ctx.tenantId!,false,body.kind);
+  await assertCatalogCapacity(db,ctx.tenantId!,false,body.kind,1,["carwash","laundry","automotive","salon","publicworks"].includes(ctx.activity!)?"catalog":"digital_menu");
   if(body.kind==="category"){
    await db.execute("INSERT INTO catalog_categories(id,tenant_id,name_ar,name_en,name_fr,description_ar,description_en,description_fr) VALUES (?,?,?,?,?,?,?,?)",[id,ctx.tenantId,name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null)]);
   }else if(body.kind==="product"){

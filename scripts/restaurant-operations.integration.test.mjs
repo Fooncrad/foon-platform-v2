@@ -24,7 +24,9 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const a=await register("operations-owner-a"),b=await register("operations-owner-b"),staff=await register("operations-kitchen");
   assert.equal((await resource(b,"pos",undefined,"GET")).status,403);
   await db.query("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES ('operations-enterprise','operations-enterprise','أعمال','Enterprise','Entreprise')");
-  const keys=new Set([...Object.values(resourceModules).map(m=>m.feature).filter(Boolean),"orders","pos","kds","customers","multi_branch","analytics","branding.logo","branding.menu_theme","branding.dark_mode","branding.custom_font","branding.white_label"]);
+  // Integration enterprise fixture must grant both independent catalog keys:
+  // digital_menu for retail/dining products; catalog for service activities.
+  const keys=new Set([...Object.values(resourceModules).map(m=>m.feature).filter(Boolean),"digital_menu","catalog","orders","pos","kds","customers","multi_branch","analytics","branding.logo","branding.menu_theme","branding.dark_mode","branding.custom_font","branding.white_label"]);
   for(const key of keys){await db.execute("INSERT IGNORE INTO package_features(feature_key,name_ar,name_en,category) VALUES (?,?,?,'test')",[key,key,key]);await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled) VALUES ('operations-enterprise',?,TRUE)",[key]);}
   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[a.tenant]);
   // An active label must not hide an expired term or grant menu writes.

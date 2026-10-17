@@ -24,7 +24,8 @@ export async function POST(request:Request){
  const [profiles]=await pool.execute<RowDataPacket[]>('SELECT t.kind,p.activity_code,p.currency FROM tenants t LEFT JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.id=? AND t.status=\'active\'',[tenant]);if(!profiles.length)return fail('FORBIDDEN',403);
  const profile=profiles[0],restaurant=profile.activity_code==='restaurant'||!profile.activity_code&&profile.kind==='restaurant';
  if(restaurant&&kind==='variants')return fail('VARIANTS_NOT_APPLICABLE');
- const feature=['groups','values','variants'].includes(kind)?'variants':'digital_menu';if(!(await tenantEntitlement(tenant,feature)).enabled)return fail('PLAN_FEATURE_REQUIRED',403);
+ const service=['carwash','laundry','automotive','salon','publicworks'].includes(String(profile.activity_code));
+ const feature=['groups','values','variants'].includes(kind)?'variants':service?'catalog':'digital_menu';if(!(await tenantEntitlement(tenant,feature)).enabled)return fail('PLAN_FEATURE_REQUIRED',403);
  const [done]=await pool.execute<RowDataPacket[]>('SELECT payload_hash,result FROM catalog_import_batches WHERE tenant_id=? AND request_key=?',[tenant,body.requestKey]);
  if(done.length){if(done[0].payload_hash!==hash)return fail('IMPORT_KEY_CONFLICT',409);return NextResponse.json(typeof done[0].result==='string'?JSON.parse(done[0].result):done[0].result);}
  const sources=[...new Set(rows.flatMap(r=>[r.image_1,r.image_2,r.image_3,r.image_4].filter(Boolean)))],prepared=new Map<string,Buffer>();
