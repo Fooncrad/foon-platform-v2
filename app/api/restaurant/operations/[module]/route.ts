@@ -89,12 +89,13 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
  }
  const attention:Record<string,number>={};
  const [pendingResources]=await db.execute<RowDataPacket[]>(
-  "SELECT kind,status,data FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND kind IN ('waiter_call','reservation','waitlist','inventory_item','purchase','customer_invoice','internal_invoice','employee','remote_task','split_bill')",params);
+  "SELECT kind,status,data FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND kind IN ('waiter_call','reservation','waitlist','inventory_item','purchase','customer_invoice','internal_invoice','employee','remote_task','split_bill','service_customer_request')",params);
  for(const row of pendingResources){
   const kind=String(row.kind),status=String(row.status);
   let section="";
   if(kind==="waiter_call"&&["pending","in_progress"].includes(status))section="tables";
   else if(["reservation","waitlist"].includes(kind)&&["pending","waiting","requested"].includes(status))section="reservations";
+  else if(kind==="service_customer_request"&&["pending","in_review"].includes(status))section="menu";
   else if(kind==="purchase"&&status==="planned")section="inventory";
   else if(["customer_invoice","internal_invoice"].includes(kind)&&status==="draft")section="printers";
   else if(kind==="split_bill"&&status==="requested")section="pos";
