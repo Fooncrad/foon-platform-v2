@@ -4,7 +4,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {database} from "@/lib/db/mysql";
 import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
-import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-routes";
+import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 
 export default async function AccountPage(){
  const id=await currentUserId();
