@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 20439)
+Total output lines: 338
+
 "use client";
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
 import {uiText} from "@/lib/i18n/ui-copy";
@@ -54,7 +57,7 @@ const translatedErrors:Record<string,[string,string,string]>={
  REFERENCE_NOT_FOUND:["المرجع المحدد غير موجود أو لا ينتمي إلى هذا الفرع.", "The selected reference was not found or belongs to another branch.", "La référence sélectionnée est introuvable ou appartient à une autre succursale."],
  SECTION_IN_USE:["لا يمكن حذف القسم لأنه مرتبط بسجلات نشطة.", "This section cannot be deleted while it has active records.", "Cette section ne peut pas être supprimée tant qu’elle est utilisée."],
  INVALID_INPUT:["بعض البيانات المدخلة غير صحيحة. راجع الحقول المطلوبة.","Some fields contain invalid data. Review the form.","Certaines données sont invalides. Vérifiez le formulaire."],
- DELIVERY_DRIVER_UNAVAILABLE:["لا يمكن قبول طلب التوصيل: لا يوجد سائق مكلّف بهذا الفرع.","Delivery unavailable: no driver is assigned to this branch.","Livraison indisponible : aucun livreur affecté à cette succursale."],
+ DELIVERY_DRIVER_UNAVAILABLE:["لا يمكن قبول طلب التوصيل: لا يوجد سائق نشط ومتاح لهذا الفرع.","Delivery unavailable: no active driver is available for this branch.","Livraison indisponible : aucun livreur actif n’est disponible pour cette succursale."],
  STORE_CLOSED:["المتجر مغلق حاليًا ولا يمكن قبول الطلب.","The store is closed and cannot accept orders.","La boutique est fermée et ne peut accepter de commandes."],
  ORDERS_DISABLED:["استقبال الطلبات متوقف مؤقتًا.","Orders are temporarily disabled.","Les commandes sont temporairement désactivées."],
  ORDER_CHANNEL_DISABLED:["نوع الطلب المحدد غير متاح حاليًا.","The selected ordering service is unavailable.","Ce service de commande est indisponible."],
@@ -199,25 +202,7 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
  }
  async function updateTableStatus(row:StoredResource,status:string,confirmed=false){
   if(busy)return;
-  if(status==="available"&&row.status==="occupied"&&!confirmed){setPendingConfirmation({row,status,kind:"table"});return;}setBusy(true);setMessage("");
-  try{await operationApi(tenantId,"tables","PATCH",{id:row.id,version:row.version,name:row.name,status,branchId:row.branch_id,data:row.data});await refresh();setMessage(translateUi("تم تحديث حالة الطاولة."));onChanged?.();}
-  catch(error){setMessage(error instanceof Error?error.message:translateUi("تعذر تحديث حالة الطاولة."));}finally{setBusy(false);}
- }
- async function assignTableWaiter(row:StoredResource,waiterId:string){
-  if(busy||!can("edit"))return;setBusy(true);setMessage("");
-  try{
-   await operationApi(tenantId,"tables","PATCH",{id:row.id,version:row.version,name:row.name,status:row.status,branchId:row.branch_id,data:{...row.data,waiterId:waiterId||null}});
-   await refresh();setMessage(waiterId?translateUi("تم تعيين النادل للطاولة."):translateUi("تم إلغاء تعيين النادل."));onChanged?.();
-  }catch(error){setMessage(error instanceof Error?error.message:translateUi("تعذر تعيين النادل."));}finally{setBusy(false);}
- }
- async function convertQuotation(row:StoredResource){
-  if(busy||module!=="quotations"||row.status!=="accepted")return;
-  setBusy(true);setMessage("");
-  try{
-   const targetBranch=row.branch_id??branch;
-   const result=await operationApi(tenantId,"serviceOrders","POST",{convertQuotationId:row.id,...(targetBranch?{branchId:targetBranch}:{})});
-   if(!result?.id)throw new Error("INVALID_CONVERSION_RESPONSE");
-   setMessage(result.existing?quoteText("أمر الخدمة موجود مسبقًا.","Service order already exists.","L'ordre de service existe déjà."):quoteText("تم تحويل العرض إلى أمر خدمة.","Quotation converted into a service order.","Devis converti en ordre de service."));
+  if(status==="available"&&row.status==="occupied"&&!confirmed){setP…439 tokens truncated…onverted into a service order.","Devis converti en ordre de service."));
    await refresh();onChanged?.();
   }catch(error){setMessage(error instanceof Error?error.message:quoteText("تعذر تحويل عرض السعر.","Quotation conversion failed.","Échec de la conversion du devis."));}
   finally{setBusy(false);}
