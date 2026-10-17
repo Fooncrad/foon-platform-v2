@@ -1,7 +1,7 @@
 export function notificationCopy(language,event,{store='',reference='',status=''}={}){
  const index=language==='en'?1:language==='fr'?2:0;
  const pick=values=>values[index];
- const statuses={pending:['بانتظار التأكيد','Awaiting confirmation','En attente de confirmation'],new:['جديد','New','Nouveau'],preparing:['قيد التحضير','Preparing','En préparation'],ready:['جاهز','Ready','Prêt'],completed:['مكتمل','Completed','Terminé'],cancelled:['ملغي','Cancelled','Annulé'],paid:['مدفوع','Paid','Payé'],refunded:['تم رد المبلغ','Refunded','Remboursé'],confirmed:['مؤكد','Confirmed','Confirmé'],seated:['تم تسجيل الحضور','Checked in','Arrivée enregistrée']};
+ const statuses={pending:['بانتظار التأكيد','Awaiting confirmation','En attente de confirmation'],new:['جديد','New','Nouveau'],preparing:['قيد التحضير','Preparing','En préparation'],ready:['جاهز','Ready','Prêt'],completed:['مكتمل','Completed','Terminé'],cancelled:['ملغي','Cancelled','Annulé'],paid:['مدفوع','Paid','Payé'],refunded:['تم رد المبلغ','Refunded','Remboursé'],confirmed:['مؤكد','Confirmed','Confirmé'],seated:['تم تسجيل الحضور','Checked in','Arrivée enregistrée'],no_show:['لم يحضر الضيف','Guest did not attend','Le client ne s’est pas présenté']};
  const value=pick(statuses[status]??['قيد المتابعة','In progress','En cours']);
  if(event.startsWith('service_request_'))return {
   subject:pick(['تحديث طلب خدمة — ','Service request update — ','Mise à jour de prestation — '])+store,
