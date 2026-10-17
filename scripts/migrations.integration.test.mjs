@@ -29,6 +29,16 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     const [[history]]=await db.query("SELECT COUNT(*) AS n FROM schema_migrations");
     assert.ok(Number(history.n)>=32,"Expected at least the baseline 32 migrations");
     // Migration 0094 is additive: formal quotes exist only as paid plan grants.
+    const [initialQuoteGrants]=await db.execute("SELECT p.code,pf.enabled FROM package_plans p JOIN package_plan_features pf ON pf.plan_id=p.id WHERE pf.feature_key='quotes' AND p.code IN ('free','starter','professional','enterprise') ORDER BY p.code");
+    assert.deepEqual(Object.fromEntries(initialQuoteGrants.map(r=>[r.code,Number(r.enabled)])),{free:0});
+    // The baseline migration creates Free alone. Simulate paid plans being
+    // defined later, then replay 0094 to verify correct additive grants.
+    for(const [code,enabled] of [['starter',0],['professional',1],['enterprise',1]]){
+     await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)",
+      ['migration-'+code,code,code,code,code]);
+    }
+    await db.execute("DELETE FROM schema_migrations WHERE id='0094_quotation_plan_grants.sql'");
+    successfulRun();
     const [quoteGrants]=await db.execute("SELECT p.code,pf.enabled FROM package_plans p JOIN package_plan_features pf ON pf.plan_id=p.id WHERE pf.feature_key='quotes' AND p.code IN ('free','starter','professional','enterprise') ORDER BY p.code");
     assert.deepEqual(Object.fromEntries(quoteGrants.map(r=>[r.code,Number(r.enabled)])),
      {enterprise:1,free:0,professional:1,starter:0});
