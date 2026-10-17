@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import {randomUUID} from "node:crypto";
 import mysql from "mysql2/promise";
 import {provisionStore} from "./provision-store.mjs";
 import {registerCustomer} from "./register-customer.mjs";
@@ -28,6 +29,27 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.ok(Number(tables.n)>=56,"Expected at least the baseline 56 tables");
     const [[history]]=await db.query("SELECT COUNT(*) AS n FROM schema_migrations");
     assert.ok(Number(history.n)>=32,"Expected at least the baseline 32 migrations");
+    // Migration 0094 is additive: formal quotes exist only as paid plan grants.
+    const [initialQuoteGrants]=await db.execute("SELECT p.code,pf.enabled FROM package_plans p JOIN package_plan_features pf ON pf.plan_id=p.id WHERE pf.feature_key='quotes' AND p.code IN ('free','starter','professional','enterprise') ORDER BY p.code");
+    assert.deepEqual(Object.fromEntries(initialQuoteGrants.map(r=>[r.code,Number(r.enabled)])),{free:0});
+    // The baseline migration creates Free alone. Simulate paid plans being
+    // defined later, then replay 0094 to verify correct additive grants.
+    for(const [code,enabled] of [['starter',0],['professional',1],['enterprise',1]]){
+     await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)",
+      [randomUUID(),code,code,code,code]);
+    }
+    await db.execute("DELETE FROM schema_migrations WHERE id='0094_quotation_plan_grants.sql'");
+    successfulRun();
+    const [quoteGrants]=await db.execute("SELECT p.code,pf.enabled FROM package_plans p JOIN package_plan_features pf ON pf.plan_id=p.id WHERE pf.feature_key='quotes' AND p.code IN ('free','starter','professional','enterprise') ORDER BY p.code");
+    assert.deepEqual(Object.fromEntries(quoteGrants.map(r=>[r.code,Number(r.enabled)])),
+     {enterprise:1,free:0,professional:1,starter:0});
+    const [[professional]]=await db.execute("SELECT id FROM package_plans WHERE code='professional' LIMIT 1");
+    await db.execute("UPDATE package_plan_features SET enabled=FALSE WHERE plan_id=? AND feature_key='quotes'",[professional.id]);
+    await db.execute("DELETE FROM schema_migrations WHERE id='0094_quotation_plan_grants.sql'");
+    successfulRun();
+    const [[preservedQuote]]=await db.execute("SELECT enabled FROM package_plan_features WHERE plan_id=? AND feature_key='quotes'",[professional.id]);
+    assert.equal(Number(preservedQuote.enabled),0,"0094 replay must preserve paid plan customization");
+    await db.execute("UPDATE package_plan_features SET enabled=TRUE WHERE plan_id=? AND feature_key='quotes'",[professional.id]);
     const [contextColumns]=await db.query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='restaurant_orders' AND COLUMN_NAME IN ('dining_section_id','party_size','dining_snapshot')");assert.equal(contextColumns.length,3);
     await db.execute("DELETE FROM schema_migrations WHERE id='0065_dining_order_context.sql'");successfulRun();
     // New account/profile tables must retain real parent constraints on fresh installs.

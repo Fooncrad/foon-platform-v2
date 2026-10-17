@@ -22,10 +22,28 @@ test('activity plan overrides isolate grants, limits and administrator permissio
    const r=await call(endpoint+'?activity='+activity,'GET',undefined,admin.cookie);assert.equal(r.status,200);const menu=r.body.features.find(f=>f.feature_key==='digital_menu');assert.equal(Number(menu.enabled),1);assert.equal(menu.limit_value,20);assert.equal(Number(menu.overridden),1);
   }
   const save=(activity,feature_key,enabled,limit_value)=>call(endpoint,'PUT',{activity,feature_key,enabled,limit_value},admin.cookie);
+  // The UI filter is not security: the API must refuse unsupported grants.
+  const irrelevant=await save('automotive','digital_menu',true,null);
+  assert.equal(irrelevant.status,422);assert.equal(irrelevant.body.code,'FEATURE_NOT_APPLICABLE');
+  assert.equal((await save('restaurant','creator_profile',true,null)).status,422);
+  // Existing legacy overrides may still be removed (reset) without re-granting them.
+  assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'digital_menu'},admin.cookie)).status,200);
   assert.equal((await save('grocery','orders',false,null)).status,200);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant)).status,200);
   assert.equal((await save('grocery','digital_menu',true,2)).status,200);
+  // Bootstrap is one-time initialization, not a reset of existing custom
+  // settings. A deliberately removed override must continue to inherit.
+  await db.execute("DELETE FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
+  for(let i=0;i<2;i++){
+   const seeded=await call('/api/admin/plans/bootstrap','POST',{confirm:'CREATE_FOUR_PLANS'},admin.cookie);
+   assert.equal(seeded.status,200,JSON.stringify(seeded.body));
+   assert.equal(seeded.body.freeActivitiesSeeded,0);
+  }
+  const [[restored]]=await db.execute("SELECT COUNT(*) AS n FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
+  assert.equal(Number(restored.n),0);
+  const [[custom]]=await db.execute("SELECT enabled,limit_value FROM package_plan_activity_features WHERE plan_id=? AND activity_code='grocery' AND feature_key='digital_menu'",[free.id]);
+  assert.equal(Number(custom.enabled),1);assert.equal(Number(custom.limit_value),2);
   const catalog='/api/restaurant/activity-catalog';const category=await call(catalog,'POST',{kind:'category',name:'Category'},grocery.cookie,grocery.tenant);assert.equal(category.status,201,JSON.stringify(category.body));
   const product={kind:'product',name:'First product',price:5,categoryId:category.body.id};
   assert.equal((await call(catalog,'POST',product,grocery.cookie,grocery.tenant)).status,201);
@@ -46,6 +64,19 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   const [[base]]=await db.execute("SELECT enabled,limit_value FROM package_plan_features WHERE plan_id=? AND feature_key='orders'",[free.id]);assert.equal(Number(base.enabled),1);
   const [[other]]=await db.execute("SELECT limit_value FROM package_plan_activity_features WHERE plan_id=? AND activity_code='clothing' AND feature_key='digital_menu'",[free.id]);assert.equal(other.limit_value,20);
   assert.equal((await call(endpoint,'DELETE',{activity:'grocery',feature_key:'orders'},admin.cookie)).status,200);
+  // Plan pricing is audited and the Free tier remains zero-cost across currencies.
+  const prices='/api/admin/plans/'+free.id+'/prices';
+  const zero=await call(prices,'PUT',{billing_cycle:'monthly',currency:'SAR',price:0,enabled:true},admin.cookie);
+  assert.equal(zero.status,200,JSON.stringify(zero.body));
+  const invalidFree=await call(prices,'PUT',{billing_cycle:'monthly',currency:'SAR',price:1,enabled:true},admin.cookie);
+  assert.equal(invalidFree.status,409);assert.equal(invalidFree.body.code,'FREE_PLAN_MUST_BE_ZERO');
+  const [[freePrice]]=await db.execute("SELECT price FROM package_plan_prices WHERE plan_id=? AND billing_cycle='monthly' AND currency='SAR'",[free.id]);
+  assert.equal(Number(freePrice.price),0);
+  const [[paidPlan]]=await db.execute("SELECT id FROM package_plans WHERE code='starter'");
+  const paid=await call('/api/admin/plans/'+paidPlan.id+'/prices','PUT',{billing_cycle:'yearly',currency:'SAR',price:129.99,enabled:true},admin.cookie);
+  assert.equal(paid.status,200,JSON.stringify(paid.body));
+  const [[priceAudits]]=await db.execute("SELECT COUNT(*) AS n FROM platform_audit_events WHERE actor_user_id=? AND action='plan.price.update'",[admin.user]);
+  assert.ok(Number(priceAudits.n)>=2);
   await db.execute("UPDATE platform_admins SET role='support' WHERE user_id=?",[admin.user]);
   assert.equal((await call(endpoint+'?activity=grocery','GET',undefined,admin.cookie)).status,200);assert.equal((await save('grocery','orders',true,null)).status,403);assert.equal((await call(endpoint,'DELETE',{activity:'grocery',feature_key:'orders'},admin.cookie)).status,403);
   const [[audit]]=await db.execute("SELECT COUNT(*) AS n FROM platform_audit_events WHERE actor_user_id=? AND action IN ('plan.feature.update','plan.activity_feature.reset')",[admin.user]);assert.ok(Number(audit.n)>=5);
