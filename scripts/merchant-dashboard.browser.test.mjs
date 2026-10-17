@@ -338,7 +338,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
     await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
     await expect(page.locator('.foonActivityTools')).toBeVisible();
     const destinations=await page.locator('.foonActivityTools a').evaluateAll(links=>links.map(link=>link.href));expect(new Set(destinations).size).toBe(destinations.length);
-    await expect(page.locator('.foonActivityTools a[href*="/restaurant/payments?"]')).toBeVisible();
+    await expect(page.locator('.foonActivityTools a[href*="/workspace/"][href*="/payments?"]')).toBeVisible();
     const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
     const dining=activity==="restaurant"||activity==="cafe";
     if(activity!=="restaurant"){
