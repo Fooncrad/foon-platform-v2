@@ -1,4 +1,5 @@
 import {checkoutSettings} from "./checkout-settings";
+import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
@@ -324,9 +325,26 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   if(existing.length){if(existing[0].request_fingerprint!==fingerprint)throw new ResourceError("CONFLICT");return{id:String(existing[0].id),total:Number(existing[0].total),currency:String(existing[0].currency)};}
  }
  await branchExists(db,tenantId,branchId);
+ // Enforce the same availability rules for POS, public menu, and all activity stores.
+ const [orderPolicies]=await db.execute<RowDataPacket[]>(
+  "SELECT kind,data FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND status='active' AND (kind='storefront_config' OR (kind='branch_config' AND branch_id=?)) ORDER BY created_at DESC",
+  [tenantId,branchId]
+ );
+ const operatingSettings=(kind:string)=>{const row=orderPolicies.find(item=>item.kind===kind);return row?parseData(row.data):{};};
+ const availability=orderChannelStatus(operatingSettings("storefront_config"),operatingSettings("branch_config"),String(body.channel) as OrderChannel);
+ if(!availability.allowed)throw new ResourceError(availability.reason!);
  const profile=await salesProfile(db,tenantId);
  if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
  if(!profile.dining&&body.channel==="dine_in")throw new ResourceError("CHANNEL_UNAVAILABLE");
+ if(body.channel==="delivery"){
+  // Availability is server-enforced: a branch must have an active assigned driver.
+  const [drivers]=await db.execute<RowDataPacket[]>(
+   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 1",
+   [branchId,tenantId]
+  );
+  if(!drivers.length)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
+ }
+
  const stockDebits:StockDebit[]=[];
  const choices=profile.catalog?await activityPosOptions(db,tenantId,cart.map(item=>item.id),true):await menuOptions(db,tenantId,cart.map(item=>item.id));
  const lines:{id:string;name:string;quantity:number;price:number;total:number;options:{name:string;price:number}[]}[]=[];let subtotal=0;
