@@ -66,7 +66,7 @@ test("duplicate and malformed grants fail closed instead of using last-write win
 test("admin classification and resolver share the same alias policy",()=>{
  for(const activity of Object.keys(ACTIVITY_PRESETS)){
   for(const key of ["waiter_call","kds","service_catalog","appointments","takeaway","digital_menu","qr_menu"]){
-   const expected=ACTIVITY_PRESETS[activity].includes(activityFeatureCapability(key));
+   const expected=key==="qr_menu"||ACTIVITY_PRESETS[activity].includes(activityFeatureCapability(key));
    assert.equal(activityFeatureSupport(activity,key),expected?"supported":"unsupported");
    assert.equal(canUseActivityFeature(activity,key,[{feature_key:key,enabled:true,limit_value:null}]),expected);
   }
@@ -80,7 +80,8 @@ test("server dining restrictions cover every registered activity without grantin
  for(const activity of Object.keys(ACTIVITY_PRESETS)){
   const dining=activity==="restaurant"||activity==="cafe";
   for(const key of ["tables","reservations","waitlist","kds","waiter_call"])assert.equal(passesServerActivityRestriction(activity,key),dining,activity+":"+key);
-  for(const key of ["pos","delivery","customer_invoices","quotes","variants"])assert.equal(passesServerActivityRestriction(activity,key),true,"existing entitlement remains mandatory for "+key);
+  for(const key of ["pos","delivery","customer_invoices","quotes"])assert.equal(passesServerActivityRestriction(activity,key),true,"existing entitlement remains mandatory for "+key);
+  assert.equal(passesServerActivityRestriction(activity,"variants"),ACTIVITY_PRESETS[activity].includes("variants"),activity+":variants");
  }
 });
 test("server restriction preserves legacy profile behavior while strict resolver still rejects unknown types",()=>{
@@ -88,4 +89,27 @@ test("server restriction preserves legacy profile behavior while strict resolver
   assert.equal(passesServerActivityRestriction(activity,"tables"),true);
  }
  assert.throws(()=>resolveActivityEntitlements("legacy-unknown",[]),/UNSUPPORTED_ACTIVITY_TYPE/);
+});
+
+test("automotive, carwash, salon and public works use service catalogs without dining features",()=>{
+ for(const activity of ["automotive","carwash","salon","publicworks","laundry"]){
+  for(const key of ["catalog","storefront","service_catalog","queue","payments","pos"])
+   assert.equal(activityFeatureSupport(activity,key),"supported",activity+":"+key);
+  for(const key of ["tables","split_bills","table_qr","room_service","digital_menu","department_printers"]){
+   assert.equal(activityFeatureSupport(activity,key),"unsupported",activity+":"+key);
+   assert.equal(passesServerActivityRestriction(activity,key),false,activity+":"+key);
+  }
+ }
+ for(const key of ["inventory","purchases","suppliers","appointments"])
+  assert.equal(activityFeatureSupport("automotive",key),"supported",key);
+ for(const key of ["excise_tax","waitlist_fees","creator_profile"])
+  assert.equal(activityFeatureSupport("automotive",key),"unsupported",key);
+});
+test("all 15 activities share storefront and catalog limits without inheriting creator rights",()=>{
+ for(const activity of Object.keys(ACTIVITY_PRESETS)){
+  for(const key of ["catalog","storefront","qr_menu","customer_invoices"])
+   assert.equal(activityFeatureSupport(activity,key),"supported",activity+":"+key);
+  for(const key of ["creator_profile","media_library","content_marketplace"])
+   assert.equal(activityFeatureSupport(activity,key),"unsupported",activity+":"+key);
+ }
 });
