@@ -53,7 +53,7 @@ export async function POST(request:Request){
  try{
   await db.beginTransaction();
   if(body.kind!=="category"&&body.kind!=="product")return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
-  await assertCatalogCapacity(db,ctx.tenantId!,false,body.kind);
+  await assertCatalogCapacity(db,ctx.tenantId!,false,body.kind,1,["carwash","laundry","automotive","salon","publicworks"].includes(ctx.activity!)?"catalog":"digital_menu");
   if(body.kind==="category"){
    await db.execute("INSERT INTO catalog_categories(id,tenant_id,name_ar,name_en,name_fr,description_ar,description_en,description_fr) VALUES (?,?,?,?,?,?,?,?)",[id,ctx.tenantId,name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null)]);
   }else if(body.kind==="product"){
