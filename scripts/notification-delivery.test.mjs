@@ -19,3 +19,9 @@ test('custom tenant SMTP is decrypted only for its own provider and never falls 
  const received=await queuedMailProvider(db,'tenant-only',env,async options=>options);assert.equal(received.SMTP_PASSWORD,'tenant-test-password');assert.equal(received.SMTP_USER,'store@example.test');
  await assert.rejects(()=>queuedMailProvider(db,'tenant-only',{...env,FOON_MAIL_ENCRYPTION_KEY:Buffer.alloc(32,3).toString('hex')},async()=>{throw Error('MUST_NOT_FALL_BACK')}));
 });
+
+test('notification worker skips expired and already-used verification links',async()=>{
+ const f=fixture({claimed:false});
+ await deliverNotifications(f.db,{providerFor:async()=>({send(){throw Error("NOT_SENT")},close(){}})});
+ assert.ok(f.calls.some(c=>c.sql.includes("JOIN email_verification_tokens v")&&c.sql.includes("VERIFICATION_LINK_EXPIRED")));
+});
