@@ -5,6 +5,7 @@ import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {registrationActivities} from "@/lib/tenant/registration-activities";
 import {localizedActivityModules} from "@/lib/platform/activity-presets";
+import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import {supportedCountries,countryRegions,currencyForCountry} from "@/lib/tenant/country-catalog";
 export default function RestaurantRegisterPage(){
  const [lang]=useLanguagePreference(),router=useRouter();
@@ -16,7 +17,7 @@ export default function RestaurantRegisterPage(){
   try{
    const response=await fetch("/api/restaurant/onboard",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),slug:data.get("slug"),activity,countryCode:country,currency:currencyForCountry(country),region,taxNumber:data.get("taxNumber")})});
    const result=await response.json().catch(()=>({}));
-   if(response.ok){router.replace((["restaurant","cafe","sweets"].includes(activity)?"/restaurant":"/business")+"?tenant="+encodeURIComponent(result.tenant.id));router.refresh();return;}
+   if(response.ok){router.replace(activityWorkspaceUrl(activity,result.tenant.id));router.refresh();return;}
    if(response.status===401){router.push("/login");return;}
    setError(result.code==="SLUG_EXISTS"?t("الرابط مستخدم، اختر رابطًا آخر.","This store URL is taken. Choose another.","Cette adresse est déjà utilisée. Choisissez-en une autre."):t("راجع بيانات النشاط والرابط والدولة والمدينة وحاول مجددًا.","Check the business details, URL, country and city, then try again.","Vérifiez les informations, l’adresse, le pays et la ville, puis réessayez."));
   }catch{setError(t("تعذر الاتصال بالخادم. حاول مجددًا.","Unable to connect. Please try again.","Connexion impossible. Réessayez."));}finally{setBusy(false);}
