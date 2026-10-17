@@ -37,6 +37,9 @@ export function activityFeatureSupport(activity:string,key:string):"supported"|"
  // variants feature even though these activities do not list retail variants
  // as a standalone workspace module. The exact paid grant is still required.
  if(key==="variants"&&["restaurant","cafe","grocery"].includes(activity))return "supported";
+ // Existing service order operations are gated by the quotes subscription key.
+ // Keep it activity-relevant without granting access when the plan denies it.
+ if(key==="quotes")return (ACTIVITY_PRESETS[activity] as readonly string[]).includes("services")?"supported":"unsupported";
  if(key==="service_fees")return activity==="restaurant"||activity==="cafe"||
   (ACTIVITY_PRESETS[activity] as readonly string[]).includes("services")?"supported":"unsupported";
  const capability=activityFeatureCapability(key);

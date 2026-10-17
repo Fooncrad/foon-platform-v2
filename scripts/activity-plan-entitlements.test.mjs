@@ -117,6 +117,16 @@ test("restaurant, cafe and grocery retain option variants without opening servic
   assert.equal(passesServerActivityRestriction(activity,"variants"),false);
  }
 });
+test("service-order quotations are relevant only to service activities and still require grants",()=>{
+ for(const activity of ["carwash","laundry","automotive","salon","publicworks"]){
+  assert.equal(activityFeatureSupport(activity,"quotes"),"supported",activity);
+  assert.equal(canUseActivityFeature(activity,"quotes",[{feature_key:"quotes",enabled:true,limit_value:null}]),true,activity);
+  assert.equal(canUseActivityFeature(activity,"quotes",[{feature_key:"quotes",enabled:false,limit_value:null}]),false,activity);
+ }
+ for(const activity of ["grocery","clothing","ecommerce"]){
+  assert.equal(activityFeatureSupport(activity,"quotes"),"unsupported",activity);
+ }
+});
 test("all 15 activities share storefront and catalog limits without inheriting creator rights",()=>{
  for(const activity of Object.keys(ACTIVITY_PRESETS)){
   for(const key of ["catalog","storefront","qr_menu","customer_invoices"])
