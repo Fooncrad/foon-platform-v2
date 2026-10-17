@@ -9,3 +9,8 @@ export function activityWorkspaceUrl(activity:string,tenantId?:string):string{
  const path=activityWorkspacePath(activity);
  return tenantId?path+"?tenant="+encodeURIComponent(tenantId):path;
 }
+
+export function activityPaymentsUrl(activity:string,tenantId?:string):string{
+ const path=activityWorkspacePath(activity)+"/payments";
+ return tenantId?path+"?tenant="+encodeURIComponent(tenantId):path;
+}
