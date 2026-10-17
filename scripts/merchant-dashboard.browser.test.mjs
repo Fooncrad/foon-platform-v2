@@ -629,7 +629,7 @@ test('administrator customizes one activity without changing another activity in
   await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,'digital_menu',TRUE,8)",[plan]);
   const page=await context.newPage();await page.goto(origin+'/admin/plans');const card=page.locator('.adminPlanCatalogCard').filter({has:page.getByText(planName,{exact:true})});
   const details=card.locator('details').filter({has:page.getByText('Plan features and limits by activity',{exact:true})});await details.locator('summary').click();await details.locator('select').selectOption('grocery');
-  const row=details.locator('strong').filter({hasText:'Catalog management and item/service limit'}).locator('..');await expect(row.getByRole('spinbutton')).toHaveValue('8');
+  const row=details.locator('small[dir="ltr"]').filter({hasText:'digital_menu'}).locator('..');await expect(row.getByRole('spinbutton')).toHaveValue('8');
   await row.getByRole('spinbutton').fill('3');await row.getByRole('spinbutton').press('Tab');await expect(row.getByText(/Customized/)).toBeVisible();
   await details.locator('select').selectOption('clothing');await expect(row.getByRole('spinbutton')).toHaveValue('8');
   await details.locator('select').selectOption('grocery');await expect(row.getByRole('spinbutton')).toHaveValue('3');
