@@ -27,7 +27,7 @@ test("production registration routes activate owners and isolate store customers
   // now verifies ownership and is strictly single-use with origin protection.
   const [verifications]=await db.execute("SELECT id,subject,body_text FROM platform_notification_outbox WHERE event_key='email_verification' AND recipient_email=? ORDER BY created_at DESC LIMIT 1",[owner.email]);
   assert.equal(verifications.length,1,"registration must enqueue a verification link");
-  const verificationLink=String(verifications[0].body_text).match(/https?:\\/\\/[^\\s]+/)?.[0];
+  const verificationLink=String(verifications[0].body_text).match(/https?:\/\/[^\s]+/)?.[0];
   assert.ok(verificationLink,"email includes the one-time verification URL");
   const verificationToken=new URL(verificationLink).searchParams.get("token");
   assert.match(verificationToken,/^[A-Za-z0-9_-]{43}$/);
