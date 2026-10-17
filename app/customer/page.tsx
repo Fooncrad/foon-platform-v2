@@ -15,6 +15,7 @@ function safeReservationData(value:string):Record<string,unknown>{try{const pars
 export default async function CustomerPage(){
  const translationLanguage=(await uiCookies()).get("foon_language")?.value;
  const translateUi=(value:string)=>uiText(value,translationLanguage==="en"||translationLanguage==="fr"?translationLanguage:"ar");
+ const verifyEmailLabel=translationLanguage==="en"?"Verify email":translationLanguage==="fr"?"Vérifier l’adresse e-mail":"تأكيد البريد الإلكتروني";
 
  const id=await currentUserId();if(!id)redirect("/login");
  if(await isEmployeeAccount(id))redirect("/restaurant");
