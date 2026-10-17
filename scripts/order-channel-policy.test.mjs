@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {orderChannelStatus} from "../lib/restaurant/order-channel-policy.ts";
 const at=(value:string)=>new Date(value);
 test("all activities share a global ordering kill switch",()=>{
- for(const channel of ["delivery","takeaway","dine_in"] as const)
+ for(const channel of ["delivery","takeaway","dine_in"])
   assert.equal(orderChannelStatus({ordersEnabled:"no"},{},channel).reason,"ORDERS_DISABLED");
 });
 test("merchant and branch channel switches are independent",()=>{
