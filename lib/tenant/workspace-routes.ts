@@ -14,3 +14,8 @@ export function activityPaymentsUrl(activity:string,tenantId?:string):string{
  const path=activityWorkspacePath(activity)+"/payments";
  return tenantId?path+"?tenant="+encodeURIComponent(tenantId):path;
 }
+
+export function activityMediaStudioUrl(activity:string,tenantId?:string):string{
+ const path=activityWorkspacePath(activity)+"/media-studio";
+ return tenantId?path+"?tenant="+encodeURIComponent(tenantId):path;
+}
