@@ -299,11 +299,16 @@ export async function confirmManualInvoiceReceipt(
  return {id:invoiceId,settlementId,existing:false};
 }
 
-export async function ordersRows(db:PoolConnection,tenantId:string,role:string,branchId?:string|null){
+export async function ordersRows(db:PoolConnection,tenantId:string,role:string,branchId?:string|null,actorUserId?:string){
  const financial=["owner","manager","cashier","accountant"].includes(role);
  const values:string[]=[tenantId];let filter="";
  if(branchId){filter+=" AND branch_id=?";values.push(branchId);}
- if(role==="driver")filter+=" AND channel='delivery'";
+ if(role==="driver"){
+  if(!actorUserId||!branchId)return [];
+  const [employees]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 2",[tenantId,branchId,actorUserId]);
+  if(employees.length!==1)return [];
+  filter+=" AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=?";values.push(String(employees[0].id));
+ }
  const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
  if(!orders.length)return [];
  const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
@@ -340,11 +345,16 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(body.channel==="delivery"){
   // Availability is server-enforced: a branch must have an active assigned driver.
   const [drivers]=await db.execute<RowDataPacket[]>(
-   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' ORDER BY e.id LIMIT 1",
-   [branchId,tenantId]
+   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' ORDER BY e.id FOR UPDATE",
+   [branchId,tenantId,branchId]
   );
-  if(!drivers.length)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
-  assignedDriverId=String(drivers[0].id);
+  // One active delivery per driver. Locking the eligible driver rows serializes
+  // concurrent checkouts so the same available driver cannot be double-booked.
+  for(const driver of drivers){
+   const [active]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=? AND status NOT IN ('completed','cancelled') LIMIT 1 FOR UPDATE",[tenantId,String(driver.id)]);
+   if(!active.length){assignedDriverId=String(driver.id);break;}
+  }
+  if(!assignedDriverId)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
  }
 
  const stockDebits:StockDebit[]=[];
@@ -403,9 +413,14 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
 }
 export async function updateOrder(db:PoolConnection,tenantId:string,actor:string,role:string,body:Record<string,unknown>){
  if(typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
- const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,payment_status,version,channel,table_id FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,tenantId]);const order=rows[0];
+ const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,payment_status,version,channel,table_id,branch_id,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,tenantId]);const order=rows[0];
  if(!order)throw new ResourceError("ORDER_NOT_FOUND");
  if(!Number.isInteger(body.version)||Number(body.version)!==Number(order.version))throw new ResourceError("CONFLICT");
+ if(role==="driver"){
+  const snapshot=order.checkout_snapshot?parseData(order.checkout_snapshot):{};
+  const [assigned]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' AND e.id=? LIMIT 1 FOR UPDATE",[tenantId,String(order.branch_id),actor,String(snapshot.assignedDriverId??"")]);
+  if(order.channel!=="delivery"||!assigned.length)throw new ResourceError("FORBIDDEN");
+ }
  let status=String(order.status),payment=String(order.payment_status);
  if(body.status!==undefined){
   const next=String(body.status),transitions:Record<string,string[]>={new:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["completed","cancelled"],completed:[],cancelled:[]};
