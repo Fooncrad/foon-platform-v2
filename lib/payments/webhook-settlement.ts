@@ -1,3 +1,4 @@
+import {notifyOrder} from "../notifications/customer.ts";
 import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {majorToMinor,currencyDecimals,type VerifiedPaymentWebhook} from "./webhook-verification.mjs";
@@ -182,6 +183,7 @@ export async function persistPaymentWebhook(db:PoolConnection,endpoint:Endpoint,
     await db.execute("UPDATE restaurant_orders SET payment_status='paid',version=version+1 WHERE tenant_id=? AND id=? AND payment_status='unpaid'",[endpoint.tenant_id,attempt.order_id]);
     await db.execute("UPDATE tenant_payment_attempts SET status='paid' WHERE tenant_id=? AND id=?",[endpoint.tenant_id,attempt.id]);
     await settleIssuedOrderInvoice(db,endpoint,event,String(attempt.order_id),String(order.branch_id),String(order.currency));
+    await notifyOrder(db,endpoint.tenant_id,String(attempt.order_id),"paid",true);
     status="paid";
    }
   }

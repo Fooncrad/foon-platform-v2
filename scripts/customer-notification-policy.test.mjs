@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {notifyCustomer,notifyOrder} from '../lib/notifications/customer.ts';
+function fixture(rule,active=true,guest=false){const writes=[];return {writes,db:{async execute(sql,args){if(sql.startsWith('SELECT customer_user_id'))return [[{customer_user_id:guest?null:'customer',order_number:123}]];if(sql.startsWith('SELECT u.email'))return [active?[{email:'customer@test.example',default_locale:'en',name:'Store'}]:[]];if(sql.startsWith('SELECT enabled'))return [rule?[rule]:[]];writes.push({sql,args});return [{affectedRows:1}];}}};}
+const input={userId:'customer',tenantId:'store',event:'order_payment_paid',resourceId:'order',status:'paid'};
+test('payment notice preserves explicit email opt-out while creating account notification',async()=>{const f=fixture({enabled:1,in_app_enabled:1,email_enabled:0});await notifyCustomer(f.db,input);assert.equal(f.writes.length,1);assert.ok(f.writes[0].sql.includes('customer_notifications'));assert.equal(f.writes[0].args[1],'customer');assert.equal(f.writes[0].args[2],'store');});
+test('disabled event and inactive customers never enqueue messages',async()=>{for(const f of [fixture({enabled:0,in_app_enabled:1,email_enabled:1}),fixture(null,false)]){await notifyCustomer(f.db,input);assert.equal(f.writes.length,0);}});
+test('guest payments do not infer a recipient from staff identity',async()=>{const f=fixture(null,true,true);await notifyOrder(f.db,'store','order','paid',true);assert.equal(f.writes.length,0);});
+test('default registered customer payment queues localized account and email messages',async()=>{const f=fixture(null);await notifyOrder(f.db,'store','order','paid',true);assert.equal(f.writes.length,2);assert.ok(f.writes[0].args.includes('order_payment_paid'));assert.ok(f.writes[1].sql.includes('platform_notification_outbox'));assert.equal(/[\u0600-\u06ff]/.test(f.writes[1].args.join('')),false);});
