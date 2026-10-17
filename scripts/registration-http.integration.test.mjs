@@ -35,6 +35,26 @@ test("production registration routes activate owners and isolate store customers
   assert.equal((await post("/api/auth/register",owner)).status,409);
   assert.equal((await post("/api/auth/register",{...owner,email:"slug-collision@test.example"})).status,409);
   const [[rollback]]=await db.query("SELECT COUNT(*) AS n FROM users WHERE email='slug-collision@test.example'");assert.equal(Number(rollback.n),0);
+  // Existing accounts create the selected activity directly, without admin provisioning.
+  const ownerCookie=created.headers.get("set-cookie").split(";")[0];
+  const onboard=(body,cookie=ownerCookie,source=origin)=>fetch(origin+"/api/restaurant/onboard",{method:"POST",headers:{origin:source,"content-type":"application/json",cookie},body:JSON.stringify(body)});
+  const input={name:"Additional business",slug:"additional-business",activity:"clothing",countryCode:"AE",currency:"AED",region:"دبي",taxNumber:"123456789"};
+  assert.equal((await onboard(input,"")).status,401);
+  assert.equal((await onboard(input,ownerCookie,"https://foreign.example")).status,403);
+  for(const invalid of [{activity:"unknown"},{activity:undefined},{currency:"SAR"},{countryCode:"XX"},{region:"invalid"}])assert.equal((await onboard({...input,...invalid})).status,400);
+  const [[before]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=?",[result.user.id]);assert.equal(Number(before.n),1);
+  for(const activity of ["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]){
+   const res=await onboard({...input,activity,slug:"onboard-"+activity});assert.equal(res.status,201,await res.clone().text());const added=await res.json();
+   assert.equal(added.activity,activity);assert.ok(added.activityModules.includes("payments"));assert.equal(added.plan,"free");assert.equal(added.tenant.status,"active");
+   const [[profile]]=await db.execute("SELECT activity_code,country_code,currency,region,tax_number FROM tenant_business_profiles WHERE tenant_id=?",[added.tenant.id]);
+   assert.deepEqual({...profile},{activity_code:activity,country_code:"AE",currency:"AED",region:"دبي",tax_number:"123456789"});
+   const [[provisioned]]=await db.execute("SELECT t.kind,m.role,s.status,p.code,(SELECT COUNT(*) FROM branches b WHERE b.tenant_id=t.id) AS branches FROM tenants t JOIN memberships m ON m.tenant_id=t.id JOIN tenant_subscriptions s ON s.tenant_id=t.id JOIN package_plans p ON p.id=s.plan_id WHERE t.id=? AND m.user_id=?",[added.tenant.id,result.user.id]);
+   assert.equal(provisioned.kind,["restaurant","cafe","sweets"].includes(activity)?"restaurant":"store");assert.equal(provisioned.role,"owner");assert.equal(provisioned.status,"active");assert.equal(provisioned.code,"free");assert.equal(Number(provisioned.branches),1);
+  }
+  assert.equal((await onboard({...input,slug:"onboard-clothing"})).status,409);
+  const [[after]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=?",[result.user.id]);assert.equal(Number(after.n),16);
+  const [[admins]]=await db.execute("SELECT COUNT(*) AS n FROM platform_admins WHERE user_id=?",[result.user.id]);assert.equal(Number(admins.n),0);
+  console.log("Self-service onboarding: all 15 activity profiles, free activation, owner isolation, locale validation and collision rollback verified");
   const customer={email:"http-customer@test.example",password:"a-strong-test-password",name:"Customer",storeSlug:owner.slug};
   const registered=await post("/api/customer/register",customer);assert.equal(registered.status,201,await registered.clone().text());
   const customerResult=await registered.json();assert.equal(customerResult.tenantId,result.tenant.id);

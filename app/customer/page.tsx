@@ -1,3 +1,4 @@
+import {isEmployeeAccount} from "@/lib/auth/account-surface";
 import {cookies as uiCookies} from "next/headers";
 import {uiText} from "@/lib/i18n/ui-copy";
 import AccountLanguageSwitcher from "../restaurant/account-language-switcher";
@@ -16,6 +17,7 @@ export default async function CustomerPage(){
  const translateUi=(value:string)=>uiText(value,translationLanguage==="en"||translationLanguage==="fr"?translationLanguage:"ar");
 
  const id=await currentUserId();if(!id)redirect("/login");
+ if(await isEmployeeAccount(id))redirect("/restaurant");
  const [rows]=await database().execute<RowDataPacket[]>("SELECT display_name,email,email_verified_at,status FROM users WHERE id=? AND status='active' LIMIT 1",[id]);
  const user=rows[0];if(!user)redirect("/login");
  const [profiles]=await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[id]);

@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
@@ -6,6 +7,7 @@ export const runtime="nodejs";
 
 // Invoice archive is visible only to the authenticated customer owning the order.
 export async function GET(){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const user=await currentUserId();
  if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{

@@ -1,3 +1,4 @@
+import {assertCatalogCapacity} from "@/lib/plans/catalog-capacity";
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -42,10 +43,11 @@ export async function POST(request:Request){
  const connection=await database().getConnection();
  try{
   await connection.beginTransaction();
+  await assertCatalogCapacity(connection,auth.tenantId!,true,"product");
   await connection.execute("INSERT INTO restaurant_menu_items(id,tenant_id,category_id,name,description,price,currency) VALUES (?,?,?,?,?,?,'SAR')",[id,auth.tenantId,categoryId,name,description||null,priceText]);
   await connection.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,NULL,'menu_item',?,'active',JSON_OBJECT('categoryId',?))",[id,auth.tenantId,name,categoryId]);
   await connection.commit();
  }catch(error){await connection.rollback();throw error}finally{connection.release()}
  return NextResponse.json({ok:true,item:{id,name,categoryId,price:priceText}},{status:201});
- }catch{return NextResponse.json({ok:false,code:"MENU_SAVE_FAILED"},{status:503})}
+ }catch(e){const code=e instanceof Error?e.message:"";return NextResponse.json({ok:false,code:["PLAN_LIMIT_REACHED","PLAN_FEATURE_REQUIRED"].includes(code)?code:"MENU_SAVE_FAILED"},{status:["PLAN_LIMIT_REACHED","PLAN_FEATURE_REQUIRED"].includes(code)?403:503});}
 }

@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -10,6 +11,7 @@ import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {customerCartAvailable} from "@/lib/platform/customer-checkout";
 export const runtime="nodejs";
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null);

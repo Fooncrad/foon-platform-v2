@@ -6,13 +6,14 @@ import {useSavedPreference} from "@/lib/ui/saved-preference";
 import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
+import {registrationActivities as activities} from "@/lib/tenant/registration-activities";
 import CountrySelect from "./country-select";
 import "./country-select.css";
 import {getSystemMessage} from "@/lib/ui/system-messages";
 import {supportedCountries,countryRegions,currencyForCountry} from "@/lib/tenant/country-catalog";
 type Lang="ar"|"en"|"fr";
 type Theme="light"|"dark";
-const activities=[{id:"restaurant",group:"restaurant",ar:"مطعم",en:"Restaurant",fr:"Restaurant"},{id:"cafe",group:"restaurant",ar:"مقهى",en:"Café",fr:"Café"},{id:"sweets",group:"restaurant",ar:"حلويات ومخبوزات",en:"Sweets & bakery",fr:"Pâtisserie"},{id:"grocery",group:"retail",ar:"بقالة وسوبرماركت",en:"Grocery & supermarket",fr:"Épicerie"},{id:"clothing",group:"retail",ar:"ملابس وأزياء",en:"Clothing & fashion",fr:"Vêtements"},{id:"perfume",group:"retail",ar:"عطور وتجميل",en:"Perfume & beauty",fr:"Parfumerie"},{id:"accessories",group:"retail",ar:"إكسسوارات",en:"Accessories",fr:"Accessoires"},{id:"watches",group:"retail",ar:"ساعات",en:"Watches",fr:"Montres"},{id:"gifts",group:"retail",ar:"هدايا وتغليف",en:"Gifts & wrapping",fr:"Cadeaux"},{id:"ecommerce",group:"retail",ar:"تجارة إلكترونية",en:"E-commerce",fr:"Commerce électronique"},{id:"carwash",group:"service",ar:"غسيل سيارات",en:"Car wash",fr:"Lavage auto"},{id:"laundry",group:"service",ar:"مغسلة ملابس",en:"Laundry",fr:"Blanchisserie"},{id:"automotive",group:"service",ar:"خدمات سيارات",en:"Automotive services",fr:"Services automobiles"},{id:"salon",group:"service",ar:"صالون وتجميل",en:"Salon & beauty",fr:"Salon de beauté"},{id:"publicworks",group:"service",ar:"مقاولات وخدمات عامة",en:"Public works & services",fr:"Travaux et services"}] as const;
+
 const countries=supportedCountries;
 const copy={
  ar:{tag:"ابدأ مجانًا",title:"إنشاء حساب ومتجر",intro:"متجرك وباقتك المجانية يُفعّلان فور التسجيل، ويمكنك بدء العمل مباشرة.",name:"الاسم",store:"اسم النشاط",kind:"نوع النشاط",retail:"متجر",restaurant:"مطعم",slug:"رابط المتجر",email:"البريد الإلكتروني",password:"كلمة المرور",hint:"9 أحرف على الأقل",submit:"إنشاء الحساب",busy:"جارٍ الإنشاء…",hasAccount:"لديك حساب؟",login:"تسجيل الدخول",language:"اللغة",theme:"تبديل المظهر",exists:"هذا البريد مسجل مسبقًا.",slugExists:"رابط المتجر مستخدم، اختر رابطًا آخر.",failure:"تعذر إنشاء الحساب والمتجر. تحقق من البيانات وحاول مجددًا.",network:"تعذر الاتصال بالخادم. حاول مجددًا."},

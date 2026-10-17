@@ -1,3 +1,5 @@
+import {tenantEntitlement} from "@/lib/plans/entitlements";
+import {assertCatalogCapacity} from "@/lib/plans/catalog-capacity";
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -13,6 +15,7 @@ async function scope(request:Request){
  const tenant=request.headers.get("x-foon-tenant");if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
   const ctx=await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET");
+  if(!(await tenantEntitlement(ctx.tenantId,"digital_menu")).enabled)return {error:NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403})};
   const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
   const activity=String(rows[0]?.activity_code??"");
   if(!isActivityType(activity)||activity==="restaurant")return {error:NextResponse.json({ok:false,code:"ACTIVITY_NOT_SUPPORTED"},{status:409})};
@@ -45,20 +48,25 @@ export async function POST(request:Request){
  const body=await request.json().catch(()=>null);
  if(!body||!validName(body.name))return NextResponse.json({ok:false,code:"INVALID_NAME"},{status:400});
  const name=body.name.trim(),id=randomUUID();
+ const db=await database().getConnection();
  try{
+  await db.beginTransaction();
+  if(body.kind!=="category"&&body.kind!=="product")return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
+  await assertCatalogCapacity(db,ctx.tenantId!,false,body.kind);
   if(body.kind==="category"){
-   await database().execute("INSERT INTO catalog_categories(id,tenant_id,name_ar,name_en,name_fr,description_ar,description_en,description_fr) VALUES (?,?,?,?,?,?,?,?)",[id,ctx.tenantId,name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null)]);
+   await db.execute("INSERT INTO catalog_categories(id,tenant_id,name_ar,name_en,name_fr,description_ar,description_en,description_fr) VALUES (?,?,?,?,?,?,?,?)",[id,ctx.tenantId,name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null)]);
   }else if(body.kind==="product"){
    const category=String(body.categoryId??"");
-   const [matches]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,category]);
+   const [matches]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,category]);
    if(!matches.length)return NextResponse.json({ok:false,code:"INVALID_CATEGORY"},{status:400});
    const price=Number(body.price);
    if(!Number.isFinite(price)||price<0||price>9999999999)return NextResponse.json({ok:false,code:"INVALID_PRICE"},{status:400});
    const service=["carwash","laundry","automotive","salon","publicworks"].includes(ctx.activity!);
-   await database().execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,description_en,description_fr,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null),price,ctx.currency]);
+   await db.execute("INSERT INTO catalog_products(id,tenant_id,category_id,product_type,name_ar,name_en,name_fr,description_ar,description_en,description_fr,price,currency) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",[id,ctx.tenantId,category,service?"service":"physical",name,String(body.nameEn??"").slice(0,180)||null,String(body.nameFr??"").slice(0,180)||null,...["description","descriptionEn","descriptionFr"].map(key=>typeof body[key]==="string"?body[key].slice(0,5000):null),price,ctx.currency]);
   }else return NextResponse.json({ok:false,code:"INVALID_KIND"},{status:400});
+  await db.commit();
   return NextResponse.json({ok:true,id},{status:201});
- }catch{return NextResponse.json({ok:false,code:"CATALOG_SAVE_FAILED"},{status:503})}
+ }catch(e){await db.rollback();const code=e instanceof Error?e.message:"";return NextResponse.json({ok:false,code:["PLAN_LIMIT_REACHED","PLAN_FEATURE_REQUIRED"].includes(code)?code:"CATALOG_SAVE_FAILED"},{status:["PLAN_LIMIT_REACHED","PLAN_FEATURE_REQUIRED"].includes(code)?403:503});}finally{await db.rollback();db.release();}
 }
 
 export async function PATCH(request:Request){

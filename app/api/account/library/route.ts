@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {assetInUse} from "@/lib/media/asset-use";
 import {randomUUID} from "node:crypto";
 import {squareImage} from "@/lib/media/square-image";
@@ -9,10 +10,12 @@ import {mediaPolicy,mediaUsage,assertMediaSpace} from "@/lib/media/account-quota
 import type {RowDataPacket} from "mysql2/promise";
 export const runtime="nodejs";
 export async function GET(){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const id=await currentUserId();if(!id)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  try{const policy=await mediaPolicy(id);const [files]=await database().execute<RowDataPacket[]>("SELECT id,file_name,size_bytes,created_at FROM user_media_library WHERE user_id=? ORDER BY created_at DESC LIMIT 10000",[id]);const [assets]=await database().execute<RowDataPacket[]>("SELECT a.id,CONCAT(t.name,' · ',LEFT(a.id,8),'.jpg') AS file_name,a.size_bytes,a.created_at FROM restaurant_assets a JOIN tenants t ON t.id=a.tenant_id WHERE EXISTS (SELECT 1 FROM memberships m WHERE m.tenant_id=a.tenant_id AND m.user_id=? AND m.role='owner' AND m.status='active') ORDER BY a.created_at DESC LIMIT 10000",[id]);files.push(...assets);return NextResponse.json({ok:true,policy,usage:await mediaUsage(database(),id),files:files.map(f=>({id:f.id,name:f.file_name,size:Number(f.size_bytes),createdAt:f.created_at}))});}catch{return NextResponse.json({ok:false,code:"LIBRARY_UNAVAILABLE"},{status:503});}
 }
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const size=Number(request.headers.get("content-length")??0);if(size>11*1024*1024)return NextResponse.json({ok:false,code:"IMAGE_TOO_LARGE"},{status:413});
@@ -40,6 +43,7 @@ export async function POST(request:Request){
  }catch(error){const code=error instanceof Error?error.message:"LIBRARY_UNAVAILABLE";return NextResponse.json({ok:false,code:["STORAGE_LIMIT_REACHED","LIBRARY_DISABLED","IMAGE_TOO_LARGE","INVALID_IMAGE"].includes(code)?code:"LIBRARY_UNAVAILABLE"},{status:["STORAGE_LIMIT_REACHED","LIBRARY_DISABLED"].includes(code)?409:code==="IMAGE_TOO_LARGE"?413:code==="INVALID_IMAGE"?400:503})}
 }
 export async function DELETE(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const data=await request.json().catch(()=>null);if(typeof data?.id!=="string"||!/^[0-9a-f-]{36}$/i.test(data.id))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});

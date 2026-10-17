@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {cookies} from "next/headers";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
@@ -16,6 +17,7 @@ const restaurantActivities=new Set(["restaurant","cafe","sweets"]);
 const storeActivities=new Set(["grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]);
 export const runtime="nodejs";
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
   try{
     try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
     const body=await request.json().catch(()=>null);

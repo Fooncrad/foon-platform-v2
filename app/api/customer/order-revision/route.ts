@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {NextResponse} from "next/server";
 import {createHash} from "node:crypto";
 import type {RowDataPacket} from "mysql2/promise";
@@ -6,6 +7,7 @@ import {database} from "@/lib/db/mysql";
 
 export const runtime="nodejs";
 export async function GET(){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const userId=await currentUserId();
  if(!userId)return NextResponse.json({code:"UNAUTHORIZED"},{status:401,headers:{"Cache-Control":"no-store"}});
  try{

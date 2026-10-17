@@ -1,8 +1,10 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {NextResponse} from 'next/server';
 import {currentUserId} from '@/lib/auth/session';
 import {database} from '@/lib/db/mysql';
 import {assertSameOrigin} from '@/lib/security/origin';
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false},{status:401});
  const body=await request.json().catch(()=>null);

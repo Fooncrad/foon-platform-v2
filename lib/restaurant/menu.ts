@@ -1,3 +1,4 @@
+import {assertCatalogCapacity} from "@/lib/plans/catalog-capacity";
 import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {ResourceError,validateResource,resourceModules} from "@/scripts/restaurant-resource-schema.mjs";
@@ -29,6 +30,7 @@ export async function saveCanonicalMenu(db:PoolConnection,tenantId:string,actor:
  if(body.id!==undefined&&!previous)throw new ResourceError("RESOURCE_NOT_FOUND");
  if(previous&&body.version!==previous.version)throw new ResourceError("CONFLICT");
  const table=tables[module],kind=kinds[module];
+ if(!previous&&!archive&&(module==="categories"||module==="menu"))await assertCatalogCapacity(db,tenantId,true,module==="categories"?"category":"product");
  if(archive){
   if(!previous)throw new ResourceError("INVALID_INPUT");
   if(module!=="menuImages")await db.execute("UPDATE "+table+" SET enabled=FALSE WHERE id=? AND tenant_id=?",[id,tenantId]);

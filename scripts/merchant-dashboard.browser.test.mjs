@@ -52,8 +52,13 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const [[visualTenant]]=await database.execute("SELECT t.id AS tenant,b.id AS branch FROM tenants t JOIN branches b ON b.tenant_id=t.id WHERE t.slug=? LIMIT 1",[visualSlug]);
  await database.end();
  await page.reload();
+ let releaseCategories;const categoriesReady=new Promise(resolve=>{releaseCategories=resolve;});
+ const categoryRoute=/\/api\/restaurant\/operations\/categories(?:\?|$)/;
+ await page.route(categoryRoute,async route=>{if(route.request().method()==='GET')await categoriesReady;await route.continue();});
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
  await page.getByRole("button",{name:"التصنيفات",exact:true}).click();
+ await expect(page.getByRole('button',{name:'إضافة قسم جديد',exact:true})).toBeDisabled();releaseCategories();
+ await expect(page.getByRole('button',{name:'إضافة قسم جديد',exact:true})).toBeEnabled();await page.unroute(categoryRoute);
  await page.getByRole("button",{name:"إضافة قسم جديد",exact:true}).click();
  await page.getByLabel("اسم القسم",{exact:true}).fill("مشروبات المعاينة");
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
@@ -592,4 +597,43 @@ test('merchant configures weight options and selling measurements in mobile dial
   const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);expect(attributes.measurements.quantityMode).toBe('measured');
   const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
  }finally{await db.end();await context.close()}
+});
+
+
+test("existing accounts create activity-specific businesses without administrator approval",async({browser})=>{
+ for(const [locale,activity] of [["ar","cafe"],["en","clothing"],["fr","salon"]]){
+  const context=await browser.newContext({viewport:{width:320,height:740}});
+  try{
+   await context.addCookies([{name:"foon_language",value:locale,url:origin}]);
+   const slug="self-service-"+randomUUID().slice(0,8);
+   const registered=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Owner",storeName:"Original business",email:slug+"@test.example",password:"synthetic-long-password",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"}});expect(registered.status()).toBe(201);
+   const page=await context.newPage();await page.goto(origin+"/restaurant/register");
+   await page.locator('select[name="activity"]').selectOption(activity);
+   await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+   const response=page.waitForResponse(r=>r.url().endsWith("/api/restaurant/onboard")&&r.request().method()==="POST");
+   await page.locator('button[type="submit"],form button:not([type])').click();const result=await response;expect(result.status()).toBe(201);const body=await result.json();expect(body.activity).toBe(activity);
+   await expect(page).toHaveURL(origin+"/restaurant?tenant="+body.tenant.id);await expect(page.locator('main')).toBeVisible();
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  }finally{await context.close();}
+ }
+});
+
+test('administrator customizes one activity without changing another activity in the same plan',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:320,height:740}}),db=await mysql.createConnection(process.env.DATABASE_URL);
+ try{
+  await context.addCookies([{name:'foon_language',value:'en',url:origin}]);const slug='plan-ui-'+randomUUID().slice(0,8);
+  const registered=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Admin test',email:slug+'@test.example',password:'synthetic-long-password',storeName:slug,slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(registered.status()).toBe(201);const account=await registered.json();
+  await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'admin',TRUE)",[account.user.id]);
+  const plan=randomUUID(),planName='Activity isolation '+slug;await db.execute('INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)',[plan,slug,'اختبار النشاط',planName,'Test activité']);
+  await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,'digital_menu',TRUE,8)",[plan]);
+  const page=await context.newPage();await page.goto(origin+'/admin/plans');const card=page.locator('.adminPlanCatalogCard').filter({has:page.getByText(planName,{exact:true})});
+  const details=card.locator('details').filter({has:page.getByText('Plan features and limits by activity',{exact:true})});await details.locator('summary').click();await details.locator('select').selectOption('grocery');
+  const row=details.locator('strong').filter({hasText:'Catalog management and item/service limit'}).locator('..');await expect(row.getByRole('spinbutton')).toHaveValue('8');
+  await row.getByRole('spinbutton').fill('3');await row.getByRole('spinbutton').press('Tab');await expect(row.getByText(/Customized/)).toBeVisible();
+  await details.locator('select').selectOption('clothing');await expect(row.getByRole('spinbutton')).toHaveValue('8');
+  await details.locator('select').selectOption('grocery');await expect(row.getByRole('spinbutton')).toHaveValue('3');
+  await row.getByRole('button',{name:'Restore shared default',exact:true}).click();await expect(row.getByRole('spinbutton')).toHaveValue('8');await expect(row.getByText(/Inherited/)).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ }finally{await db.end();await context.close();}
 });

@@ -80,6 +80,8 @@ jobs:
       - name: Test real registration routes against disposable MariaDB
         run: node --test scripts/registration-http.integration.test.mjs
 
+      - name: Verify activity-specific plans and employee account isolation
+        run: node --test --test-concurrency=1 scripts/activity-plan-settings.integration.test.mjs scripts/account-surface.integration.test.mjs
       - name: Test restaurant operational integrity
         run: npm run test:operations
       - name: Install Chromium for visual checks

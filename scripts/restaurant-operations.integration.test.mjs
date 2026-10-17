@@ -505,7 +505,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   await runActivityEntitlementGateChecks({db,call,resource,restaurant:a,staff,fixtures:activityFixtures});
   const admin=await register("operations-platform-admin");
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
-  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,200);
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403,"platform administration is not tenant ownership");
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,admin.tenant)).status,200,"an explicit own membership still works");
   await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
  }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await db.end();}
