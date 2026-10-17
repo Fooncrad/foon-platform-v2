@@ -330,8 +330,8 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   "SELECT kind,data FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND status='active' AND (kind='storefront_config' OR (kind='branch_config' AND branch_id=?)) ORDER BY created_at DESC",
   [tenantId,branchId]
  );
- const settings=(kind:string)=>{const row=orderPolicies.find(item=>item.kind===kind);return row?parseData(row.data):{};};
- const availability=orderChannelStatus(settings("storefront_config"),settings("branch_config"),String(body.channel) as OrderChannel);
+ const operatingSettings=(kind:string)=>{const row=orderPolicies.find(item=>item.kind===kind);return row?parseData(row.data):{};};
+ const availability=orderChannelStatus(operatingSettings("storefront_config"),operatingSettings("branch_config"),String(body.channel) as OrderChannel);
  if(!availability.allowed)throw new ResourceError(availability.reason!);
  const profile=await salesProfile(db,tenantId);
  if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
