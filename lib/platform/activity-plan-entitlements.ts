@@ -7,14 +7,35 @@ import {ACTIVITY_PRESETS, isActivityType} from "./activity-presets.ts";
 export type PlanGrant = {feature_key:string; enabled:boolean; limit_value:number|null};
 export type ActivityEntitlement = {key:string; available:boolean; limit:number|null; reason:"available"|"unsupported_activity"|"not_granted"|"permission_denied"};
 
-const FEATURE_CAPABILITIES:Readonly<Record<string,string>>={waiter_call:"waiter",kds:"kitchen",service_catalog:"services",appointments:"bookings",takeaway:"pickup",digital_menu:"catalog",qr_menu:"catalog"};
+const FEATURE_CAPABILITIES:Readonly<Record<string,string>>={
+ waiter_call:"waiter",kds:"kitchen",service_catalog:"services",appointments:"bookings",queue:"services",
+ takeaway:"pickup",digital_menu:"catalog",nfc_menu:"catalog",
+ table_qr:"tables",table_minimum_charge:"tables",split_bills:"tables",split_bill_requests:"tables",
+ reservation_fees:"reservations",waitlist_fees:"waitlist",
+ departments:"kitchen",department_printers:"kitchen",department_routing:"kitchen",
+ purchases:"inventory",suppliers:"inventory"
+};
+/** Core platform features apply across activities, even when their operational module is not in a preset. */
+const COMMON_FEATURES=new Set([
+ "catalog","storefront","qr_menu","menu_templates","customer_invoices","internal_invoices",
+ "invoice_printing","credit_notes","payments","vat_management","customers","employees",
+ "multi_branch","analytics","coupons","loyalty","reviews","campaigns","content_library",
+ "storage","sales"
+]);
+/** Creator account privileges are not merchant subscription features. */
+const CREATOR_ONLY=new Set(["creator_profile","content_marketplace","content_pricing","media_library","watermark"]);
 const knownCapabilities=new Set<string>(Object.values(ACTIVITY_PRESETS).flatMap(modules=>[...modules]));
+const exciseActivities=new Set(["restaurant","cafe","sweets","grocery","perfume"]);
 /** Classification does not grant access; exact subscription keys remain independent. */
 export function activityFeatureCapability(key:string):string{return Object.hasOwn(FEATURE_CAPABILITIES,key)?FEATURE_CAPABILITIES[key]:key;}
 export function activityFeatureSupport(activity:string,key:string):"supported"|"unsupported"|"unclassified"{
  if(!isActivityType(activity))throw new Error("UNSUPPORTED_ACTIVITY_TYPE");
+ if(key.startsWith("branding.")||COMMON_FEATURES.has(key))return "supported";
+ if(CREATOR_ONLY.has(key)||key==="room_service")return "unsupported";
+ if(key==="excise_tax")return exciseActivities.has(activity)?"supported":"unsupported";
+ if(key==="service_fees")return activity==="restaurant"||activity==="cafe"||
+  (ACTIVITY_PRESETS[activity] as readonly string[]).includes("services")?"supported":"unsupported";
  const capability=activityFeatureCapability(key);
- if(key.startsWith("branding."))return "supported";
  if(!knownCapabilities.has(capability))return "unclassified";
  return (ACTIVITY_PRESETS[activity] as readonly string[]).includes(capability)?"supported":"unsupported";
 }
@@ -49,11 +70,15 @@ export function canUseActivityFeature(activity:string,feature:string,grants:read
 
 
 
-/** Additional server restriction only: true never grants subscription/RBAC access.
- * Only audited dining feature keys are enforced in this batch. Missing/unknown
- * legacy profiles retain existing subscription behavior until explicitly migrated.
+/** Server enforcement complements the admin activity filter. A supported capability
+ * never bypasses a plan grant or employee permissions. Preserve unknown legacy profiles.
  */
-const SERVER_RESTRICTED_FEATURES=new Set(["tables","reservations","waitlist","kds","waiter_call"]);
+const SERVER_RESTRICTED_FEATURES=new Set([
+ "tables","reservations","waitlist","kds","waiter_call","digital_menu","nfc_menu",
+ "service_catalog","appointments","queue","room_service","split_bills","split_bill_requests",
+ "table_qr","table_minimum_charge","reservation_fees","waitlist_fees","service_fees",
+ "departments","department_printers","department_routing","takeaway","variants","excise_tax"
+]);
 export function passesServerActivityRestriction(activity:unknown,featureKey:string):boolean{
  if(!SERVER_RESTRICTED_FEATURES.has(featureKey)||typeof activity!=="string"||!isActivityType(activity))return true;
  return activityFeatureSupport(activity,featureKey)==="supported";
