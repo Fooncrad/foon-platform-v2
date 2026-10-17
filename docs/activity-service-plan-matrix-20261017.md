@@ -1,27 +1,44 @@
-# FOON V2 — Activity-specific plan and service storefront review (2026-10-17)
+# FOON V2 — Activity-scoped plans and public service request lifecycle (2026-10-17)
 
 ## Scope
-This change corrects feature relevance for all 15 activities without changing saved paid subscriptions, activity overrides, or the existing `0093` migration. No new migration is required for the code change. Product/service records and tenant membership remain isolated.
+This change fixes package-feature relevance for all 15 business activities, service/product catalog limits, public service listings, and a new **customer-to-merchant service request** lifecycle. No production DB migration, deployment or actual payment is performed here. Existing paid subscriptions and administrator custom overrides are preserved.
 
-## Capability matrix
-- Dining (restaurant, cafe): tables, waiter, waitlist, restaurant reservation charges, split bills, kitchen and section routing; digital menu limits.
-- Product retail (sweets, grocery, clothing, perfume, accessories, watches, gifts, ecommerce): product catalog and its existing digital-menu limit, product variants only when supported by preset.
-- Services (carwash, laundry, automotive, salon, publicworks): service/catalog limits and service cards, never waiter/tables/room service/split-bill controls. Automotive additionally supports its existing inventory and booking preset; salon appointment presets; publicworks quotes.
-- Shared: storefront/QR listing, POS, delivery, payments, invoices, staff, customer management and meaningful marketing tools, still subject to actual subscription grants and employee permissions.
-- Creator account-only features do not appear in merchant plan editing. Previously saved rows are preserved; this filter does not delete them.
+## Capabilities and package boundaries
+- Restaurant and café: dining, waiter, kitchen, tables, restaurant reservations and split-bill features.
+- Retail: product catalog and its existing `digital_menu` limit, plus variants where supported.
+- Car wash, laundry, automotive, salon and public works: the `catalog` grant controls service catalog creation/CSV/images and the existing per-category and per-item quota. Physical products do not receive service-request buttons.
+- Automotive can also have stock, purchases/suppliers and appointments, subject to its own plan and permissions; car wash and salon support appointments; public works offers **quotation inquiries**, not automatically generated price offers.
+- Common merchant features such as storefront, POS, delivery and accounting remain subject to their existing plan grants. Creator-only account features do not appear in merchant feature editing. Unknown historical activity profiles keep legacy behavior.
+- Free plans can accept **inquiries** under their existing service catalog grant; requesting an appointment requires the `appointments` grant. Formal quotation generation remains controlled separately.
+- Shared plan settings and preexisting saved activity overrides are not deleted or rewritten. Only the relevant features are shown in each activity selector. Numeric limit editors appear only for actual enforced catalog keys; limits on other keys should not be advertised as enforced until implemented.
 
-## Fixes
-- Admin plan editor shows only relevant business features. The separate shared-defaults selection still exposes the complete catalog. Numeric limit fields remain on the catalog limits that are presently enforced, rather than suggesting every on/off feature has an operative count limit.
-- Merchant subscription summary also excludes irrelevant features.
-- Services use `catalog` as their quota key for direct catalog edits, CSV import and images, while product activities keep `digital_menu`. The catalog quotas still count categories and items separately, including inactive rows.
-- Public non-restaurant storefronts already read published `catalog_products` and `catalog_categories`. Cards now identify service vs. physical product, and service activities with a validated business phone show a direct call-to-inquire action. This is **not** an online appointment or quote API and must not be represented as one.
-- Server-side restrictions prevent a grant from bypassing clearly unsupported activity-specific modules. The unknown legacy activity-profile behavior is intentionally left unchanged.
+## Customer service request workflow
+- On the published `/{slug}` storefront, active catalog entries of `product_type='service'` can offer an **inquiry**, **appointment request** or **quotation inquiry** as applicable. The label never asserts confirmation.
+- Customers must sign in (or register), and their account must be joined to that business. Staff/employee accounts are explicitly rejected, including suspended employment.
+- `POST /api/customer/service-requests` verifies membership, active tenant/branch, active service and category, capability/plan, contact details and requested appointment window. It uses the customer's own authenticated identity, an idempotency key, a tenant-scoped unique lookup, an audit trail and rate limiting.
+- `GET /api/customer/service-requests` reads **only the authenticated customer's** own service request history within the selected business. It never exposes another customer's requests.
+- Requests are stored as `service_customer_request` resources within the existing tenant-scoped `restaurant_resources` table; there is **no new schema migration**.
+- The merchant service catalog presents a request inbox even in plans where formal quotation management is unavailable. `GET/PATCH /api/restaurant/service-requests` is owner/manager-only, scoped by tenant, with optimistic version checks, allowed transitions and audit history.
+- Status transitions:
+  - Appointments: pending → in_review/confirmed/declined; confirmed → completed/cancelled.
+  - Inquiries/quote requests: pending → in_review/responded/declined; no implicit confirmation of a priced quotation.
+  - Customers can submit requests but cannot update merchant-controlled statuses.
+- Customers receive in-account status notifications with Arabic/English/French copy. Email queues depend on actual mail setup and delivery workers, which are **not verified** here.
+- Pending or in-review requests appear in the merchant menu attention count, not in restaurant waiter/table queues.
+- A merchant phone link remains as a secondary way to inquire.
 
-## Verification completed and still required
-- Local isolated Node test matrix: 5 passed, 0 failed, for 15 activities, service/dining boundaries, automotive capabilities and plan/permission denial.
-- A complete Next.js production build, local MariaDB integration suite, customer browser journeys (Arabic/English/French, 320px), service CSV/images tests, and real deployed account acceptance are **not yet verified** in this environment.
-- Do **not** merge or deploy on test results above alone. Test free/professional/enterprise plan overrides, enabled/disabled service categories, normal product variants, employee boundaries and existing restaurant POS.
-- Before deployment, confirm that live `main` code and `schema_migrations` 0092/0093 match, and ensure a database backup exists.
+## Verification
+- 228 programmatic pure-policy assertions on the actual service-request policy source and localized notification source passed in an isolated JavaScript environment.
+- A new reproducible Node test file is provided: `node --experimental-strip-types --test scripts/service-request-policy.test.mjs`.
+- Static cross-file checks are part of the review. These do not validate database transaction semantics or a production build.
+- **Still required outside GitHub Actions before approving the draft PR:** `npm ci`, `npm run typecheck`, `npm run lint`, `npm run build`, new service-policy tests, existing activity tests, local MariaDB integration and real customer/merchant browser journeys in Arabic/English/French at 320px.
+- Test repeat-key collisions, cross-tenant service IDs, expired appointments, disabled plan grants, suspended employee accounts, free and paid activity quotas, branch filtering, updates and customer notifications. Check that restaurant ordering and retailer catalogs remain unchanged.
+- Confirm `schema_migrations` includes 0092/0093 and take a production backup before manually merging/deploying.
 
-## Still not implemented by this change
-Full customer-driven service appointment booking and online quotation actions, further service-specific workflow UIs, and operational enforcement of every optional numeric feature limit. Those require dedicated APIs, permissions, data models, acceptance tests and possibly separate migrations.
+## Open work / explicit limits
+- Request submission is **not** a resource-capacity availability engine or a confirmed appointment. Manager confirmation changes request status only; calendar collision and staff allocation are not implemented.
+- Quotation inquiry is **not** a formal priced quotation, deposit, payment link, accepted estimate or invoice. Conversion to a formal merchant quotation still needs a dedicated audited workflow.
+- Sending the request does not guarantee SMS, WhatsApp, email or an instant merchant audio notification; email delivery and live push are unverified.
+- Full scheduled service booking, vehicle details (plate/model), assignment, slot availability, advanced appointment cancellation, service-specific inventory lines, merchant push, and all non-catalog numeric feature quotas remain further work.
+
+**Release status: DRAFT — no automatic merge or publish.**
