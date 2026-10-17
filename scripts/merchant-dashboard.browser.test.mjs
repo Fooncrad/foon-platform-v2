@@ -615,7 +615,7 @@ test("existing accounts create activity-specific businesses without administrato
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
    const response=page.waitForResponse(r=>r.url().endsWith("/api/restaurant/onboard")&&r.request().method()==="POST");
    await page.locator('button[type="submit"],form button:not([type])').click();const result=await response;expect(result.status()).toBe(201);const body=await result.json();expect(body.activity).toBe(activity);
-   await expect(page).toHaveURL(origin+"/restaurant?tenant="+body.tenant.id);await expect(page.locator('main')).toBeVisible();
+   await expect(page).toHaveURL(origin+"/workspace/"+activity+"?tenant="+body.tenant.id);await expect(page.locator('main')).toBeVisible();
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   }finally{await context.close();}
  }
