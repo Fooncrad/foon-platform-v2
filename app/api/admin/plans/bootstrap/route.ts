@@ -7,6 +7,7 @@ import { requirePlatformRole } from "@/lib/auth/authorization";
 import { assertSameOrigin } from "@/lib/security/origin";
 import { referenceFeatures } from "@/lib/plans/reference-catalog";
 import {ACTIVITY_PRESETS} from "@/lib/platform/activity-presets";
+import {FREE_CATALOG_LIMIT,initialPlanFeatureLimit,shouldSeedFreeActivityDefaults} from "@/lib/plans/free-plan-bootstrap-policy";
 
 const tiers=[
  {code:"free",ar:"مجانية",en:"Free",fr:"Gratuit",rank:0},
@@ -18,7 +19,6 @@ const basic=new Set(["digital_menu","qr_menu","branding.logo","branding.colors",
 const starter=new Set([...basic,"menu_templates","branding.dark_mode","branding.menu_theme","tables","waiter_call","reservations","waitlist","takeaway","delivery","employees","reviews","coupons","analytics","variants","pickup","customers","service_catalog","appointments","queue","payments"]);
 const professional=new Set([...starter,"pos","kds","inventory","purchases","suppliers","loyalty","campaigns","multi_branch","content_library","storage","branding.qr","room_service","nfc_menu","media_library","creator_profile","content_pricing","sales"]);
 const freeActivityCodes=Object.keys(ACTIVITY_PRESETS);
-const freeCatalogKeys=new Set(["digital_menu","catalog"]);
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentActiveAdminUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
@@ -41,8 +41,8 @@ export async function POST(request:Request){
     if(prior.length){
      const [shared]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM package_plan_features WHERE plan_id=?",[prior[0].id]);
      const [overrides]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM package_plan_activity_features WHERE plan_id=?",[prior[0].id]);
-     initializeFreeActivityDefaults=Number(shared[0].n)===0&&Number(overrides[0].n)===0;
-    }else initializeFreeActivityDefaults=true;
+     initializeFreeActivityDefaults=shouldSeedFreeActivityDefaults(true,Number(shared[0].n),Number(overrides[0].n));
+    }else initializeFreeActivityDefaults=shouldSeedFreeActivityDefaults(false,0,0);
    }
    await db.execute("INSERT IGNORE INTO package_plans(id,code,name_ar,name_en,name_fr,sort_order) VALUES (?,?,?,?,?,?)",[randomUUID(),tier.code,tier.ar,tier.en,tier.fr,tier.rank]);
    const [rows]=await db.execute<RowDataPacket[]>("SELECT id FROM package_plans WHERE code=? LIMIT 1",[tier.code]);
@@ -51,7 +51,7 @@ export async function POST(request:Request){
    for(const [key] of referenceFeatures){
     const enabled=tier.rank===3||tier.rank===2&&professional.has(key)||tier.rank===1&&starter.has(key)||tier.rank===0&&basic.has(key);
     // Initialize only new shared grants; never rewrite saved settings.
-    const limit=tier.code==="free"&&freeCatalogKeys.has(key)?20:null;
+    const limit=initialPlanFeatureLimit(tier.code,key);
     await db.execute("INSERT IGNORE INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,?,?,?)",[id,key,enabled,limit]);
    }
   }
@@ -66,7 +66,7 @@ export async function POST(request:Request){
    [freePlanId,...freeActivityCodes,freePlanId]
   );
   await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?)",
-   [actor,"plan.bootstrap","plan",freePlanId,JSON.stringify({plans:tiers.map(t=>t.code),activityCount:initializeFreeActivityDefaults?freeActivityCodes.length:0,freeCatalogMax:20})]);
+   [actor,"plan.bootstrap","plan",freePlanId,JSON.stringify({plans:tiers.map(t=>t.code),activityCount:initializeFreeActivityDefaults?freeActivityCodes.length:0,freeCatalogMax:FREE_CATALOG_LIMIT})]);
   await db.commit();
   return NextResponse.json({ok:true,plans:tiers.map(t=>t.code),features:referenceFeatures.length,freeActivitiesSeeded:initializeFreeActivityDefaults?freeActivityCodes.length:0,note:"Missing free activity defaults are bounded at 20 categories and items. Existing overrides and paid subscriptions are unchanged; prices remain unset."});
  }catch{await db.rollback();return NextResponse.json({ok:false,code:"BOOTSTRAP_UNAVAILABLE"},{status:503});}finally{db.release();}
