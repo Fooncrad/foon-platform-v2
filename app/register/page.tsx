@@ -29,7 +29,7 @@ export default function RegisterPage(){
   try{
    const res=await fetch("/api/auth/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),email:data.get("email"),password:data.get("password"),storeName:data.get("storeName"),slug:data.get("slug"),activity:data.get("activity"),countryCode:country,currency:currencyForCountry(country),region:region.trim(),taxNumber:taxNumber.trim()})});const body=await res.json().catch(()=>({}));
    if(!res.ok){const code=typeof body.code==="string"?body.code:"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
-   router.replace("/restaurant");router.refresh();
+   router.replace("/verify-email?sent=1");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
  }
  return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><Link href="/" className="auth-brand">FOON</Link><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
