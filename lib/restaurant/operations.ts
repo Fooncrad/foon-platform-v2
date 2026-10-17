@@ -1,4 +1,5 @@
 import {checkoutSettings} from "./checkout-settings";
+import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
@@ -324,6 +325,14 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   if(existing.length){if(existing[0].request_fingerprint!==fingerprint)throw new ResourceError("CONFLICT");return{id:String(existing[0].id),total:Number(existing[0].total),currency:String(existing[0].currency)};}
  }
  await branchExists(db,tenantId,branchId);
+ // Enforce the same availability rules for POS, public menu, and all activity stores.
+ const [orderPolicies]=await db.execute<RowDataPacket[]>(
+  "SELECT kind,data FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND status='active' AND (kind='storefront_config' OR (kind='branch_config' AND branch_id=?)) ORDER BY created_at DESC",
+  [tenantId,branchId]
+ );
+ const settings=(kind:string)=>{const row=orderPolicies.find(item=>item.kind===kind);return row?parseData(row.data):{};};
+ const availability=orderChannelStatus(settings("storefront_config"),settings("branch_config"),String(body.channel) as OrderChannel);
+ if(!availability.allowed)throw new ResourceError(availability.reason!);
  const profile=await salesProfile(db,tenantId);
  if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
  if(!profile.dining&&body.channel==="dine_in")throw new ResourceError("CHANNEL_UNAVAILABLE");
