@@ -11,7 +11,11 @@ export default function CatalogVariantImages({tenantId,product,variant}:{tenantI
   const r=await fetch(url+"?"+new URLSearchParams({product,variant}),{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
   const d=await r.json();if(!r.ok||!Array.isArray(d.images))throw Error(d.code??"LOAD_FAILED");setImages(d.images);
  }
- useEffect(()=>{void refresh().catch(()=>setError(t("تعذر جلب الصور","Could not load images","Chargement impossible")))},[tenantId,product,variant]);
+ useEffect(()=>{
+  let active=true;const controller=new AbortController();
+  fetch(url+"?"+new URLSearchParams({product,variant}),{headers:{"x-foon-tenant":tenantId},cache:"no-store",signal:controller.signal}).then(async r=>{const d=await r.json();if(!r.ok||!Array.isArray(d.images))throw Error("LOAD_FAILED");return d.images as Photo[];}).then(photos=>{if(active){setImages(photos);setError("");}}).catch(()=>{if(active)setError(lang==="ar"?"تعذر جلب الصور":lang==="en"?"Could not load images":"Chargement impossible");});
+  return()=>{active=false;controller.abort();};
+ },[tenantId,product,variant,lang]);
  async function mutate(method:"POST"|"PATCH"|"DELETE",payload:FormData|Record<string,unknown>){
   setBusy(true);setError("");
   try{
