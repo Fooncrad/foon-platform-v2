@@ -2,6 +2,7 @@ import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {cookies} from "next/headers";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
+import {queueVerificationMail,type VerificationLocale} from "@/lib/auth/email-verification";
 import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import { randomUUID } from "node:crypto";
@@ -49,6 +50,7 @@ export async function POST(request:Request){
       const locale=(await cookies()).get("foon_language")?.value;
    await db.execute("UPDATE users SET default_locale=? WHERE id=?",[locale==="en"||locale==="fr"?locale:"ar",id]);
    await notifyCustomer(db,{userId:id,tenantId:workspace.tenant.id,event:"account_welcome",resourceId:id});
+   await queueVerificationMail(db,{userId:id,email,locale:(locale==="en"||locale==="fr"?locale:"ar") as VerificationLocale,origin:process.env.APP_URL||"https://nfoodz.com"});
    await createSession(id,db);
       await db.commit();dispatchNotifications();
       return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free"},{status:201});
