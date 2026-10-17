@@ -47,7 +47,7 @@ export async function POST(request:Request){
  const phone=body?.phone;
  if(!validStoreSlug(slug)||!uuid.test(body?.serviceId??"")||!uuid.test(body?.requestKey??"")||
   !["inquiry","appointment","quote"].includes(type)||typeof note!=="string"||note.length>1000||
-  typeof phone!=="string"||!/^\\+?[0-9 ()-]{7,40}$/.test(phone)||phone.replace(/\\D/g,"").length<7)
+  typeof phone!=="string"||!/^\+?[0-9 ()-]{7,40}$/.test(phone)||phone.replace(/\D/g,"").length<7)
   return fail("INVALID_INPUT");
  const scheduled=type==="appointment"?Date.parse(body.scheduledAt):null;
  if(type==="appointment"&&(!Number.isFinite(scheduled)||scheduled!<Date.now()+15*60000||scheduled!>Date.now()+90*86400000))return fail("INVALID_APPOINTMENT_TIME");
