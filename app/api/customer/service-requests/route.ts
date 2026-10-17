@@ -9,18 +9,17 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
+import {SERVICE_BUSINESSES,serviceRequestTypeAllowed,validServiceAppointmentTime,validServiceRequestPhone} from "@/lib/platform/service-request-policy";
 export const runtime="nodejs";
 const fail=(code:string,status=400)=>NextResponse.json({ok:false,code},{status,headers:{"Cache-Control":"no-store"}});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-const serviceActivities=new Set(["automotive","carwash","laundry","salon","publicworks"]);
-const appointmentActivities=new Set(["automotive","carwash","salon"]);
 async function customerScope(db:Pick<ReturnType<typeof database>,"execute">,user:string,slug:string){
  const [rows]=await db.execute<RowDataPacket[]>(
   "SELECT t.id,p.activity_code FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.slug=? AND t.status='active' LIMIT 1",
   [user,slug]);
  if(!rows.length)return null;
  const activity=String(rows[0].activity_code);
- return serviceActivities.has(activity)?{tenantId:String(rows[0].id),activity}:null;
+ return SERVICE_BUSINESSES.has(activity)?{tenantId:String(rows[0].id),activity}:null;
 }
 export async function GET(request:Request){
  const denied=await employeePersonalAccessDenied();if(denied)return denied;
@@ -47,10 +46,10 @@ export async function POST(request:Request){
  const phone=body?.phone;
  if(!validStoreSlug(slug)||!uuid.test(body?.serviceId??"")||!uuid.test(body?.requestKey??"")||
   !["inquiry","appointment","quote"].includes(type)||typeof note!=="string"||note.length>1000||
-  typeof phone!=="string"||!/^\+?[0-9 ()-]{7,40}$/.test(phone)||phone.replace(/\D/g,"").length<7)
+  !validServiceRequestPhone(phone))
   return fail("INVALID_INPUT");
  const scheduled=type==="appointment"?Date.parse(body.scheduledAt):null;
- if(type==="appointment"&&(!Number.isFinite(scheduled)||scheduled!<Date.now()+15*60000||scheduled!>Date.now()+90*86400000))return fail("INVALID_APPOINTMENT_TIME");
+ if(type==="appointment"&&!validServiceAppointmentTime(body.scheduledAt))return fail("INVALID_APPOINTMENT_TIME");
  const pool=database(),db=await pool.getConnection();
  try{
   await db.beginTransaction();
@@ -58,7 +57,7 @@ export async function POST(request:Request){
   const [users]=await db.execute<RowDataPacket[]>("SELECT display_name FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   const ctx=await customerScope(db,user,slug);
   if(!users.length||!ctx) {await db.rollback();return fail("STORE_CUSTOMER_REQUIRED",403)}
-  if(type==="appointment"&&!appointmentActivities.has(ctx.activity)||type==="quote"&&ctx.activity!=="publicworks") {await db.rollback();return fail("UNSUPPORTED_REQUEST_TYPE")}
+  if(!serviceRequestTypeAllowed(ctx.activity,type,true)) {await db.rollback();return fail("UNSUPPORTED_REQUEST_TYPE")}
   if(!(await tenantEntitlement(ctx.tenantId,"catalog",db)).enabled) {await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
   if(type==="appointment"&&!(await tenantEntitlement(ctx.tenantId,"appointments",db)).enabled){await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
   const [services]=await db.execute<RowDataPacket[]>(
