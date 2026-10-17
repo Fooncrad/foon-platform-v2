@@ -6,7 +6,7 @@ import {combinationKey} from '@/lib/restaurant/activity-pos';
 import {parseCatalogMeasurements} from '@/lib/platform/catalog-measurements';
 import type {ImportKind,ImportRow} from './import-csv';
 export async function importBatch(db:PoolConnection,tenant:string,actor:string,restaurant:boolean,activity:string,currency:string,kind:ImportKind,rows:ImportRow[],images:Map<string,string>){
- if(!restaurant&&(kind==='categories'||kind==='items'))await assertCatalogCapacity(db,tenant,false,kind==='categories'?'category':'product',rows.length);
+ if(!restaurant&&(kind==='categories'||kind==='items'))await assertCatalogCapacity(db,tenant,false,kind==='categories'?'category':'product',rows.length,['carwash','laundry','automotive','salon','publicworks'].includes(activity)?'catalog':'digital_menu');
  const ids:string[]=[];
  const find=async(table:string,column:string,name:string,extra='',values:string[]=[])=>{const [found]=await db.execute<RowDataPacket[]>('SELECT id FROM '+table+' WHERE tenant_id=? AND '+column+'=?'+extra+' LIMIT 2',[tenant,name,...values]);if(found.length!==1)throw Error(found.length?'AMBIGUOUS_REFERENCE':'REFERENCE_NOT_FOUND');return String(found[0].id);};
  for(const row of rows){
