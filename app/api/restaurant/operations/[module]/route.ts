@@ -70,7 +70,7 @@ function failure(error:unknown){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
  const code=error instanceof ResourceError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  if(status>=500)console.error("[FOON operations]",{incidentId,code,error});
  return NextResponse.json({ok:false,code,incidentId},{status});
 }
