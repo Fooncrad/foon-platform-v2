@@ -5,6 +5,7 @@ import {currentActiveAdminUserId} from "@/lib/auth/session";
 import {requirePlatformRole} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {isActivityType} from "@/lib/platform/activity-presets";
+import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
 type Context={params:Promise<{id:string}>};
 async function authorize(write:boolean){
  const actor=await currentActiveAdminUserId();if(!actor)return {error:NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401})};
@@ -25,6 +26,11 @@ async function mutate(request:Request,context:Context,reset:boolean){
  const auth=await authorize(true);if(auth.error)return auth.error;
  const {id}=await context.params,body=await request.json().catch(()=>null);
  if(!body||typeof body.feature_key!=="string"||!/^[a-z][a-z0-9._-]{1,99}$/.test(body.feature_key)||body.activity!==undefined&&(typeof body.activity!=="string"||!isActivityType(body.activity))||reset&&!body.activity||!reset&&(typeof body.enabled!=="boolean"||body.limit_value!==null&&body.limit_value!==undefined&&(!Number.isSafeInteger(body.limit_value)||body.limit_value<0||body.limit_value>2147483647)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ // A shared plan may have every feature, but an activity override may only
+ // configure a feature that the activity can actually use. Reset remains
+ // available to clean up legacy, irrelevant overrides.
+ if(body.activity&&!reset&&activityFeatureSupport(body.activity,body.feature_key)!=="supported")
+  return NextResponse.json({ok:false,code:"FEATURE_NOT_APPLICABLE"},{status:422});
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
