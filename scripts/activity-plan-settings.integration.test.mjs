@@ -32,16 +32,16 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant)).status,200);
   assert.equal((await save('grocery','digital_menu',true,2)).status,200);
-  // Reinitializing built-in plans after migration 0093 must restore missing
-  // free rows, remain idempotent and preserve custom activity grants.
+  // Bootstrap is one-time initialization, not a reset of existing custom
+  // settings. A deliberately removed override must continue to inherit.
   await db.execute("DELETE FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
   for(let i=0;i<2;i++){
    const seeded=await call('/api/admin/plans/bootstrap','POST',{confirm:'CREATE_FOUR_PLANS'},admin.cookie);
    assert.equal(seeded.status,200,JSON.stringify(seeded.body));
-   assert.equal(seeded.body.freeActivities,15);
+   assert.equal(seeded.body.freeActivitiesSeeded,0);
   }
-  const [[restored]]=await db.execute("SELECT enabled,limit_value FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
-  assert.equal(Number(restored.enabled),1);assert.equal(Number(restored.limit_value),20);
+  const [[restored]]=await db.execute("SELECT COUNT(*) AS n FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
+  assert.equal(Number(restored.n),0);
   const [[custom]]=await db.execute("SELECT enabled,limit_value FROM package_plan_activity_features WHERE plan_id=? AND activity_code='grocery' AND feature_key='digital_menu'",[free.id]);
   assert.equal(Number(custom.enabled),1);assert.equal(Number(custom.limit_value),2);
   const catalog='/api/restaurant/activity-catalog';const category=await call(catalog,'POST',{kind:'category',name:'Category'},grocery.cookie,grocery.tenant);assert.equal(category.status,201,JSON.stringify(category.body));
