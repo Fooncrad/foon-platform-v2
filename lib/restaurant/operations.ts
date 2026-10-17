@@ -336,6 +336,15 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const profile=await salesProfile(db,tenantId);
  if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
  if(!profile.dining&&body.channel==="dine_in")throw new ResourceError("CHANNEL_UNAVAILABLE");
+ if(body.channel==="delivery"){
+  // Availability is server-enforced: a branch must have an active assigned driver.
+  const [drivers]=await db.execute<RowDataPacket[]>(
+   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 1",
+   [branchId,tenantId]
+  );
+  if(!drivers.length)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
+ }
+
  const stockDebits:StockDebit[]=[];
  const choices=profile.catalog?await activityPosOptions(db,tenantId,cart.map(item=>item.id),true):await menuOptions(db,tenantId,cart.map(item=>item.id));
  const lines:{id:string;name:string;quantity:number;price:number;total:number;options:{name:string;price:number}[]}[]=[];let subtotal=0;
