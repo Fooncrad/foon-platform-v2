@@ -7,8 +7,8 @@ test("password resets protect the actor and other super admins",()=>{
  assert.equal(canResetAccountPassword("a","b",null,"short"),false);
  assert.equal(canResetAccountPassword("a","b",null,"ع".repeat(40)),false);
 });
-test("global tenant access is limited to an active super admin",()=>{
- assert.equal(canAccessAllTenants("super_admin",true),true);
+test("platform administration never grants operational tenant access",()=>{
+ assert.equal(canAccessAllTenants("super_admin",true),false);
  assert.equal(canAccessAllTenants("admin",true),false);
  assert.equal(canAccessAllTenants("super_admin",false),false);
 });

@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
@@ -6,6 +7,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 export const runtime="nodejs";
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const userId=await currentUserId();
  if(!userId)return NextResponse.json({ok:false,code:"UNAUTHORIZED"},{status:401});

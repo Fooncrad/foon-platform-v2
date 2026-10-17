@@ -1,3 +1,4 @@
+import {isEmployeeAccount} from '@/lib/auth/account-surface';
 import {createHash,randomUUID} from 'node:crypto';
 import {NextResponse} from 'next/server';
 import type {RowDataPacket} from 'mysql2/promise';
@@ -27,6 +28,7 @@ export async function POST(request:Request){
  const [done]=await pool.execute<RowDataPacket[]>('SELECT payload_hash,result FROM catalog_import_batches WHERE tenant_id=? AND request_key=?',[tenant,body.requestKey]);
  if(done.length){if(done[0].payload_hash!==hash)return fail('IMPORT_KEY_CONFLICT',409);return NextResponse.json(typeof done[0].result==='string'?JSON.parse(done[0].result):done[0].result);}
  const sources=[...new Set(rows.flatMap(r=>[r.image_1,r.image_2,r.image_3,r.image_4].filter(Boolean)))],prepared=new Map<string,Buffer>();
+ if(sources.some(source=>source.startsWith('/api/account/library/'))&&await isEmployeeAccount(user))return fail('EMPLOYEE_OPERATIONAL_ACCESS_ONLY',403);
  try{for(let index=0;index<sources.length;index+=4)await Promise.all(sources.slice(index,index+4).map(async source=>{
   let bytes:Buffer;if(source.startsWith('/api/account/library/')){const id=source.split('/').at(-1)!;const [found]=await pool.execute<RowDataPacket[]>('SELECT image_data AS bytes FROM user_media_library WHERE user_id=? AND id=? UNION ALL SELECT a.bytes FROM restaurant_assets a JOIN memberships m ON m.tenant_id=a.tenant_id AND m.user_id=? AND m.role=\'owner\' AND m.status=\'active\' WHERE a.id=? LIMIT 1',[user,id,user,id]);if(!found.length)throw Error('LIBRARY_IMAGE_NOT_FOUND');bytes=found[0].bytes;}else bytes=await remoteImage(source);prepared.set(source,await squareImage(bytes));
  }));}catch(e){const code=e instanceof Error?e.message:'IMAGE_DOWNLOAD_FAILED';return fail(['LIBRARY_IMAGE_NOT_FOUND','IMAGE_HOST_NOT_PUBLIC','HTTPS_IMAGE_REQUIRED','IMAGE_TOO_LARGE','IMAGE_TIMEOUT'].includes(code)?code:'INVALID_OR_UNREACHABLE_IMAGE');}

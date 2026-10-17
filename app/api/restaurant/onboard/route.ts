@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {isActivityType,defaultActivityModules} from "@/lib/platform/activity-presets";
 import {currencyForCountry,countryRegions} from "@/lib/tenant/country-catalog";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
@@ -9,6 +10,7 @@ import { assertSameOrigin } from "@/lib/security/origin";
 
 export const runtime="nodejs";
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null);

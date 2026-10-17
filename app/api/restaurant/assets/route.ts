@@ -1,3 +1,4 @@
+import {isEmployeeAccount} from '@/lib/auth/account-surface';
 import {randomUUID} from 'node:crypto';
 import {NextResponse} from 'next/server';
 import type {RowDataPacket} from 'mysql2/promise';
@@ -18,6 +19,7 @@ export async function POST(request:Request){
  try{
   let bytes:Buffer;
   if(request.headers.get('content-type')?.includes('application/json')){
+   if(await isEmployeeAccount(user))return NextResponse.json({ok:false,code:'EMPLOYEE_OPERATIONAL_ACCESS_ONLY'},{status:403});
    const body=await request.json();if(typeof body.libraryId!=='string'||!/^[a-f0-9-]{36}$/i.test(body.libraryId))return NextResponse.json({ok:false},{status:400});
    const [existing]=await database().execute<RowDataPacket[]>('SELECT a.id,a.tenant_id,a.bytes FROM restaurant_assets a JOIN memberships m ON m.tenant_id=a.tenant_id AND m.user_id=? AND m.role=\'owner\' AND m.status=\'active\' WHERE a.id=? LIMIT 1',[user,body.libraryId]);
    if(existing[0]?.tenant_id===tenant)return NextResponse.json({ok:true,url:'/api/restaurant/assets/'+body.libraryId},{status:201});

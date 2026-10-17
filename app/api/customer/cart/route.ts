@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {catalogQuantityPolicy} from "@/lib/platform/catalog-measurements";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -9,6 +10,7 @@ import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 export const runtime="nodejs";
 export async function GET(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const query=new URL(request.url).searchParams,slug=query.get("store")??"",id=query.get("product")??"";
  if(!validStoreSlug(slug)||!/^[-a-f0-9]{36}$/i.test(id))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();

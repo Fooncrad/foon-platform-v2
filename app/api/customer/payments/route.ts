@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {NextResponse} from "next/server";
 import {currentUserId} from "@/lib/auth/session";
 import {database} from "@/lib/db/mysql";
@@ -5,6 +6,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {CheckoutError,startCustomerPayment} from "@/lib/payments/customer-checkout";
 export const runtime="nodejs";
 export async function POST(request:Request){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const reply=(body:object,status:number)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
  try{assertSameOrigin(request);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
  const user=await currentUserId();if(!user)return reply({ok:false,code:"UNAUTHENTICATED"},401);
