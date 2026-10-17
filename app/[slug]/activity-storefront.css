@@ -119,3 +119,8 @@
  .foonActivityStorefront-services .foonActivityProducts{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){.foonActivityStorefront *{transition:none!important}}
+
+/* Service listings share catalog data but use an explicit service presentation. */
+.foonActivityServiceTag{display:inline-flex;width:max-content;max-width:100%;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--activity-accent) 13%,white);color:var(--activity-accent)!important;font-weight:750}
+.foonActivityServiceContact{display:inline-flex;align-items:center;justify-content:center;min-height:42px;text-align:center;border-radius:12px;background:var(--activity-accent);color:#fff!important;text-decoration:none;font-weight:750;padding:9px 12px;overflow-wrap:anywhere}
+.foonActivityServiceContact:focus-visible{outline:3px solid #222;outline-offset:3px}
