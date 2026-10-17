@@ -336,13 +336,15 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const profile=await salesProfile(db,tenantId);
  if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
  if(!profile.dining&&body.channel==="dine_in")throw new ResourceError("CHANNEL_UNAVAILABLE");
+ let assignedDriverId:string|null=null;
  if(body.channel==="delivery"){
   // Availability is server-enforced: a branch must have an active assigned driver.
   const [drivers]=await db.execute<RowDataPacket[]>(
-   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 1",
+   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' ORDER BY e.id LIMIT 1",
    [branchId,tenantId]
   );
   if(!drivers.length)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
+  assignedDriverId=String(drivers[0].id);
  }
 
  const stockDebits:StockDebit[]=[];
@@ -390,7 +392,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if((kitchenNotes?.length??0)>1000||(orderNotes?.length??0)>1000)throw new ResourceError("INVALID_INPUT");
  const settings=await checkoutSettings(db,tenantId);
  const totals=checkoutTotals(subtotal/100,discount/100,String(body.channel),settings.policy);
- const snapshot={version:1,...settings,...totals};
+ const snapshot={version:1,...settings,...totals,...(assignedDriverId?{assignedDriverId}:{})};
  const id=randomUUID();
  await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,dining?.sectionId??null,dining?Number(body.partySize):null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
