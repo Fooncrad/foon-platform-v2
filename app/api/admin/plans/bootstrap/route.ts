@@ -17,7 +17,7 @@ const tiers=[
 ] as const;
 const basic=new Set(["digital_menu","qr_menu","branding.logo","branding.colors","storefront","catalog","orders"]);
 const starter=new Set([...basic,"menu_templates","branding.dark_mode","branding.menu_theme","tables","waiter_call","reservations","waitlist","takeaway","delivery","employees","reviews","coupons","analytics","variants","pickup","customers","service_catalog","appointments","queue","payments"]);
-const professional=new Set([...starter,"pos","kds","inventory","purchases","suppliers","loyalty","campaigns","multi_branch","content_library","storage","branding.qr","room_service","nfc_menu","media_library","creator_profile","content_pricing","sales"]);
+const professional=new Set([...starter,"pos","kds","inventory","purchases","suppliers","quotes","loyalty","campaigns","multi_branch","content_library","storage","branding.qr","room_service","nfc_menu","media_library","creator_profile","content_pricing","sales"]);
 const freeActivityCodes=Object.keys(ACTIVITY_PRESETS);
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
