@@ -33,9 +33,10 @@ export function activityFeatureSupport(activity:string,key:string):"supported"|"
  if(key.startsWith("branding.")||COMMON_FEATURES.has(key))return "supported";
  if(CREATOR_ONLY.has(key)||key==="room_service")return "unsupported";
  if(key==="excise_tax")return exciseActivities.has(activity)?"supported":"unsupported";
- // The restaurant and cafe menu option groups use the variants grant for
- // modifiers and size choices; this does not grant service variants.
- if(key==="variants"&&(activity==="restaurant"||activity==="cafe"))return "supported";
+ // Restaurant/cafe modifiers and grocery weight/size options reuse the
+ // variants feature even though these activities do not list retail variants
+ // as a standalone workspace module. The exact paid grant is still required.
+ if(key==="variants"&&["restaurant","cafe","grocery"].includes(activity))return "supported";
  if(key==="service_fees")return activity==="restaurant"||activity==="cafe"||
   (ACTIVITY_PRESETS[activity] as readonly string[]).includes("services")?"supported":"unsupported";
  const capability=activityFeatureCapability(key);
