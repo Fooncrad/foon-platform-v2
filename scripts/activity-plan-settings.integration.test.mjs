@@ -23,11 +23,11 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   }
   const save=(activity,feature_key,enabled,limit_value)=>call(endpoint,'PUT',{activity,feature_key,enabled,limit_value},admin.cookie);
   // The UI filter is not security: the API must refuse unsupported grants.
-  const irrelevant=await save('automotive','table_qr',true,null);
+  const irrelevant=await save('automotive','digital_menu',true,null);
   assert.equal(irrelevant.status,422);assert.equal(irrelevant.body.code,'FEATURE_NOT_APPLICABLE');
   assert.equal((await save('restaurant','creator_profile',true,null)).status,422);
   // Existing legacy overrides may still be removed (reset) without re-granting them.
-  assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'table_qr'},admin.cookie)).status,200);
+  assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'digital_menu'},admin.cookie)).status,200);
   assert.equal((await save('grocery','orders',false,null)).status,200);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant)).status,200);
