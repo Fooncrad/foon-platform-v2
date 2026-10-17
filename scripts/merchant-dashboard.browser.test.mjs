@@ -1,6 +1,7 @@
 import {test,expect} from "@playwright/test";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
+import sharp from "sharp";
 import {randomUUID} from "node:crypto";
 // Screenshot artifacts are optional; all functional and layout assertions still run.
 // Default behavior retains visual captures. Set FOON_BROWSER_SCREENSHOTS=0 only
@@ -144,7 +145,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await captureScreenshot(publicPage,{path:"work/menu-"+template+"-mobile.png",fullPage:true});
   const gridBounds=await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>nodes.slice(0,4).map(n=>{const r=n.getBoundingClientRect();return {top:r.top,width:r.width}}));expect(gridBounds.length).toBe(4);expect(Math.max(...gridBounds.map(r=>r.top))-Math.min(...gridBounds.map(r=>r.top)),JSON.stringify(gridBounds)).toBeLessThan(2);expect(gridBounds.every(r=>r.width>55&&r.width<100)).toBeTruthy();
-  const coffeeCard=publicPage.locator('.publicMenuItem').filter({has:publicPage.getByRole('heading',{name:'قهوة المعاينة',exact:true})});await expect(coffeeCard.getByRole('img',{name:'قهوة المعاينة',exact:true})).toHaveJSProperty('naturalWidth',1);await expect(coffeeCard.locator('del')).toContainText('14.00');await expect(coffeeCard.locator('.publicMenuProductPrice strong')).toContainText('10.00');expect(await coffeeCard.locator('p').evaluate(n=>n.scrollHeight>n.clientHeight)).toBeTruthy();
+  const coffeeCard=publicPage.locator('.publicMenuItem').filter({has:publicPage.getByRole('heading',{name:'قهوة المعاينة',exact:true})});await expect(coffeeCard.getByRole('img',{name:'قهوة المعاينة',exact:true})).toHaveJSProperty('naturalWidth',800);await expect(coffeeCard.locator('del')).toContainText('14.00');await expect(coffeeCard.locator('.publicMenuProductPrice strong')).toContainText('10.00');expect(await coffeeCard.locator('p').evaluate(n=>n.scrollHeight>n.clientHeight)).toBeTruthy();
   await captureScreenshot(publicPage,{path:"work/menu-"+template+"-mobile.png",fullPage:true});
  }
  await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>Math.max(...nodes.slice(0,4).map(n=>n.getBoundingClientRect().top))-Math.min(...nodes.slice(0,4).map(n=>n.getBoundingClientRect().top)))).toBeLessThan(2);
@@ -368,7 +369,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
       const row=page.locator('.foonCatalogRow').filter({hasText:productName});
       await row.getByRole('button',{name:'إدارة الصور',exact:true}).click();
       const gallery=row.getByRole('region',{name:'صور المنتج',exact:true});
-      const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
+      const png=await sharp({create:{width:1200,height:600,channels:3,background:'#4a83c1'}}).png().toBuffer();
       for(let i=0;i<4;i++){
        await gallery.locator('input[type="file"]').setInputFiles({name:'catalog-'+i+'.png',mimeType:'image/png',buffer:png});
        await expect(gallery.locator('img')).toHaveCount(i+1);
