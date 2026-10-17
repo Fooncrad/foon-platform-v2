@@ -81,7 +81,7 @@ test("server dining restrictions cover every registered activity without grantin
   const dining=activity==="restaurant"||activity==="cafe";
   for(const key of ["tables","reservations","waitlist","kds","waiter_call"])assert.equal(passesServerActivityRestriction(activity,key),dining,activity+":"+key);
   for(const key of ["pos","delivery","customer_invoices","quotes"])assert.equal(passesServerActivityRestriction(activity,key),true,"existing entitlement remains mandatory for "+key);
-  assert.equal(passesServerActivityRestriction(activity,"variants"),ACTIVITY_PRESETS[activity].includes("variants"),activity+":variants");
+  assert.equal(passesServerActivityRestriction(activity,"variants"),ACTIVITY_PRESETS[activity].includes("variants")||dining,activity+":variants");
  }
 });
 test("server restriction preserves legacy profile behavior while strict resolver still rejects unknown types",()=>{
@@ -104,6 +104,18 @@ test("automotive, carwash, salon and public works use service catalogs without d
   assert.equal(activityFeatureSupport("automotive",key),"supported",key);
  for(const key of ["excise_tax","waitlist_fees","creator_profile"])
   assert.equal(activityFeatureSupport("automotive",key),"unsupported",key);
+});
+test("restaurant and cafe retain menu item modifier options without opening service variants",()=>{
+ for(const activity of ["restaurant","cafe"]){
+  assert.equal(activityFeatureSupport(activity,"variants"),"supported");
+  assert.equal(passesServerActivityRestriction(activity,"variants"),true);
+  assert.equal(canUseActivityFeature(activity,"variants",[{feature_key:"variants",enabled:true,limit_value:5}]),true);
+  assert.equal(canUseActivityFeature(activity,"variants",[{feature_key:"variants",enabled:false,limit_value:null}]),false);
+ }
+ for(const activity of ["carwash","automotive","laundry","salon","publicworks"]){
+  assert.equal(activityFeatureSupport(activity,"variants"),"unsupported");
+  assert.equal(passesServerActivityRestriction(activity,"variants"),false);
+ }
 });
 test("all 15 activities share storefront and catalog limits without inheriting creator rights",()=>{
  for(const activity of Object.keys(ACTIVITY_PRESETS)){
