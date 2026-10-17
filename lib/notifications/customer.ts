@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import type {PoolConnection,RowDataPacket} from 'mysql2/promise';
-import {notificationCopy} from '@/scripts/customer-notification-copy.mjs';
+import {notificationCopy} from '../../scripts/customer-notification-copy.mjs';
 export async function notifyCustomer(db:PoolConnection,input:{userId:string;tenantId:string;event:string;resourceId:string;reference?:string;status?:string}){
  const [rows]=await db.execute<RowDataPacket[]>('SELECT u.email,u.default_locale,t.name FROM users u JOIN tenants t ON t.id=? WHERE u.id=? AND u.status=\'active\' LIMIT 1',[input.tenantId,input.userId]);
  if(!rows.length)return;

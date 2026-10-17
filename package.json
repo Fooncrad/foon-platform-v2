@@ -15,7 +15,7 @@
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "notifications:worker": "node scripts/notification-worker.mjs",
     "test:migrations": "node --test scripts/sql-statements.test.mjs",
-    "test:mail": "node --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs",
+    "test:mail": "node --experimental-strip-types --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs scripts/customer-notification-policy.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
     "test:resources": "node --test scripts/restaurant-resource-schema.test.mjs scripts/service-order-policy.test.mjs",

@@ -1,3 +1,4 @@
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
@@ -23,7 +24,7 @@ export async function POST(request:Request,{params}:{params:Promise<{endpoint:st
   const credentials=decryptPaymentCredentials(String(row.credentials_ciphertext),{tenantId:String(row.tenant_id),scope:String(row.scope_key),provider:String(row.provider),mode:row.mode});
   const event=verifyPaymentWebhook({provider:String(row.provider),mode:String(row.mode),raw,headers:request.headers,credentials,merchantReference:row.merchant_reference});
   await persistPaymentWebhook(db,{tenant_id:String(row.tenant_id),scope_key:String(row.scope_key),endpoint_id:endpoint,provider:String(row.provider),mode:String(row.mode)},event);
-  await db.commit();
+  await db.commit();dispatchNotifications();
   // Acknowledge only durable authenticated receipts. Do not expose order or tenant information.
   return NextResponse.json({ok:true},{headers:{"Cache-Control":"no-store"}});
  }catch(error){

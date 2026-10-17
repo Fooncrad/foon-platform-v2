@@ -8,15 +8,16 @@ import {registerPaymentAttempt,registerServiceInvoicePaymentAttempt} from "../li
 import {startServiceInvoiceSandboxCheckout} from "../lib/payments/service-invoice-checkout.ts";
 import {encryptPaymentCredentials} from "../lib/payments/credential-vault.mjs";
 
+
 test("webhook routes verify signatures, settle mapped live orders exactly once and expose scoped metadata",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
  const db=await mysql.createConnection(url.href),origin="http://127.0.0.1:3120",vault=randomBytes(32).toString("base64");
  process.env.FOON_PAYMENT_VAULT_KEY=vault;
- const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-p","3120"],{env:{...process.env,APP_URL:origin,FOON_PAYMENT_VAULT_KEY:vault},stdio:["ignore","pipe","pipe"]});
+ const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3120"],{env:{...process.env,APP_URL:origin,FOON_PAYMENT_VAULT_KEY:vault},stdio:["ignore","pipe","pipe"]});
  let output="";server.stdout.on("data",c=>output+=c);server.stderr.on("data",c=>output+=c);
  try{
-  let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+"/login");ready=true;break;}catch{await new Promise(r=>setTimeout(r,500));}}assert.ok(ready,output);
-  async function owner(){const suffix=randomUUID().slice(0,8);const r=await fetch(origin+"/api/auth/register",{method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify({email:"webhook-"+suffix+"@test.example",password:"synthetic-long-password-2026",name:"Webhook owner",storeName:"Webhook "+suffix,slug:"webhook-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});assert.equal(r.status,201,await r.clone().text());const data=await r.json();return {tenant:data.tenant.id,cookie:r.headers.get("set-cookie").split(";")[0],user:data.user.id};}
+  let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+"/login",{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,500));}}assert.ok(ready,output);
+  async function owner(){const suffix=randomUUID().slice(0,8);const r=await fetch(origin+"/api/auth/register",{method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify({email:"webhook-"+suffix+"@test.example",password:"synthetic-long-password-2026",name:"Webhook owner",storeName:"Webhook "+suffix,slug:"webhook-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});assert.equal(r.status,201,await r.clone().text());const data=await r.json();return {tenant:data.tenant.id,cookie:r.headers.get("set-cookie").split(";")[0],user:data.user.id,slug:"webhook-"+suffix};}
   const account=await owner(),other=await owner();
   const headers={cookie:account.cookie,"x-foon-tenant":account.tenant,origin,"content-type":"application/json"};
   // Explicitly grant invoice access to the disposable test tenant only.
@@ -47,12 +48,18 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   function event(eventId,paymentId,amount=1234,live=true){return {id:eventId,type:"payment_intent.succeeded",livemode:live,data:{object:{id:paymentId,object:"payment_intent",status:"succeeded",amount_received:amount,currency:"sar"}}};}
   async function send(e,url=webhook,valid=true){const raw=JSON.stringify(e),timestamp=Math.floor(Date.now()/1000),sig=createHmac("sha256",valid?secret:"wrong-secret").update(timestamp+"."+raw).digest("hex");return fetch(url,{method:"POST",headers:{"content-type":"application/json","stripe-signature":"t="+timestamp+",v1="+sig},body:raw});}
   const main=await order(),mainInvoice=await invoice(main);await bind(main,"pi_live_synthetic");
+  // Bind a genuine customer, preserving the staff/customer separation and tenant FK.
+  const customerResponse=await fetch(origin+"/api/customer/register",{method:"POST",headers:{origin,"content-type":"application/json",cookie:"foon_language=en"},body:JSON.stringify({name:"Payment customer",email:randomUUID()+"@test.example",password:"synthetic-customer-password-2026",storeSlug:account.slug})});assert.equal(customerResponse.status,201,await customerResponse.clone().text());const customerId=(await customerResponse.json()).user.id;
+  await db.execute("UPDATE restaurant_orders SET customer_user_id=? WHERE id=?",[customerId,main]);
+  const paidNotices=async()=>Number((await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND resource_id=? AND event_key='order_payment_paid'",[customerId,main]))[0][0].n);
+
   const blockedChange=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}})});assert.equal(blockedChange.status,409);assert.equal((await blockedChange.json()).code,"PAYMENT_ATTEMPTS_PENDING");
   assert.equal((await send(event("evt_invalid","pi_live_synthetic"),webhook,false)).status,400);
   assert.equal((await paymentStatus(main)).payment_status,"unpaid");
   assert.equal((await invoiceStatus(mainInvoice)).status,"issued");assert.equal(await invoiceReceiptCount(mainInvoice),0);
   assert.equal((await send(event("evt_case_sensitive","pi_LIVE_synthetic"))).status,200);assert.equal((await paymentStatus(main)).payment_status,"unpaid");
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
+  assert.equal(await paidNotices(),1);
   assert.equal((await paymentStatus(main)).payment_status,"paid");const version=(await paymentStatus(main)).version;
   assert.equal((await invoiceStatus(mainInvoice)).status,"paid","an issued order invoice follows the verified live payment");
   const invoiceVersion=(await invoiceStatus(mainInvoice)).version;
@@ -100,6 +107,9 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   assert.equal(await invoiceReceiptCount(mainInvoice),1,"alternate signed events for the same provider payment must not duplicate settlement");
   // Each distinct authenticated event is preserved, while the financial settlement is unique.
   assert.equal((await db.execute("SELECT COUNT(*) AS n FROM tenant_payment_webhook_receipts WHERE payment_id='pi_live_synthetic'"))[0][0].n,2);
+  assert.equal(await paidNotices(),1,"distinct verified replay events cannot send duplicate payment notices");
+  const [[mailNotice]]=await db.execute("SELECT COUNT(*) AS n FROM platform_notification_outbox WHERE tenant_id=? AND event_key='order_payment_paid'",[account.tenant]);assert.equal(Number(mailNotice.n),1);
+
   const wrongInvoiceOrder=await order(),wrongInvoiceId=await invoice(wrongInvoiceOrder,12.33);
   await bind(wrongInvoiceOrder,"pi_invoice_mismatch");
   assert.equal((await send(event("evt_invoice_mismatch","pi_invoice_mismatch"))).status,200);
