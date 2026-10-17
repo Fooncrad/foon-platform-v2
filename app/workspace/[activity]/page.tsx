@@ -1,7 +1,8 @@
 import {notFound,redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
-import {activityWorkspaceUrl,tenantWorkspaceActivity} from "@/lib/tenant/workspace-routes";
+import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
+import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import {isActivityType} from "@/lib/platform/activity-presets";
 import MerchantWorkspace from "../../restaurant/page";
 
