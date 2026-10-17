@@ -75,7 +75,7 @@ function failure(error:unknown){
  return NextResponse.json({ok:false,code,incidentId},{status});
 }
 async function connection(){const db=await database().getConnection();try{await db.query("SET time_zone='+00:00'");return db;}catch(error){db.release();throw error;}}
-async function overview(db:PoolConnection,tenantId:string,role:string,branch:string|null){
+async function overview(db:PoolConnection,tenantId:string,role:string,branch:string|null,actorUserId:string){
  const filter=branch?" AND branch_id=?":"",params=branch?[tenantId,branch]:[tenantId];
  const [[summary]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS orders,COALESCE(SUM(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total ELSE 0 END),0) AS sales,COALESCE(AVG(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total END),0) AS average,SUM(status='new') AS newOrders,SUM(status='preparing') AS preparing,SUM(status='ready') AS ready FROM restaurant_orders WHERE tenant_id=?"+filter+" AND created_at>=TIMESTAMP(DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR))-INTERVAL 3 HOUR",params);
  const [[outstanding]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
@@ -105,7 +105,7 @@ async function overview(db:PoolConnection,tenantId:string,role:string,branch:str
   }
   if(section){const allowed=section==="tables"||section==="reservations"?["owner","manager","waiter"]:section==="inventory"?["owner","manager","accountant"]:section==="printers"?["owner","manager","cashier","accountant"]:section==="pos"?["owner","manager","cashier"]:["owner","manager"];if(allowed.includes(role))attention[section]=(attention[section]??0)+1;}
  }
- return {attention,summary:{...serviceCounts,outstandingOrders:Number(outstanding.n),sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch)};
+ return {attention,summary:{...serviceCounts,outstandingOrders:Number(outstanding.n),sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch,actorUserId)};
 }
 async function availableTables(db:PoolConnection,tenantId:string,branch:string|null){
  const tables=await resourceRows(db,tenantId,"tables",branch);
@@ -150,8 +150,8 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
    }
    return NextResponse.json({ok:true,resources,references:refs,truncated});
   }
-  if(["orders","pos","kds"].includes(module)){const profile=await salesProfile(db,ctx.tenantId);const menu=module==="pos"?(profile.catalog?await activityPosMenu(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,"menu",branch)):[];return NextResponse.json({ok:true,currency:profile.currency,checkoutPolicy:module==="pos"?(await checkoutSettings(db,ctx.tenantId)).policy:undefined,catalogSource:profile.catalog?"activity":"restaurant",orders:await ordersRows(db,ctx.tenantId,ctx.role,branch),menu,options:module==="pos"?(profile.catalog?await activityPosOptions(db,ctx.tenantId,menu.map(i=>i.id)):await menuOptions(db,ctx.tenantId,menu.map(i=>i.id))):{},tables:module==="pos"&&profile.dining&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
-  if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch)});
+  if(["orders","pos","kds"].includes(module)){const profile=await salesProfile(db,ctx.tenantId);const menu=module==="pos"?(profile.catalog?await activityPosMenu(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,"menu",branch)):[];return NextResponse.json({ok:true,currency:profile.currency,checkoutPolicy:module==="pos"?(await checkoutSettings(db,ctx.tenantId)).policy:undefined,catalogSource:profile.catalog?"activity":"restaurant",orders:await ordersRows(db,ctx.tenantId,ctx.role,branch,ctx.user),menu,options:module==="pos"?(profile.catalog?await activityPosOptions(db,ctx.tenantId,menu.map(i=>i.id)):await menuOptions(db,ctx.tenantId,menu.map(i=>i.id))):{},tables:module==="pos"&&profile.dining&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
+  if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch,ctx.user)});
   if(module==="reports"){
    const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");
    if(!from||!to||!/^\d{4}-\d\d-\d\d$/.test(from)||!/^\d{4}-\d\d-\d\d$/.test(to))throw new ResourceError("INVALID_DATE_RANGE");
