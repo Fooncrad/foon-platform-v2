@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
 const source=readFileSync(new URL("../lib/platform/activity-presets.ts",import.meta.url),"utf8");
-const signup=readFileSync(new URL("../app/register/page.tsx",import.meta.url),"utf8");
+const signup=readFileSync(new URL("../lib/tenant/registration-activities.ts",import.meta.url),"utf8");
 const codes=[...signup.matchAll(/\{id:"([^"]+)",group:/g)].map(m=>m[1]);
+assert.match(readFileSync(new URL("../app/register/page.tsx",import.meta.url),"utf8"),/registrationActivities as activities/);
 const presets=[...source.matchAll(/^  ([a-z_]+): \[/gm)].map(m=>m[1]);
 test("every registration activity has an operational preset",()=>{
  assert.deepEqual([...presets].sort(),[...codes].sort());
