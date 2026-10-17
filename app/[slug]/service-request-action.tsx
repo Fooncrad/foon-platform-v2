@@ -31,7 +31,7 @@ export default function ServiceRequestAction({slug,serviceId,serviceName,mode,la
    const response=await fetch("/api/customer/service-requests",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,requestKey:requestRef.current.key})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(result.code??"SAVE_FAILED");
-   setSuccess(String(result.id));requestRef.current=null;
+   setSuccess(String(result.id));window.dispatchEvent(new CustomEvent("foon:service-request-sent"));requestRef.current=null;
   }catch(e){setError(e instanceof Error&&e.message==="RATE_LIMITED"?t.limit:t.fail);}
   finally{setBusy(false);}
  }
