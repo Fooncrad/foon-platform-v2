@@ -8,7 +8,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 async function authorize(write:boolean){const id=await currentActiveAdminUserId();if(!id)return {status:401,id:null};try{await requirePlatformRole(id,write?["super_admin","admin"]:["super_admin","admin","support"]);return {status:200,id};}catch{return {status:403,id:null};}}
 export async function GET(){
  const auth=await authorize(false);if(auth.status!==200)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:auth.status});
- try{const [rows]=await database().execute<RowDataPacket[]>("SELECT id,event_key,tenant_id,recipient_email,subject,status,attempts,last_error,next_attempt_at,sent_at,created_at FROM platform_notification_outbox ORDER BY created_at DESC LIMIT 100");return NextResponse.json({ok:true,items:rows});}
+ try{const [rows]=await database().execute<RowDataPacket[]>("SELECT id,event_key,tenant_id,recipient_email,subject,status,attempts,last_error,next_attempt_at,sent_at,created_at FROM platform_notification_outbox ORDER BY created_at DESC LIMIT 100");return NextResponse.json({ok:true,items:rows},{headers:{"Cache-Control":"no-store, private"}});}
  catch{return NextResponse.json({ok:false,code:"OUTBOX_UNAVAILABLE"},{status:503});}
 }
 export async function PATCH(req:Request){
