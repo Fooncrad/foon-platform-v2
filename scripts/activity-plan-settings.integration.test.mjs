@@ -22,10 +22,28 @@ test('activity plan overrides isolate grants, limits and administrator permissio
    const r=await call(endpoint+'?activity='+activity,'GET',undefined,admin.cookie);assert.equal(r.status,200);const menu=r.body.features.find(f=>f.feature_key==='digital_menu');assert.equal(Number(menu.enabled),1);assert.equal(menu.limit_value,20);assert.equal(Number(menu.overridden),1);
   }
   const save=(activity,feature_key,enabled,limit_value)=>call(endpoint,'PUT',{activity,feature_key,enabled,limit_value},admin.cookie);
+  // The UI filter is not security: the API must refuse unsupported grants.
+  const irrelevant=await save('automotive','table_qr',true,null);
+  assert.equal(irrelevant.status,422);assert.equal(irrelevant.body.code,'FEATURE_NOT_APPLICABLE');
+  assert.equal((await save('restaurant','creator_profile',true,null)).status,422);
+  // Existing legacy overrides may still be removed (reset) without re-granting them.
+  assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'table_qr'},admin.cookie)).status,200);
   assert.equal((await save('grocery','orders',false,null)).status,200);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant)).status,200);
   assert.equal((await save('grocery','digital_menu',true,2)).status,200);
+  // Reinitializing built-in plans after migration 0093 must restore missing
+  // free rows, remain idempotent and preserve custom activity grants.
+  await db.execute("DELETE FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
+  for(let i=0;i<2;i++){
+   const seeded=await call('/api/admin/plans/bootstrap','POST',{confirm:'CREATE_FOUR_PLANS'},admin.cookie);
+   assert.equal(seeded.status,200,JSON.stringify(seeded.body));
+   assert.equal(seeded.body.freeActivities,15);
+  }
+  const [[restored]]=await db.execute("SELECT enabled,limit_value FROM package_plan_activity_features WHERE plan_id=? AND activity_code='automotive' AND feature_key='catalog'",[free.id]);
+  assert.equal(Number(restored.enabled),1);assert.equal(Number(restored.limit_value),20);
+  const [[custom]]=await db.execute("SELECT enabled,limit_value FROM package_plan_activity_features WHERE plan_id=? AND activity_code='grocery' AND feature_key='digital_menu'",[free.id]);
+  assert.equal(Number(custom.enabled),1);assert.equal(Number(custom.limit_value),2);
   const catalog='/api/restaurant/activity-catalog';const category=await call(catalog,'POST',{kind:'category',name:'Category'},grocery.cookie,grocery.tenant);assert.equal(category.status,201,JSON.stringify(category.body));
   const product={kind:'product',name:'First product',price:5,categoryId:category.body.id};
   assert.equal((await call(catalog,'POST',product,grocery.cookie,grocery.tenant)).status,201);
