@@ -20,7 +20,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  // Legacy restaurant tenants may not yet have a business profile. Restore their
  // restaurant navigation without overriding an explicitly configured activity.
  const storedActivityCode=String(activityRows[0]?.activity_code??"").trim();
- // This is the restaurant workspace: an absent or legacy unknown activity code
+ // Shared activity workspace: an absent or legacy unknown activity code
  // must not hide restaurant tools. Explicitly supported other activities retain
  // their own module presets; RBAC and subscription checks remain unchanged.
  const activityCode=isActivityType(storedActivityCode)?storedActivityCode:"restaurant";
