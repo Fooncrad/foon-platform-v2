@@ -10,8 +10,8 @@ const copy={
 export default function ServiceRequestHistory({slug,language,visible}:{slug:string;language:Lang;visible:boolean}){
  const [rows,setRows]=useState<RecordItem[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
  const t=copy[language];
- const load=async()=>{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(!r.ok||!Array.isArray(j.requests))throw Error("LOAD_FAILED");setRows(j.requests);setError("");setLoading(false);};
- useEffect(()=>{if(!visible)return;let active=true;const read=async()=>{try{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(!r.ok||!Array.isArray(j.requests))throw Error();if(active){setRows(j.requests);setError("");}}catch{if(active)setError(t.error)}finally{if(active)setLoading(false)}};
+ const load=async()=>{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(r.status===403){setRows([]);setLoading(false);return;}if(!r.ok||!Array.isArray(j.requests))throw Error("LOAD_FAILED");setRows(j.requests);setError("");setLoading(false);};
+ useEffect(()=>{if(!visible)return;let active=true;const read=async()=>{try{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(r.status===403){if(active)setRows([]);return;}if(!r.ok||!Array.isArray(j.requests))throw Error();if(active){setRows(j.requests);setError("");}}catch{if(active)setError(t.error)}finally{if(active)setLoading(false)}};
  void read();const handler=()=>void read();window.addEventListener("foon:service-request-sent",handler);return()=>{active=false;window.removeEventListener("foon:service-request-sent",handler);};
  },[visible,slug,t.error]);
  if(!visible)return null;
