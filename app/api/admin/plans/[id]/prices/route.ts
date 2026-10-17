@@ -25,10 +25,17 @@ export async function PUT(request:Request,context:Context){
  const cycle=body.billing_cycle,currency=body.currency,rawPrice=body.price;
  const price=typeof rawPrice==="number"?rawPrice:Number(rawPrice);
  if(!["monthly","yearly"].includes(cycle)||typeof currency!=="string"||!/^[A-Z]{3}$/.test(currency)||!Number.isFinite(price)||price<0||price>9999999999.99||Math.round(price*100)/100!==price||typeof body.enabled!=="boolean")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const db=await database().getConnection();
  try{
-  const [plans]=await database().execute<RowDataPacket[]>("SELECT id FROM package_plans WHERE id=? LIMIT 1",[id]);
-  if(!plans.length)return NextResponse.json({ok:false,code:"PLAN_NOT_FOUND"},{status:404});
-  await database().execute("INSERT INTO package_plan_prices(id,plan_id,billing_cycle,currency,price,enabled) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE price=VALUES(price),enabled=VALUES(enabled)",[randomUUID(),id,cycle,currency,price,body.enabled]);
+  await db.beginTransaction();
+  const [plans]=await db.execute<RowDataPacket[]>("SELECT id,code FROM package_plans WHERE id=? FOR UPDATE",[id]);
+  if(!plans.length){await db.rollback();return NextResponse.json({ok:false,code:"PLAN_NOT_FOUND"},{status:404});}
+  // The Free tier can be customized by activity, but must remain free.
+  if(plans[0].code==="free"&&price!==0){await db.rollback();return NextResponse.json({ok:false,code:"FREE_PLAN_MUST_BE_ZERO"},{status:409});}
+  const [previous]=await db.execute<RowDataPacket[]>("SELECT price,enabled FROM package_plan_prices WHERE plan_id=? AND billing_cycle=? AND currency=? FOR UPDATE",[id,cycle,currency]);
+  await db.execute("INSERT INTO package_plan_prices(id,plan_id,billing_cycle,currency,price,enabled) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE price=VALUES(price),enabled=VALUES(enabled)",[randomUUID(),id,cycle,currency,price,body.enabled]);
+  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?)",[actor,"plan.price.update","plan",id,JSON.stringify({billingCycle:cycle,currency,price,enabled:body.enabled,previous:previous.length?{price:String(previous[0].price),enabled:Boolean(previous[0].enabled)}:null})]);
+  await db.commit();
   return NextResponse.json({ok:true});
- }catch{return NextResponse.json({ok:false,code:"PRICE_SAVE_UNAVAILABLE"},{status:503});}
+ }catch{await db.rollback();return NextResponse.json({ok:false,code:"PRICE_SAVE_UNAVAILABLE"},{status:503});}finally{db.release();}
 }
