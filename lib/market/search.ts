@@ -4,7 +4,7 @@ import {supportedCountries} from "../tenant/country-catalog.ts";
 export const MARKET_PAGE_SIZE=24;
 export type MarketFilters={country:string;activity:string;kind:""|"store"|"restaurant";q:string;page:number};
 export function parseMarketFilters(input:{country?:unknown;activity?:unknown;kind?:unknown;q?:unknown;page?:unknown}):MarketFilters{
- const validCountries=new Set(supportedCountries.map(c=>c.code));
+ const validCountries=new Set<string>(supportedCountries.map(c=>c.code));
  const country=typeof input.country==="string"?input.country.toUpperCase():"";
  const activity=typeof input.activity==="string"?input.activity:"";
  const kind=input.kind==="store"||input.kind==="restaurant"?input.kind:"";
