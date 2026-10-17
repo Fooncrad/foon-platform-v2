@@ -124,3 +124,21 @@
 .foonActivityServiceTag{display:inline-flex;width:max-content;max-width:100%;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--activity-accent) 13%,white);color:var(--activity-accent)!important;font-weight:750}
 .foonActivityServiceContact{display:inline-flex;align-items:center;justify-content:center;min-height:42px;text-align:center;border-radius:12px;background:var(--activity-accent);color:#fff!important;text-decoration:none;font-weight:750;padding:9px 12px;overflow-wrap:anywhere}
 .foonActivityServiceContact:focus-visible{outline:3px solid #222;outline-offset:3px}
+
+
+/* Customer-facing service inquiries and appointment requests. */
+.foonServiceRequestAction{margin-top:6px;min-width:0}
+.foonServiceRequestAction>button,.foonServiceRequestButtons button{min-height:42px;cursor:pointer}
+.foonServiceRequestForm{border:1px solid var(--activity-border);border-radius:14px;padding:12px;background:#f9fbfc;display:grid;gap:12px}
+.foonServiceRequestForm form,.foonServiceRequestForm form label{display:grid;gap:8px;min-width:0}
+.foonServiceRequestForm input,.foonServiceRequestForm textarea{max-width:100%;width:100%;box-sizing:border-box;border:1px solid #cad5e1;border-radius:8px;padding:10px;font:inherit;background:#fff;color:#152031}
+.foonServiceRequestButtons{display:flex;gap:8px;flex-wrap:wrap}
+.foonServiceRequestButtons button{padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#172033}
+.foonServiceRequestButtons button:first-child{background:var(--activity-accent);color:white;border-color:var(--activity-accent)}
+.foonActivityServicePhone{display:inline-flex;min-height:40px;justify-content:center;align-items:center;padding:8px 12px;text-decoration:none;border:1px solid var(--activity-accent);border-radius:10px}
+.foonServiceRequestHistory{max-width:1300px;margin:10px auto 30px;padding:18px;border:1px solid #e4e8ee;border-radius:16px;background:#fff}
+.foonServiceRequestHistory header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.foonServiceRequestHistory header button{min-height:40px;cursor:pointer}
+.foonServiceHistoryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.foonServiceHistoryList article{display:grid;gap:6px;padding:12px;border:1px solid #edf0f4;border-radius:12px}
+@media(max-width:600px){.foonServiceRequestHistory{margin-inline:12px}.foonServiceRequestForm{padding:9px}}
