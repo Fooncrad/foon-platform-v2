@@ -31,7 +31,8 @@ export function activityFeatureCapability(key:string):string{return Object.hasOw
 export function activityFeatureSupport(activity:string,key:string):"supported"|"unsupported"|"unclassified"{
  if(!isActivityType(activity))throw new Error("UNSUPPORTED_ACTIVITY_TYPE");
  if(key.startsWith("branding.")||COMMON_FEATURES.has(key))return "supported";
- if(CREATOR_ONLY.has(key)||key==="room_service")return "unsupported";
+ if(CREATOR_ONLY.has(key))return "unsupported";
+ if(key==="room_service")return ["restaurant","cafe"].includes(activity)?"supported":"unsupported";
  if(key==="excise_tax")return exciseActivities.has(activity)?"supported":"unsupported";
  // Restaurant/cafe modifiers and grocery weight/size options reuse the
  // variants feature even though these activities do not list retail variants

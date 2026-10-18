@@ -16,6 +16,7 @@ const groups:Record<string,{key:string;label:string}[]>={
  tables:[{key:"sections",label:"إضافة قسم صالة"},{key:"tables",label:"الطاولات وربطها بالقسم"},{key:"diningBatch",label:"الإضافة الجماعية"},{key:"waiterCalls",label:"نداءات النادل"}],
  menu:[{key:"menu",label:"الأصناف"},{key:"categories",label:"التصنيفات"},{key:"menuGroups",label:"الخيارات"},{key:"menuValues",label:"قيم الخيارات"},{key:"menuImages",label:"الصور"},{key:"templates",label:"القوالب والمظهر"}],
  pickupPoints:[{key:"pickupPoints",label:"نقاط الاستلام المسجلة"}],
+ roomService:[{key:"hotelRooms",label:"غرف الفندق المسجلة"}],
  inventory:[{key:"inventory",label:"المخزون"},{key:"suppliers",label:"الموردون"},{key:"purchases",label:"المشتريات"}],
  team:[{key:"team",label:"إدارة الموظفين وإضافتهم"},{key:"attendance",label:"الحضور"},{key:"mailSettings",label:"بريد الموظفين والإشعارات"}],
  marketing:[{key:"coupons",label:"الكوبونات"},{key:"marketing",label:"الحملات"}],
