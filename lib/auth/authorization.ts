@@ -10,7 +10,11 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
  // the current login session. Platform roles alone never grant tenant access.
  const sessionId=await currentSessionId();
  const activeAdmin=await currentActiveAdminUserId(false);
- if(sessionId&&activeAdmin===userId){
+ const [platformAdmins]=await database().execute<RowDataPacket[]>(
+  "SELECT role FROM platform_admins WHERE user_id=? AND enabled=TRUE LIMIT 1",[userId]
+ );
+ if(platformAdmins.length){
+  if(!sessionId||activeAdmin!==userId)throw new Error("FORBIDDEN");
   const [support]=await database().execute<RowDataPacket[]>(
    "SELECT s.id,s.platform_role,pa.role AS current_role FROM platform_tenant_support_sessions s JOIN platform_admins pa ON pa.user_id=s.actor_user_id AND pa.enabled=TRUE JOIN users u ON u.id=s.actor_user_id AND u.status='active' JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
    [sessionId,userId,id]
@@ -20,6 +24,7 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
    if(!allowed.includes("manager")||touchAdminSession&&role==="support")throw new Error("FORBIDDEN");
    return {tenantId:id,role:"manager" as TenantRole,adminAccess:true,platformRole:role};
   }
+  throw new Error("FORBIDDEN");
  }
   const [rows]=await database().execute<RowDataPacket[]>(
   "SELECT m.role FROM memberships m INNER JOIN users u ON u.id=m.user_id INNER JOIN tenants t ON t.id=m.tenant_id WHERE m.tenant_id=? AND m.user_id=? AND m.status='active' AND u.status='active' AND t.status='active' LIMIT 1",
