@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
 import {randomBytes,randomUUID} from "node:crypto";
-import {mkdtemp,rm} from "node:fs/promises";
+import {mkdtemp,rm,access} from "node:fs/promises";
 import {createServer} from "node:net";
 import {tmpdir} from "node:os";
 import {join,dirname,resolve} from "node:path";
@@ -29,7 +29,7 @@ async function freePort(){
 
 async function fixture(){
   const dir=await mkdtemp(join(tmpdir(),"foon-w09-http-"));
-  const config={dir,localPort:await freePort(),
+  const config={dir,blockedMarker:join(dir,"blocked-external-connection.txt"),localPort:await freePort(),
     localDb:join(dir,"gateway.sqlite"),remoteDb:join(dir,"http-receiver.sqlite"),
     localToken:secret(),ackSecret:secret(),remoteToken:secret(),receiptKey:secret(),
     tenantId:randomUUID(),branchId:randomUUID(),deviceId:randomUUID()};
@@ -45,9 +45,13 @@ async function fixture(){
   };
   async function startGateway(){
     assert(!gateway,"gateway already running");
-    gateway=spawn(process.execPath,[gatewayFile],{
+    const isolatedEnv={...process.env};
+    for(const name of ["DATABASE_URL","EDGE_TEST_DATABASE_URL","FOON_EDGE_MASTER_RECEIPT_KEY"])
+      delete isolatedEnv[name];
+    gateway=spawn(process.execPath,["--require",join(root,"apps/desktop/w06-block-external.cjs"),gatewayFile],{
       cwd:root,windowsHide:true,stdio:"ignore",
-      env:{...process.env,
+      env:{...isolatedEnv,
+        FOON_W06_EXTERNAL_ATTEMPT_MARKER:config.blockedMarker,
         FOON_LAN_HOST:"127.0.0.1",FOON_LAN_PORT:String(config.localPort),
         FOON_LAN_DB:config.localDb,FOON_LAN_TOKEN:config.localToken,
         FOON_EDGE_ACK_SECRET:config.ackSecret,
@@ -134,6 +138,10 @@ async function fixture(){
   const close=async()=>{
     await stopGateway();
     await stopCloud();
+    try{
+      await access(config.blockedMarker);
+      throw Error("W09_EXTERNAL_NETWORK_ATTEMPT_DETECTED");
+    }catch(error){if(error?.code!=="ENOENT")throw error;}
     await rm(dir,{recursive:true,force:true,maxRetries:6,retryDelay:150});
   };
   try{
