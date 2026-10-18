@@ -126,7 +126,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
    ["remote","Remote task",{description:"Review menu",employeeId,budget:100},"assigned"],
    ["marketing","Campaign",{message:"Test draft only",channel:"email"},"draft"],
    ["settings","Branch settings",{openingTime:"08:00",closingTime:"23:00"},"active"],
-   ["storefront","Brand",{primaryColor:"#224466",brandName:"Published brand",menuTheme:"modern",platformBranding:"hidden"},"active"]
+   ["storefront","Brand",{primaryColor:"#224466",brandName:"Published brand",menuTheme:"modern",platformBranding:"hidden",roomServiceEnabled:"yes",checkoutRoomServiceFee:3},"active"]
   ])await save(a,module,name,data,status);
   const appearancePath="/api/restaurant/menu/appearance";
   assert.equal((await call(appearancePath,"PUT",{template:"classic",colorMode:"light"},a.cookie,b.tenant)).status,403);
@@ -191,6 +191,14 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const pickupOrder=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",pickupPointId:pickupPoint.body.id,items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(pickupOrder.status,201,JSON.stringify(pickupOrder.body));
   const [[pickupSnapshot]]=await db.execute("SELECT checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[pickupOrder.body.id,a.tenant]);const savedPickupSnapshot=typeof pickupSnapshot.checkout_snapshot==="string"?JSON.parse(pickupSnapshot.checkout_snapshot):pickupSnapshot.checkout_snapshot;assert.equal(savedPickupSnapshot.pickupPoint.address,"King Fahd Road");
   const foreignPoints=await fetch(origin+"/api/customer/pickup-points?storeSlug=operations-owner-a&branchId="+encodeURIComponent(b.branch));assert.equal(foreignPoints.status,404);
+  const hotelRoom=await resource(a,"hotelRooms",{name:"Room 101",status:"active",branchId:a.branch,data:{roomNumber:"101"}});assert.equal(hotelRoom.status,201,JSON.stringify(hotelRoom.body));
+  const duplicateHotelRoom=await resource(a,"hotelRooms",{name:"Suite 101",status:"active",branchId:a.branch,data:{roomNumber:"101"}});assert.equal(duplicateHotelRoom.body.code,"DUPLICATE_HOTEL_ROOM");
+  const roomServicePayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"room_service",roomNumber:"101",requestKey:randomUUID(),items:[{id:item,quantity:1,options:[option]}]};
+  const unregisteredRoom=await call("/api/customer/orders","POST",{...roomServicePayload,roomNumber:"999",requestKey:randomUUID()},customer.cookie);assert.equal(unregisteredRoom.status,409);assert.equal(unregisteredRoom.body.code,"HOTEL_ROOM_UNAVAILABLE");
+  const roomServiceOrder=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceOrder.status,201,JSON.stringify(roomServiceOrder.body));assert.equal(roomServiceOrder.body.total,25);
+  const roomServiceReplay=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceReplay.status,201);assert.equal(roomServiceReplay.body.id,roomServiceOrder.body.id);
+  const [[roomServiceSnapshot]]=await db.execute("SELECT channel,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[roomServiceOrder.body.id,a.tenant]);assert.equal(roomServiceSnapshot.channel,"room_service");const savedRoomSnapshot=typeof roomServiceSnapshot.checkout_snapshot==="string"?JSON.parse(roomServiceSnapshot.checkout_snapshot):roomServiceSnapshot.checkout_snapshot;assert.equal(savedRoomSnapshot.hotelRoom.roomNumber,"101");
+  const tenantOrders=await resource(a,"orders",undefined,"GET");assert.equal(tenantOrders.status,200);assert.equal(tenantOrders.body.orders.find(row=>row.id===roomServiceOrder.body.id).hotel_room.roomNumber,"101");
   // Real HTTP + database coverage for quote -> invoice references, tenant isolation and duplicate billing.
   const quoteData={customerName:"Integration customer",serviceDescription:"Approved service",amount:22};
   const quoteCreated=await resource(a,"quotations",{name:"Service quote",status:"sent",branchId:a.branch,data:quoteData});

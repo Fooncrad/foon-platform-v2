@@ -4,7 +4,7 @@ import {useEffect,useId,useRef,useState,type FormEvent} from "react";
 import DiningPicker from "./dining-picker";
 import BookingCalendar from "./booking-calendar";
 import InlineCustomerAuth from "./inline-customer-auth";
-export type MenuServices={waiter:boolean;reservations:boolean};
+export type MenuServices={waiter:boolean;reservations:boolean;roomService?:boolean};
 export type DiningSection={id:string;name:string;branchId:string|null};
 export type DiningTable={id:string;name:string;branchId:string|null;sectionId?:string|null;sectionName?:string;capacity?:number};
 export function MenuIcon({kind}:{kind:'menu'|'bell'|'calendar'|'close'}){

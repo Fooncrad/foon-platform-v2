@@ -18,6 +18,13 @@ test("registered pickup points require a usable address and remain branch-scoped
  assert.throws(()=>validateResource("pickupPoints",{name:"نقطة بلا عنوان",status:"active",data:{}}));
  assert.throws(()=>validateResource("pickupPoints",{name:"نقطة",status:"active",data:{address:"عنوان",mapUrl:"javascript:alert(1)"}}));
 });
+test("registered hotel rooms require a branch and normalize room numbers",()=>{
+ const branch="11111111-1111-4111-8111-111111111111";
+ const room=validateResource("hotelRooms",{name:"Room a-101",status:"active",branchId:branch,data:{roomNumber:"a-101"}});
+ assert.equal(resourceModules.hotelRooms.kind,"hotel_room");assert.equal(room.branchId,branch);assert.equal(room.data.roomNumber,"A-101");
+ assert.throws(()=>validateResource("hotelRooms",{name:"Room 101",status:"active",data:{roomNumber:"101"}}),{code:"REQUIRED_BRANCH"});
+ for(const value of ["","  ","Room 101 / <script>"," ".repeat(25)])assert.throws(()=>validateResource("hotelRooms",{name:"Room",status:"active",branchId:branch,data:{roomNumber:value}}));
+});
 test("staff roles, coupon bounds and attendance chronology are constrained",()=>{
  assert.throws(()=>validateResource("team",{name:"X",status:"active",data:{email:"x@example.com",role:"owner"}}));
  assert.throws(()=>validateResource("coupons",{name:"X",status:"active",data:{code:"SAVE",discountType:"percent",value:101}}));

@@ -117,6 +117,10 @@ test("restaurant, cafe and grocery retain option variants without opening servic
   assert.equal(passesServerActivityRestriction(activity,"variants"),false);
  }
 });
+test("room service is enabled only for restaurants and cafes and still needs its plan grant",()=>{
+ for(const activity of ["restaurant","cafe"]){assert.equal(activityFeatureSupport(activity,"room_service"),"supported");assert.equal(passesServerActivityRestriction(activity,"room_service"),true);assert.equal(canUseActivityFeature(activity,"room_service",[{feature_key:"room_service",enabled:true,limit_value:null}]),true);assert.equal(canUseActivityFeature(activity,"room_service",[{feature_key:"room_service",enabled:false,limit_value:null}]),false);}
+ for(const activity of ["grocery","ecommerce","laundry","publicworks"])assert.equal(activityFeatureSupport(activity,"room_service"),"unsupported",activity);
+});
 test("service-order quotations are relevant only to service activities and still require grants",()=>{
  for(const activity of ["carwash","laundry","automotive","salon","publicworks"]){
   assert.equal(activityFeatureSupport(activity,"quotes"),"supported",activity);

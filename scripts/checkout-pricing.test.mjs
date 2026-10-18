@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {checkoutPolicy,checkoutTotals} from '../lib/restaurant/checkout-pricing.ts';
 const policy=(values={})=>checkoutPolicy({vatEnabled:'yes',vatRate:15,...values});
 test('legacy store defaults preserve totals and delivery has no invented fee',()=>{const p=checkoutPolicy({});for(const channel of ['takeaway','delivery','dine_in'])assert.equal(checkoutTotals(100,10,channel,p).total,90);});
+test('room-service checkout adds the configured optional room fee to the stored total',()=>{const p=policy({checkoutRoomServiceFee:12.5});const total=checkoutTotals(100,0,'room_service',p);assert.equal(total.serviceFee,12.5);assert.equal(total.total,127.5);assert.equal(checkoutTotals(100,0,'takeaway',p).serviceFee,0);});
 test('exclusive VAT applies after discount',()=>{const r=checkoutTotals(100,10,'takeaway',policy());assert.equal(r.net,90);assert.equal(r.tax,13.50);assert.equal(r.total,103.50);});
 test('inclusive VAT is extracted once after discount',()=>{const r=checkoutTotals(115,0,'takeaway',policy({menuStoredPricesIncludeVat:'yes'}));assert.equal(r.net,100);assert.equal(r.tax,15);assert.equal(r.total,115);});
 test('delivery fee is charged only for delivery, service fee for each order',()=>{const p=policy({checkoutServiceFee:5,checkoutDeliveryFee:10});assert.equal(checkoutTotals(100,0,'takeaway',p).total,120);assert.equal(checkoutTotals(100,0,'delivery',p).total,130);});
