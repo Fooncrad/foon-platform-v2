@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Core UI capability only: no filesystem, shell, network plugins or credential access",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}
