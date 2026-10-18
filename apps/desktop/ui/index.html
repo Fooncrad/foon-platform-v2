@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./style.css" />
   <script defer src="./station.js"></script>
   <script defer src="./demo-orders.js"></script>
+  <script defer src="./launcher.js"></script>
 </head>
 <body>
   <main>
@@ -15,6 +16,12 @@
     <section class="hero"><p class="eyebrow">WINDOWS STATION</p><h1>محطة FOON المحلية</h1><p>لوحة تشغيل أصلية لنظام Windows. يتم إعداد ربط FOON Edge والمزامنة في مراحل مستقلة مع اختبار كل مرحلة قبل اعتمادها.</p></section>
     <section class="card" aria-labelledby="status-title"><div class="card-head"><h2 id="status-title">حالة الخدمة المحلية</h2><span class="status" id="status-label" role="status" aria-live="polite">جارٍ الفحص</span></div><p id="status-details">نتحقق من وجود منفذ الخدمة على هذا الجهاز دون قراءة بيانات الدخول أو إرسالها.</p><p class="mono">127.0.0.1:8788</p><button id="refresh" type="button">إعادة الفحص</button></section>
     <section class="card" aria-labelledby="edge-title"><div class="card-head"><h2 id="edge-title">FOON Edge · SQLite</h2><span class="status" id="edge-status-label" role="status" aria-live="polite">جارٍ التحقق</span></div><p id="edge-status-details">يُجرى فحص مصادقة آمن من داخل التطبيق الأصلي. لا تُعرض المفاتيح على هذه الصفحة.</p><p id="edge-pending" hidden>طلبات تنتظر المزامنة: <strong id="edge-pending-count" dir="ltr">0</strong></p><p class="mono">127.0.0.1:8787</p></section>
+    <section class="card" aria-labelledby="w04-title">
+      <div class="card-head"><h2 id="w04-title">W04 · إدارة محرك SQLite من التطبيق</h2><span class="status" id="w04-status" role="status" aria-live="polite">جارٍ فحص المكونات...</span></div>
+      <p>اضغط تشغيل لبدء محرك تجريبي محلي بمفاتيح عشوائية وبيانات وهمية فقط. لا يستخدم حسابات المتاجر أو موقع الإنتاج.</p>
+      <div class="demo-actions"><button id="w04-start" type="button" disabled>تشغيل المحرك التجريبي</button><button id="w04-stop" type="button" disabled>إيقاف التجربة وتنظيف بياناتها</button></div>
+      <p id="w04-feedback" role="status" aria-live="polite"></p>
+    </section>
     <section class="card" aria-labelledby="demo-title">
       <div class="card-head"><h2 id="demo-title">W03 · طلبات SQLite التجريبية</h2><span class="status" id="demo-state" role="status" aria-live="polite">التحقق من وضع التجربة...</span></div>
       <p>هذه الأداة مخصصة لقاعدة اختبار مؤقتة فقط. لا تُنشئ طلبات فعلية ولا تشغّل مزامنة أو دفعًا إلكترونيًا.</p>
