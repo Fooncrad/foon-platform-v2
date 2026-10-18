@@ -14,6 +14,23 @@ Do not duplicate these modules.
 ## Stage 1: pure cloud-adapter regression tests
 Run apps/desktop/run-w08-cloud-adapter-tests.ps1 on the W08 branch. It uses fake database connections, local synthetic SQLite for W07 test, and deliberately does NOT run migrations or contact real MySQL. Tests include authorization, tenant/branch/device isolation, unique inbox keys, replay, receipt signatures, and conflict handling.
 
+## Stage 1.5: read-only local MariaDB readiness check
+Run `apps/desktop/run-w08-mariadb-preflight.ps1` from the W08 branch after creating a **brand-new, empty** local database called `foon_edge_test` and a dedicated non-root account with privileges only on `foon_edge_test.*`. The password is requested hidden by PowerShell; never paste it into chat or git.
+
+The script first tests its fail-closed URL checks, verifies that port 3306 is listening locally, then opens a short-lived *read-only* MySQL connection solely to validate the selected database, scoped grants, empty schema and server version. It explicitly refuses any existing schema (including `schema_migrations`), global write grants, other database grants, root, remote hosts, and unexpected ports. A failed preflight MUST NOT be "fixed" by pointing it to `foon_v2_test`, Hostinger, a populated developer database, or by running migrations.
+
+Example of **intended manual, local administrator-only setup** (not performed by this task; replace the placeholder with a strong private password chosen locally):
+
+```sql
+CREATE DATABASE foon_edge_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'foon_edge_runner'@'127.0.0.1' IDENTIFIED BY '<LOCAL_PRIVATE_PASSWORD>';
+GRANT ALL PRIVILEGES ON foon_edge_test.* TO 'foon_edge_runner'@'127.0.0.1';
+```
+
+Do not run those statements against remote/Hostinger servers. If the database or user already exists, inspect first rather than overwriting it; do not delete any existing databases. Granting `*.*` is forbidden.
+
+The stage 1.5 result is only a readiness check. **Passing does not authorize any migration or mutation.**
+
 ## Stage 2: real local MariaDB integration — NOT AUTHORIZED OR EXECUTED YET
 A separate local MariaDB database named foon_edge_test on 127.0.0.1 is required. The existing foon-edge-cloud.integration.test.mjs calls scripts/migrate.mjs against that database and creates/drops additional isolated collation fixture databases. Therefore it is MUTATING, not read-only. It must NOT be run against production, any existing merchant dataset, or a database used by unrelated tests.
 
