@@ -230,6 +230,10 @@ fn start_runtime(app: AppHandle, state: State<'_, DemoRuntime>, mode: RuntimeMod
     for key in ["FOON_EDGE_TENANT_ID","FOON_EDGE_BRANCH_ID","FOON_EDGE_DEVICE_ID","FOON_EDGE_CLOUD_SYNC_URL"] {
         env::remove_var(key);
     }
+    if mode==RuntimeMode::Durable {
+        // Native-only synthetic branch scope. Cloud tenant/device remain unset.
+        env::set_var("FOON_EDGE_BRANCH_ID",&branch);
+    }
     *guard=Some(OwnedGateway{child,dir,mode,lock});
     Ok(launcher(true,"OWNED_DEMO_RUNNING",mode.label()))
 }
