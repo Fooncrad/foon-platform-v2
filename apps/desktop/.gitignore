@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.cache/
+**/target/
+**/*.sqlite
+**/*.sqlite-*
+**/.env*
+operators*.json
+*.pfx
+*.pem
+*.key
+*.msi
+*.exe
