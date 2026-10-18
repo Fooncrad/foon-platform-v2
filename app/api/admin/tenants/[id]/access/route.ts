@@ -19,7 +19,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   if(!sessions.length){await db.rollback();return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});}
   const [tenants]=await db.execute<RowDataPacket[]>("SELECT id FROM tenants WHERE id=? AND status='active' FOR UPDATE",[id]);
   if(!tenants.length){await db.rollback();return NextResponse.json({ok:false,code:"TENANT_NOT_FOUND_OR_INACTIVE"},{status:404});}
-  await db.execute("UPDATE platform_tenant_support_sessions SET ended_at=NOW() WHERE auth_session_id=? AND ended_at IS NULL",[authSession]);
+  await db.execute("UPDATE platform_tenant_support_sessions SET ended_at=UTC_TIMESTAMP() WHERE auth_session_id=? AND ended_at IS NULL",[authSession]);
   const supportId=randomUUID();
   await db.execute("INSERT INTO platform_tenant_support_sessions(id,auth_session_id,actor_user_id,tenant_id,platform_role,expires_at) VALUES (?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 HOUR))",[supportId,authSession,actor,id,role]);
   await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,accessMode:role==="support"?"read_only":"full",printerSettingsUnaffected:true,expiresInMinutes:120})]);
