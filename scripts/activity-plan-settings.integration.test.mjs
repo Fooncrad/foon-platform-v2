@@ -30,7 +30,7 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'digital_menu'},admin.cookie)).status,200);
   assert.equal((await save('grocery','orders',false,null)).status,200);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
-  assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant)).status,200);
+  const clothingOrders=await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant);assert.equal(clothingOrders.status,200,JSON.stringify(clothingOrders.body));
   assert.equal((await save('grocery','digital_menu',true,2)).status,200);
   // Bootstrap is one-time initialization, not a reset of existing custom
   // settings. A deliberately removed override must continue to inherit.
