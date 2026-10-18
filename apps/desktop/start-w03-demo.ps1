@@ -58,7 +58,7 @@ try {
         }
     }
     if (-not $ready) { throw "W03_SQLITE_DEMO_NOT_READY" }
-    Write-Host "W03 SQLITE DEMO READY — no cloud synchronization" -ForegroundColor Green
+    Write-Host "W03 SQLITE DEMO READY - no cloud synchronization" -ForegroundColor Green
     Write-Host "No production accounts or databases are configured."
     Write-Host "Use the app to create one demo order and advance its status. Close the app to clean up."
     $desktopProcess = Start-Process -FilePath $app -PassThru
