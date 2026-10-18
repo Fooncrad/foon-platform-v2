@@ -71,7 +71,22 @@ main().catch(error=>{
     "W08_DATABASE_SCOPED_PRIVILEGES_REQUIRED","W08_TEST_DATABASE_NOT_EMPTY",
     "W08_MYSQL2_DEPENDENCY_MISSING"
   ]);
-  const code=known.has(error?.message)?error.message:"W08_LOCAL_DATABASE_UNAVAILABLE";
+  // Report only a known category, never the driver message: mysql2 errors can
+  // contain host information or other potentially sensitive connection details.
+  const connectionErrors={
+    ER_ACCESS_DENIED_ERROR:"W08_DATABASE_ACCESS_DENIED",
+    ER_DBACCESS_DENIED_ERROR:"W08_DATABASE_PRIVILEGES_REJECTED",
+    ER_BAD_DB_ERROR:"W08_TEST_DATABASE_MISSING",
+    ER_NOT_SUPPORTED_AUTH_MODE:"W08_DATABASE_AUTH_PLUGIN_UNSUPPORTED",
+    ECONNREFUSED:"W08_LOCAL_MARIADB_CONNECTION_REFUSED",
+    ETIMEDOUT:"W08_LOCAL_MARIADB_CONNECTION_TIMED_OUT",
+    EHOSTUNREACH:"W08_LOCAL_MARIADB_HOST_UNREACHABLE",
+    ENOTFOUND:"W08_LOCAL_MARIADB_HOST_UNREACHABLE",
+    PROTOCOL_CONNECTION_LOST:"W08_LOCAL_DATABASE_CONNECTION_LOST"
+  };
+  const code=known.has(error?.message)
+    ?error.message
+    :connectionErrors[error?.code]||"W08_LOCAL_DATABASE_UNAVAILABLE";
   console.error(code);
   process.exitCode=1;
 });
