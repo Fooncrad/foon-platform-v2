@@ -42,6 +42,7 @@ export async function POST(request:Request){
   if(!(await tenantEntitlement(tenantId,"orders",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.couponCode&&!(await tenantEntitlement(tenantId,"coupons",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.channel==="dine_in"&&!(await tenantEntitlement(tenantId,"tables",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
+  if(body.channel==="room_service"&&!(await tenantEntitlement(tenantId,"room_service",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   const [profiles]=await db.execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[user]);
   const customerPhone=typeof body.customerPhone==="string"&&body.customerPhone.trim()?body.customerPhone.trim():String(profiles[0]?.phone||"");
   const catalogDelivery=body.channel==="delivery"&&String(stores[0].activity_code??"")!=="restaurant"&&Boolean(stores[0].activity_code);
@@ -50,5 +51,5 @@ export async function POST(request:Request){
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
- }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
+ }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }

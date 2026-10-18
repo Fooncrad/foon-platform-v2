@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {orderChannelStatus} from "../lib/restaurant/order-channel-policy.ts";
-const at=(value:string)=>new Date(value);
+const at=value=>new Date(value);
 test("all activities share a global ordering kill switch",()=>{
- for(const channel of ["delivery","takeaway","dine_in"])
+ for(const channel of ["delivery","takeaway","dine_in","room_service"])
   assert.equal(orderChannelStatus({ordersEnabled:"no"},{},channel).reason,"ORDERS_DISABLED");
 });
 test("merchant and branch channel switches are independent",()=>{
@@ -11,6 +11,9 @@ test("merchant and branch channel switches are independent",()=>{
  assert.equal(orderChannelStatus({deliveryEnabled:"no"},{},"takeaway").allowed,true);
  assert.equal(orderChannelStatus({},{pickupEnabled:"no"},"takeaway").allowed,false);
  assert.equal(orderChannelStatus({},{dineInEnabled:"no"},"dine_in").allowed,false);
+ assert.equal(orderChannelStatus({roomServiceEnabled:"no"}, {}, "room_service").allowed,false);
+ assert.equal(orderChannelStatus({}, {roomServiceEnabled:"no"}, "room_service").allowed,false);
+ assert.equal(orderChannelStatus({}, {}, "room_service").allowed,true);
 });
 test("configured hours block orders at closing time",()=>{
  const branch={openingTime:"09:00",closingTime:"17:00",timeZone:"UTC"};

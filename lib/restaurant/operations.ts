@@ -166,6 +166,12 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  const diningLookup=await prepareDiningResource(db,tenantId,module,input,id);
  let lookup:string|null=diningLookup??(config.singleton?"config":module==="coupons"?String(input.data.code):null);
+ if(module==="hotelRooms"){
+  const roomNumber=String(input.data.roomNumber),roomKey=String(input.branchId)+":"+roomNumber;
+  const [duplicates]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND lookup_key=? AND archived=FALSE AND id<>? LIMIT 1 FOR UPDATE",[tenantId,input.branchId,roomKey,id]);
+  if(duplicates.length)throw new ResourceError("DUPLICATE_HOTEL_ROOM");
+  lookup=roomKey;
+ }
  if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
  if(module==="team"){
   const email=String(input.data.email).toLowerCase(),memberRole=String(input.data.role),membershipRole=memberRole==="supervisor"?"waiter":memberRole;
@@ -316,11 +322,11 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
  if(!orders.length)return [];
  const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
- return orders.map(o=>{const checkout=o.checkout_snapshot?parseData(o.checkout_snapshot):null;return{...o,pickup_point:checkout?.pickupPoint??null,checkout_snapshot:financial?checkout:null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)};});
+ return orders.map(o=>{const checkout=o.checkout_snapshot?parseData(o.checkout_snapshot):null;return{...o,pickup_point:checkout?.pickupPoint??null,hotel_room:checkout?.hotelRoom??null,checkout_snapshot:financial?checkout:null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)};});
 }
 export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
  const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
- if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!["dine_in","takeaway","delivery"].includes(String(body.channel)))throw new ResourceError("INVALID_INPUT");
+ if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!["dine_in","takeaway","delivery","room_service"].includes(String(body.channel)))throw new ResourceError("INVALID_INPUT");
  if(!cart.every(item=>item&&typeof item.id==="string"&&validCatalogQuantity(item.quantity)))throw new ResourceError("INVALID_CART");
  if(body.kitchenNotes!=null&&(typeof body.kitchenNotes!=="string"||body.kitchenNotes.length>1000)||body.orderNotes!=null&&(typeof body.orderNotes!=="string"||body.orderNotes.length>1000))throw new ResourceError("INVALID_INPUT");
  if(cart.some(item=>item.id.length>36)||body.customerName!=null&&typeof body.customerName!=="string"||body.customerPhone!=null&&typeof body.customerPhone!=="string"||body.couponCode!=null&&(typeof body.couponCode!=="string"||body.couponCode.length>40))throw new ResourceError("INVALID_INPUT");
@@ -329,7 +335,9 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(cart.some(item=>item.options!==undefined&&(!Array.isArray(item.options)||item.options.length>100||item.options.some(id=>typeof id!=="string"||id.length>36))))throw new ResourceError("INVALID_OPTIONS");
  const reservationId=body.reservationId==null?null:String(body.reservationId);
  if(reservationId&&!/^[a-f0-9-]{36}$/i.test(reservationId))throw new ResourceError("INVALID_INPUT");
- const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
+ const roomNumber=body.channel==="room_service"&&typeof body.roomNumber==="string"?body.roomNumber.trim().toLocaleUpperCase("en-US"):"";
+ if(body.channel==="room_service"&&(!customerId||!roomNumber||roomNumber.length>24||!/^[\p{L}\p{N}][\p{L}\p{N} -]{0,23}$/u.test(roomNumber))||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
+ const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,...(roomNumber?{roomNumber}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
  if(requestKey){
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,total,currency,request_fingerprint FROM restaurant_orders WHERE tenant_id=? AND created_by=? AND request_key=? FOR UPDATE",[tenantId,actor,requestKey]);
@@ -357,6 +365,12 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const operatingSettings=(kind:string)=>{const row=orderPolicies.find(item=>item.kind===kind);return row?parseData(row.data):{};};
  const availability=orderChannelStatus(operatingSettings("storefront_config"),operatingSettings("branch_config"),String(body.channel) as OrderChannel);
  if(!availability.allowed)throw new ResourceError(availability.reason!);
+ let hotelRoomSnapshot:{roomNumber:string}|null=null;
+ if(body.channel==="room_service"){
+  const [rooms]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND lookup_key=? AND status='active' AND archived=FALSE LIMIT 1 FOR UPDATE",[tenantId,branchId,branchId+":"+roomNumber]);
+  if(!rooms.length)throw new ResourceError("HOTEL_ROOM_UNAVAILABLE");
+  hotelRoomSnapshot={roomNumber};
+ }
  let pickupPointSnapshot:{id:string;name:string;address:string;instructions:string|null;mapUrl:string|null}|null=null;
  if(body.channel==="takeaway"){
   if(body.pickupPointId!=null&&(typeof body.pickupPointId!=="string"||!/^[-a-f0-9]{36}$/i.test(body.pickupPointId)))throw new ResourceError("PICKUP_POINT_UNAVAILABLE");
@@ -429,7 +443,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if((kitchenNotes?.length??0)>1000||(orderNotes?.length??0)>1000)throw new ResourceError("INVALID_INPUT");
  const settings=await checkoutSettings(db,tenantId);
  const totals=checkoutTotals(subtotal/100,discount/100,String(body.channel),settings.policy);
- const snapshot={version:1,...settings,...totals,...(assignedDriverId?{assignedDriverId}:{}),...(reservationId?{reservationId}:{}),...(pickupPointSnapshot?{pickupPoint:pickupPointSnapshot}:{})};
+ const snapshot={version:1,...settings,...totals,...(assignedDriverId?{assignedDriverId}:{}),...(reservationId?{reservationId}:{}),...(pickupPointSnapshot?{pickupPoint:pickupPointSnapshot}:{}),...(hotelRoomSnapshot?{hotelRoom:hotelRoomSnapshot}:{})};
  const id=randomUUID();
  await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,reservationId,dining?.sectionId??null,body.channel==="dine_in"?partySize:null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);

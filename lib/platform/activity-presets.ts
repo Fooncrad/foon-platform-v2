@@ -1,7 +1,7 @@
 /** Registration-time activity defaults. Keep capabilities separate from plan grants and RBAC. */
 export const ACTIVITY_PRESETS = {
-  restaurant: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments","delivery"],
-  cafe: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments","delivery"],
+  restaurant: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments","delivery","room_service"],
+  cafe: ["catalog","orders","pos","tables","reservations","waitlist","kitchen","waiter","inventory","payments","delivery","room_service"],
   sweets: ["catalog","orders","pos","inventory","payments","delivery"],
   grocery: ["catalog","orders","pos","inventory","barcode","suppliers","delivery","pickup","payments"],
   clothing: ["catalog","orders","pos","inventory","variants","delivery","pickup","payments"],
@@ -41,6 +41,7 @@ export const MODULE_LABELS: Record<string,Record<ActivityLanguage,string>> = {
   suppliers:{ar:"الموردون",en:"Suppliers",fr:"Fournisseurs"},
   delivery:{ar:"التوصيل",en:"Delivery",fr:"Livraison"},
   pickup:{ar:"الاستلام",en:"Pickup",fr:"Retrait"},
+  room_service:{ar:"خدمة الغرف",en:"Room service",fr:"Service en chambre"},
   variants:{ar:"خيارات المنتجات",en:"Product variants",fr:"Variantes de produits"},
   services:{ar:"الخدمات",en:"Services",fr:"Services"},
   bookings:{ar:"المواعيد والحجوزات",en:"Appointments & bookings",fr:"Rendez-vous et réservations"},
