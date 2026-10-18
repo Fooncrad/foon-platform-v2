@@ -52,3 +52,24 @@ Before running stage 2:
 - Safe automatic sync at boot or certified payment reconciliations
 
 No GitHub Actions, automatic merge, production database changes, or deployment.
+
+## Stage 2A: approved minimal local MariaDB persistence fixture (manual Windows run)
+
+Run only on branch `feat/foon-windows-w08-mysql-sync-validation-20261018` after the already successful read-only preflight:
+
+```powershell
+Set-Location "$env:USERPROFILE\Desktop\FOON-Windows-W05"
+git pull --ff-only origin feat/foon-windows-w08-mysql-sync-validation-20261018
+& ".\apps\desktop\run-w08-mariadb-local-integration.ps1"
+```
+
+- The PowerShell runner first executes pure fail-closed Node safety tests, then requests the exact confirmation `WRITE foon_edge_test` and hidden credentials for the dedicated `foon_edge_runner` account.
+- `w08-mariadb-stage2-safety.mjs` only permits `mysql://foon_edge_runner:...@127.0.0.1:3306/foon_edge_test`; the connection must resolve as that user and target and grants must remain database-scoped. Database must **start empty**.
+- Actual MariaDB tests execute only `migrations/0073_edge_sync_inbox.sql` (one validated inbox CREATE TABLE) and create a dedicated `w08_fixture_orders` test table. No full platform migration, real merchant order, customer data, production database, HTTP endpoint, or SQLite files.
+- Four synthetic orders/events verify signed durable receipts, duplicate retry (same receipt and a single order), altered-payload conflict, wrong tenant/branch rejection, 4 concurrent retries, rollback of failed business mutation plus successful retry, and independent synthetic tenant/branch/device scopes. Authenticated real employee/device HTTP policy remains outside this test.
+- Fixture tables and synthetic rows are deliberately **retained for manual inspection** on success. **Do not rerun**: once any table exists the guard refuses because the database is no longer empty. On failure after table creation, do not delete/recreate databases or rerun until the exact failure is reviewed.
+- A pass is a LOCAL MariaDB adapter persistence test, **not** proof that Windows Desktop has synced with production/cloud, nor a license to run `scripts/foon-edge-cloud.integration.test.mjs`.
+
+## Stage 2B: full platform integration — STILL BLOCKED
+
+The older cloud integration calls `scripts/migrate.mjs` on the test database and creates/drops an extra `foon_edge_collation_*` database. Stage 2A intentionally does neither. Use a separate, reviewed fixture strategy before running full platform migrations. Never grant global database privileges to force the older test to pass.
