@@ -29,7 +29,9 @@ GRANT ALL PRIVILEGES ON foon_edge_test.* TO 'foon_edge_runner'@'127.0.0.1';
 
 Do not run those statements against remote/Hostinger servers. If the database or user already exists, inspect first rather than overwriting it; do not delete any existing databases. Granting `*.*` is forbidden.
 
-The stage 1.5 result is only a readiness check. **Passing does not authorize any migration or mutation.**
+On MariaDB 11.8, SHOW GRANTS may include inherited `TO PUBLIC` grants on `test` and the escaped `test\\_%` fixture prefix even when the dedicated account has no direct grants outside `foon_edge_test`. The read-only W08 checker explicitly recognizes **only these two exact PUBLIC test namespaces**, prints a warning, and rejects unknown PUBLIC scopes, direct grants on any other database, any account-level global privileges, and an account recipient other than `foon_edge_runner`. No server-level grant changes are needed for the read-only preflight. PUBLIC rights are still real inherited rights and are NOT evidence of complete account isolation.
+
+The stage 1.5 result is only a readiness check. **Passing does not authorize any migration or mutation.** Stage 2 remains blocked: the pre-existing integration test creates/drops an extra `foon_edge_collation_*` database and may require global CREATE DATABASE, which this safety gate intentionally forbids. Do not grant global privileges just to make the old test pass. First refactor Stage 2 to stay within owned disposable fixture namespaces with separately reviewed credentials.
 
 ## Stage 2: real local MariaDB integration — NOT AUTHORIZED OR EXECUTED YET
 A separate local MariaDB database named foon_edge_test on 127.0.0.1 is required. The existing foon-edge-cloud.integration.test.mjs calls scripts/migrate.mjs against that database and creates/drops additional isolated collation fixture databases. Therefore it is MUTATING, not read-only. It must NOT be run against production, any existing merchant dataset, or a database used by unrelated tests.
