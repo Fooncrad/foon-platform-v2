@@ -30,7 +30,7 @@ test("payment settings isolate tenants and branches, hide secrets and reject sta
   assert.equal((await fetch(origin+"/api/restaurant/payments/settings")).status,401);
   assert.equal((await request(owner,"GET",null,other.tenant)).status,403);
   assert.equal((await request(owner,"PUT",payload,owner.tenant,"https://foreign.example")).status,403);
-  assert.equal((await request(owner,"PUT",{...payload,branch_id:otherBranch.id})).status,404);
+  const foreignBranch=await request(owner,"PUT",{...payload,branch_id:otherBranch.id});assert.equal(foreignBranch.status,404,await foreignBranch.clone().text());
   assert.equal((await request(owner,"PUT",{...payload,enabled:true})).status,409);
   assert.equal((await request(owner,"PUT",{...payload,mode:"live"})).status,400);
   let saved=await request(owner,"PUT",payload);assert.equal(saved.status,200,await saved.clone().text());assert.equal((await saved.json()).version,1);
