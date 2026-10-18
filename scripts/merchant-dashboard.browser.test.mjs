@@ -655,3 +655,40 @@ test('administrator customizes one activity without changing another activity in
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  }finally{await db.end();await context.close();}
 });
+
+test('all activity storefront templates retain distinct direction and responsive cards',async({browser})=>{
+ test.setTimeout(180000);
+ const activities=['cafe','sweets','grocery','clothing','perfume','accessories','watches','gifts','ecommerce','carwash','laundry','automotive','salon','publicworks'];
+ const merchant=await browser.newContext(),customer=await browser.newContext({viewport:{width:320,height:850}});
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ try{
+  const page=await customer.newPage();
+  for(const activity of activities){
+   const slug='storefront-visual-'+activity+'-'+randomUUID().slice(0,8);
+   const registered=await merchant.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Visual merchant',storeName:'Visual '+activity,slug,email:slug+'@test.example',password:'a-strong-test-password',activity,countryCode:'SA',currency:'SAR',region:'الرياض'}});
+   expect(registered.status(),await registered.text()).toBe(201);const account=await registered.json();
+   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
+   const headers={origin,'x-foon-tenant':account.tenant.id};
+   const category=await merchant.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'category',name:'Visual category'}});expect(category.status(),await category.text()).toBe(201);
+   const product=await merchant.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'product',categoryId:(await category.json()).id,name:'Responsive visual product',price:12.5}});expect(product.status(),await product.text()).toBe(201);
+   const settings=await merchant.request.get(origin+'/api/restaurant/activity-template',{headers});expect(settings.status(),await settings.text()).toBe(200);
+   const choices=(await settings.json()).templates;expect(choices.length,activity).toBe(2);
+   for(let i=0;i<choices.length;i++){
+    const template=choices[i];const saved=await merchant.request.put(origin+'/api/restaurant/activity-template',{headers,data:{template}});expect(saved.status(),await saved.text()).toBe(200);
+    const language=activity==='clothing'?'en':activity==='salon'?'fr':'ar';
+    await customer.addCookies([{name:'foon_language',value:language,url:origin}]);
+    for(const width of [320,1440]){
+     await page.setViewportSize({width,height:width===320?850:1000});
+     await page.goto(origin+'/'+slug);
+     const storefront=page.locator('.foonActivityStorefront');
+     await expect(storefront).toHaveAttribute('data-activity',activity);
+     await expect(storefront).toHaveAttribute('data-template',template);
+     await expect(storefront).toHaveAttribute('dir',language==='ar'?'rtl':'ltr');
+     await expect(page.getByRole('heading',{name:'Responsive visual product',exact:true})).toBeVisible();
+     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),activity+'/'+template+'/'+width).toBe(true);
+     const bounds=await page.locator('.foonActivityProduct').first().boundingBox();expect(bounds).not.toBeNull();expect(bounds.x,activity+'/'+template+'/'+width).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width,activity+'/'+template+'/'+width).toBeLessThanOrEqual(width+1);expect(bounds.width,activity+'/'+template+'/'+width).toBeGreaterThan(100);
+    }
+   }
+  }
+ }finally{await db.end();await Promise.all([merchant.close(),customer.close()]);}
+});
