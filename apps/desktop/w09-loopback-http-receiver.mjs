@@ -2,6 +2,7 @@
 // W07 SQLite receiver. Never listen on LAN or contact a production service.
 // No credential or network port is supplied by application configuration.
 import http from "node:http";
+import {timingSafeEqual} from "node:crypto";
 import {createSandboxReceiver} from "./w07-sandbox-receiver.mjs";
 
 function respond(res,status,data){
@@ -33,7 +34,9 @@ export async function startW09LoopbackReceiver({port=0,dbPath,deviceId,tenantId,
     const token=/^Bearer (.+)$/.exec(req.headers.authorization||"")?.[1]||"";
     if(path!=="/edge/sync"&&path!=="/test/state")
       return respond(res,404,{error:"W09_NOT_FOUND"});
-    if(token!==authToken)return respond(res,401,{error:"W09_UNAUTHORIZED"});
+    const supplied=Buffer.from(token),expected=Buffer.from(authToken);
+    if(supplied.length!==expected.length||!timingSafeEqual(supplied,expected))
+      return respond(res,401,{error:"W09_UNAUTHORIZED"});
     if(req.method==="GET"&&path==="/test/state")
       return respond(res,200,receiver.snapshot());
     if(req.method!=="POST"||path!=="/edge/sync")
