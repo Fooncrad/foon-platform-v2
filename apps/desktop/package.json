@@ -1,11 +1,12 @@
 {
   "name": "@foon/desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "FOON Windows station — native shell and local Edge readiness checks",
   "scripts": {
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
+    "w04:prepare": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\prepare-w04.ps1",
     "test": "node --test desktop-gate.test.mjs",
     "preflight": "node desktop-preflight.mjs"
   },
