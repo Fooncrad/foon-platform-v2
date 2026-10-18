@@ -8,7 +8,9 @@
     "desktop:build": "tauri build",
     "w04:prepare": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\prepare-w04.ps1",
     "test": "node --test desktop-gate.test.mjs",
-    "preflight": "node desktop-preflight.mjs"
+    "preflight": "node desktop-preflight.mjs",
+    "desktop:security-audit": "node w11-distribution-audit.mjs",
+    "desktop:release": "node w11-distribution-audit.mjs && tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0"
