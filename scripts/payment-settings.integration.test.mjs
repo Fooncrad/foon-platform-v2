@@ -26,11 +26,12 @@ test("payment settings isolate tenants and branches, hide secrets and reject sta
   const owner=await register("restaurant"),other=await register("salon");
   const [[branch]]=await db.execute("SELECT id FROM branches WHERE tenant_id=? LIMIT 1",[owner.tenant]);
   const [[otherBranch]]=await db.execute("SELECT id FROM branches WHERE tenant_id=? LIMIT 1",[other.tenant]);
+  const [[ownerMembership]]=await db.execute("SELECT role,status FROM memberships WHERE tenant_id=? AND user_id=(SELECT user_id FROM auth_sessions WHERE token_hash=SHA2(?,256)) LIMIT 1",[owner.tenant,owner.cookie.split("=")[1]]);
   const payload={branch_id:null,provider:"moyasar",mode:"test",enabled:false,currency:"SAR",merchant_reference:"",public_key:"pk_test_synthetic",version:null,credentials:{secret_key:"sk_test_synthetic",webhook_secret:"synthetic-webhook"}};
   assert.equal((await fetch(origin+"/api/restaurant/payments/settings")).status,401);
   assert.equal((await request(owner,"GET",null,other.tenant)).status,403);
   assert.equal((await request(owner,"PUT",payload,owner.tenant,"https://foreign.example")).status,403);
-  const foreignBranch=await request(owner,"PUT",{...payload,branch_id:otherBranch.id});assert.equal(foreignBranch.status,404,await foreignBranch.clone().text());
+  const foreignBranch=await request(owner,"PUT",{...payload,branch_id:otherBranch.id});assert.equal(foreignBranch.status,404,JSON.stringify({response:await foreignBranch.clone().text(),ownerMembership}));
   assert.equal((await request(owner,"PUT",{...payload,enabled:true})).status,409);
   assert.equal((await request(owner,"PUT",{...payload,mode:"live"})).status,400);
   let saved=await request(owner,"PUT",payload);assert.equal(saved.status,200,await saved.clone().text());assert.equal((await saved.json()).version,1);
