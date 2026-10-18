@@ -27,6 +27,7 @@ $tests = @(
     ".\apps\desktop\w08-mariadb-stage2-safety.test.mjs",
     ".\apps\desktop\w09-loopback-http.integration.test.mjs",
     ".\apps\desktop\w10-http-mariadb-guard.test.mjs",
+    ".\apps\desktop\w10-http-mariadb-receiver.test.mjs",
     ".\scripts\foon-edge-sync-bridge.test.mjs",
     ".\scripts\foon-edge-sync-worker.test.mjs",
     ".\scripts\foon-edge-mysql-adapter.test.mjs",
