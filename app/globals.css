@@ -721,6 +721,30 @@
 @media(max-width:640px){.foonPublicHeader .foonLogin{display:inline-flex!important;align-items:center;min-height:38px;padding:7px 9px;border:1px solid var(--fp-line);border-radius:10px;font-size:12px}.foonPublicHeader .foonPublicControls{flex-wrap:wrap;justify-content:flex-end;max-width:100%}.foonPublicHeader .foonHeaderCta{display:none}.foonPublicHeader{flex-wrap:wrap}.foonPublicHeader .foonPublicBrand{flex-shrink:0}}
 @media(max-width:370px){.foonPublicHeader .foonLogin{padding:6px 8px}.foonPublicHeader .foonPublicControls{gap:4px}}
 
+/* Keep public language controls compact and on a predictable mobile header row. */
+.foonPublic .foonLanguageSelector select{min-width:96px;max-width:125px}
+@media(max-width:640px){
+ .foonPublicHeader{align-items:center;row-gap:8px}
+ .foonPublicHeader .foonPublicControls{width:auto;flex-wrap:nowrap;align-items:center;gap:5px}
+ .foonPublic .foonLanguageSelector select{width:100px;min-width:0;max-width:100px;min-height:38px;padding-inline:7px;font-size:12px}
+ .foonPublic .foonThemeControl{min-width:38px;min-height:38px}
+ .foonPublicHeader .foonLogin{min-height:38px;padding:6px 8px;font-size:11px}
+}
+@media(max-width:390px){.foonPublicHeader{padding-inline:10px}.foonPublicBrand{gap:7px}.foonPublicBrand small{font-size:7px}.foonPublic .foonLanguageSelector select{width:88px;max-width:88px;font-size:11px}.foonPublicHeader .foonLogin{font-size:10px;padding-inline:6px}}
+
+/* Activity storefront header: controls wrap without creating a tall label row. */
+.foonActivityHeader{min-width:0}
+.foonActivityHeaderNav{min-width:0;justify-content:flex-end}
+.foonActivityLanguageSelector select{min-width:96px;max-width:125px}
+@media(max-width:680px){
+ .foonActivityHeader{display:grid!important;grid-template-columns:minmax(0,1fr);gap:8px!important;padding:10px 14px!important}
+ .foonActivityHeader>a{max-width:100%;overflow-wrap:anywhere}
+ .foonActivityHeaderNav{width:100%;justify-content:flex-start;gap:6px!important}
+ .foonActivityHeaderNav>a,.foonActivityHeaderNav>button{min-height:40px;padding:7px 10px;border:1px solid var(--activity-border,#e6e9ef);border-radius:999px;background:#fff;font-size:12px;white-space:nowrap}
+ .foonActivityLanguageSelector select{min-width:96px;max-width:112px;min-height:40px;font-size:12px}
+}
+@media(max-width:360px){.foonActivityHeaderNav{gap:4px!important}.foonActivityHeaderNav>a,.foonActivityHeaderNav>button{padding-inline:7px;font-size:11px}}
+
 /* Admin navigation: one desktop sidebar and one mobile drawer, with contained scrolling. */
 @media(min-width:851px){.adminShell .adminSide{height:100dvh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminSide>nav{display:grid}.adminShell .adminMobileMenu{display:none}}
 @media(max-width:850px){.adminShell .adminSide>nav{display:none!important}.adminShell .adminMobileMenu{display:block}.adminShell .adminDrawer{max-height:calc(100dvh - 110px)!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminStage{min-width:0}.adminShell .adminStage>.workspace{max-width:100%;overflow-wrap:anywhere}}
@@ -786,3 +810,7 @@ body{min-width:0;overflow-x:clip}
 @media (max-width: 600px) {
   .restaurantOrderActions button { min-height: 44px; }
 }
+/* Shared visually-hidden text used by accessible controls across every surface. */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.foonLanguageSelector{display:inline-flex;align-items:center;min-width:0;max-width:100%}
+.foonLanguageSelector select{min-width:96px;max-width:125px;min-height:40px;padding:7px 8px;border:1px solid var(--border,#d9e2ee);border-radius:10px;background:var(--surface,#fff);color:var(--text,#172033);font:inherit;cursor:pointer}
