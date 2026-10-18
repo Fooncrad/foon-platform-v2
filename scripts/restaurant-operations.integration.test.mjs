@@ -125,7 +125,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
    ["waitlist","Waiting guest",{partySize:2},"waiting"],
    ["remote","Remote task",{description:"Review menu",employeeId,budget:100},"assigned"],
    ["marketing","Campaign",{message:"Test draft only",channel:"email"},"draft"],
-   ["settings","Branch settings",{openingTime:"08:00",closingTime:"23:00"},"active"],
+   ["settings","Branch settings",{timeZone:"UTC",openingTime:"00:00",closingTime:"23:59"},"active"],
    ["storefront","Brand",{primaryColor:"#224466",brandName:"Published brand",menuTheme:"modern",platformBranding:"hidden",roomServiceEnabled:"yes",checkoutRoomServiceFee:3},"active"]
   ])await save(a,module,name,data,status);
   const appearancePath="/api/restaurant/menu/appearance";
