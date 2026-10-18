@@ -38,6 +38,17 @@ test("preparation printers require a routable department while receipt-only prin
  assert.throws(()=>validateResource("printers",base),{code:"REQUIRED_departmentId"});
  assert.equal(validateResource("printers",{...base,data:{...base.data,departmentId:department}}).data.departmentId,department);
  assert.equal(validateResource("printers",{...base,data:{...base.data,purpose:"customer_receipt",printOn:"on_paid"}}).data.departmentId,null);
+ assert.throws(()=>validateResource("printers",{...base,data:{...base.data,purpose:"both"}}),{code:"INVALID_purpose"});
+ assert.equal(validateResource("printers",{...base,id:"33333333-3333-4333-8333-333333333333",data:{...base.data,purpose:"both",departmentId:department}}).data.purpose,"both","existing combined printers remain editable during migration");
+});
+test("printer routing links whole menu categories to operating departments",()=>{
+ const fields=resourceModules.departmentAssignments.fields;
+ assert.equal(resourceModules.departmentAssignments.label,"ربط أقسام المنيو بالطابعات");
+ assert.equal(fields.find(field=>field.key==="categoryId")?.ref,"categories");
+ assert.equal(fields.find(field=>field.key==="departmentId")?.ref,"departments");
+ assert.equal(fields.some(field=>field.key==="itemId"),false);
+ const route=validateResource("departmentAssignments",{name:"القهوة إلى البار",status:"active",data:{departmentId:"11111111-1111-4111-8111-111111111111",categoryId:"22222222-2222-4222-8222-222222222222",printCopies:2}});
+ assert.equal(route.data.categoryId,"22222222-2222-4222-8222-222222222222");
 });
 test("staff roles, coupon bounds and attendance chronology are constrained",()=>{
  assert.throws(()=>validateResource("team",{name:"X",status:"active",data:{email:"x@example.com",role:"owner"}}));

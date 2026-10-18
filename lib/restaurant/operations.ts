@@ -18,7 +18,7 @@ export const parseData=(value:unknown):Record<string,string|number|null>=>typeof
 async function queueOrderPrintJobs(db:PoolConnection,tenantId:string,orderId:string,triggerEvent:"on_accept"|"on_prepare"|"on_paid"){
  const [[order]]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,order_number,channel,table_id,customer_name,customer_phone,kitchen_notes,order_notes,total,currency FROM restaurant_orders WHERE tenant_id=? AND id=? LIMIT 1",[tenantId,orderId]);if(!order)return 0;
  const [[items],[printers],[assignments]]=await Promise.all([
-  db.execute<RowDataPacket[]>("SELECT menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id=? ORDER BY id",[tenantId,orderId]),
+  db.execute<RowDataPacket[]>("SELECT oi.menu_item_id,mi.category_id,oi.item_name,oi.quantity,oi.unit_price,oi.line_total,oi.options_snapshot FROM restaurant_order_items oi LEFT JOIN restaurant_menu_items mi ON mi.id=oi.menu_item_id AND mi.tenant_id=oi.tenant_id WHERE oi.tenant_id=? AND oi.order_id=? ORDER BY oi.id",[tenantId,orderId]),
   db.execute<RowDataPacket[]>("SELECT id,name,data FROM restaurant_resources WHERE tenant_id=? AND (branch_id=? OR branch_id IS NULL) AND kind='printer' AND status='active' AND archived=FALSE",[tenantId,String(order.branch_id)]),
   db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='department_assignment' AND status='active' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL)",[tenantId,String(order.branch_id)])
  ]);
@@ -28,7 +28,7 @@ async function queueOrderPrintJobs(db:PoolConnection,tenantId:string,orderId:str
   if(!printerDispatchAllowed({triggerEvent},config))continue;
   const routed=triggerEvent==="on_paid"?items:routePreparationItems(items,routes,departmentId);if(!routed.length)continue;
   const includePrices=config.includePrices==="yes"||triggerEvent==="on_paid",includeCustomer=config.includeCustomer==="yes",includeNotes=config.includeNotes==="yes";
-  const payload={version:1,orderId:String(order.id),orderNumber:Number(order.order_number),branchId:String(order.branch_id),channel:String(order.channel),tableId:order.table_id?String(order.table_id):null,triggerEvent,printer:{name:String(printer.name),paperWidth:Number(config.paperWidth??80),copies:Number(config.copies??1),purpose,cutPaper:config.cutPaper==="yes",openDrawer:triggerEvent==="on_paid"&&config.openDrawer==="yes",headerText:String(config.headerText??""),footerText:String(config.footerText??"")},...(includeCustomer?{customer:{name:order.customer_name??null,phone:order.customer_phone??null}}:{}),...(includeNotes?{notes:{kitchen:order.kitchen_notes??null,order:order.order_notes??null}}:{}),...(includePrices?{total:Number(order.total),currency:String(order.currency)}:{}),items:routed.map(item=>{const route=routes.find(value=>String(value.itemId??"")===String(item.menu_item_id)&&(!departmentId||String(value.departmentId??"")===departmentId));let options:unknown=item.options_snapshot;try{if(typeof options==="string")options=JSON.parse(options);}catch{options=null;}return{name:String(item.item_name),quantity:Number(item.quantity),...(includePrices?{unitPrice:Number(item.unit_price),lineTotal:Number(item.line_total)}:{}),copies:Math.max(1,Math.min(10,Number(route?.printCopies??1))),options};})};
+  const payload={version:1,orderId:String(order.id),orderNumber:Number(order.order_number),branchId:String(order.branch_id),channel:String(order.channel),tableId:order.table_id?String(order.table_id):null,triggerEvent,printer:{name:String(printer.name),paperWidth:Number(config.paperWidth??80),copies:Number(config.copies??1),purpose,cutPaper:config.cutPaper==="yes",openDrawer:triggerEvent==="on_paid"&&config.openDrawer==="yes",headerText:String(config.headerText??""),footerText:String(config.footerText??"")},...(includeCustomer?{customer:{name:order.customer_name??null,phone:order.customer_phone??null}}:{}),...(includeNotes?{notes:{kitchen:order.kitchen_notes??null,order:order.order_notes??null}}:{}),...(includePrices?{total:Number(order.total),currency:String(order.currency)}:{}),items:routed.map(item=>{const categoryRoute=routes.find(value=>String(value.categoryId??"")===String(item.category_id??""));const route=categoryRoute??routes.find(value=>!routes.some(candidate=>String(candidate.categoryId??"")===String(item.category_id??""))&&String(value.itemId??"")===String(item.menu_item_id)&&(!departmentId||String(value.departmentId??"")===departmentId));let options:unknown=item.options_snapshot;try{if(typeof options==="string")options=JSON.parse(options);}catch{options=null;}return{name:String(item.item_name),quantity:Number(item.quantity),...(includePrices?{unitPrice:Number(item.unit_price),lineTotal:Number(item.line_total)}:{}),copies:Math.max(1,Math.min(10,Number(route?.printCopies??1))),options};})};
   await db.execute("INSERT IGNORE INTO restaurant_print_jobs(id,tenant_id,branch_id,printer_id,source_type,source_id,event_key,payload_json,status) VALUES (?,?,?,?,'order',?,?,?,'pending')",[randomUUID(),tenantId,String(order.branch_id),String(printer.id),orderId,orderId+":"+triggerEvent,JSON.stringify(payload)]);queued++;
  }
  return queued;
@@ -37,7 +37,16 @@ export async function resourceRows(db:PoolConnection,tenantId:string,module:stri
  if(canonicalMenuModules.includes(module))return canonicalMenuRows(db,tenantId,module,branchId);
  const config=resourceModules[module];
  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE"+(branchId?" AND (branch_id=? OR branch_id IS NULL)":"")+" ORDER BY created_at DESC LIMIT 200",branchId?[tenantId,config.kind,branchId]:[tenantId,config.kind]);
- return rows.map(r=>({...r,data:parseData(r.data),version:Number(r.version)})) as StoredResource[];
+ const resources=rows.map(r=>({...r,data:parseData(r.data),version:Number(r.version)})) as StoredResource[];
+ if(module==="departmentAssignments"){
+  const legacyIds=resources.filter(row=>!row.data.categoryId&&row.data.itemId).map(row=>String(row.data.itemId));
+  if(legacyIds.length){
+   const [items]=await db.execute<RowDataPacket[]>("SELECT id,category_id FROM restaurant_menu_items WHERE tenant_id=? AND id IN ("+legacyIds.map(()=>"?").join(",")+")",[tenantId,...legacyIds]);
+   const categories=new Map(items.map(item=>[String(item.id),String(item.category_id)]));
+   for(const row of resources){const categoryId=categories.get(String(row.data.itemId??""));if(categoryId)row.data={...row.data,categoryId};}
+  }
+ }
+ return resources;
 }
 export async function branchExists(db:PoolConnection,tenantId:string,branchId:string|null,activeOnly=true){
  if(!branchId)return;
@@ -166,8 +175,19 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(module==="storefront"&&input.data.menuTheme){await db.execute("INSERT INTO restaurant_menu_appearance(tenant_id,template_key) VALUES (?,?) ON DUPLICATE KEY UPDATE template_key=VALUES(template_key)",[tenantId,input.data.menuTheme]);}
  if(config.singleton)input.branchId=null;
  await branchExists(db,tenantId,input.branchId);
+ if(module==="departmentAssignments"){
+  const profile=await salesProfile(db,tenantId),categoryId=String(input.data.categoryId??"");
+  if(profile.catalog){
+   const [categories]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM catalog_categories WHERE id=? AND tenant_id=? AND enabled=TRUE"+(input.branchId?" AND (branch_id=? OR branch_id IS NULL)":"")+" LIMIT 1 LOCK IN SHARE MODE",input.branchId?[categoryId,tenantId,input.branchId]:[categoryId,tenantId]);
+   if(!categories.length)throw new ResourceError("REFERENCE_NOT_FOUND");
+  }else{
+   const category=(await canonicalMenuRows(db,tenantId,"categories",input.branchId,categoryId))[0];
+   if(!category||category.status!=="active")throw new ResourceError("REFERENCE_NOT_FOUND");
+  }
+ }
  for(const field of config.fields.filter(f=>f.type==="ref")){
   const value=input.data[field.key];if(!value)continue;
+  if(module==="departmentAssignments"&&field.key==="categoryId")continue;
   if(field.ref==="orders"){
    const [orders]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[value,tenantId]);
    if(!orders.length||input.branchId&&orders[0].branch_id&&orders[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");

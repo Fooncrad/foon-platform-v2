@@ -139,6 +139,14 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
     }
     const config=resourceModules[field.ref!];
     if(!config)continue;
+    if(module==="departmentAssignments"&&field.ref==="categories"){
+     const profile=await salesProfile(db,ctx.tenantId);
+     if(profile.catalog){
+      const [categories]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name_ar FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" ORDER BY sort_order,id LIMIT 500",branch?[ctx.tenantId,branch]:[ctx.tenantId]);
+      refs.categories=categories.map(category=>({id:String(category.id),name:String(category.name_ar),status:"active",branch_id:category.branch_id?String(category.branch_id):null,data:{}}));
+     }else refs.categories=await resourceRows(db,ctx.tenantId,"categories",branch);
+     continue;
+    }
     if((["owner","manager"].includes(ctx.role)||config.roles.includes(ctx.role))&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled)&&!(field.ref==="team"&&!["owner","manager"].includes(ctx.role)))refs[field.ref!]=field.ref==="tables"&&module==="reservations"?await availableTables(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,field.ref!,field.ref==="team"?null:branch);
    }
    let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;

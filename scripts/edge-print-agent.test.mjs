@@ -30,12 +30,15 @@ test("kitchen tickets wait for staff acceptance and receipts wait for both compl
 });
 
 test("items print only at the printer assigned to their current department",()=>{
- const items=[{menu_item_id:"food-1",item_name:"Meal"},{menu_item_id:"drink-1",item_name:"Coffee"},{menu_item_id:"dessert-1",item_name:"Cake"}];
- const assignments=[{itemId:"food-1",departmentId:"kitchen-id"},{itemId:"drink-1",departmentId:"bar-id"},{itemId:"dessert-1",departmentId:"new-section-created-later"}];
- assert.deepEqual(routePreparationItems(items,assignments,"kitchen-id").map(item=>item.item_name),["Meal"],"food is printed in the kitchen");
+ const items=[{menu_item_id:"food-1",category_id:"food-category",item_name:"Meal"},{menu_item_id:"food-2",category_id:"food-category",item_name:"Burger"},{menu_item_id:"drink-1",category_id:"drink-category",item_name:"Coffee"},{menu_item_id:"dessert-1",category_id:"dessert-category",item_name:"Cake"}];
+ const assignments=[{categoryId:"food-category",departmentId:"kitchen-id"},{categoryId:"drink-category",departmentId:"bar-id"},{categoryId:"dessert-category",departmentId:"new-section-created-later"}];
+ assert.deepEqual(routePreparationItems(items,assignments,"kitchen-id").map(item=>item.item_name),["Meal","Burger"],"every food in the menu category prints in the kitchen");
  assert.deepEqual(routePreparationItems(items,assignments,"bar-id").map(item=>item.item_name),["Coffee"],"coffee is printed at the bar");
  assert.deepEqual(routePreparationItems(items,assignments,"new-section-created-later").map(item=>item.item_name),["Cake"]);
  assert.deepEqual(routePreparationItems(items,assignments,null),[]);
+ assert.deepEqual(routePreparationItems([{menu_item_id:"legacy",item_name:"Old route"}],[{itemId:"legacy",departmentId:"kitchen-id"}],"kitchen-id").map(item=>item.item_name),["Old route"],"existing item routes remain supported while stores migrate");
+ assert.deepEqual(routePreparationItems([{menu_item_id:"legacy",category_id:"shared",item_name:"Moved item"}],[{itemId:"legacy",departmentId:"kitchen-id"},{categoryId:"shared",departmentId:"bar-id"}],"kitchen-id"),[],"new category routing takes precedence over a stale item route");
+ assert.deepEqual(routePreparationItems([{menu_item_id:"legacy",category_id:"shared",item_name:"Moved item"}],[{itemId:"legacy",departmentId:"kitchen-id"},{categoryId:"shared",departmentId:"bar-id"}],"bar-id").map(item=>item.item_name),["Moved item"]);
 });
 
 test("ESC/POS output includes accepted preparation and paid receipt content",()=>{
