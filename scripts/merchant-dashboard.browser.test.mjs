@@ -151,11 +151,27 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await mobileDock.getByRole('link',{name:'القائمة',exact:true}).click();
   expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   await captureScreenshot(publicPage,{path:"work/menu-"+template+"-mobile.png",fullPage:true});
-  const gridBounds=await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>nodes.slice(0,4).map(n=>{const r=n.getBoundingClientRect();return {top:r.top,width:r.width}}));expect(gridBounds.length).toBe(4);expect(Math.max(...gridBounds.map(r=>r.top))-Math.min(...gridBounds.map(r=>r.top)),JSON.stringify(gridBounds)).toBeLessThan(2);expect(gridBounds.every(r=>r.width>55&&r.width<100)).toBeTruthy();
+  const gridBounds=await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>nodes.slice(0,4).map(n=>{const r=n.getBoundingClientRect();return {top:r.top,width:r.width}}));expect(gridBounds.length).toBe(4);expect(gridBounds[0].top,JSON.stringify(gridBounds)).toBe(gridBounds[1].top);expect(gridBounds[2].top,JSON.stringify(gridBounds)).toBe(gridBounds[3].top);expect(gridBounds.every(r=>r.width>140&&r.width<190)).toBeTruthy();
   const coffeeCard=publicPage.locator('.publicMenuItem').filter({has:publicPage.getByRole('heading',{name:'قهوة المعاينة',exact:true})});await expect(coffeeCard.getByRole('img',{name:'قهوة المعاينة',exact:true})).toHaveJSProperty('naturalWidth',800);await expect(coffeeCard.locator('del')).toContainText('14.00');await expect(coffeeCard.locator('.publicMenuProductPrice strong')).toContainText('10.00');expect(await coffeeCard.locator('p').evaluate(n=>n.scrollHeight>n.clientHeight)).toBeTruthy();
   await captureScreenshot(publicPage,{path:"work/menu-"+template+"-mobile.png",fullPage:true});
  }
- await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenuItem').evaluateAll(nodes=>Math.max(...nodes.slice(0,4).map(n=>n.getBoundingClientRect().top))-Math.min(...nodes.slice(0,4).map(n=>n.getBoundingClientRect().top)))).toBeLessThan(2);
+ const localeSelect=publicPage.getByRole('combobox',{name:'Language / اللغة'}),menuRoot=publicPage.locator('.publicMenu');
+ for(const language of ['ar','en','fr']){
+  await localeSelect.selectOption(language);await expect(menuRoot).toHaveAttribute('lang',language);await expect(menuRoot).toHaveAttribute('dir',language==='ar'?'rtl':'ltr');
+  for(const width of [320,390,768,1024,1440]){
+   await publicPage.setViewportSize({width,height:900});
+   const layout=await publicPage.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,direction:getComputedStyle(document.querySelector('.publicMenu')).direction,titleDirection:getComputedStyle(document.querySelector('.publicMenuSectionTitle')).direction,columns:getComputedStyle(document.querySelector('.publicMenu .publicMenuLayout .publicMenuItems')).gridTemplateColumns.split(' ').length}));
+   expect(layout.scrollWidth,`${language} ${width}px overflow`).toBeLessThanOrEqual(layout.width);expect(layout.direction).toBe(language==='ar'?'rtl':'ltr');expect(layout.titleDirection).toBe(layout.direction);
+   const expectedColumns=width<=340?1:width<=700?2:width<=1150?2:4;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
+   if(language==='ar'&&width===320||language==='en'&&width===768||language==='fr'&&width===1440)await captureScreenshot(publicPage,{path:`work/menu-responsive-${language}-${width}.png`,fullPage:true});
+  }
+ }
+ await localeSelect.selectOption('ar');await publicPage.setViewportSize({width:390,height:844});
+ const themeToggle=publicPage.getByRole('button',{name:'تبديل الوضع الليلي'});
+ await themeToggle.click();await expect(menuRoot).toHaveAttribute('data-color-mode','light');
+ const darkContrast=await menuRoot.evaluate(el=>{const s=getComputedStyle(el),hex=(v)=>{const n=v.replace('#','');return [0,2,4].map(i=>parseInt(n.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4)};const lum=hex(s.getPropertyValue('--public-brand').trim()).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0),on=hex(s.getPropertyValue('--public-on-brand').trim()).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0);return (Math.max(lum,on)+.05)/(Math.min(lum,on)+.05)});expect(darkContrast).toBeGreaterThanOrEqual(4.5);
+ await themeToggle.click();await expect(menuRoot).toHaveAttribute('data-color-mode','dark');
+ await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenu .publicMenuLayout .publicMenuItems').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)).toBe(1);
  expect(await publicPage.locator('.publicMenuMobileDock').evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>=0&&r.left>=0&&r.right<=innerWidth})).toBeTruthy();
  await publicPage.setViewportSize({width:390,height:844});
  await publicPage.getByRole('button',{name:'تفاصيل قهوة المعاينة',exact:true}).click();const details=publicPage.getByRole('dialog',{name:'قهوة المعاينة',exact:true});await expect(details).toBeVisible();await expect(details.getByText(fullDescription,{exact:true})).toBeVisible();await expect(details.getByText('مسببات الحساسية',{exact:true})).toBeVisible();await expect(details.getByText('بروتين 3 غرام · كربوهيدرات 10 غرام',{exact:true})).toBeVisible();await expect(details.getByText('120 kcal',{exact:true})).toBeVisible();await expect(details.locator('del')).toContainText('14.00');
