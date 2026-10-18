@@ -10,7 +10,7 @@ export async function GET(request:Request){
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const tenantId=new URL(request.url).searchParams.get("tenantId")??"";
  if(!/^[a-f0-9-]{36}$/i.test(tenantId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
- try{await requireTenantMembership(user,tenantId,["owner","manager","waiter","cashier","kitchen","driver","accountant"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ try{await requireTenantMembership(user,tenantId,["owner","manager","waiter","cashier","kitchen","driver","accountant"],false);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  try{
   const entitlement=await tenantEntitlement(tenantId,"tables");
   if(!entitlement.enabled)return NextResponse.json({ok:false,code:entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED"},{status:403});

@@ -5,19 +5,19 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {encryptSmtpPassword,tenantMailSettings} from "@/lib/restaurant/mail-settings";
 export const runtime="nodejs";
-async function authorize(request:Request){
+async function authorize(request:Request,write:boolean){
  const user=await currentUserId();if(!user)throw Error("UNAUTHENTICATED");
  const tenantId=request.headers.get("x-foon-tenant")??"";
- await requireTenantMembership(user,tenantId,["owner","manager"]);
+ await requireTenantMembership(user,tenantId,["owner","manager"],write);
  return tenantId;
 }
 export async function GET(request:Request){
- try{const tenantId=await authorize(request);const s=await tenantMailSettings(tenantId);
+ try{const tenantId=await authorize(request,false);const s=await tenantMailSettings(tenantId);
  return NextResponse.json({ok:true,mode:s?.mode==="custom"?"custom":"platform",host:s?.smtp_host??"",port:465,user:s?.smtp_user??"",fromName:s?.smtp_from_name??"",passwordSet:Boolean(s?.smtp_secret),platformConfigured:Boolean(process.env.SMTP_PASSWORD)});
  }catch{return NextResponse.json({ok:false,code:"MAIL_SETTINGS_UNAVAILABLE"},{status:403});}
 }
 export async function PUT(request:Request){
- try{assertSameOrigin(request);const tenantId=await authorize(request);
+ try{assertSameOrigin(request);const tenantId=await authorize(request,true);
  const body=await request.json().catch(()=>null);
  if(!body||!["platform","custom"].includes(body.mode))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  if(body.mode==="platform"){

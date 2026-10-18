@@ -13,7 +13,7 @@ async function authorize(request:Request){
  const tenant=request.headers.get("x-foon-tenant");
  if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
- const ctx=await requireTenantMembership(id,tenant,["owner","manager"]);
+ const ctx=await requireTenantMembership(id,tenant,["owner","manager"],request.method!=="GET");
  const [rows]=await database().execute<RowDataPacket[]>("SELECT kind FROM tenants WHERE id=? AND status='active' LIMIT 1",[ctx.tenantId]);
  if(rows[0]?.kind!=="restaurant")return {error:NextResponse.json({ok:false,code:"RESTAURANT_ONLY"},{status:403})};
  return {tenantId:ctx.tenantId};

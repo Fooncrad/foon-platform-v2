@@ -14,6 +14,25 @@ import {debitCatalogVariant,salesProfile,activityPosOptions,activitySaleItem,deb
 
 export type StoredResource={currency?:string;id:string;branch_id:string|null;name:string;status:string;data:Record<string,string|number|null>;version:number|string;created_at:string};
 export const parseData=(value:unknown):Record<string,string|number|null>=>typeof value==="string"?JSON.parse(value):value as Record<string,string|number|null>;
+async function queueOrderPrintJobs(db:PoolConnection,tenantId:string,orderId:string,triggerEvent:"on_accept"|"on_prepare"|"on_paid"){
+ const [[order]]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,order_number,channel,table_id,customer_name,customer_phone,kitchen_notes,order_notes,total,currency FROM restaurant_orders WHERE tenant_id=? AND id=? LIMIT 1",[tenantId,orderId]);if(!order)return 0;
+ const [[items],[printers],[assignments]]=await Promise.all([
+  db.execute<RowDataPacket[]>("SELECT menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id=? ORDER BY id",[tenantId,orderId]),
+  db.execute<RowDataPacket[]>("SELECT id,name,data FROM restaurant_resources WHERE tenant_id=? AND (branch_id=? OR branch_id IS NULL) AND kind='printer' AND status='active' AND archived=FALSE",[tenantId,String(order.branch_id)]),
+  db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='department_assignment' AND status='active' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL)",[tenantId,String(order.branch_id)])
+ ]);
+ const routes=assignments.map(row=>parseData(row.data));let queued=0;
+ for(const printer of printers){
+  const config=parseData(printer.data),departmentId=String(config.departmentId??"");
+  if(config.autoPrint!=="yes"||config.printOn!==triggerEvent)continue;
+  const purpose=String(config.purpose??"preparation");if(triggerEvent==="on_paid"?!["customer_receipt","both"].includes(purpose):!["preparation","both"].includes(purpose))continue;
+  const routed=items.filter(item=>!departmentId||routes.some(route=>String(route.itemId??"")===String(item.menu_item_id)&&String(route.departmentId??"")===departmentId));if(!routed.length)continue;
+  const includePrices=config.includePrices==="yes",includeCustomer=config.includeCustomer==="yes",includeNotes=config.includeNotes==="yes";
+  const payload={version:1,orderId:String(order.id),orderNumber:Number(order.order_number),branchId:String(order.branch_id),channel:String(order.channel),tableId:order.table_id?String(order.table_id):null,triggerEvent,printer:{name:String(printer.name),paperWidth:Number(config.paperWidth??80),copies:Number(config.copies??1),purpose,cutPaper:config.cutPaper==="yes",openDrawer:triggerEvent==="on_paid"&&config.openDrawer==="yes",headerText:String(config.headerText??""),footerText:String(config.footerText??"")},...(includeCustomer?{customer:{name:order.customer_name??null,phone:order.customer_phone??null}}:{}),...(includeNotes?{notes:{kitchen:order.kitchen_notes??null,order:order.order_notes??null}}:{}),...(includePrices?{total:Number(order.total),currency:String(order.currency)}:{}),items:routed.map(item=>{const route=routes.find(value=>String(value.itemId??"")===String(item.menu_item_id)&&(!departmentId||String(value.departmentId??"")===departmentId));let options:unknown=item.options_snapshot;try{if(typeof options==="string")options=JSON.parse(options);}catch{options=null;}return{name:String(item.item_name),quantity:Number(item.quantity),...(includePrices?{unitPrice:Number(item.unit_price),lineTotal:Number(item.line_total)}:{}),copies:Math.max(1,Math.min(10,Number(route?.printCopies??1))),options};})};
+  await db.execute("INSERT IGNORE INTO restaurant_print_jobs(id,tenant_id,branch_id,printer_id,source_type,source_id,event_key,payload_json,status) VALUES (?,?,?,?,'order',?,?,?,'pending')",[randomUUID(),tenantId,String(order.branch_id),String(printer.id),orderId,orderId+":"+triggerEvent,JSON.stringify(payload)]);queued++;
+ }
+ return queued;
+}
 export async function resourceRows(db:PoolConnection,tenantId:string,module:string,branchId?:string|null){
  if(canonicalMenuModules.includes(module))return canonicalMenuRows(db,tenantId,module,branchId);
  const config=resourceModules[module];
@@ -47,444 +66,149 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   }
   if(module==="quotations"&&previous?.status!=="draft")throw new ResourceError("QUOTATION_ARCHIVE_FORBIDDEN");
   if(module==="customerInvoices"&&previous?.status!=="draft")throw new ResourceError("INVOICE_ARCHIVE_FORBIDDEN");
-  if(["sections","tables"].includes(module)){const field=module==="sections"?"sectionId":"tableId";const [[used]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,?))=? AND (kind='dining_table' OR status IN ('pending','confirmed','seated','in_progress'))",[tenantId,id,"$."+field,id]) as [RowDataPacket[],unknown];if(Number(used.n))throw new ResourceError("SECTION_IN_USE");}
-  if(module==="team"){const data=parseData(previous!.data);if(data.userId===actor||role!=="owner"&&data.role==="manager")throw new ResourceError("FORBIDDEN");if(data.userId)await db.execute("UPDATE memberships SET status='suspended' WHERE tenant_id=? AND user_id=? AND role<>'owner'",[tenantId,data.userId]);}
-  await db.execute("UPDATE restaurant_resources SET archived=TRUE,lookup_key=NULL,version=version+1 WHERE id=? AND tenant_id=?",[id,tenantId]);
-  await audit(db,tenantId,actor,module+".archive",id);return {id};
- }
- if(module==="quotations"&&previous){
-  const from=String(previous.status),to=String(body.status??"");
-  const transitions:Record<string,string[]>={draft:["draft","sent","cancelled"],sent:["sent","accepted","rejected","cancelled"],accepted:[],rejected:[],cancelled:[]};
-  if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
-  if(from==="sent"&&to==="accepted"){const validUntil=String(parseData(previous.data).validUntil??"");if(validUntil&&Date.parse(validUntil+"T23:59:59.999Z")<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
-  if(from==="sent"&&JSON.stringify(parseData(previous.data))!==JSON.stringify(body.data??{}))throw new ResourceError("QUOTATION_SENT_IMMUTABLE");
-  if(from==="sent"&&(String(previous.name)!==String(body.name??"")||String(previous.branch_id??"")!==String(body.branchId??"")))throw new ResourceError("QUOTATION_SENT_IMMUTABLE");
- }
- if(module==="quotations"&&!previous&&!["draft","sent"].includes(String(body.status)))throw new ResourceError("INVALID_QUOTATION_TRANSITION");
- const input=validateResource(module,body);
- if(module==="reservations"){
-  const oldStatus=previous?String(previous.status):null;
-  if(!reservationTransitionAllowed(oldStatus,String(input.status)))throw new ResourceError("INVALID_RESERVATION_TRANSITION");
-  if(input.status==="no_show"){
-   if(!previous)throw new ResourceError("INVALID_RESERVATION_TRANSITION");
-   const original=parseData(previous.data);
-   const [settings]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='branch_config' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) AND JSON_TYPE(JSON_EXTRACT(data,'$.noShowGraceMinutes')) IN ('INTEGER','DOUBLE') ORDER BY (branch_id IS NOT NULL) DESC,updated_at DESC,created_at DESC LIMIT 1",[tenantId,input.branchId??previous.branch_id]);
-   const setting=settings[0]?parseData(settings[0].data):{};
-   if(!reservationNoShowDue(original.scheduledAt,setting.noShowGraceMinutes))throw new ResourceError("RESERVATION_NO_SHOW_NOT_DUE");
-   const reservationFields=resourceModules.reservations.fields.map(field=>field.key);
-   if(reservationFields.some(key=>JSON.stringify(original[key]??null)!==JSON.stringify(input.data[key]??null))||String(previous.name)!==String(input.name)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("RESERVATION_NO_SHOW_DATA_IMMUTABLE");
-  }
- }
- if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}
- if(module==="serviceOrders"){
-  const inputOrder=validateResource(module,body);
-  if(!serviceOrderTransitionAllowed(previous?String(previous.status):null,String(inputOrder.status)))throw new ResourceError("INVALID_SERVICE_ORDER_TRANSITION");
-  if(previous){
-   const old=parseData(previous.data);
-   if(old.quotationId!==inputOrder.data.quotationId)throw new ResourceError("SERVICE_ORDER_QUOTATION_IMMUTABLE");
-   if(["completed","cancelled"].includes(String(previous.status))&&(JSON.stringify(old)!==JSON.stringify(inputOrder.data)||String(previous.name)!==String(inputOrder.name)||String(previous.branch_id??"")!==String(inputOrder.branchId??"")))throw new ResourceError("SERVICE_ORDER_FINAL_IMMUTABLE");
-  }
-  if(inputOrder.data.quotationId){
-   const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[inputOrder.data.quotationId,tenantId]);
-   if(!quotes.length||quotes[0].status!=="accepted"||quotes[0].branch_id&&quotes[0].branch_id!==inputOrder.branchId)throw new ResourceError("SERVICE_ORDER_QUOTATION_NOT_ACCEPTED");
-   const quote=parseData(quotes[0].data);
-   if(Math.round(Number(quote.amount)*100)!==Math.round(Number(inputOrder.data.amount)*100)||String(quote.customerName)!==String(inputOrder.data.customerName)||String(quote.serviceDescription)!==String(inputOrder.data.serviceDescription))throw new ResourceError("SERVICE_ORDER_QUOTATION_MISMATCH");
-   const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,inputOrder.data.quotationId]);
-   if(linked.length)throw new ResourceError("SERVICE_ORDER_ALREADY_CREATED");
-  }
- }
- if(module==="customerInvoices"&&previous){
-  const from=String(previous.status),to=String(input.status);
-  const transitions:Record<string,string[]>={draft:["draft","issued","void"],issued:["issued","paid","void"],paid:["paid"],void:["void"]};
-  if(!transitions[from]?.includes(to))throw new ResourceError("INVALID_INVOICE_TRANSITION");
-  if(from!=="paid"&&to==="paid")throw new ResourceError("INVOICE_SETTLEMENT_REQUIRED");
- }
- if(module==="customerInvoices"&&!previous&&!["draft","issued"].includes(String(input.status)))throw new ResourceError("INVALID_INVOICE_TRANSITION");
- if(module==="customerInvoices"&&previous&&["issued","paid","void"].includes(String(previous.status))){
-  if(JSON.stringify(parseData(previous.data))!==JSON.stringify(input.data)||String(previous.branch_id??"")!==String(input.branchId??"")||String(previous.name)!==String(input.name))throw new ResourceError("ISSUED_INVOICE_IMMUTABLE");
- }
- if(module==="customerInvoices"&&previous&&parseData(previous.data).quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_QUOTATION_LINK_IMMUTABLE");
- if(module==="customerInvoices"&&previous&&parseData(previous.data).orderId!==input.data.orderId)throw new ResourceError("INVOICE_ORDER_LINK_IMMUTABLE");
+  if(["sections","tables"].includes(module)){const field=module==="sections"?"sectionId":"tableId";const [[used]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,?))=? AND (kind='dining_table' OR status IN ('pending','confirmed','seated','in_progress'))",[tenantId,id,"$."+field,id]) as [RowDataPuÓ½µ¶‰ËkºwµçKİ[“[X™\Š^\İ[™ÖÌKİ[
+Kİ\œ™[˜ŞN”İš[™Ê^\İ[™ÖÌK˜İ\œ™[˜ŞJ_NßBˆBˆ]ØZ]œ˜[˜Ú^\İÊ‹[˜[Yœ˜[˜ÚY
+NÂˆ]™\Ù\˜][Û‘]N”™XÛÜ™İš[™Ë[šÛ›İÛŸ[[[ÂˆYŠ™\Ù\˜][Û’Y
+^ÂˆYŠ›ÙK˜Ú[›™[OOH™[™WÚ[ˆŸXİ\İÛY\’Y
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”‘TÑT•USÓ—ÓÔ‘T—ÒS•SQŠNÂˆÛÛœİÜ™\Ù\˜][Ûœ×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕYœ˜[˜ÚÚYİ]\Ë]H”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈÒT‘H[˜[ÚYOÈS‘YOÈS‘Ú[™IÜ™\Ù\˜][Û‰ÈS‘\˜Ú]™YQSÑHS‘İ]\ÈSˆ
+	Ü[™[™ÉË	ØÛÛ™š\›YY	ÊHS‘œ˜[˜ÚÚYOÈ“ÔˆTUH‹İ[˜[Y™\Ù\˜][Û’Yœ˜[˜ÚYJNÂˆYŠ\™\Ù\˜][ÛœË›[™İ
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”‘TÑT•USÓ—Ó“ÕĞURSP“HŠNÂˆ™\Ù\˜][Û‘]O\\œÙQ]J™\Ù\˜][ÛœÖÌK™]JNÂˆÛÛœİØÚY[Y]Q]Kœ\œÙJİš[™Ê™\Ù\˜][Û‘]KœØÚY[Y]ÏÈˆŠJNÂˆYŠİš[™Ê™\Ù\˜][Û‘]K˜İ\İÛY\•\Ù\’YÏÈˆŠHOOXİ\İÛY\’YS[X™\‹š\Ñš[š]JØÚY[Y]
+_ØÚY[Y]Q]K››İÊ
+J]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”‘TÑT•USÓ—Ó“ÕĞURSP“HŠNÂˆÛÛœİ\TÚ^™OS[X™\Š™\Ù\˜][Û‘]Kœ\TÚ^™JNÂˆYŠS[X™\‹š\Ò[YÙ\Š\TÚ^™J_\TÚ^™O_\TÚ^™OŒL
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”‘TÑT•USÓ—Ó“ÕĞURSP“HŠNÂˆÛÛœİÜš[Ü“Ü™\œ×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕY”“ÓH™\İ]\˜[ÛÜ™\œÈÒT‘H[˜[ÚYOÈS‘™\Ù\˜][Û—ÚYOÈSRUH“ÔˆTUH‹İ[˜[Y™\Ù\˜][Û’YJNÂˆYŠš[Ü“Ü™\œË›[™İ
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”‘TÑT•USÓ—ĞS‘PQWÓÔ‘T‘QŠNÂˆBˆËÈ[™›Ü˜ÙHHØ[YH]˜Z[Xš[]H[\È›ÜˆÔËX›XÈY[K[™[Xİ]š]HİÜ™\Ë‚ˆÛÛœİÛÜ™\”ÛXÚY\×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠˆ”ÑSPÕÚ[™]H”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈÒT‘H[˜[ÚYOÈS‘\˜Ú]™YQSÑHS‘İ]\ÏIØXİ]™IÈS‘
+Ú[™IÜİÜ™Yœ›ÛØÛÛ™šYÉÈÔˆ
+Ú[™IØœ˜[˜ÚØÛÛ™šYÉÈS‘œ˜[˜ÚÚYOÊJHÔ‘Tˆ–HÜ™X]YØ]TĞÈ‹ˆİ[˜[Yœ˜[˜ÚYBˆ
+NÂˆÛÛœİÜ\˜][™ÔÙ][™ÜÏJÚ[™œİš[™ÊOOØÛÛœİ›İÏ[Ü™\”ÛXÚY\Ë™š[™
+][OOš][KšÚ[™OOZÚ[™
+NÜ™]\›ˆ›İÏÜ\œÙQ]J›İË™]JNßNßNÂˆÛÛœİ]˜Z[Xš[]O[Ü™\Ú[›™[İ]\ÊÜ\˜][™ÔÙ][™ÜÊœİÜ™Yœ›ÛØÛÛ™šYÈŠKÜ\˜][™ÔÙ][™ÜÊ˜œ˜[˜ÚØÛÛ™šYÈŠKİš[™Ê›ÙK˜Ú[›™[
+H\ÈÜ™\Ú[›™[
+NÂˆYŠX]˜Z[Xš[]K˜[İÙY
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ]˜Z[Xš[]Kœ™X\ÛÛˆJNÂˆ]İ[›ÛÛTÛ˜\ÚİÜ›ÛÛS[X™\œİš[™ß_[[[ÂˆYŠ›ÙK˜Ú[›™[OOHœ›ÛÛWÜÙ\šXÙHŠ^ÂˆÛÛœİÜ›ÛÛ\×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕY”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈÒT‘H[˜[ÚYOÈS‘œ˜[˜ÚÚYOÈS‘Ú[™IÚİ[Ü›ÛÛIÈS‘ÛÚİ\ÚÙ^OOÈS‘İ]\ÏIØXİ]™IÈS‘\˜Ú]™YQSÑHSRUH“ÔˆTUH‹İ[˜[Yœ˜[˜ÚYœ˜[˜ÚY
+ÈˆŠÜ›ÛÛS[X™\—JNÂˆYŠ\›ÛÛ\Ë›[™İ
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’ÕSÔ“ÓÓWÕSURSP“HŠNÂˆİ[›ÛÛTÛ˜\Úİ^Ü›ÛÛS[X™\ŸNÂˆBˆ]XÚİ\Ú[Û˜\ÚİÚYœİš[™ÎÛ˜[YNœİš[™ÎØY™\ÜÎœİš[™ÎÚ[œİXİ[ÛœÎœİš[™ß[ÛX\\›œİš[™ß[_[[[ÂˆYŠ›ÙK˜Ú[›™[OOHZÙX]Ø^HŠ^ÂˆYŠ›ÙKœXÚİ\Ú[YO[[	‰Š\[Ùˆ›ÙKœXÚİ\Ú[YOOHœİš[™ÈŸK×–ËXKYŒNW^ÌÍŸIÚK\İ
+›ÙKœXÚİ\Ú[Y
+JJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”PÒÕTÔÒS•ÕSURSP“HŠNÂˆÛÛœİÜXÚİ\Ú[×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕY˜[YK]H”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈÒT‘H[˜[ÚYOÈS‘œ˜[˜ÚÚYOÈS‘Ú[™IÜXÚİ\ÜÚ[	ÈS‘İ]\ÏIØXİ]™IÈS‘\˜Ú]™YQSÑHÔ‘Tˆ–H˜[YKY“ÔˆTUH‹İ[˜[Yœ˜[˜ÚYJNÂˆYŠXÚİ\Ú[Ë›[™İ	‰˜İ\İÛY\’Y	‰ˆX›ÙKœXÚİ\Ú[Y
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”PÒÕTÔÒS•Ô‘TURT‘QŠNÂˆYŠ›ÙKœXÚİ\Ú[Y
+^ØÛÛœİÚ[\XÚİ\Ú[Ë™š[™
+›İÏO”İš[™Ê›İËšY
+OOOX›ÙKœXÚİ\Ú[Y
+NÚYŠ\Ú[
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”PÒÕTÔÒS•ÕSURSP“HŠNØÛÛœİ]O\\œÙQ]JÚ[™]JNÜXÚİ\Ú[Û˜\Úİ^ÚY”İš[™ÊÚ[šY
+K˜[YN”İš[™ÊÚ[›˜[YJKY™\ÜÎ”İš[™Ê]K˜Y™\ÜÏÏÈˆŠK[œİXİ[ÛœÎ™]Kš[œİXİ[ÛœÏÔİš[™Ê]Kš[œİXİ[ÛœÊN›[X\\›™]K›X\\›Ôİš[™Ê]K›X\\›
+N›[NßBˆY[ÙHYŠ›ÙKœXÚİ\Ú[YO[[
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÒS”UŠNÂˆÛÛœİ›Ùš[OX]ØZ]Ø[\Ô›Ùš[J‹[˜[Y
+NÂˆYŠ›ÙK˜İ\œ™[˜ŞHOO][™Yš[™Y	‰˜›ÙK˜İ\œ™[˜ŞHOO\›Ùš[K˜İ\œ™[˜ŞJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠÕT”‘SÖWĞÒS‘ÑQŠNÂˆYŠ\›Ùš[K™[š[™É‰˜›ÙK˜Ú[›™[OOH™[™WÚ[ˆŠ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠÒS“‘SÕSURSP“HŠNÂˆ]\ÜÚYÛ™Yš]™\’Yœİš[™ß[[[ÂˆYŠ›ÙK˜Ú[›™[OOH™[]™\HŠ^ÂˆËÈ]˜Z[Xš[]H\ÈÙ\™\‹Y[™›Ü˜ÙYˆHœ˜[˜Ú]\İ]™H[ˆXİ]™H\ÜÚYÛ™Yš]™\‹‚ˆÛÛœİÙš]™\œ×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠˆ”ÑSPÕKšY”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈH“ÒSˆY[X™\œÚ\ÈHÓˆK[˜[ÚYYK[˜[ÚYS‘K\Ù\—ÚYR”ÓÓ—ÕS”USÕJ”ÓÓ—ÑVPÕ
+K™]K	É\Ù\’Y	ÊJHS‘Kœ›ÛOIÙš]™\‰ÈS‘Kœİ]\ÏIØXİ]™IÈ“ÒSˆ[\ŞYYWØœ˜[˜ÚØ\ÜÚYÛ›Y[ÈHÓˆK[˜[ÚYYK[˜[ÚYS‘K\Ù\—ÚY[K\Ù\—ÚYS‘K˜œ˜[˜ÚÚYOÈS‘K™[˜X›YU•QHÒT‘HK[˜[ÚYOÈS‘K˜œ˜[˜ÚÚYOÈS‘KšÚ[™IÙ[\ŞYYIÈS‘K˜\˜Ú]™YQSÑHS‘Kœİ]\ÏIØXİ]™IÈS‘”ÓÓ—ÕS”USÕJ”ÓÓ—ÑVPÕ
+K™]K	Éœ›ÛIÊJOIÙš]™\‰ÈÔ‘Tˆ–HKšY“ÔˆTUH‹ˆØœ˜[˜ÚY[˜[Yœ˜[˜ÚYBˆ
+NÂˆËÈÛ™HXİ]™H[]™\H\ˆš]™\‹ˆØÚÚ[™ÈH[YÚX›Hš]™\ˆ›İÜÈÙ\šX[^™\ÂˆËÈÛÛ˜İ\œ™[ÚXÚÛİ]ÈÛÈHØ[YH]˜Z[X›Hš]™\ˆØ[››İ™HİX›KX›ÛÚÙY‚ˆ›ÜŠÛÛœİš]™\ˆÙˆš]™\œÊ^ÂˆÛÛœİØXİ]™WOX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕY”“ÓH™\İ]\˜[ÛÜ™\œÈÒT‘H[˜[ÚYOÈS‘Ú[›™[IÙ[]™\IÈS‘”ÓÓ—ÕS”USÕJ”ÓÓ—ÑVPÕ
+ÚXÚÛİ]ÜÛ˜\Úİ	É˜\ÜÚYÛ™Yš]™\’Y	ÊJOOÈS‘İ]\È“ÕSˆ
+	ØÛÛ\]Y	Ë	ØØ[˜Ù[Y	ÊHSRUH“ÔˆTUH‹İ[˜[Yİš[™Êš]™\‹šY
+WJNÂˆYŠXXİ]™K›[™İ
+^Ø\ÜÚYÛ™Yš]™\’YTİš[™Êš]™\‹šY
+NØœ™XZÎßBˆBˆYŠX\ÜÚYÛ™Yš]™\’Y
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ‘SU‘T–WÑ’U‘T—ÕSURSP“HŠNÂˆB‚ˆÛÛœİİØÚÑXš]Î”İØÚÑXš]×OV×NÂˆÛÛœİÚÚXÙ\Ï\›Ùš[K˜Ø][ÙÏØ]ØZ]Xİ]š]TÜÓÜ[ÛœÊ‹[˜[YØ\›X\
+][OOš][KšY
+KYJN˜]ØZ]Y[SÜ[ÛœÊ‹[˜[YØ\›X\
+][OOš][KšY
+JNÂˆÛÛœİ[™\ÎÚYœİš[™ÎÛ˜[YNœİš[™ÎÜ]X[]N›[X™\ÜšXÙN›[X™\İİ[›[X™\ÛÜ[ÛœÎÛ˜[YNœİš[™ÎÜšXÙN›[X™\ŸV×_V×OV×NÛ]İXİ[LÂˆ›ÜŠÛÛœİ][HÙˆË‹‹˜Ø\KœÛÜ
 
- if(module==="customerInvoices"&&previous&&parseData(previous.data).serviceOrderId!==input.data.serviceOrderId)throw new ResourceError("INVOICE_SERVICE_ORDER_LINK_IMMUTABLE");
- if(module==="customerInvoices"&&input.data.serviceOrderId){
-  if(input.data.orderId)throw new ResourceError("INVOICE_MULTIPLE_ORDER_SOURCES");
-  const [services]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[input.data.serviceOrderId,tenantId]);
-  if(!services.length||services[0].status==="cancelled")throw new ResourceError("SERVICE_ORDER_NOT_BILLABLE");
-  if(input.branchId&&services[0].branch_id&&input.branchId!==services[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH");
-  const service=parseData(services[0].data);
-  if(input.data.quotationId&&service.quotationId!==input.data.quotationId)throw new ResourceError("INVOICE_SOURCE_QUOTATION_MISMATCH");
-  const total=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
-  if(!Number.isSafeInteger(total)||total!==Math.round(Number(service.amount)*100))throw new ResourceError("SERVICE_ORDER_INVOICE_AMOUNT_MISMATCH");
-  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,input.data.serviceOrderId]);
-  if(linked.length)throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
- }
+KŠOO”İš[™ÊKšY
+K›ØØ[PÛÛ\\™Jİš[™Ê‹šY
+JJJ^ÂˆYŠZ][_\[Ùˆ][KšYOOHœİš[™ÈŸ]˜[YØ][ÙÔ]X[]J][Kœ]X[]JJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQĞĞT•ŠNÂˆÛÛœİÜ›İÜ×O\›Ùš[K˜Ø][ÙÏÖÖØ]ØZ]Xİ]š]TØ[R][J‹[˜[Yœ˜[˜ÚY][KšY
+WWN˜]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕKšYK›˜[YKKœšXÙKK˜İ\œ™[˜ŞKK˜œ˜[˜ÚÚY”“ÓH™\İ]\˜[ÛY[WÚ][\ÈH“ÒSˆ™\İ]\˜[ÛY[WØØ]YÛÜšY\ÈÈÓˆËšYZK˜Ø]YÛÜWÚYS‘Ë[˜[ÚYZK[˜[ÚYS‘Ë™[˜X›YU•QHQ•“ÒSˆ™\İ]\˜[Ü™\Ûİ\˜Ù\ÈHÓˆKšYZKšYS‘K[˜[ÚYZK[˜[ÚYÒT‘HKšYOÈS‘K[˜[ÚYOÈS‘K™[˜X›YU•QHS‘ÓĞSTĞÑJK˜\˜Ú]™YSÑJOQSÑHSRUHĞÒÈSˆÒT‘HSÑH‹Ú][KšY[˜[YJNÂˆYŠ\›İÜË›[™İ›İÜÖÌK˜œ˜[˜ÚÚY	‰œ›İÜÖÌK˜œ˜[˜ÚÚYOOXœ˜[˜ÚY
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’USWÕSURSP“HŠNÂˆYŠ›İÜÖÌK˜İ\œ™[˜ŞHOO\›Ùš[K˜İ\œ™[˜ŞJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ•S”ÕTÔ•QĞÕT”‘SÖHŠNÂˆYŠS[X™\‹š\Ò[YÙ\Š][Kœ]X[]JI‰Š\›Ùš[K˜Ø][ÙßXØ][ÙÔ]X[]TÛXŞJ›İÜÖÌK˜]šX]\ÊK›YX\İ\™Y
+J]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQĞĞT•ŠNÂˆÛÛœİÙ[XİYZ][K›Ü[ÛœÏÏÖ×KÜ›İ\ÏXÚÚXÙ\ÖÚ][KšYOÏÖ×K˜[YYÜ›İ\Ë™›]X\
+Ü›İ\O™Ü›İ\˜[Y\ÊNÂˆYŠ™]ÈÙ]
+Ù[XİY
+KœÚ^™HOO\Ù[XİY›[™İÙ[XİYœÛÛYJYOˆ]˜[YœÛÛYJO‹šYOOZY
+JJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÓÔSÓ”ÈŠNÂˆ›ÜŠÛÛœİÜ›İ\ÙˆÜ›İ\Ê^ØÛÛœİÛİ[\Ù[XİY™š[\ŠYO™Ü›İ\˜[Y\ËœÛÛYJO‹šYOOZY
+JK›[™İÚYŠÛİ[
+Ü›İ\œ™\]Z\™YÓX]›X^
+KÜ›İ\›Z[ŠN™Ü›İ\›Z[Š_Ûİ[ŠÜ›İ\\OOOHœÚ[™ÛHÓX]›Z[ŠKÜ›İ\›X^
+N™Ü›İ\›X^
+J]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÓÔSÓ”ÈŠNßBˆÛÛœİÜ[ÛœÏ]˜[Y™š[\ŠOœÙ[XİYš[˜ÛY\Ê‹šY
+JK›X\
+OŠÛ˜[YN‹›˜[YKšXÙN‹œšXÙ_JJNÂˆÛÛœİšXÙOSX]œ›İ[™
+[X™\Š›İÜÖÌKœšXÙJJŒL
+JÛÜ[ÛœËœ™YXÙJ
+İ[KÜ[ÛŠOOœİ[JÓX]œ›İ[™
+Ü[Û‹œšXÙJŒL
+K
+NÂˆYŠS[X™\‹š\Ñš[š]JšXÙJ_šXÙOšXÙOŒL
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’USWÕSURSP“HŠNÂˆYŠ›Ùš[K˜Ø][ÙÊ^Ø]ØZ]Xš]Ø][ÙÕ˜\šX[
+‹[˜[Y][KšYÙ[XİY][Kœ]X[]KİØÚÑXš]ÊNØ]ØZ]Xš]Xİ]š]TİØÚÊ‹[˜[Yœ›ÙXİ‹][KšY][Kœ]X[]KİØÚÑXš]ÊNÙ›ÜŠÛÛœİÜ[ÛˆÙˆÙ[XİY
+X]ØZ]Xš]Xİ]š]TİØÚÊ‹[˜[Y›Ü[Ûˆ‹Ü[Û‹][Kœ]X[]KİØÚÑXš]ÊNØ]ØZ][œİ\™PXİ]š]TØ[T™Y™\™[˜ÙJ‹[˜[Y›İÜÖÌJNßBˆ[ÙH]ØZ]‹™^Xİ]J’S”ÑT•QÓ“Ô‘HS•È™\İ]\˜[Ü™\Ûİ\˜Ù\ÊY[˜[ÚYÚ[™˜[YKİ]\Ë]JHSQTÈ
+ËË	ÛY[WÚ][IËË	ØXİ]™IË	ŞßIÊH‹Ú][KšY[˜[Y›İÜÖÌK›˜[YWJNÂˆÛÛœİİ[SX]œ›İ[™
+šXÙJ“X]œ›İ[™
+][Kœ]X[]JŒL
+KÌL
+NÜİXİ[
+Ï]İ[Û[™\Ëœ\Ú
+ÚYš][KšY˜[YNœ›Ùš[K˜Ø][ÙÉ‰˜Ø][ÙÔ]X[]TÛXŞJ›İÜÖÌK˜]šX]\ÊK›YX\İ\™YÔİš[™Ê›İÜÖÌK›˜[YJKœÛXÙJMŠJÈˆÈŠØØ][ÙÔ]X[]TÛXŞJ›İÜÖÌK˜]šX]\ÊK[š]”İš[™Ê›İÜÖÌK›˜[YJK]X[]Nš][Kœ]X[]KšXÙNœšXÙKÌLİ[İ[ÌLÜ[ÛœßJNÂˆBˆYŠİXİ[NNNNNNNNNNNJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQĞĞT•ŠNÂˆÛÛœİX›RYX›ÙK˜Ú[›™[OOH™[™WÚ[ˆ‰‰ˆ\™\Ù\˜][Û’Y	‰˜›ÙKX›RYÔİš[™Ê›ÙKX›RY
+N›[ÂˆÛÛœİ\TÚ^™O\™\Ù\˜][Û‘]OÓ[X™\Š™\Ù\˜][Û‘]Kœ\TÚ^™JN“[X™\Š›ÙKœ\TÚ^™JNÂˆYŠ›ÙK˜Ú[›™[OOH™[™WÚ[ˆ‰‰Š]X›RY	‰ˆ\™\Ù\˜][Û‘]_S[X™\‹š\Ò[YÙ\Š\TÚ^™J_\TÚ^™OJJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ‘S’S‘×ÑURS×Ô‘TURT‘QŠNÂˆÛÛœİ[š[™Ï]X›RYØ]ØZ][š[™ÕX›J‹[˜[Yœ˜[˜ÚYX›RY[X™\Š›ÙKœ\TÚ^™JJN›[ÂˆYŠX›RY
+^ÂˆËÈÙ\šX[^™HÜ™\œÈ›ÜˆHX›HÈ™]™[ÛÈÛÛ˜İ\œ™[ÚXÚÛİ]Èœ›ÛHZÚ[™È]‚ˆÛÛœİİ[™š[š\ÚYOX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠˆ”ÑSPÕY”“ÓH™\İ]\˜[ÛÜ™\œÈÒT‘H[˜[ÚYOÈS‘œ˜[˜ÚÚYOÈS‘X›WÚYOÈS‘
+İ]\ÈTÈ•SÔˆİ]\È“ÕSˆ
+	ØÛÛ\]Y	Ë	ØØ[˜Ù[Y	Ë	Ù[]™\™Y	Ë	Ü™Y[™Y	Ë	Ü™Z™XİY	ÊJHSRUH“ÔˆTUH‹ˆİ[˜[Yœ˜[˜ÚYX›RYBˆ
+NÂˆYŠ[™š[š\ÚY›[™İ
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ•P“WÒT×ÕS‘’S’TÒQÓÔ‘TˆŠNÂˆBˆ]Ûİ\Û’Yœİš[™ß[[[\ØÛİ[LÂˆYŠ›ÙK˜Ûİ\ÛÛÙJ^ÂˆÛÛœİÜ›İÜ×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕY]H”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈÒT‘H[˜[ÚYOÈS‘Ú[™IØÛİ\Û‰ÈS‘ÛÚİ\ÚÙ^OOÈS‘İ]\ÏIØXİ]™IÈS‘\˜Ú]™YQSÑH“ÔˆTUH‹İ[˜[Yİš[™Ê›ÙK˜Ûİ\ÛÛÙJKš[J
+KÕ\\Ø\ÙJ
+WJNÂˆYŠ\›İÜË›[™İ
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠÓÕTÓ—ÕSURSP“HŠNØÛÛœİÛİ\Û\\œÙQ]J›İÜÖÌK™]JNÂˆYŠÛİ\Û‹™[™Ğ]	‰‘]Kœ\œÙJİš[™ÊÛİ\Û‹™[™Ğ]
+JOQ]K››İÊ
+J]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠÓÕTÓ—ÕSURSP“HŠNÂˆYŠÛİ\Û‹\ØYÙS[Z]
+^ØÛÛœİÖİ\ÙYWOX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕÓÕS•
 
- // A converted quotation may retain both references: each is independently
- // validated against the same invoice total, without adding the amounts together.
- if(module==="customerInvoices"&&input.data.quotationId){
-  const [quotes]=await db.execute<RowDataPacket[]>("SELECT status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[input.data.quotationId,tenantId]);
-  if(!quotes.length||quotes[0].status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
-  if(input.branchId&&quotes[0].branch_id&&input.branchId!==quotes[0].branch_id)throw new ResourceError("REFERENCE_NOT_FOUND");
-  if(input.data.orderId){
-   const [linkedOrders]=await db.execute<RowDataPacket[]>("SELECT branch_id,customer_phone FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[input.data.orderId,tenantId]);
-   if(!linkedOrders.length)throw new ResourceError("REFERENCE_NOT_FOUND");
-   if(quotes[0].branch_id&&linkedOrders[0].branch_id&&quotes[0].branch_id!==linkedOrders[0].branch_id)throw new ResourceError("INVOICE_SOURCE_BRANCH_MISMATCH");
-   const quotedPhone=String(parseData(quotes[0].data).customerPhone??"").replace(/[^0-9]/g,"");
-   const orderedPhone=String(linkedOrders[0].customer_phone??"").replace(/[^0-9]/g,"");
-   if(quotedPhone&&orderedPhone&&quotedPhone!==orderedPhone)throw new ResourceError("INVOICE_SOURCE_CUSTOMER_MISMATCH");
-  }
-  const quotedAmount=Math.round(Number(parseData(quotes[0].data).amount)*100);
-  const invoiceAmount=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
-  if(!Number.isSafeInteger(quotedAmount)||quotedAmount!==invoiceAmount)throw new ResourceError("QUOTATION_INVOICE_AMOUNT_MISMATCH");
-  const [linked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,input.data.quotationId]);
-  if(linked.length)throw new ResourceError("QUOTATION_ALREADY_INVOICED");
- }
- if(module==="storefront"&&input.data.menuTheme){await db.execute("INSERT INTO restaurant_menu_appearance(tenant_id,template_key) VALUES (?,?) ON DUPLICATE KEY UPDATE template_key=VALUES(template_key)",[tenantId,input.data.menuTheme]);}
- if(config.singleton)input.branchId=null;
- await branchExists(db,tenantId,input.branchId);
- for(const field of config.fields.filter(f=>f.type==="ref")){
-  const value=input.data[field.key];if(!value)continue;
-  if(field.ref==="orders"){
-   const [orders]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,total,status FROM restaurant_orders WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[value,tenantId]);
-   if(!orders.length||input.branchId&&orders[0].branch_id&&orders[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
-   if(module==="customerInvoices"){
-    if(orders[0].status==="cancelled")throw new ResourceError("INVOICE_ORDER_CANCELLED");
-    const total=Math.round(Number(orders[0].total)*100);
-    const invoiceTotal=Math.round((Number(input.data.subtotal??0)+Number(input.data.taxAmount??0)+Number(input.data.serviceFee??0))*100);
-    if(!Number.isSafeInteger(total)||total!==invoiceTotal)throw new ResourceError("ORDER_INVOICE_AMOUNT_MISMATCH");
-    const [linkedInvoices]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE AND id<>? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.orderId'))=? LIMIT 1 FOR UPDATE",[tenantId,id,value]);
-    if(linkedInvoices.length)throw new ResourceError("ORDER_ALREADY_INVOICED");
-   }
-   continue;
-  }
-  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE LIMIT 1 LOCK IN SHARE MODE",[value,tenantId,resourceModules[field.ref!].kind]);
-  if(!rows.length||input.branchId&&rows[0].branch_id&&rows[0].branch_id!==input.branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
- }
- if(module==="tables"&&input.status==="available"&&previous?.status!=="available"){
-  const [active]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND table_id=? AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected')) LIMIT 1",[tenantId,id]);
-  if(active.length)throw new ResourceError("TABLE_HAS_UNFINISHED_ORDER");
-  const [reservations]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=?",[tenantId,id]);
-  if(reservations.some(row=>{const data=parseData(row.data);const start=Date.parse(String(data.scheduledAt??""));const duration=Number(data.durationMinutes??90);return Number.isFinite(start)&&start<=Date.now()&&Date.now()<start+duration*60000;}))throw new ResourceError("TABLE_HAS_ACTIVE_RESERVATION");
- }
- const diningLookup=await prepareDiningResource(db,tenantId,module,input,id);
- let lookup:string|null=diningLookup??(config.singleton?"config":module==="coupons"?String(input.data.code):null);
- if(module==="hotelRooms"){
-  const roomNumber=String(input.data.roomNumber),roomKey=String(input.branchId)+":"+roomNumber;
-  const [duplicates]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND lookup_key=? AND archived=FALSE AND id<>? LIMIT 1 FOR UPDATE",[tenantId,input.branchId,roomKey,id]);
-  if(duplicates.length)throw new ResourceError("DUPLICATE_HOTEL_ROOM");
-  lookup=roomKey;
- }
- if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
- if(module==="team"){
-  const email=String(input.data.email).toLowerCase(),memberRole=String(input.data.role),membershipRole=memberRole==="supervisor"?"waiter":memberRole;
-  if(role!=="owner"&&memberRole==="manager")throw new ResourceError("FORBIDDEN");
-  const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE email=? AND status='active' LIMIT 1 LOCK IN SHARE MODE",[email]);
-  const userId=users.length?String(users[0].id):null;
-  const [members]=userId?await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? FOR UPDATE",[tenantId,userId]):[[] as RowDataPacket[]];
-  if(userId===actor)throw new ResourceError("EMPLOYEE_SELF_ASSIGNMENT_NOT_ALLOWED");
-  if(members.some(m=>m.role==="owner"))throw new ResourceError("EMPLOYEE_OWNER_ROLE_PROTECTED");
-  if(role!=="owner"&&members.some(m=>m.role==="manager"))throw new ResourceError("EMPLOYEE_MANAGER_ROLE_PROTECTED");
-  if(previous&&String(parseData(previous.data).email??"").toLowerCase()!==email)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
-  if(previous&&parseData(previous.data).userId&&parseData(previous.data).userId!==userId)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
-  if(userId){await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status)",[randomUUID(),tenantId,userId,membershipRole,input.status]);input.data.userId=userId;}
-  else {input.data.invitationStatus="pending";input.status="suspended";}
-  if(userId)input.data.invitationStatus="linked";
-  input.data.email=email;lookup=email;
- }
- if(module==="purchases"){
-  if(previous?.status==="received")throw new ResourceError("RECEIVED_PURCHASE_IMMUTABLE");
-  if(input.status==="received"){
-   const [stocks]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='inventory_item' AND archived=FALSE FOR UPDATE",[input.data.inventoryId,tenantId]);
-   if(!stocks.length)throw new ResourceError("REFERENCE_NOT_FOUND");
-   const stock=parseData(stocks[0].data),quantity=Number(stock.quantity)+Number(input.data.quantity);
-   if(!Number.isFinite(quantity)||quantity>1000000)throw new ResourceError("INVALID_QUANTITY");
-   stock.quantity=Math.round(quantity*1000)/1000;
-   await db.execute("UPDATE restaurant_resources SET data=?,version=version+1 WHERE id=? AND tenant_id=?",[JSON.stringify(stock),stocks[0].id,tenantId]);
-  }
- }
- if(previous)await db.execute("UPDATE restaurant_resources SET name=?,status=?,branch_id=?,data=?,lookup_key=?,version=version+1 WHERE id=? AND tenant_id=?",[input.name,input.status,input.branchId,JSON.stringify(input.data),lookup,id,tenantId]);
- else await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[id,tenantId,input.branchId,config.kind,input.name,input.status,JSON.stringify(input.data),lookup]);
- await audit(db,tenantId,actor,module+".save",id,{status:input.status});
- return {id};
-}
+ŠHTÈˆ”“ÓH™\İ]\˜[ÛÜ™\œÈÒT‘H[˜[ÚYOÈS‘Ûİ\Û—ÚYOÈS‘İ]\Ï‰ØØ[˜Ù[Y	È‹İ[˜[Y›İÜÖÌKšYJNÚYŠ[X™\Š\ÙY›ŠOS[X™\ŠÛİ\Û‹\ØYÙS[Z]
+J]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠÓÕTÓ—ÓSRUÔ‘PPÒQŠNßBˆÛİ\Û’YTİš[™Ê›İÜÖÌKšY
+NÙ\ØÛİ[SX]›Z[ŠİXİ[Ûİ\Û‹™\ØÛİ[\OOOHœ\˜Ù[ÓX]œ›İ[™
+İXİ[
+“[X™\ŠÛİ\Û‹˜[YJKÌL
+N“X]œ›İ[™
+[X™\ŠÛİ\Û‹˜[YJJŒL
+JNÂˆBˆÛÛœİİ\İÛY\“˜[YOX›ÙK˜İ\İÛY\“˜[YOO[[Û[”İš[™Ê›ÙK˜İ\İÛY\“˜[YJKš[J
+KÛ™OX›ÙK˜İ\İÛY\”Û™OO[[Û[”İš[™Ê›ÙK˜İ\İÛY\”Û™JKš[J
+NÂˆYŠ
+İ\İÛY\“˜[YOË›[™İÏÌ
+OŒN
+Û™OË›[™İÏÌ
+O
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÒS”UŠNÂˆÛÛœİÚ]Ú[“›İ\ÏX›ÙKšÚ]Ú[“›İ\ÏO[[Û[”İš[™Ê›ÙKšÚ]Ú[“›İ\ÊKš[J
+KÜ™\“›İ\ÏX›ÙK›Ü™\“›İ\ÏO[[Û[”İš[™Ê›ÙK›Ü™\“›İ\ÊKš[J
+NÂˆYŠ
+Ú]Ú[“›İ\ÏË›[™İÏÌ
+OŒL
+Ü™\“›İ\ÏË›[™İÏÌ
+OŒL
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÒS”UŠNÂˆÛÛœİÙ][™ÜÏX]ØZ]ÚXÚÛİ]Ù][™ÜÊ‹[˜[Y
+NÂˆÛÛœİİ[ÏXÚXÚÛİ]İ[ÊİXİ[ÌL\ØÛİ[ÌLİš[™Ê›ÙK˜Ú[›™[
+KÙ][™ÜËœÛXŞJNÂˆÛÛœİÛ˜\Úİ^İ™\œÚ[ÛŒK‹‹œÙ][™ÜË‹‹İ[Ë‹‹Š\ÜÚYÛ™Yš]™\’YŞØ\ÜÚYÛ™Yš]™\’YNßJK‹‹Š™\Ù\˜][Û’YŞÜ™\Ù\˜][Û’YNßJK‹‹ŠXÚİ\Ú[Û˜\ÚİŞÜXÚİ\Ú[œXÚİ\Ú[Û˜\ÚİNßJK‹‹Šİ[›ÛÛTÛ˜\ÚİŞÚİ[›ÛÛNšİ[›ÛÛTÛ˜\ÚİNßJ_NÂˆÛÛœİY\˜[™ÛUURQ
 
-/** Atomically convert the server-stored, accepted quotation into a service order.
- * Lock the quotation first: concurrent conversions serialize on this same row.
- * Never trust prices, customer data or the quotation status supplied by a browser.
- */
-export async function convertAcceptedQuotation(db:PoolConnection,tenantId:string,actor:string,role:string,quotationId:string,requestedBranch:string|null){
- if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(quotationId))throw new ResourceError("INVALID_INPUT");
- const [quotes]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_quotation' AND archived=FALSE FOR UPDATE",[quotationId,tenantId]);
- if(!quotes.length)throw new ResourceError("REFERENCE_NOT_FOUND");
- const quote=quotes[0];
- if(quote.status!=="accepted")throw new ResourceError("QUOTATION_NOT_ACCEPTED");
- const quoteBranch=quote.branch_id?String(quote.branch_id):null;
- if(quoteBranch&&requestedBranch&&quoteBranch!==requestedBranch)throw new ResourceError("REFERENCE_NOT_FOUND");
- const branchId=quoteBranch??requestedBranch;
- await branchExists(db,tenantId,branchId);
- // Include archived rows in the duplicate guard: archival must never permit re-conversion.
- const [linked]=await db.execute<RowDataPacket[]>("SELECT id,archived,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=? LIMIT 2 FOR UPDATE",[tenantId,quotationId]);
- if(linked.length){
-  if(linked.length!==1||Number(linked[0].archived))throw new ResourceError("SERVICE_ORDER_ALREADY_CREATED");
-  if(branchId&&linked[0].branch_id&&String(linked[0].branch_id)!==branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
-  return {id:String(linked[0].id),existing:true};
- }
- const data=parseData(quote.data),amount=Number(data.amount);
- if(!Number.isFinite(amount)||amount<0||amount>100000000)throw new ResourceError("INVALID_QUOTATION_AMOUNT");
- const saved=await saveResource(db,tenantId,actor,role,"serviceOrders",{
-  name:String(quote.name),status:"new",branchId,
-  data:{quotationId,customerName:String(data.customerName??""),customerPhone:String(data.customerPhone??""),serviceDescription:String(data.serviceDescription??""),amount,notes:String(data.notes??"")}
- });
- await audit(db,tenantId,actor,"quotation.convert",saved.id,{quotationId});
- return {...saved,existing:false};
-}
+NÂˆ]ØZ]‹™^Xİ]J’S”ÑT•S•È™\İ]\˜[ÛÜ™\œÊY[˜[ÚYœ˜[˜ÚÚYX›WÚY™\Ù\˜][Û—ÚY[š[™×ÜÙXİ[Û—ÚY\WÜÚ^™K[š[™×ÜÛ˜\ÚİÛİ\Û—ÚYİ\İÛY\—Û˜[YKİ\İÛY\—ÜÛ™Kİ\İÛY\—İ\Ù\—ÚYÜ™X]YØK™\]Y\İÚÙ^K™\]Y\İÙš[™Ù\œš[Ú[›™[İXİ[\ØÛİ[İ[Ú]Ú[—Û›İ\ËÜ™\—Û›İ\Ëİ\œ™[˜ŞKÚXÚÛİ]ÜÛ˜\Úİ
+HSQTÈ
+ËËËËËËËËËËËËËËËËËËËËËËÊH‹ÚY[˜[Yœ˜[˜ÚYX›RY™\Ù\˜][Û’Y[š[™ÏËœÙXİ[Û’YÏÛ[›ÙK˜Ú[›™[OOH™[™WÚ[ˆÜ\TÚ^™N›[[š[™ÏÒ”ÓÓ‹œİš[™ÚYJ[š[™ÊN›[Ûİ\Û’Yİ\İÛY\“˜[YKÛ™Kİ\İÛY\’YXİÜ‹™\]Y\İÙ^Kš[™Ù\œš[İš[™Ê›ÙK˜Ú[›™[
+KİXİ[ÌL\ØÛİ[ÌLİ[Ëİ[Ú]Ú[“›İ\ËÜ™\“›İ\Ë›Ùš[K˜İ\œ™[˜ŞK”ÓÓ‹œİš[™ÚYJÛ˜\Úİ
+WJNÂˆYŠX›RY
+X]ØZ]‹™^Xİ]J•TUH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈÑUİ]\ÏIÛØØİ\YY	Ë™\œÚ[Û]™\œÚ[ÛŠÌHÒT‘HYOÈS‘[˜[ÚYOÈS‘Ú[™IÙ[š[™×İX›IÈS‘İ]\ÏIØ]˜Z[X›IÈ‹İX›RY[˜[YJNÂˆ›ÜŠÛÛœİ[™HÙˆ[™\ÊX]ØZ]‹™^Xİ]J’S”ÑT•S•È™\İ]\˜[ÛÜ™\—Ú][\ÊY[˜[ÚYÜ™\—ÚYY[WÚ][WÚY][WÛ˜[YK]X[]K[š]ÜšXÙK[™Wİİ[Ü[Ûœ×ÜÛ˜\Úİ
+HSQTÈ
+ËËËËËËËËÊH‹Ü˜[™ÛUURQ
 
-/** Produce an unissued invoice draft from a completed service order.
- * The client supplies only the source ID and optional authorized branch;
- * amounts and customer source are read under row lock on the server.
- */
-export async function draftInvoiceForCompletedService(db:PoolConnection,tenantId:string,actor:string,role:string,serviceOrderId:string,requestedBranch:string|null){
- if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(serviceOrderId))throw new ResourceError("INVALID_INPUT");
- const [orders]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='service_order' AND archived=FALSE FOR UPDATE",[serviceOrderId,tenantId]);
- if(!orders.length)throw new ResourceError("REFERENCE_NOT_FOUND");
- const order=orders[0],sourceBranch=order.branch_id?String(order.branch_id):null;
- if(sourceBranch&&requestedBranch&&sourceBranch!==requestedBranch)throw new ResourceError("REFERENCE_NOT_FOUND");
- const branchId=sourceBranch??requestedBranch;
- await branchExists(db,tenantId,branchId);
- if(order.status!=="completed")throw new ResourceError("SERVICE_ORDER_NOT_COMPLETED");
- const [invoices]=await db.execute<RowDataPacket[]>("SELECT id,archived,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=? LIMIT 2 FOR UPDATE",[tenantId,serviceOrderId]);
- if(invoices.length){
-  if(invoices.length!==1||Number(invoices[0].archived))throw new ResourceError("SERVICE_ORDER_ALREADY_INVOICED");
-  if(branchId&&invoices[0].branch_id&&String(invoices[0].branch_id)!==branchId)throw new ResourceError("REFERENCE_NOT_FOUND");
-  return {id:String(invoices[0].id),existing:true};
- }
- const details=parseData(order.data),amount=Number(details.amount);
- if(!Number.isFinite(amount)||amount<0||amount>100000000)throw new ResourceError("INVALID_SERVICE_ORDER_AMOUNT");
- const quotationId=typeof details.quotationId==="string"&&details.quotationId?details.quotationId:null;
- const saved=await saveResource(db,tenantId,actor,role,"customerInvoices",{
-  name:"ÙØ§ØªÙˆØ±Ø© Ø®Ø¯Ù…Ø©: "+String(order.name),status:"draft",branchId,
-  data:{serviceOrderId,quotationId,subtotal:amount,taxAmount:0,serviceFee:0}
- });
- await audit(db,tenantId,actor,"service_order.invoice_draft",saved.id,{serviceOrderId,quotationId});
- return {...saved,existing:false};
-}
-
-/** Merchant-attested manual receipt. This is NOT a gateway/bank verification.
- * Invoice locks serialize competing receipts; settlement records cannot be mutated
- * through resource APIs and are written in the same transaction as the paid status.
- */
-export async function confirmManualInvoiceReceipt(
- db:PoolConnection,tenantId:string,actor:string,invoiceId:string,requestedBranch:string|null,
- method:unknown,reference:unknown,amount:unknown,attested:unknown
-){
- if(typeof invoiceId!=="string"||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(invoiceId))throw new ResourceError("INVALID_INPUT");
- if(method!=="cash"&&method!=="bank_transfer")throw new ResourceError("INVALID_SETTLEMENT_METHOD");
- if(typeof reference!=="string"||!new RegExp("^[A-Za-z0-9][A-Za-z0-9_./ -]{5,119}$").test(reference.trim()))throw new ResourceError("INVALID_SETTLEMENT_REFERENCE");
- if(typeof amount!=="number"||!Number.isFinite(amount)||amount<0||amount>100000000||Math.abs(amount*100-Math.round(amount*100))>0.000001)throw new ResourceError("INVALID_SETTLEMENT_AMOUNT");
- if(attested!==true)throw new ResourceError("MANUAL_RECEIPT_CONFIRMATION_REQUIRED");
- const [invoices]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND archived=FALSE FOR UPDATE",[invoiceId,tenantId]);
- if(!invoices.length)throw new ResourceError("REFERENCE_NOT_FOUND");
- const invoice=invoices[0],invoiceBranch=invoice.branch_id?String(invoice.branch_id):null;
- if(invoiceBranch&&requestedBranch&&invoiceBranch!==requestedBranch)throw new ResourceError("REFERENCE_NOT_FOUND");
- await branchExists(db,tenantId,invoiceBranch??requestedBranch);
- const detail=parseData(invoice.data);
- const due=Math.round((Number(detail.subtotal??0)+Number(detail.taxAmount??0)+Number(detail.serviceFee??0))*100);
- const paid=Math.round(amount*100);
- if(!Number.isSafeInteger(due)||due<0||due!==paid)throw new ResourceError("INVOICE_SETTLEMENT_AMOUNT_MISMATCH");
- const trimmed=reference.trim();
- const [existing]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=? LIMIT 2 FOR UPDATE",[tenantId,invoiceId]);
- if(existing.length){
-  if(existing.length!==1)throw new ResourceError("INVOICE_ALREADY_SETTLED");
-  const prior=parseData(existing[0].data);
-  if(invoice.status==="paid"&&prior.method===method&&prior.reference===trimmed&&Math.round(Number(prior.amount)*100)===paid)return {id:invoiceId,settlementId:String(existing[0].id),existing:true};
-  throw new ResourceError("INVOICE_ALREADY_SETTLED");
- }
- if(invoice.status!=="issued")throw new ResourceError("INVOICE_NOT_ISSUED");
- const token=createHash("sha256").update(String(method)+":"+trimmed).digest("hex");
- const [reused]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND lookup_key=? LIMIT 1 FOR UPDATE",[tenantId,token]);
- if(reused.length)throw new ResourceError("SETTLEMENT_REFERENCE_REUSED");
- const settlementId=randomUUID(),now=new Date().toISOString();
- const proof={invoiceId,method,reference:trimmed,amount,confirmedBy:actor,confirmedAt:now,source:"merchant_attested_manual"};
- await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[settlementId,tenantId,invoiceBranch??requestedBranch,"invoice_settlement","Manual settlement: "+String(invoice.name),"confirmed",JSON.stringify(proof),token]);
- await db.execute("UPDATE restaurant_resources SET status='paid',version=version+1 WHERE id=? AND tenant_id=? AND kind='customer_invoice' AND status='issued'",[invoiceId,tenantId]);
- await audit(db,tenantId,actor,"customer_invoice.manual_receipt",invoiceId,{settlementId,method,amount,source:"merchant_attested_manual"});
- return {id:invoiceId,settlementId,existing:false};
-}
-
-export async function ordersRows(db:PoolConnection,tenantId:string,role:string,branchId?:string|null,actorUserId?:string){
- const financial=["owner","manager","cashier","accountant"].includes(role);
- const values:string[]=[tenantId];let filter="";
- if(branchId){filter+=" AND branch_id=?";values.push(branchId);}
- if(role==="driver"){
-  if(!actorUserId||!branchId)return [];
-  const [employees]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 2",[tenantId,branchId,actorUserId]);
-  if(employees.length!==1)return [];
-  filter+=" AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=?";values.push(String(employees[0].id));
- }
- const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
- if(!orders.length)return [];
- const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
- return orders.map(o=>{const checkout=o.checkout_snapshot?parseData(o.checkout_snapshot):null;return{...o,pickup_point:checkout?.pickupPoint??null,hotel_room:checkout?.hotelRoom??null,checkout_snapshot:financial?checkout:null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" Â· "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("ØŒ "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)};});
-}
-export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
- const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
- if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!["dine_in","takeaway","delivery","room_service"].includes(String(body.channel)))throw new ResourceError("INVALID_INPUT");
- if(!cart.every(item=>item&&typeof item.id==="string"&&validCatalogQuantity(item.quantity)))throw new ResourceError("INVALID_CART");
- if(body.kitchenNotes!=null&&(typeof body.kitchenNotes!=="string"||body.kitchenNotes.length>1000)||body.orderNotes!=null&&(typeof body.orderNotes!=="string"||body.orderNotes.length>1000))throw new ResourceError("INVALID_INPUT");
- if(cart.some(item=>item.id.length>36)||body.customerName!=null&&typeof body.customerName!=="string"||body.customerPhone!=null&&typeof body.customerPhone!=="string"||body.couponCode!=null&&(typeof body.couponCode!=="string"||body.couponCode.length>40))throw new ResourceError("INVALID_INPUT");
- const requestKey=body.requestKey==null?null:String(body.requestKey);
- if(requestKey&&!/^[a-f0-9-]{36}$/i.test(requestKey))throw new ResourceError("INVALID_REQUEST_KEY");
- if(cart.some(item=>item.options!==undefined&&(!Array.isArray(item.options)||item.options.length>100||item.options.some(id=>typeof id!=="string"||id.length>36))))throw new ResourceError("INVALID_OPTIONS");
- const reservationId=body.reservationId==null?null:String(body.reservationId);
- if(reservationId&&!/^[a-f0-9-]{36}$/i.test(reservationId))throw new ResourceError("INVALID_INPUT");
- const roomNumber=body.channel==="room_service"&&typeof body.roomNumber==="string"?body.roomNumber.trim().toLocaleUpperCase("en-US"):"";
- if(body.channel==="room_service"&&(!customerId||!roomNumber||roomNumber.length>24||!/^[\p{L}\p{N}][\p{L}\p{N} -]{0,23}$/u.test(roomNumber))||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
- const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,...(roomNumber?{roomNumber}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
- if(requestKey){
-  const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
-  const [existing]=await db.execute<RowDataPacket[]>("SELECT id,total,currency,request_fingerprint FROM restaurant_orders WHERE tenant_id=? AND created_by=? AND request_key=? FOR UPDATE",[tenantId,actor,requestKey]);
-  if(existing.length){if(existing[0].request_fingerprint!==fingerprint)throw new ResourceError("CONFLICT");return{id:String(existing[0].id),total:Number(existing[0].total),currency:String(existing[0].currency)};}
- }
- await branchExists(db,tenantId,branchId);
- let reservationData:Record<string,unknown>|null=null;
- if(reservationId){
-  if(body.channel!=="dine_in"||!customerId)throw new ResourceError("RESERVATION_ORDER_INVALID");
-  const [reservations]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,status,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed') AND branch_id=? FOR UPDATE",[tenantId,reservationId,branchId]);
-  if(!reservations.length)throw new ResourceError("RESERVATION_NOT_AVAILABLE");
-  reservationData=parseData(reservations[0].data);
-  const scheduledAt=Date.parse(String(reservationData.scheduledAt??""));
-  if(String(reservationData.customerUserId??"")!==customerId||!Number.isFinite(scheduledAt)||scheduledAt<=Date.now())throw new ResourceError("RESERVATION_NOT_AVAILABLE");
-  const partySize=Number(reservationData.partySize);
-  if(!Number.isInteger(partySize)||partySize<1||partySize>100)throw new ResourceError("RESERVATION_NOT_AVAILABLE");
-  const [priorOrders]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND reservation_id=? LIMIT 1 FOR UPDATE",[tenantId,reservationId]);
-  if(priorOrders.length)throw new ResourceError("RESERVATION_ALREADY_ORDERED");
- }
- // Enforce the same availability rules for POS, public menu, and all activity stores.
- const [orderPolicies]=await db.execute<RowDataPacket[]>(
-  "SELECT kind,data FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND status='active' AND (kind='storefront_config' OR (kind='branch_config' AND branch_id=?)) ORDER BY created_at DESC",
-  [tenantId,branchId]
- );
- const operatingSettings=(kind:string)=>{const row=orderPolicies.find(item=>item.kind===kind);return row?parseData(row.data):{};};
- const availability=orderChannelStatus(operatingSettings("storefront_config"),operatingSettings("branch_config"),String(body.channel) as OrderChannel);
- if(!availability.allowed)throw new ResourceError(availability.reason!);
- let hotelRoomSnapshot:{roomNumber:string}|null=null;
- if(body.channel==="room_service"){
-  const [rooms]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND lookup_key=? AND status='active' AND archived=FALSE LIMIT 1 FOR UPDATE",[tenantId,branchId,branchId+":"+roomNumber]);
-  if(!rooms.length)throw new ResourceError("HOTEL_ROOM_UNAVAILABLE");
-  hotelRoomSnapshot={roomNumber};
- }
- let pickupPointSnapshot:{id:string;name:string;address:string;instructions:string|null;mapUrl:string|null}|null=null;
- if(body.channel==="takeaway"){
-  if(body.pickupPointId!=null&&(typeof body.pickupPointId!=="string"||!/^[-a-f0-9]{36}$/i.test(body.pickupPointId)))throw new ResourceError("PICKUP_POINT_UNAVAILABLE");
-  const [pickupPoints]=await db.execute<RowDataPacket[]>("SELECT id,name,data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='pickup_point' AND status='active' AND archived=FALSE ORDER BY name,id FOR UPDATE",[tenantId,branchId]);
-  if(pickupPoints.length&&customerId&&!body.pickupPointId)throw new ResourceError("PICKUP_POINT_REQUIRED");
-  if(body.pickupPointId){const point=pickupPoints.find(row=>String(row.id)===body.pickupPointId);if(!point)throw new ResourceError("PICKUP_POINT_UNAVAILABLE");const data=parseData(point.data);pickupPointSnapshot={id:String(point.id),name:String(point.name),address:String(data.address??""),instructions:data.instructions?String(data.instructions):null,mapUrl:data.mapUrl?String(data.mapUrl):null};}
- }else if(body.pickupPointId!=null)throw new ResourceError("INVALID_INPUT");
- const profile=await salesProfile(db,tenantId);
- if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
- if(!profile.dining&&body.channel==="dine_in")throw new ResourceError("CHANNEL_UNAVAILABLE");
- let assignedDriverId:string|null=null;
- if(body.channel==="delivery"){
-  // Availability is server-enforced: a branch must have an active assigned driver.
-  const [drivers]=await db.execute<RowDataPacket[]>(
-   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' ORDER BY e.id FOR UPDATE",
-   [branchId,tenantId,branchId]
-  );
-  // One active delivery per driver. Locking the eligible driver rows serializes
-  // concurrent checkouts so the same available driver cannot be double-booked.
-  for(const driver of drivers){
-   const [active]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=? AND status NOT IN ('completed','cancelled') LIMIT 1 FOR UPDATE",[tenantId,String(driver.id)]);
-   if(!active.length){assignedDriverId=String(driver.id);break;}
-  }
-  if(!assignedDriverId)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
- }
-
- const stockDebits:StockDebit[]=[];
- const choices=profile.catalog?await activityPosOptions(db,tenantId,cart.map(item=>item.id),true):await menuOptions(db,tenantId,cart.map(item=>item.id));
- const lines:{id:string;name:string;quantity:number;price:number;total:number;options:{name:string;price:number}[]}[]=[];let subtotal=0;
- for(const item of [...cart].sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
-  if(!item||typeof item.id!=="string"||!validCatalogQuantity(item.quantity))throw new ResourceError("INVALID_CART");
-  const [rows]=profile.catalog?[[await activitySaleItem(db,tenantId,branchId,item.id)]]:await db.execute<RowDataPacket[]>("SELECT i.id,i.name,i.price,i.currency,m.branch_id FROM restaurant_menu_items i JOIN restaurant_menu_categories c ON c.id=i.category_id AND c.tenant_id=i.tenant_id AND c.enabled=TRUE LEFT JOIN restaurant_resources m ON m.id=i.id AND m.tenant_id=i.tenant_id WHERE i.id=? AND i.tenant_id=? AND i.enabled=TRUE AND COALESCE(m.archived,FALSE)=FALSE LIMIT 1 LOCK IN SHARE MODE",[item.id,tenantId]);
-  if(!rows.length||rows[0].branch_id&&rows[0].branch_id!==branchId)throw new ResourceError("ITEM_UNAVAILABLE");
-  if(rows[0].currency!==profile.currency)throw new ResourceError("UNSUPPORTED_CURRENCY");
-  if(!Number.isInteger(item.quantity)&&(!profile.catalog||!catalogQuantityPolicy(rows[0].attributes).measured))throw new ResourceError("INVALID_CART");
-  const selected=item.options??[],groups=choices[item.id]??[],valid=groups.flatMap(group=>group.values);
-  if(new Set(selected).size!==selected.length||selected.some(id=>!valid.some(v=>v.id===id)))throw new ResourceError("INVALID_OPTIONS");
-  for(const group of groups){const count=selected.filter(id=>group.values.some(v=>v.id===id)).length;if(count<(group.required?Math.max(1,group.min):group.min)||count>(group.type==="single"?Math.min(1,group.max):group.max))throw new ResourceError("INVALID_OPTIONS");}
-  const options=valid.filter(v=>selected.includes(v.id)).map(v=>({name:v.name,price:v.price}));
-  const price=Math.round(Number(rows[0].price)*100)+options.reduce((sum,option)=>sum+Math.round(option.price*100),0);
-  if(!Number.isFinite(price)||price<0||price>100000000)throw new ResourceError("ITEM_UNAVAILABLE");
-  if(profile.catalog){await debitCatalogVariant(db,tenantId,item.id,selected,item.quantity,stockDebits);await debitActivityStock(db,tenantId,"product",item.id,item.quantity,stockDebits);for(const option of selected)await debitActivityStock(db,tenantId,"option",option,item.quantity,stockDebits);await ensureActivitySaleReference(db,tenantId,rows[0]);}
-  else await db.execute("INSERT IGNORE INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'menu_item',?,'active','{}')",[item.id,tenantId,rows[0].name]);
-  const total=Math.round(price*Math.round(item.quantity*1000)/1000);subtotal+=total;lines.push({id:item.id,name:profile.catalog&&catalogQuantityPolicy(rows[0].attributes).measured?String(rows[0].name).slice(0,166)+" / "+catalogQuantityPolicy(rows[0].attributes).unit:String(rows[0].name),quantity:item.quantity,price:price/100,total:total/100,options});
- }
- if(subtotal>999999999999)throw new ResourceError("INVALID_CART");
- const tableId=body.channel==="dine_in"&&!reservationId&&body.tableId?String(body.tableId):null;
- const partySize=reservationData?Number(reservationData.partySize):Number(body.partySize);
- if(body.channel==="dine_in"&&(!tableId&&!reservationData||!Number.isInteger(partySize)||partySize<1))throw new ResourceError("DINING_DETAILS_REQUIRED");
- const dining=tableId?await diningTable(db,tenantId,branchId,tableId,Number(body.partySize)):null;
- if(tableId){
-  // Serialize orders for a table to prevent two concurrent checkouts from taking it.
-  const [unfinished]=await db.execute<RowDataPacket[]>(
-   "SELECT id FROM restaurant_orders WHERE tenant_id=? AND branch_id=? AND table_id=? AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected')) LIMIT 1 FOR UPDATE",
-   [tenantId,branchId,tableId]
-  );
-  if(unfinished.length)throw new ResourceError("TABLE_HAS_UNFINISHED_ORDER");
- }
- let couponId:string|null=null,discount=0;
- if(body.couponCode){
-  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='coupon' AND lookup_key=? AND status='active' AND archived=FALSE FOR UPDATE",[tenantId,String(body.couponCode).trim().toUpperCase()]);
-  if(!rows.length)throw new ResourceError("COUPON_UNAVAILABLE");const coupon=parseData(rows[0].data);
-  if(coupon.endsAt&&Date.parse(String(coupon.endsAt))<=Date.now())throw new ResourceError("COUPON_UNAVAILABLE");
-  if(coupon.usageLimit){const [[used]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=? AND coupon_id=? AND status<>'cancelled'",[tenantId,rows[0].id]);if(Number(used.n)>=Number(coupon.usageLimit))throw new ResourceError("COUPON_LIMIT_REACHED");}
-  couponId=String(rows[0].id);discount=Math.min(subtotal,coupon.discountType==="percent"?Math.round(subtotal*Number(coupon.value)/100):Math.round(Number(coupon.value)*100));
- }
- const customerName=body.customerName==null?null:String(body.customerName).trim(),phone=body.customerPhone==null?null:String(body.customerPhone).trim();
- if((customerName?.length??0)>180||(phone?.length??0)>40)throw new ResourceError("INVALID_INPUT");
- const kitchenNotes=body.kitchenNotes==null?null:String(body.kitchenNotes).trim(),orderNotes=body.orderNotes==null?null:String(body.orderNotes).trim();
- if((kitchenNotes?.length??0)>1000||(orderNotes?.length??0)>1000)throw new ResourceError("INVALID_INPUT");
- const settings=await checkoutSettings(db,tenantId);
- const totals=checkoutTotals(subtotal/100,discount/100,String(body.channel),settings.policy);
- const snapshot={version:1,...settings,...totals,...(assignedDriverId?{assignedDriverId}:{}),...(reservationId?{reservationId}:{}),...(pickupPointSnapshot?{pickupPoint:pickupPointSnapshot}:{}),...(hotelRoomSnapshot?{hotelRoom:hotelRoomSnapshot}:{})};
- const id=randomUUID();
- await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,reservationId,dining?.sectionId??null,body.channel==="dine_in"?partySize:null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
- if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
- for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
- await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
- await notifyOrder(db,tenantId,id,"new");
- return {id,total:totals.total,currency:profile.currency};
-}
-export async function updateOrder(db:PoolConnection,tenantId:string,actor:string,role:string,body:Record<string,unknown>){
- if(typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
- const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,payment_status,version,channel,table_id,branch_id,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,tenantId]);const order=rows[0];
- if(!order)throw new ResourceError("ORDER_NOT_FOUND");
- if(!Number.isInteger(body.version)||Number(body.version)!==Number(order.version))throw new ResourceError("CONFLICT");
- if(role==="driver"){
-  const snapshot=order.checkout_snapshot?parseData(order.checkout_snapshot):{};
-  const [assigned]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' AND e.id=? LIMIT 1 FOR UPDATE",[tenantId,String(order.branch_id),actor,String(snapshot.assignedDriverId??"")]);
-  if(order.channel!=="delivery"||!assigned.length)throw new ResourceError("FORBIDDEN");
- }
- let status=String(order.status),payment=String(order.payment_status);
- if(body.status!==undefined){
-  const next=String(body.status),transitions:Record<string,string[]>={new:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["completed","cancelled"],completed:[],cancelled:[]};
-  if(!transitions[status].includes(next))throw new ResourceError("INVALID_TRANSITION");
-  if(role==="kitchen"&&!(status==="new"&&next==="preparing"||status==="preparing"&&next==="ready")||role==="waiter"&&!(status==="ready"&&next==="completed")||role==="driver"&&!(order.channel==="delivery"&&status==="ready"&&next==="completed")||role==="accountant")throw new ResourceError("FORBIDDEN");
-  if(next==="cancelled"&&payment==="paid")throw new ResourceError("REFUND_REQUIRED");status=next;
- }
- if(body.paymentStatus!==undefined){
-  if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
-  const next=String(body.paymentStatus);
-  if(!(payment==="unpaid"&&next==="paid"&&status!=="cancelled"||payment==="paid"&&next==="refunded"))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
- }
- if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
- if(status==="cancelled"&&order.status!=="cancelled")await restoreActivityStock(db,tenantId,String(order.id));
- await db.execute("UPDATE restaurant_orders SET status=?,payment_status=?,version=version+1 WHERE id=? AND tenant_id=?",[status,payment,order.id,tenantId]);
- // A completed order does not prove that the guest has left.
- // Keep the table occupied until staff explicitly confirms departure.
- if(status!==String(order.status))await notifyOrder(db,tenantId,String(order.id),status);
- if(payment!==String(order.payment_status))await notifyOrder(db,tenantId,String(order.id),payment,true);
- await audit(db,tenantId,actor,"order.update",String(order.id),{status,paymentStatus:payment});return {id:order.id};
-}
-
-
+K[˜[YY[™KšY[™K›˜[YK[™Kœ]X[]K[™KœšXÙK[™Kİ[”ÓÓ‹œİš[™ÚYJ[™K›Ü[ÛœÊWJNÂˆ]ØZ]]Y]YSÜ™\”š[›ØœÊ‹[˜[YY›Û—ØXØÙ\ŠNÂˆ]ØZ]]Y]
+‹[˜[YXİÜ‹›Ü™\‹˜Ü™X]H‹Yİİ[İ[Ëİ[‹‹Š›Ùš[K˜Ø][ÙÏŞÜİØÚÑXš]Ëİ\œ™[˜ŞNœ›Ùš[K˜İ\œ™[˜Ş_NßJ_JNÂˆ]ØZ]›İYSÜ™\Š‹[˜[YY›™]ÈŠNÂˆ™]\›ˆÚYİ[İ[Ëİ[İ\œ™[˜ŞNœ›Ùš[K˜İ\œ™[˜Ş_NÂŸB™^Ü\Ş[˜È[˜İ[Ûˆ\]SÜ™\Š”ÛÛÛÛ›™Xİ[Û‹[˜[Yœİš[™ËXİÜœİš[™Ë›ÛNœİš[™Ë›ÙN”™XÛÜ™İš[™Ë[šÛ›İÛŠ^ÂˆYŠ\[Ùˆ›ÙKšYOOHœİš[™ÈŠ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÒS”UŠNÂˆÛÛœİÜ›İÜ×OX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕYİ]\Ë^[Y[Üİ]\Ë™\œÚ[Û‹Ú[›™[X›WÚYœ˜[˜ÚÚYÚXÚÛİ]ÜÛ˜\Úİ”“ÓH™\İ]\˜[ÛÜ™\œÈÒT‘HYOÈS‘[˜[ÚYOÈ“ÔˆTUH‹Ø›ÙKšY[˜[YJNØÛÛœİÜ™\\›İÜÖÌNÂˆYŠ[Ü™\Š]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ“Ô‘T—Ó“ÕÑ“ÕS‘ŠNÂˆYŠS[X™\‹š\Ò[YÙ\Š›ÙK™\œÚ[ÛŠ_[X™\Š›ÙK™\œÚ[ÛŠHOOS[X™\ŠÜ™\‹™\œÚ[ÛŠJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠÓÓ‘“PÕŠNÂˆYŠ›ÛOOOH™š]™\ˆŠ^ÂˆÛÛœİÛ˜\Úİ[Ü™\‹˜ÚXÚÛİ]ÜÛ˜\ÚİÜ\œÙQ]JÜ™\‹˜ÚXÚÛİ]ÜÛ˜\Úİ
+NßNÂˆÛÛœİØ\ÜÚYÛ™YOX]ØZ]‹™^Xİ]O›İÑ]TXÚÙ]×OŠ”ÑSPÕKšY”“ÓH™\İ]\˜[Ü™\Ûİ\˜Ù\ÈH“ÒSˆY[X™\œÚ\ÈHÓˆK[˜[ÚYYK[˜[ÚYS‘K\Ù\—ÚYR”ÓÓ—ÕS”USÕJ”ÓÓ—ÑVPÕ
+K™]K	É\Ù\’Y	ÊJHS‘Kœ›ÛOIÙš]™\‰ÈS‘Kœİ]\ÏIØXİ]™IÈ“ÒSˆ[\ŞYYWØœ˜[˜ÚØ\ÜÚYÛ›Y[ÈHÓˆK[˜[ÚYYK[˜[ÚYS‘K\Ù\—ÚY[K\Ù\—ÚYS‘K˜œ˜[˜ÚÚYYK˜œ˜[˜ÚÚYS‘K™[˜X›YU•QHÒT‘HK[˜[ÚYOÈS‘K˜œ˜[˜ÚÚYOÈS‘KšÚ[™IÙ[\ŞYYIÈS‘K˜\˜Ú]™YQSÑHS‘Kœİ]\ÏIØXİ]™IÈS‘”ÓÓ—ÕS”USÕJ”ÓÓ—ÑVPÕ
+K™]K	É\Ù\’Y	ÊJOOÈS‘”ÓÓ—ÕS”USÕJ”ÓÓ—ÑVPÕ
+K™]K	Éœ›ÛIÊJOIÙš]™\‰ÈS‘KšYOÈSRUH“ÔˆTUH‹İ[˜[Yİš[™ÊÜ™\‹˜œ˜[˜ÚÚY
+KXİÜ‹İš[™ÊÛ˜\Úİ˜\ÜÚYÛ™Yš]™\’YÏÈˆŠWJNÂˆYŠÜ™\‹˜Ú[›™[OOH™[]™\HŸX\ÜÚYÛ™Y›[™İ
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ‘“Ô’QSˆŠNÂˆBˆ]İ]\ÏTİš[™ÊÜ™\‹œİ]\ÊK^[Y[Tİš[™ÊÜ™\‹œ^[Y[Üİ]\ÊNÂˆYŠ›ÙKœİ]\ÈOO][™Yš[™Y
+^ÂˆÛÛœİ™^Tİš[™Ê›ÙKœİ]\ÊK˜[œÚ][ÛœÎ”™XÛÜ™İš[™Ëİš[™Ö×O^Û™]Î–Èœ™\\š[™È‹˜Ø[˜Ù[Y—K™\\š[™Î–Èœ™XYH‹˜Ø[˜Ù[Y—K™XYN–È˜ÛÛ\]Y‹˜Ø[˜Ù[Y—KÛÛ\]Y–×KØ[˜Ù[Y–×_NÂˆYŠ]˜[œÚ][ÛœÖÜİ]\×Kš[˜ÛY\Ê™^
+J]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÕS”ÒUSÓˆŠNÂˆYŠ›ÛOOOHšÚ]Ú[ˆ‰‰ˆJİ]\ÏOOH›™]È‰‰›™^OOHœ™\\š[™ÈŸİ]\ÏOOHœ™\\š[™È‰‰›™^OOHœ™XYHŠ_›ÛOOOHØZ]\ˆ‰‰ˆJİ]\ÏOOHœ™XYH‰‰›™^OOH˜ÛÛ\]YŠ_›ÛOOOH™š]™\ˆ‰‰ˆJÜ™\‹˜Ú[›™[OOH™[]™\H‰‰œİ]\ÏOOHœ™XYH‰‰›™^OOH˜ÛÛ\]YŠ_›ÛOOOH˜XØÛİ[[Š]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ‘“Ô’QSˆŠNÂˆYŠ™^OOH˜Ø[˜Ù[Y‰‰œ^[Y[OOHœZYŠ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ”‘Q•S‘Ô‘TURT‘QŠNÜİ]\Ï[™^ÂˆBˆYŠ›ÙKœ^[Y[İ]\ÈOO][™Yš[™Y
+^ÂˆYŠVÈ›İÛ™\ˆ‹›X[˜YÙ\ˆ‹˜Ø\ÚY\ˆ—Kš[˜ÛY\Ê›ÛJJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ‘“Ô’QSˆŠNÂˆÛÛœİ™^Tİš[™Ê›ÙKœ^[Y[İ]\ÊNÂˆYŠJ^[Y[OOH[œZY‰‰›™^OOHœZY‰‰œİ]\ÈOOH˜Ø[˜Ù[YŸ^[Y[OOHœZY‰‰›™^OOHœ™Y[™YŠJ]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÔVSQS•ÕS”ÒUSÓˆŠNÜ^[Y[[™^ÂˆBˆYŠ›ÙKœİ]\ÏOO][™Yš[™Y	‰˜›ÙKœ^[Y[İ]\ÏOO][™Yš[™Y
+]›İÈ™]È™\Ûİ\˜ÙQ\œ›ÜŠ’S•SQÒS”UŠNÂˆYŠİ]\ÏOOH˜Ø[˜Ù[Y‰‰›Ü™\‹œİ]\ÈOOH˜Ø[˜Ù[YŠX]ØZ]™\İÜ™PXİ]š]TİØÚÊ‹[˜[Yİš[™ÊÜ™\‹šY
+JNÂˆ]ØZ]‹™^Xİ]J•TUH™\İ]\˜[ÛÜ™\œÈÑUİ]\ÏOË^[Y[Üİ]\ÏOË™\œÚ[Û]™\œÚ[ÛŠÌHÒT‘HYOÈS‘[˜[ÚYOÈ‹Üİ]\Ë^[Y[Ü™\‹šY[˜[YJNÂˆYŠİ]\ÈOOTİš[™ÊÜ™\‹œİ]\ÊI‰œİ]\ÏOOHœ™\\š[™ÈŠX]ØZ]]Y]YSÜ™\”š[›ØœÊ‹[˜[Yİš[™ÊÜ™\‹šY
+K›Û—Ü™\\™HŠNÂˆYŠ^[Y[OOTİš[™ÊÜ™\‹œ^[Y[Üİ]\ÊI‰œ^[Y[OOHœZYŠX]ØZ]]Y]YSÜ™\”š[›ØœÊ‹[˜[Yİš[™ÊÜ™\‹šY
+K›Û—ÜZYŠNÂˆËÈHÛÛ\]YÜ™\ˆÙ\È›İ›İ™H]HİY\İ\ÈY‚ˆËÈÙY\HX›HØØİ\YY[[İY™ˆ^XÚ]HÛÛ™š\›\È\\\™K‚ˆYŠİ]\ÈOOTİš[™ÊÜ™\‹œİ]\ÊJX]ØZ]›İYSÜ™\Š‹[˜[Yİš[™ÊÜ™\‹šY
+Kİ]\ÊNÂˆYŠ^[Y[OOTİš[™ÊÜ™\‹œ^[Y[Üİ]\ÊJX]ØZ]›İYSÜ™\Š‹[˜[Yİš[™ÊÜ™\‹šY
+K^[Y[YJNÂˆ]ØZ]]Y]
+‹[˜[YXİÜ‹›Ü™\‹\]H‹İš[™ÊÜ™\‹šY
+KÜİ]\Ë^[Y[İ]\Îœ^[Y[JNÜ™]\›ˆÚY›Ü™\‹šYNÂŸB‚‚

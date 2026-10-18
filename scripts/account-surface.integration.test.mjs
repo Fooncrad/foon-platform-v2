@@ -16,7 +16,12 @@ test('employees stay in their employer workspace and platform admins never inher
   const owner=await register(),other=await register(),admin=await register();
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user.id]);
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,admin.cookie,owner.tenant.id)).status,403);
-  assert.equal((await request('/api/admin/tenants/'+owner.tenant.id+'/access','POST',{},admin.cookie)).status,403);
+  const supportAccess=await request('/api/admin/tenants/'+owner.tenant.id+'/access','POST',{},admin.cookie);assert.equal(supportAccess.status,200,await supportAccess.clone().text());
+  assert.equal((await request('/restaurant?tenant='+owner.tenant.id,'GET',undefined,admin.cookie)).status,200);
+  assert.equal((await request('/api/restaurant/operations/orders','POST',{},admin.cookie,owner.tenant.id)).status,403,'platform support is read-only');
+  const [[supportAudit]]=await db.execute("SELECT COUNT(*) AS n FROM platform_audit_events WHERE actor_user_id=? AND target_id=? AND action='admin.tenant.support.start'",[admin.user.id,owner.tenant.id]);assert.equal(Number(supportAudit.n),1);
+  assert.equal((await request('/api/admin/tenants/access','DELETE',undefined,admin.cookie)).status,200);
+  assert.equal((await request('/restaurant?tenant='+owner.tenant.id,'GET',undefined,admin.cookie)).status,307);
   assert.equal((await request('/api/admin/tenants','GET',undefined,owner.cookie)).status,403);
   const [[branch]]=await db.execute('SELECT id FROM branches WHERE tenant_id=? LIMIT 1',[owner.tenant.id]);
   for(const role of ['manager','cashier','waiter','kitchen','driver','accountant']){

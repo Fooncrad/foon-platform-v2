@@ -14,7 +14,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const userId=await currentUserId();if(!userId)redirect("/login");
  const {tenant}=await searchParams;
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
- const tenantId=workspace.tenant_id,canManage=["owner","manager"].includes(workspace.role);
+ const tenantId=workspace.tenant_id,canManage=["owner","manager"].includes(workspace.role)&&!workspace.supportReadOnly;
  const db=database();
  const [activityRows]=await db.execute<RowDataPacket[]>("SELECT t.kind,bp.activity_code,bp.currency FROM tenants t LEFT JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE t.id=? LIMIT 1",[tenantId]);
  // Legacy restaurant tenants may not yet have a business profile. Restore their
@@ -48,7 +48,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const subscription=subscriptions[0];
  const now=new Date();
  const data:MerchantData={
-  tenantId,emailVerified:Boolean(identity[0]?.email_verified_at),activityCode,currency:String(activityRows[0]?.currency??"SAR"),activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,
+  tenantId,emailVerified:Boolean(identity[0]?.email_verified_at),activityCode,currency:String(activityRows[0]?.currency??"SAR"),activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,supportReadOnly:workspace.supportReadOnly,
   staffPermissions,tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),
