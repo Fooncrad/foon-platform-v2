@@ -20,6 +20,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "W08_PREFLIGHT_SAFETY_TESTS_FAILED"
 }
 
+if (-not (Test-Path -LiteralPath (Join-Path $root "node_modules\mysql2\package.json") -PathType Leaf)) {
+    throw "W08_MYSQL2_MISSING_RUN_NPM_CI_FROM_PROJECT_ROOT"
+}
+
 if (-not (Get-NetTCPConnection -LocalPort 3306 -State Listen -ErrorAction SilentlyContinue)) {
     throw "W08_LOCAL_MARIADB_NOT_LISTENING_ON_3306"
 }
