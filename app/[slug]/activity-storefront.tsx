@@ -52,7 +52,7 @@ export default function ActivityStorefront({name,slug,activity,template,branding
  const title=activityNames[activity]?.[language]??t.shop;
  const layout=chosen?.endsWith("grid")?"grid":chosen?.includes("gallery")?"gallery":service?"services":"featured";
  const accent=activity==="grocery"?"#23744b":activity==="perfume"?"#8052a2":activity==="clothing"?"#a64d62":activity==="salon"?"#ad4c83":service?"#147e80":"#3458a4";
- return <main className={"foonActivityStorefront foonActivityStorefront-"+layout} data-activity={isActivityType(activity)?activity:"unknown"} data-template={chosen??"unassigned"} dir={language==="ar"?"rtl":"ltr"} lang={language} style={{minHeight:"100vh",background:"#f8fafc",color:"#172033",fontFamily:"inherit",["--activity-accent" as string]:accent}}>
+ return <main className={"foonActivityStorefront foonActivityStorefront-"+layout} data-activity={isActivityType(activity)?activity:"unknown"} data-template={chosen??"unassigned"} data-layout={layout} dir={language==="ar"?"rtl":"ltr"} lang={language} style={{["--activity-accent" as string]:accent}}>
   <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",padding:"18px clamp(16px,4vw,64px)",background:"#fff",borderBottom:"1px solid #e2e8f0"}}>
    <Link href={"/"+encodeURIComponent(slug)} style={{fontWeight:800,color:"inherit",textDecoration:"none"}}>{name}</Link>
    <nav aria-label={t.shop} style={{display:"flex",gap:18,alignItems:"center",flexWrap:"wrap"}}><StorefrontQr slug={slug} name={name} language={language}/><StorefrontLanguageSwitcher language={language}/><Link href={"/"+encodeURIComponent(slug)+"/login"}>{t.account}</Link><Link href={"/"+encodeURIComponent(slug)+"/register"}>{t.register}</Link></nav>
