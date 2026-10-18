@@ -90,7 +90,7 @@ export function createSandboxReceiver({dbPath,deviceId,tenantId,branchId,authTok
  function snapshot(){
   return {inbox:db.prepare("SELECT count(*) AS n FROM inbox").get().n,
    orders:db.prepare("SELECT count(*) AS n FROM orders").get().n,
-   rows:db.prepare("SELECT id,status FROM orders ORDER BY id").all()};
+   rows:db.prepare("SELECT id,status FROM orders ORDER BY id").all().map(row=>({id:row.id,status:row.status}))};
  }
  return {accept,snapshot,close:()=>db.close()};
 }
