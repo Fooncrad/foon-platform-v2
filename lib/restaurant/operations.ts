@@ -68,8 +68,11 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   if(input.status==="no_show"){
    if(!previous)throw new ResourceError("INVALID_RESERVATION_TRANSITION");
    const original=parseData(previous.data);
-   if(!reservationNoShowDue(original.scheduledAt,original.durationMinutes))throw new ResourceError("RESERVATION_NO_SHOW_NOT_DUE");
-   if(JSON.stringify(original)!==JSON.stringify(input.data)||String(previous.name)!==String(input.name)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("RESERVATION_NO_SHOW_DATA_IMMUTABLE");
+   const [settings]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='branch_config' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY (branch_id IS NOT NULL) DESC,created_at DESC LIMIT 1",[tenantId,input.branchId??previous.branch_id]);
+   const setting=settings[0]?parseData(settings[0].data):{};
+   if(!reservationNoShowDue(original.scheduledAt,setting.noShowGraceMinutes))throw new ResourceError("RESERVATION_NO_SHOW_NOT_DUE");
+   const reservationFields=resourceModules.reservations.fields.map(field=>field.key);
+   if(reservationFields.some(key=>JSON.stringify(original[key]??null)!==JSON.stringify(input.data[key]??null))||String(previous.name)!==String(input.name)||String(previous.branch_id??"")!==String(input.branchId??""))throw new ResourceError("RESERVATION_NO_SHOW_DATA_IMMUTABLE");
   }
  }
  if(module==="quotations"&&input.status==="sent"&&input.data.validUntil){const deadline=Date.parse(String(input.data.validUntil)+"T23:59:59.999Z");if(!Number.isFinite(deadline)||deadline<Date.now())throw new ResourceError("QUOTATION_EXPIRED");}

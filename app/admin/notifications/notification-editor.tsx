@@ -2,7 +2,7 @@
 import {useUiText} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 type Rule={event_key:string;enabled:boolean;in_app_enabled:boolean;email_enabled:boolean;sound_enabled:boolean};
-const labels:Record<string,string>={account_welcome:"ترحيب الحساب",order_completed:"اكتمال الطلب",order_payment_paid:"تأكيد دفع الطلب",order_payment_refunded:"استرداد دفع الطلب",reservation_confirmed:"تأكيد الحجز",reservation_seated:"حضور الحجز",reservation_completed:"اكتمال الحجز",order_received:"طلب جديد",order_confirmed:"تأكيد طلب",order_ready:"طلب جاهز",order_cancelled:"إلغاء طلب",reservation_created:"حجز جديد",reservation_cancelled:"إلغاء حجز",waitlist_joined:"دخول قائمة الانتظار",waiter_called:"نداء النادل",subscription_renewal:"تجديد الاشتراك"};
+const labels:Record<string,string>={account_welcome:"ترحيب الحساب",order_completed:"اكتمال الطلب",order_payment_paid:"تأكيد دفع الطلب",order_payment_refunded:"استرداد دفع الطلب",reservation_confirmed:"تأكيد الحجز",reservation_seated:"حضور الحجز",reservation_completed:"اكتمال الحجز",reservation_no_show:"عدم حضور الحجز",order_received:"طلب جديد",order_confirmed:"تأكيد طلب",order_ready:"طلب جاهز",order_cancelled:"إلغاء طلب",reservation_created:"حجز جديد",reservation_cancelled:"إلغاء حجز",waitlist_joined:"دخول قائمة الانتظار",waiter_called:"نداء النادل",subscription_renewal:"تجديد الاشتراك"};
 export default function NotificationEditor({canEdit}:{canEdit:boolean}){
  const translateUi=useUiText();
 

@@ -12,12 +12,14 @@ test("no-show is terminal and cannot be reopened",()=>{
  for(const next of ["pending","confirmed","seated","completed","cancelled"])
   assert.equal(reservationTransitionAllowed("no_show",next),false);
 });
-test("no-show requires the configured reservation period to expire",()=>{
+test("no-show respects a configurable grace period after the booking time",()=>{
  const now=Date.parse("2026-10-17T15:00:00.000Z");
- assert.equal(reservationNoShowDue("2026-10-17T13:30:00.000Z",90,now),true);
- assert.equal(reservationNoShowDue("2026-10-17T13:31:00.000Z",90,now),false);
+ assert.equal(reservationNoShowDue("2026-10-17T14:30:00.000Z",30,now),true);
+ assert.equal(reservationNoShowDue("2026-10-17T14:31:00.000Z",30,now),false);
+ assert.equal(reservationNoShowDue("2026-10-17T14:59:00.000Z",0,now),true);
+ assert.equal(reservationNoShowDue("2026-10-17T14:59:00.000Z",1441,now),false);
  assert.equal(reservationNoShowDue("invalid",90,now),false);
- assert.equal(reservationNoShowDue("2026-10-17T13:00:00.000Z",10,now),false);
+ assert.equal(reservationNoShowDue("2026-10-17T13:00:00.000Z",1441,now),false);
 });
 test("all three languages explicitly translate a no-show notification",()=>{
  for(const [locale,expected] of [["ar","لم يحضر الضيف"],["en","Guest did not attend"],["fr","Le client ne s’est pas présenté"]]){

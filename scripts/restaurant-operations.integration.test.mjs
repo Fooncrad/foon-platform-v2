@@ -6,10 +6,11 @@ import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 import {resourceModules} from "./restaurant-resource-schema.mjs";
 import {randomUUID} from "node:crypto";
+import {markOverdueReservationsNoShow} from "../lib/restaurant/reservation-no-show.ts";
 const origin="http://localhost:3103";
 test("restaurant operations preserve tenant, role, plan, pricing and transactional integrity",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
- const db=await mysql.createConnection(url.href);await db.query("SET time_zone='+00:00'");
+ const db=await mysql.createConnection(url.href),workerPool=mysql.createPool({uri:url.href,connectionLimit:2,timezone:"Z"});await db.query("SET time_zone='+00:00'");
  const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:["ignore","ignore","pipe"]});let serverErrors="";server.stderr.setEncoding("utf8");server.stderr.on("data",chunk=>{serverErrors=(serverErrors+chunk).slice(-12000);});
  const password="a-strong-test-password";
  const call=async(path,method,body,cookie,tenant)=>{
@@ -155,6 +156,24 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const booking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);assert.equal(booking.status,201,JSON.stringify(booking.body));
   const savedBookings=await resource(a,"reservations",undefined,"GET");assert.equal(savedBookings.body.resources.find(row=>row.id===booking.body.id).status,"pending");
   const customerBookings=await call("/api/customer/services?storeSlug=operations-owner-a","GET",undefined,customer.cookie);assert.equal(customerBookings.status,200);assert.equal(customerBookings.body.reservations.some(row=>row.id===booking.body.id),true);assert.equal(customerBookings.body.reservations.find(row=>row.id===booking.body.id).partySize,3);
+  await save(a,"settings","No-show grace",{noShowGraceMinutes:5});
+  const autoBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},customer.cookie);assert.equal(autoBooking.status,201,JSON.stringify(autoBooking.body));
+  const pendingAuto=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===autoBooking.body.id);assert.ok(pendingAuto);
+  const confirmedAuto=await resource(a,"reservations",{id:autoBooking.body.id,version:pendingAuto.version,name:pendingAuto.name,status:"confirmed",branchId:a.branch,data:pendingAuto.data},"PATCH");assert.equal(confirmedAuto.status,200,JSON.stringify(confirmedAuto.body));
+  await db.execute("UPDATE restaurant_resources SET data=JSON_SET(data,'$.scheduledAt',?) WHERE id=? AND tenant_id=?",[new Date(Date.now()-10*60000).toISOString(),autoBooking.body.id,a.tenant]);
+  const noShowSweep=await markOverdueReservationsNoShow(workerPool);assert.equal(noShowSweep.marked,1,JSON.stringify(noShowSweep));
+  const [[autoReservation]]=await db.execute("SELECT status,version FROM restaurant_resources WHERE id=? AND tenant_id=?",[autoBooking.body.id,a.tenant]);assert.equal(autoReservation.status,"no_show");
+  const [[noShowNotice]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND tenant_id=? AND event_key='reservation_no_show' AND resource_id=?",[customer.body.user.id,a.tenant,autoBooking.body.id]);assert.equal(Number(noShowNotice.n),1);
+  const [[noShowAudit]]=await db.execute("SELECT actor_user_id,action FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='reservation.auto_no_show'",[a.tenant,autoBooking.body.id]);assert.equal(noShowAudit.actor_user_id,null);assert.equal(noShowAudit.action,"reservation.auto_no_show");
+  assert.equal((await markOverdueReservationsNoShow(workerPool)).marked,0,"repeated worker runs must not duplicate transitions or notices");
+  const manualBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},customer.cookie);assert.equal(manualBooking.status,201,JSON.stringify(manualBooking.body));
+  const pendingManual=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===manualBooking.body.id);assert.ok(pendingManual);
+  const confirmedManual=await resource(a,"reservations",{id:manualBooking.body.id,version:pendingManual.version,name:pendingManual.name,status:"confirmed",branchId:a.branch,data:pendingManual.data},"PATCH");assert.equal(confirmedManual.status,200,JSON.stringify(confirmedManual.body));
+  await db.execute("UPDATE restaurant_resources SET data=JSON_SET(data,'$.scheduledAt',?) WHERE id=? AND tenant_id=?",[new Date(Date.now()-10*60000).toISOString(),manualBooking.body.id,a.tenant]);
+  const dueManual=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===manualBooking.body.id);
+  const manualNoShow=await resource(a,"reservations",{id:manualBooking.body.id,version:dueManual.version,name:dueManual.name,status:"no_show",branchId:a.branch,data:dueManual.data},"PATCH");assert.equal(manualNoShow.status,200,JSON.stringify(manualNoShow.body));
+  const [[manualNoShowData]]=await db.execute("SELECT JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId')) AS customer_user_id FROM restaurant_resources WHERE id=? AND tenant_id=?",[manualBooking.body.id,a.tenant]);assert.equal(manualNoShowData.customer_user_id,customer.body.user.id,"status changes must preserve the customer's private reservation link");
+  const [[manualNotice]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND tenant_id=? AND event_key='reservation_no_show' AND resource_id=?",[customer.body.user.id,a.tenant,manualBooking.body.id]);assert.equal(Number(manualNotice.n),1);
   const reservationOrderPayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"dine_in",reservationId:booking.body.id,requestKey:randomUUID(),items:[{id:item,quantity:1,options:[option]}]};
   const reservationOrder=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationOrder.status,201,JSON.stringify(reservationOrder.body));
   const reservationReplay=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationReplay.status,201);assert.equal(reservationReplay.body.id,reservationOrder.body.id);
@@ -545,7 +564,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,admin.tenant)).status,200,"an explicit own membership still works");
   await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
- }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await db.end();}
+ }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await workerPool.end();await db.end();}
 });
 
 

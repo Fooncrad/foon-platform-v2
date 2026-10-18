@@ -2510,6 +2510,14 @@ export const uiCopy:Record<string,readonly [string,string]>={
   "No-show",
   "Absent"
  ],
+ "مهلة عدم حضور الحجز بالدقائق (افتراضي 30)": [
+  "Reservation no-show grace period in minutes (default 30)",
+  "Délai de grâce d’absence en minutes (30 par défaut)"
+ ],
+ "عدم حضور الحجز": [
+  "Reservation no-show",
+  "Absence à la réservation"
+ ],
  "تم تسجيل الحضور": [
   "Checked in",
   "Arrivée enregistrée"

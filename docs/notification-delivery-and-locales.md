@@ -20,6 +20,8 @@ Platform SMTP uses `SMTP_HOST`, `SMTP_USER`, `SMTP_FROM` (same address as SMTP_U
 
 After committed account/order operations, Next.js `after()` attempts a small queue batch. To drain retries while there is no web traffic, schedule `npm run notifications:worker` every minute on a trusted host with the same database, SMTP and encryption environment. Alternatively, a trusted scheduler may POST `/api/internal/notifications` using `Authorization: Bearer <FOON_NOTIFICATION_WORKER_TOKEN>`; the token must be at least 32 characters. The endpoint accepts no recipient/content input and returns counts only. Do not put the token in a URL or public browser code.
 
+Confirmed reservations are automatically marked `no_show` by scheduling `npm run reservations:no-show-worker` every minute on the same trusted host. The grace period is configurable per branch in branch settings from 0 to 1440 minutes; it defaults to 30 minutes after the reservation time. The worker commits the status, a system-attributed audit event and the customer's in-account/email notification together. Reservations linked to an order that is not cancelled are left unchanged. Email delivery still depends on the separate notification worker and configured SMTP.
+
 Review the admin email outbox for pending/failed status, then use `npm run mail:verify` to verify SMTP authentication without sending a message. An authenticated SMTP connection does not prove mailbox delivery.
 
 ## Verification and limits
