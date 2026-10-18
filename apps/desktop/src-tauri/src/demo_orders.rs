@@ -50,7 +50,6 @@ fn context() -> Result<DemoContext, &'static str> {
     }
     for key in [
         "FOON_EDGE_TENANT_ID",
-        "FOON_EDGE_BRANCH_ID",
         "FOON_EDGE_DEVICE_ID",
         "FOON_EDGE_CLOUD_SYNC_URL",
     ] {
@@ -93,10 +92,14 @@ fn context() -> Result<DemoContext, &'static str> {
         }
         let stored=std::fs::read_to_string(durable_dir.join("demo-branch.txt"))
             .map_err(|_| "DURABLE_BRANCH_NOT_READY")?;
-        if stored.trim()!=branch.to_string() {
+        if stored.trim()!=branch.to_string() ||
+            env::var("FOON_EDGE_BRANCH_ID").as_deref()!=Ok(stored.trim()) {
             return Err("DURABLE_BRANCH_MISMATCH");
         }
     } else {
+        if env::var("FOON_EDGE_BRANCH_ID").is_ok_and(|v| !v.is_empty()) {
+            return Err("DEMO_SCOPE_FORBIDDEN");
+        }
         // W03/W04 ephemeral demo still requires an isolated temporary directory.
         let temp=env::temp_dir().canonicalize().map_err(|_| "DEMO_TEMP_UNAVAILABLE")?;
         let parent=canonical.parent().ok_or("DEMO_DB_FORBIDDEN")?;
