@@ -11,27 +11,7 @@
 .publicMenuProductPrice small{font-size:.7em;font-weight:400;color:inherit;line-height:inherit;margin:0}
 .publicMenu .publicMenuItem .publicMenuCardCart{display:flex;justify-content:center;align-items:center;gap:6px;border-radius:12px;min-width:44px;min-height:44px;width:auto;height:auto;padding:9px 12px;background:var(--public-brand);color:var(--public-on-brand);flex-shrink:0}
 .publicMenu .publicMenuItem .publicMenuCardCart>span{display:inline;font-size:12px}
-@media(min-width:701px){.publicMenu .publicMenuItem .publicMenuItemImage{order:-1}.publicMenu .publicMenuItem .publicMenuItemBody{padding:12px}.publicMenu .publicMenuItem .publicMenuProductPrice strong{font-size:17px}.publicMenu .publicMenuItem .publicMenuProductPrice small{margin:0;font-size:10px}}
-@media(max-width:700px){
- .publicMenu{padding-inline:10px!important}
- .publicMenu .publicMenuLayout .publicMenuItems{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;align-items:stretch;direction:inherit}
- .publicMenu .publicMenuItem{display:flex!important;flex-direction:column;gap:0!important;padding:0!important;border-radius:14px;min-width:0;box-shadow:0 3px 12px #00000004;transform:none!important;transition:none!important}
- .publicMenu .publicMenuLayout .publicMenuItem .publicMenuItemBody{height:74px;padding:6px!important;display:flex;flex-direction:column;gap:3px;min-width:0;flex-shrink:0}
- .publicMenu .publicMenuItem .publicMenuItemCategory{display:none!important}
- .publicMenu .publicMenuLayout .publicMenuItem h2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:12px!important;line-height:1.3!important;min-height:2.6em;max-height:2.6em;font-weight:750;letter-spacing:0}
- .publicMenu .publicMenuItem p.publicMenuItemSummary{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:10px!important;line-height:1.3!important;min-height:2.6em;max-height:2.6em;margin-top:0;overflow:hidden;color:var(--public-muted)}
- .publicMenu .publicMenuItem .publicMenuItemImage{width:100%!important;height:auto!important;aspect-ratio:4/3!important;max-height:none;border-radius:0!important;align-self:stretch;margin:0;order:0;min-height:44px}
- .publicMenu .publicMenuItem footer.publicMenuItemFooter{flex-direction:column;align-items:stretch;gap:4px;padding:5px 6px 6px!important;margin-top:auto}
- .publicMenu .publicMenuItem .publicMenuProductPrice{min-height:32px;justify-content:flex-end;gap:1px}
- .publicMenu .publicMenuItem .publicMenuProductPrice del{font-size:9px;line-height:1.4}
- .publicMenu .publicMenuItem .publicMenuProductPrice strong{font-size:12px!important;line-height:1.4;letter-spacing:0}
- .publicMenu .publicMenuItem .publicMenuProductPrice small{font-size:8px!important;line-height:inherit;margin:0}
- .publicMenu .publicMenuItem .publicMenuCardCart{width:100%!important;min-height:44px;height:44px;padding:0;border-radius:8px;gap:0}
- .publicMenu .publicMenuItem .publicMenuCardCart>span{display:none!important}
- .publicMenu .publicMenuItem .publicMenuProductPrice[data-long=true] strong{font-size:9px!important}
- .publicMenu .publicMenuItem .publicMenuProductPrice[data-long=true] small{display:block}
- .publicMenu .publicMenuViewToggle{display:none}
-}
+
 .publicMenuProductDialog{border:1px solid var(--public-line);border-radius:22px;padding:0;width:min(560px,calc(100vw - 20px));max-width:calc(100vw - 20px);max-height:92dvh;background:var(--public-surface);color:var(--public-text);box-shadow:0 22px 90px #0006;overflow:hidden}
 .publicMenuProductDialog[open]{display:flex;flex-direction:column}
 .publicMenuProductDialog::backdrop{background:#0008;backdrop-filter:blur(5px)}
@@ -57,24 +37,10 @@
 .publicMenu .publicMenuHero{width:100%!important;max-width:100%;height:clamp(180px,18vw,240px)!important;min-height:0!important;max-height:240px;padding:0!important;margin:14px 0 10px!important;border-radius:22px;display:block;isolation:isolate;overflow:hidden;background:var(--public-surface)}
 .publicMenu .publicMenuHero .publicMenuHeroImage{z-index:1;object-fit:cover!important;object-position:center;opacity:1!important}
 .publicMenu .publicMenuHero[data-cover-shape=empty]{height:112px!important;background:linear-gradient(120deg,#b59c6714,transparent),var(--public-surface)}
-@media(max-width:700px){.publicMenu .publicMenuHero{height:clamp(140px,42vw,200px)!important;max-height:200px;margin:10px 0 8px!important;border-radius:18px}.publicMenu .publicMenuHero[data-cover-shape=empty]{height:84px!important}}
+
 
 .publicMenuEmptyCartDialog{width:min(400px,calc(100vw - 24px));border:1px solid var(--public-line);border-radius:20px;background:var(--public-surface);color:var(--public-text);padding:20px;box-shadow:0 16px 60px #0004}
 .publicMenuEmptyCartDialog::backdrop{background:#0008}
 .publicMenuEmptyCartDialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}.publicMenuEmptyCartDialog h2{font-size:19px}.publicMenuEmptyCartDialog p{font-size:14px;line-height:1.9;margin:18px 0;color:var(--public-muted)}
 .publicMenuEmptyCartDialog button{min-height:44px;border:0;border-radius:12px;padding:10px 16px;background:var(--public-brand);color:var(--public-on-brand)}.publicMenuEmptyCartDialog header button{width:44px;padding:0;display:grid;place-items:center;background:var(--public-bg);color:var(--public-text)}
 .publicMenu .publicMenuServiceDialog{border-radius:24px;box-shadow:0 22px 70px #00000024}.publicMenu .publicMenuServiceDialog h2{font-size:24px;line-height:1.5}.publicMenu .publicMenuServiceDialog :is(input,select,textarea){min-height:46px;border-radius:12px}.publicMenu .publicMenuServiceDialog .publicServiceSubmit{min-height:48px;border-radius:13px;font-weight:700}.publicMenu .publicMenuInlineAuth{border-radius:18px}.publicMenu .publicMenuAuthTabs{border-radius:12px}
-@media(max-width:950px){
- .publicMenu{padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}
- .publicMenu .publicMenuMobileDock{display:flex!important;position:fixed!important;inset-inline:8px;bottom:0;gap:2px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0;background:var(--public-surface);color:var(--public-text);border:1px solid var(--public-line);box-shadow:0 -4px 24px #00000012;z-index:60;max-width:680px;margin-inline:auto;min-height:68px;align-items:stretch}
- .publicMenu .publicMenuMobileDock .publicMenuServices{display:contents}
- .publicMenu .publicMenuMobileDock :is(a,button):not(dialog *){display:flex;flex:1 1 0;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;min-width:0;min-height:52px;margin:0;padding:4px 1px;background:transparent;color:var(--public-text);border:0;border-radius:10px;text-decoration:none;font-size:10px;font-weight:600;line-height:1.4;white-space:nowrap}
- .publicMenu .publicMenuMobileDock :is(a,button):not(dialog *):focus-visible{outline:2px solid var(--public-brand);outline-offset:-2px;background:var(--public-bg)}
- .publicMenu .publicMenuMobileDock :is(a,button):not(dialog *):active{background:var(--public-bg)}
- .publicMenu .publicMenuMobileDock > button>span,.publicMenu .publicMenuMobileDock > .publicMenuServices>button>span{max-width:100%;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:1.2;text-align:center}
- .publicMenu .publicMenuMobileDock svg:not(dialog *){width:21px;height:21px;flex-shrink:0}
- .publicMenu .publicMenuMobileDock a>span{font-size:23px;line-height:21px}
- .publicMenu .publicMenuMobileDock b{position:absolute;top:0;inset-inline-end:calc(50% - 25px);min-width:18px;height:18px;padding-inline:3px;border-radius:20px;display:grid;place-items:center;background:var(--public-brand);color:var(--public-on-brand);font-size:10px;font-weight:700}
- .publicMenu #menu-items,.publicMenu #menu-cart{scroll-margin-top:16px;scroll-margin-bottom:100px}
- .menuPreviewViewport .publicMenu .publicMenuMobileDock{position:sticky!important;inset:auto;bottom:0;margin:0}
-}
