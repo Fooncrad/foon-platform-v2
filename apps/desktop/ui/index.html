@@ -10,6 +10,7 @@
   <script defer src="./demo-orders.js"></script>
   <script defer src="./launcher.js"></script>
   <script defer src="./durable.js"></script>
+  <script defer src="./recovery.js"></script>
 </head>
 <body>
   <main>
@@ -28,6 +29,12 @@
       <p>قاعدة اختبار محفوظة في بيانات Windows المحلية. تبقى الطلبات والأحداث بعد إيقاف التطبيق وإعادة فتحه. بيانات وهمية فقط، ولا توجد مزامنة سحابية.</p>
       <div class="demo-actions"><button id="w05-start" type="button" disabled>تشغيل الاختبار المحفوظ</button><button id="w05-stop" type="button" disabled>إيقاف المحرك مع الاحتفاظ بالبيانات</button></div>
       <p id="w05-feedback" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card" aria-labelledby="w06-title">
+      <div class="card-head"><h2 id="w06-title">W06 · سلامة SQLite بعد الأعطال</h2><span id="w06-status" class="status" role="status" aria-live="polite">جاهز للفحص اليدوي</span></div>
+      <p>أوقف محرك W05 أولًا، ثم افحص القاعدة المحفوظة دون تعديلها. يعرض الفحص عدد الطلبات والأحداث المعلقة فقط، ولا يتصل بالإنترنت.</p>
+      <div class="demo-actions"><button id="w06-inspect" type="button">فحص سلامة قاعدة W05 المحفوظة</button></div>
+      <p id="w06-feedback" role="status" aria-live="polite"></p>
     </section>
     <section class="card" aria-labelledby="demo-title">
       <div class="card-head"><h2 id="demo-title">W03 · طلبات SQLite التجريبية</h2><span class="status" id="demo-state" role="status" aria-live="polite">التحقق من وضع التجربة...</span></div>
