@@ -2,6 +2,101 @@ use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
 use std::time::Duration;
 
+use std::env;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GatewayStatus {
+    status: &'static str,
+    pending: Option<u64>,
+    note: &'static str,
+}
+
+#[derive(serde::Deserialize)]
+struct GatewayHealth {
+    ok: bool,
+    storage: String,
+    pending: u64,
+}
+
+/// A *read-only* authenticated request, performed inside native Rust.
+/// Never return the bearer token, error body, or request headers to JavaScript.
+/// This does not start the service, enroll a device, or prove the OS process identity.
+#[tauri::command]
+fn gateway_status() -> GatewayStatus {
+    let token = match env::var("FOON_LAN_TOKEN") {
+        Ok(value)
+            if (32..=256).contains(&value.len())
+                && value.bytes().all(|c| c.is_ascii_alphanumeric() || b"-._~".contains(&c)) =>
+        {
+            value
+        }
+        _ => {
+            return GatewayStatus {
+                status: "not_configured",
+                pending: None,
+                note: "Native local gateway credentials are not configured",
+            }
+        }
+    };
+    let client = match reqwest::blocking::Client::builder()
+        .connect_timeout(Duration::from_millis(450))
+        .timeout(Duration::from_millis(1500))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+    {
+        Ok(client) => client,
+        Err(_) => {
+            return GatewayStatus {
+                status: "unavailable",
+                pending: None,
+                note: "Local gateway inspection is unavailable",
+            }
+        }
+    };
+    let response = client
+        .get("http://127.0.0.1:8787/health")
+        .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
+        .send();
+    let response = match response {
+        Ok(response) => response,
+        Err(_) => {
+            return GatewayStatus {
+                status: "not_running",
+                pending: None,
+                note: "No authenticated response from the local gateway",
+            }
+        }
+    };
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+        return GatewayStatus {
+            status: "unauthorized",
+            pending: None,
+            note: "Local service rejected the configured native token",
+        };
+    }
+    if !response.status().is_success() {
+        return GatewayStatus {
+            status: "unavailable",
+            pending: None,
+            note: "Local service health check failed",
+        };
+    }
+    match response.json::<GatewayHealth>() {
+        Ok(health) if health.ok && health.storage == "sqlite-wal-full" => GatewayStatus {
+            status: "authenticated",
+            pending: Some(health.pending),
+            note: "Authenticated SQLite gateway response; no cloud sync is asserted",
+        },
+        _ => GatewayStatus {
+            status: "unexpected_response",
+            pending: None,
+            note: "The local port is not returning a recognized FOON SQLite health response",
+        },
+    }
+}
+
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct StationStatus {
@@ -26,7 +121,7 @@ fn station_status() -> StationStatus {
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![station_status])
+        .invoke_handler(tauri::generate_handler![station_status, gateway_status])
         .run(tauri::generate_context!())
         .expect("Unable to start FOON desktop shell");
 }
