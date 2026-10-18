@@ -194,4 +194,16 @@ mod tests {
         assert_eq!("FOON-W03-Demo-".len(), 14);
         assert_eq!(Uuid::new_v4().to_string().len(),36);
     }
+    #[test]
+    fn serializes_pending_events_in_expected_ui_format() {
+        let order = DemoOrder {
+            id: "11111111-1111-4111-8111-111111111111".to_string(),
+            status: "new".to_string(),
+            pending_events: 3,
+        };
+        let value = serde_json::to_value(order).expect("serialized demo order");
+        assert_eq!(value.get("pendingEvents").and_then(|v| v.as_u64()), Some(3));
+        assert!(value.get("pending_events").is_none());
+
+    }
 }
