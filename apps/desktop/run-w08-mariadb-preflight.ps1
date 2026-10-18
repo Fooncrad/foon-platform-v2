@@ -14,6 +14,12 @@ if (-not (Test-Path -LiteralPath $script)) {
     throw "W08_PREFLIGHT_SCRIPT_MISSING"
 }
 
+Write-Host "W08 - TEST PRE-FLIGHT SAFETY GATES" -ForegroundColor Cyan
+& node (Join-Path $PSScriptRoot "w08-mariadb-preflight.test.mjs")
+if ($LASTEXITCODE -ne 0) {
+    throw "W08_PREFLIGHT_SAFETY_TESTS_FAILED"
+}
+
 if (-not (Get-NetTCPConnection -LocalPort 3306 -State Listen -ErrorAction SilentlyContinue)) {
     throw "W08_LOCAL_MARIADB_NOT_LISTENING_ON_3306"
 }
