@@ -12,7 +12,7 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
  const activeAdmin=await currentActiveAdminUserId(false);
  if(sessionId&&activeAdmin===userId){
   const [support]=await database().execute<RowDataPacket[]>(
-   "SELECT s.id,s.platform_role,pa.role AS current_role FROM platform_tenant_support_sessions s JOIN platform_admins pa ON pa.user_id=s.actor_user_id AND pa.enabled=TRUE JOIN users u ON u.id=s.actor_user_id AND u.status='active' JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>NOW() LIMIT 1",
+   "SELECT s.id,s.platform_role,pa.role AS current_role FROM platform_tenant_support_sessions s JOIN platform_admins pa ON pa.user_id=s.actor_user_id AND pa.enabled=TRUE JOIN users u ON u.id=s.actor_user_id AND u.status='active' JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
    [sessionId,userId,id]
   );
   if(support.length){
