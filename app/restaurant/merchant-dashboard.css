@@ -126,3 +126,18 @@
 .restaurantApp[data-activity="publicworks"]{--rc-accent:#bd8733;--rc-navy:#26313d}
 .restaurantApp[data-activity] .restaurantHero{background:radial-gradient(ellipse at 5% 0%,color-mix(in srgb,var(--rc-accent) 30%,transparent),transparent 58%),var(--rc-navy)}
 .restaurantApp[data-activity] .restaurantHeroTop small{color:#fff0cf}
+
+/* Shared language and store/branch controls stay usable in compact dashboards. */
+.restaurantLanguageSelector select{min-width:100px;max-width:125px;min-height:38px;padding:6px 8px;border:1px solid var(--rc-border);border-radius:10px;background:#fff;color:var(--rc-text);font-size:12px}
+.restaurantTenantSelector{display:inline-flex;min-width:0;max-width:180px}
+.restaurantTenantSelector select{min-width:0;max-width:180px;text-overflow:ellipsis}
+@media(max-width:680px){
+ .restaurantTopActions{min-width:0;flex-wrap:wrap;gap:6px}
+ .restaurantLanguageSelector{flex:0 0 auto}
+ .restaurantTenantSelector{flex:1 1 145px;max-width:none}
+ .restaurantTenantSelector select{width:100%;max-width:none;min-height:38px;padding:6px 8px;border:1px solid var(--rc-border);border-radius:10px;background:#fff;font-size:12px;text-overflow:ellipsis}
+ .restaurantBranchSelector{flex:1 1 145px;min-width:0;padding:6px 8px}
+ .restaurantBranchSelector select{min-width:0;width:100%;font-size:12px;text-overflow:ellipsis}
+ .restaurantSearchButton{min-height:38px;padding:8px}
+}
+@media(max-width:360px){.restaurantLanguageSelector select{min-width:88px;max-width:96px;font-size:11px}.restaurantTenantSelector,.restaurantBranchSelector{flex-basis:120px}}

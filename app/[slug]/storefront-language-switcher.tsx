@@ -9,9 +9,9 @@ export default function StorefrontLanguageSwitcher({language}:{language:Activity
   setUiLanguage(next);
   router.refresh();
  }
- return <label style={{display:"inline-flex",alignItems:"center",gap:6}}>
+ return <label className="foonLanguageSelector foonActivityLanguageSelector">
   <span className="sr-only">اللغة / Language / Langue</span>
-  <select aria-label="اللغة / Language / Langue" value={language} onChange={e=>change(e.target.value as ActivityLanguage)} style={{border:"1px solid #cbd5e1",borderRadius:8,padding:"8px",minHeight:40,background:"white",color:"#172033"}}>
+  <select aria-label="اللغة / Language / Langue" value={language} onChange={e=>change(e.target.value as ActivityLanguage)}>
    {(Object.keys(labels) as ActivityLanguage[]).map(key=><option key={key} value={key}>{labels[key]}</option>)}
   </select>
  </label>;
