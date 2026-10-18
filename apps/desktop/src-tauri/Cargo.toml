@@ -1,6 +1,6 @@
 [package]
 name = "foon-desktop"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "FOON Windows native station"
 license = "UNLICENSED"
@@ -18,3 +18,4 @@ serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
+fs2 = "0.4"
