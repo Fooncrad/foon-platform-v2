@@ -268,6 +268,18 @@ fn durable_test_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let base_real=base.canonicalize().map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?;
     let dir_real=dir.canonicalize().map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?;
     if dir_real.parent()!=Some(base_real.as_path()) {return Err("DURABLE_DIRECTORY_FORBIDDEN".into());}
+    // Reject a pre-existing SQLite DB, WAL, lock or manifest that is a link or directory.
+    for file in ["orders.sqlite","orders.sqlite-wal","orders.sqlite-shm","demo-branch.txt","w05.lock"] {
+        let path=dir_real.join(file);
+        match fs::symlink_metadata(&path) {
+            Ok(meta) if !meta.is_file() || meta.file_type().is_symlink() => {
+                return Err("DURABLE_DATA_ENTRY_FORBIDDEN".into());
+            }
+            Err(e) if e.kind()==std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err("DURABLE_DATA_ENTRY_INACCESSIBLE".into()),
+            _ => {}
+        }
+    }
     Ok(dir_real)
 }
 
