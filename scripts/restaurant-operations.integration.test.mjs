@@ -69,7 +69,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const kitchenPrinter=await save(a,"printers","Kitchen printer",{connection:"network",address:"192.0.2.10",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_accept"});
   const prepPrinter=await save(a,"printers","Kitchen prep printer",{connection:"network",address:"192.0.2.11",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_prepare"});
   const receiptPrinter=await save(a,"printers","Receipt printer",{connection:"network",address:"192.0.2.12",paperWidth:"80",copies:1,purpose:"customer_receipt",autoPrint:"yes",printOn:"on_paid",includePrices:"yes"});
-  await save(a,"departmentAssignments","Coffee to kitchen",{departmentId:kitchen,itemId:item,printCopies:2});
+  await save(a,"departmentAssignments","Drinks to kitchen",{departmentId:kitchen,categoryId:categoryA,printCopies:2});
   const requestKey=randomUUID(),orderPayload={branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,couponCode:"SAVE10",requestKey,total:0,items:[{id:item,quantity:2,price:0}]};
   const order=await resource(a,"pos",orderPayload);
   assert.equal(order.status,201,JSON.stringify(order.body));assert.equal(order.body.total,18);

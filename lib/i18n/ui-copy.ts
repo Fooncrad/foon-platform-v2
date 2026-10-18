@@ -4262,9 +4262,29 @@ export const uiCopy:Record<string,readonly [string,string]>={
   "Integration notes",
   "Notes d’intégration"
  ],
- "توزيع الأصناف على الأقسام": [
-  "Route items to departments",
-  "Affecter les articles aux services"
+ "ربط أقسام المنيو بالطابعات": [
+  "Link menu categories to printers",
+  "Relier les catégories du menu aux imprimantes"
+ ],
+ "ربط أقسام المنيو بالطابعة": [
+  "Menu category printer routing",
+  "Routage des catégories du menu vers les imprimantes"
+ ],
+ "قسم التشغيل الذي يستقبل الطلب": [
+  "Operations department that receives the order",
+  "Service opérationnel qui reçoit la commande"
+ ],
+ "قسم المنيو أو الكتالوج": [
+  "Menu or catalog category",
+  "Catégorie du menu ou du catalogue"
+ ],
+ "اربط قسم المنيو بقسم التشغيل والطابعة المناسبة؛ مثل قسم البرجر للمطبخ والقهوة للبار. تطبع أصناف القسم معًا عند قبول الطلب أو بدء التحضير. طابعة العميل مستقلة وتطبع بعد إكمال الطلب والدفع. يلزم تشغيل وسيط الطباعة المحلي لطابعات الشبكة.": [
+  "Link each menu category to its operating department and printer, such as burgers to the kitchen and coffee to the bar. The category prints together when an order is accepted or preparation starts. The customer receipt uses a separate printer and prints after completion and payment. Network printers require the local print agent.",
+  "Associez chaque catégorie du menu à son service opérationnel et à son imprimante, par exemple les burgers à la cuisine et le café au bar. Tous les articles de la catégorie s’impriment ensemble à l’acceptation ou au début de la préparation. Le reçu client utilise une imprimante séparée et s’imprime après la fin et le paiement. Les imprimantes réseau nécessitent l’agent local."
+ ],
+ "اختر نوع الطباعة والقسم ووقت إصدارها. اربط قسم المنيو بقسم التشغيل لتوجيه جميع أصنافه تلقائيًا، وتبقى طابعة العميل مستقلة.": [
+  "Choose the print type, department and trigger. Link a menu category to an operating department to route all its items automatically; the customer receipt printer stays separate.",
+  "Choisissez le type d’impression, le service et le déclencheur. Associez une catégorie du menu à un service pour acheminer automatiquement tous ses articles ; l’imprimante du reçu client reste séparée."
  ],
  "الصنف": [
   "Item",
@@ -5745,6 +5765,22 @@ export const uiCopy:Record<string,readonly [string,string]>={
  "تاريخ الإصدار": [
   "Issue date",
   "Date d’émission"
+ ],
+ "إجراء": [
+  "Action",
+  "Action"
+ ],
+ "طباعة الإيصال": [
+  "Print receipt",
+  "Imprimer le reçu"
+ ],
+ "إيصال اشتراك FOON": [
+  "FOON subscription receipt",
+  "Reçu d’abonnement FOON"
+ ],
+ "اسمح بالنوافذ المنبثقة لطباعة الإيصال.": [
+  "Allow pop-ups to print the receipt.",
+  "Autorisez les fenêtres contextuelles pour imprimer le reçu."
  ],
  "إدارة مكتبة الصور": [
   "Media library management",

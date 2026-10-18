@@ -20,7 +20,7 @@ const COMMON_FEATURES=new Set([
  "catalog","storefront","qr_menu","menu_templates","customer_invoices","internal_invoices",
  "invoice_printing","credit_notes","payments","vat_management","customers","employees",
  "multi_branch","analytics","coupons","loyalty","reviews","campaigns","content_library",
- "storage","sales"
+ "storage","sales","departments","department_printers","department_routing"
 ]);
 /** Creator account privileges are not merchant subscription features. */
 const CREATOR_ONLY=new Set(["creator_profile","content_marketplace","content_pricing","media_library","watermark"]);
@@ -85,7 +85,7 @@ const SERVER_RESTRICTED_FEATURES=new Set([
  "tables","reservations","waitlist","kds","waiter_call","digital_menu","nfc_menu",
  "service_catalog","appointments","queue","room_service","split_bills","split_bill_requests",
  "table_qr","table_minimum_charge","reservation_fees","waitlist_fees","service_fees",
- "departments","department_printers","department_routing","takeaway","variants","excise_tax"
+ "takeaway","variants","excise_tax"
 ]);
 export function passesServerActivityRestriction(activity:unknown,featureKey:string):boolean{
  if(!SERVER_RESTRICTED_FEATURES.has(featureKey)||typeof activity!=="string"||!isActivityType(activity))return true;

@@ -93,9 +93,9 @@ test("server restriction preserves legacy profile behavior while strict resolver
 
 test("automotive, carwash, salon and public works use service catalogs without dining features",()=>{
  for(const activity of ["automotive","carwash","salon","publicworks","laundry"]){
-  for(const key of ["catalog","storefront","service_catalog","queue","payments","pos"])
+  for(const key of ["catalog","storefront","service_catalog","queue","payments","pos","departments","department_printers","department_routing"])
    assert.equal(activityFeatureSupport(activity,key),"supported",activity+":"+key);
-  for(const key of ["tables","split_bills","table_qr","room_service","digital_menu","department_printers"]){
+  for(const key of ["tables","split_bills","table_qr","room_service","digital_menu"]){
    assert.equal(activityFeatureSupport(activity,key),"unsupported",activity+":"+key);
    assert.equal(passesServerActivityRestriction(activity,key),false,activity+":"+key);
   }

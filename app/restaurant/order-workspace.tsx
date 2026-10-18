@@ -138,7 +138,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
    line((locale==="ar"?"الضريبة":locale==="en"?"Tax":"Taxe")+" ("+snapshot.rate+"%)",money(snapshot.tax));
   }
   if(finalInvoice)line(t.paidAmount,Number(order.total??0).toFixed(2)+" "+(order.currency??"SAR"),"total");
-  el("div",finalInvoice?t.notTaxInvoice:t.kitchenNote,"note");
+  if(!finalInvoice)el("div",t.kitchenNote,"note");
   if(finalInvoice){
    try{
     const QRCode=(await import("qrcode")).default;
