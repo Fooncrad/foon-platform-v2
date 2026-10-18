@@ -63,9 +63,18 @@ export function createOptInEdgeSyncScheduler({
       failures++;delay=backoff();lastStatus="retry-wait";
     }finally{
       inFlight=false;
-      if(runEpoch===epoch&&active&&!paused){
-        if(wakePending){wakePending=false;arm(0);}
-        else arm(delay);
+      if(active&&!paused){
+        if(runEpoch!==epoch){
+          // A new explicit start occurred while the old request was running.
+          // Ignore the stale receipt/counters and schedule ONE fresh attempt.
+          wakePending=false;
+          arm(0);
+        }else if(wakePending){
+          wakePending=false;
+          arm(0);
+        }else{
+          arm(delay);
+        }
       }
     }
   }
