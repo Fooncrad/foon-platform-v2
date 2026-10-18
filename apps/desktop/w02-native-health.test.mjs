@@ -28,7 +28,7 @@ test('W02 native health: expected controls exist and renderer has no access to t
  assert(rust.includes('127.0.0.1:8787/health'));
  assert(rust.includes('StatusCode::UNAUTHORIZED'));
  assert(rust.includes('station_status, gateway_status'));
- assert(!rust.includes('format!("Bearer {token}")')===false);
+ assert(rust.includes('format!("Bearer {token}")'));
 });
 test('W02 native health: authenticated gateway reports pending outbox count',async()=>{
  const e=await render({status:'authenticated',pending:3});
