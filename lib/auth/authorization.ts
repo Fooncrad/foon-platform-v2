@@ -15,10 +15,11 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
  if(platformAdmins.length){
   console.error("[tenant-support-debug] platform administrator identified; session present:",Boolean(sessionId));
   if(!sessionId)throw new Error("FORBIDDEN");
-  const [support]=await database().execute<RowDataPacket[]>(
+  let support:RowDataPacket[]=[];
+  try{[support]=await database().execute<RowDataPacket[]>(
    "SELECT s.id,s.platform_role,pa.role AS current_role FROM platform_tenant_support_sessions s JOIN auth_sessions a ON a.id=s.auth_session_id AND a.user_id=s.actor_user_id AND a.expires_at>UTC_TIMESTAMP() JOIN platform_admins pa ON pa.user_id=s.actor_user_id AND pa.enabled=TRUE JOIN users u ON u.id=s.actor_user_id AND u.status='active' JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
    [sessionId,userId,id]
-  );
+  );}catch(error){console.error("[tenant-support-debug] lookup query error:",error);throw error;}
   console.error("[tenant-support-debug] active support session matched:",Boolean(support.length));
   if(support.length){
    const role=String(support[0].platform_role)==="support"||String(support[0].current_role)==="support"?"support":"admin";
