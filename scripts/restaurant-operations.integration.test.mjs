@@ -140,6 +140,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1,options:[categoryB]}]})).status,400);
   const customer=await call("/api/customer/register","POST",{email:"operations-customer@test.example",name:"Customer",password,storeSlug:"operations-owner-a"});assert.equal(customer.status,201);
+  assert.equal((await call("/api/customer/services?storeSlug=operations-owner-a","GET")).status,401);
   const waiterPayload={storeSlug:"operations-owner-a",branchId:a.branch,action:"waiter",tableId:table,notes:"Water please",requestKey:randomUUID()};
   assert.equal((await call("/api/customer/services","POST",waiterPayload)).status,401);
   assert.equal((await call("/api/customer/services","POST",{...waiterPayload,storeSlug:"operations-owner-b",branchId:b.branch},customer.cookie)).status,403);
@@ -153,6 +154,15 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/customer/services","POST",{...bookingPayload,scheduledAt:new Date(Date.now()-60000).toISOString()},customer.cookie)).status,400);
   const booking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);assert.equal(booking.status,201,JSON.stringify(booking.body));
   const savedBookings=await resource(a,"reservations",undefined,"GET");assert.equal(savedBookings.body.resources.find(row=>row.id===booking.body.id).status,"pending");
+  const customerBookings=await call("/api/customer/services?storeSlug=operations-owner-a","GET",undefined,customer.cookie);assert.equal(customerBookings.status,200);assert.equal(customerBookings.body.reservations.some(row=>row.id===booking.body.id),true);assert.equal(customerBookings.body.reservations.find(row=>row.id===booking.body.id).partySize,3);
+  const reservationOrderPayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"dine_in",reservationId:booking.body.id,requestKey:randomUUID(),items:[{id:item,quantity:1}]};
+  const reservationOrder=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationOrder.status,201,JSON.stringify(reservationOrder.body));
+  const reservationReplay=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationReplay.status,201);assert.equal(reservationReplay.body.id,reservationOrder.body.id);
+  const [[linkedReservationOrder]]=await db.execute("SELECT reservation_id,table_id,party_size FROM restaurant_orders WHERE id=?",[reservationOrder.body.id]);assert.equal(linkedReservationOrder.reservation_id,booking.body.id);assert.equal(linkedReservationOrder.table_id,null);assert.equal(linkedReservationOrder.party_size,3);
+  const otherCustomer=await call("/api/customer/register","POST",{email:"operations-other-customer@test.example",name:"Other customer",password,storeSlug:"operations-owner-a"});assert.equal(otherCustomer.status,201);
+  const stolenReservationOrder=await call("/api/customer/orders","POST",{...reservationOrderPayload,requestKey:randomUUID()},otherCustomer.cookie);assert.equal(stolenReservationOrder.body.code,"RESERVATION_NOT_AVAILABLE");
+  const duplicateReservationOrder=await call("/api/customer/orders","POST",{...reservationOrderPayload,requestKey:randomUUID()},customer.cookie);assert.equal(duplicateReservationOrder.body.code,"RESERVATION_ALREADY_ORDERED");
+  const linkedBooking=savedBookings.body.resources.find(row=>row.id===booking.body.id);const cancelLinkedBooking=await resource(a,"reservations",{id:booking.body.id,version:linkedBooking.version,name:linkedBooking.name,status:"cancelled",branchId:a.branch,data:linkedBooking.data},"PATCH");assert.equal(cancelLinkedBooking.body.code,"RESERVATION_HAS_PREORDER");
   const serviceOverview=await resource(a,"overview",undefined,"GET");assert.equal(serviceOverview.body.summary.waiterCalls,1);assert.equal(serviceOverview.body.summary.reservations,1);
   const bookingTime=new Date(Date.now()+2*86400000).toISOString();
   const allocated=await save(a,"reservations","Allocated guest",{partySize:2,scheduledAt:bookingTime,durationMinutes:90,sectionId:family,tableId:diningTable},"confirmed");assert.ok(allocated);
