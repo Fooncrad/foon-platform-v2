@@ -1,5 +1,7 @@
 mod demo_orders;
 mod edge_runtime;
+#[cfg(windows)]
+mod windows_secret_store;
 use tauri::Manager;
 use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
