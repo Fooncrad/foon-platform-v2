@@ -24,7 +24,7 @@ export async function markOverdueReservationsNoShow(pool:Pool,now=Date.now(),bat
     const [rows]=await db.execute<RowDataPacket[]>("SELECT id,tenant_id,branch_id,name,status,data,version FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='reservation' AND archived=FALSE FOR UPDATE",[candidate.id,candidate.tenant_id]);
     if(!rows.length||rows[0].status!=="confirmed"){await db.commit();continue;}
     const row=rows[0] as Reservation,details=json(row.data),branch=row.branch_id?String(row.branch_id):null;
-    const [settings]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='branch_config' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) AND JSON_EXTRACT(data,'$.noShowGraceMinutes') IS NOT NULL ORDER BY (branch_id IS NOT NULL) DESC,updated_at DESC,created_at DESC LIMIT 1",[row.tenant_id,branch]);
+    const [settings]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='branch_config' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) AND JSON_TYPE(JSON_EXTRACT(data,'$.noShowGraceMinutes')) IN ('INTEGER','DOUBLE') ORDER BY (branch_id IS NOT NULL) DESC,updated_at DESC,created_at DESC LIMIT 1",[row.tenant_id,branch]);
     const config=settings[0]?json(settings[0].data):{};
     if(!reservationNoShowDue(details.scheduledAt,config.noShowGraceMinutes,now)){await db.commit();continue;}
     const [linked]=await db.execute<RowDataPacket[]>("SELECT status FROM restaurant_orders WHERE tenant_id=? AND reservation_id=? FOR UPDATE",[row.tenant_id,row.id]);
