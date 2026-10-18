@@ -53,11 +53,19 @@ extern "system" {
 
 /// Only native Rust receives unwrapped bytes. No Debug, Display, Serialize,
 /// JS injection, filesystem path or frontend command is implemented.
+fn secure_zero(bytes: &mut [u8]) {
+    for byte in bytes {
+        unsafe { write_volatile(byte, 0); }
+    }
+    compiler_fence(Ordering::SeqCst);
+}
+
 pub(crate) struct DeviceSecret(Vec<u8>);
 
 impl DeviceSecret {
-    pub(crate) fn from_bytes(bytes: Vec<u8>) -> Result<Self, &'static str> {
+    pub(crate) fn from_bytes(mut bytes: Vec<u8>) -> Result<Self, &'static str> {
         if bytes.is_empty() || bytes.len() > MAX_SECRET_SIZE {
+            secure_zero(&mut bytes);
             return Err("DPAPI_INVALID_SECRET_LENGTH");
         }
         Ok(Self(bytes))
@@ -71,10 +79,7 @@ impl Drop for DeviceSecret {
     fn drop(&mut self) {
         // Volatile overwrite before the Vec deallocates its backing buffer.
         // This cannot erase copies created elsewhere or memory swapped to disk.
-        for byte in self.0.iter_mut() {
-            unsafe { write_volatile(byte, 0); }
-        }
-        compiler_fence(Ordering::SeqCst);
+        secure_zero(&mut self.0);
     }
 }
 
@@ -99,6 +104,13 @@ impl SealedDeviceSecret {
 unsafe fn consume_output(out: &mut DataBlob, sensitive: bool) -> Result<Vec<u8>, &'static str> {
     if out.pb_data.is_null() || out.cb_data == 0 || out.cb_data as usize > MAX_DPAPI_BLOB {
         if !out.pb_data.is_null() {
+            if sensitive {
+                let wipe = std::cmp::min(out.cb_data as usize, MAX_DPAPI_BLOB);
+                for i in 0..wipe {
+                    write_volatile(out.pb_data.add(i), 0);
+                }
+                compiler_fence(Ordering::SeqCst);
+            }
             let _ = LocalFree(out.pb_data.cast::<c_void>());
         }
         out.pb_data = null_mut();
