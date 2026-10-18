@@ -32,6 +32,13 @@ test("reservation no-show grace is an optional bounded branch setting",()=>{
   assert.throws(()=>validateResource("settings",{name:"Branch",status:"active",data:{noShowGraceMinutes:value}}));
  assert.equal(validateResource("settings",{name:"Branch",status:"active",data:{noShowGraceMinutes:0}}).data.noShowGraceMinutes,0);
 });
+test("preparation printers require a routable department while receipt-only printers do not",()=>{
+ const branch="11111111-1111-4111-8111-111111111111",department="22222222-2222-4222-8222-222222222222";
+ const base={name:"Section printer",status:"active",branchId:branch,data:{connection:"network",address:"192.168.1.20",paperWidth:"80",purpose:"preparation",autoPrint:"yes",printOn:"on_accept"}};
+ assert.throws(()=>validateResource("printers",base),{code:"REQUIRED_departmentId"});
+ assert.equal(validateResource("printers",{...base,data:{...base.data,departmentId:department}}).data.departmentId,department);
+ assert.equal(validateResource("printers",{...base,data:{...base.data,purpose:"customer_receipt",printOn:"on_paid"}}).data.departmentId,null);
+});
 test("staff roles, coupon bounds and attendance chronology are constrained",()=>{
  assert.throws(()=>validateResource("team",{name:"X",status:"active",data:{email:"x@example.com",role:"owner"}}));
  assert.throws(()=>validateResource("coupons",{name:"X",status:"active",data:{code:"SAVE",discountType:"percent",value:101}}));

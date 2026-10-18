@@ -77,6 +77,7 @@ export function validateResource(module,body){
  if(module==="storefront"){if(data.vatEnabled==="yes"&&data.vatRate===null)throw new ResourceError("REQUIRED_vatRate");for(const key of ["checkoutServiceFee","checkoutDeliveryFee","checkoutRoomServiceFee"])if(data[key]!==null&&Math.abs(data[key]*100-Math.round(data[key]*100))>1e-7)throw new ResourceError("INVALID_AMOUNT_PRECISION");}
  if(module==="coupons"){data.code=data.code.toUpperCase();if(!/^[A-Z0-9_-]{2,40}$/.test(data.code)||data.discountType==="percent"&&data.value>100)throw new ResourceError("INVALID_COUPON");}
  if(module==="attendance"&&data.checkIn&&data.checkOut&&Date.parse(data.checkOut)<Date.parse(data.checkIn))throw new ResourceError("INVALID_TIME_RANGE");
+ if(module==="printers"&&["preparation","both"].includes(data.purpose)&&!data.departmentId)throw new ResourceError("REQUIRED_departmentId");
  if(module==="marketing"&&body.status==="scheduled"&&!data.scheduledAt)throw new ResourceError("REQUIRED_scheduledAt");
  const branchId=body.branchId??null;
  if(branchId!==null&&(typeof branchId!=="string"||!branchId.trim()||branchId.length>36))throw new ResourceError("INVALID_BRANCH");

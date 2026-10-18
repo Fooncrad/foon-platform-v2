@@ -6430,9 +6430,9 @@ export const uiCopy:Record<string,readonly [string,string]>={
   "Owners can add employees before registration. Access remains disabled until the account is linked and activated.",
   "Le propriétaire peut ajouter des employés avant inscription. L’accès reste désactivé jusqu’à association et activation du compte."
  ],
- "أدخل اسم الطابعة وحدد طريقة الاتصال واستخدامها. الخيارات الفنية اختيارية وموجودة أسفل الصفحة.": [
-  "Enter the printer name, connection and purpose. Optional technical settings are below.",
-  "Saisissez le nom, la connexion et l’usage de l’imprimante. Les paramètres techniques facultatifs se trouvent ci-dessous."
+ "اربط كل صنف بقسمه واختر طابعة ذلك القسم؛ مثل الأكلات للمطبخ والقهوة للبار. تطبع تذكرة القسم عند القبول أو بدء التحضير، وتطبع فاتورة العميل بعد اكتمال الطلب والدفع. يلزم تشغيل وسيط الطباعة المحلي لطابعات الشبكة.": [
+  "Assign each item to its department and choose that department’s printer, such as food to the kitchen and coffee to the bar. Department tickets print when accepted or preparation starts; customer receipts print after the order is completed and paid. The local print agent must be running for network printers.",
+  "Associez chaque article à son service et choisissez son imprimante, par exemple les plats en cuisine et le café au bar. Les tickets de service s’impriment à l’acceptation ou au début de la préparation ; les reçus client s’impriment après la fin et le paiement de la commande. L’agent d’impression local doit fonctionner pour les imprimantes réseau."
  ],
  "تحديث": [
   "Refresh",
