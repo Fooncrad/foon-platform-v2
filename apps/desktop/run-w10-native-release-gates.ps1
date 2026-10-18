@@ -8,9 +8,24 @@ $current = (& git branch --show-current).Trim()
 if ($current -ne "feat/foon-windows-w10-http-mariadb-20261019") {
     throw "W10_RELEASE_BRANCH_REQUIRED"
 }
-$pendingChanges = & git status --porcelain
-if ($LASTEXITCODE -ne 0 -or $pendingChanges) {
-    throw "W10_RELEASE_REQUIRES_CLEAN_WORKTREE"
+# Allow only known locally generated, untracked build outputs.
+# Do not delete them, stage them, or ignore changes to tracked source.
+# PS 5.1: use normal porcelain format, where untracked 'gen/' is one entry.
+$pendingChanges = @(& git status --porcelain --untracked-files=normal)
+if ($LASTEXITCODE -ne 0) { throw "W10_RELEASE_GIT_STATUS_FAILED" }
+$allowedUntracked = @(
+    "?? apps/desktop/package-lock.json",
+    "?? apps/desktop/src-tauri/Cargo.lock",
+    "?? apps/desktop/src-tauri/gen/"
+)
+foreach ($change in $pendingChanges) {
+    if ($change -cnotin $allowedUntracked) {
+        Write-Host "W10 RELEASE: unexpected modified/untracked file detected." -ForegroundColor Yellow
+        throw "W10_RELEASE_UNEXPECTED_WORKTREE_CHANGE"
+    }
+}
+if ($pendingChanges.Count -gt 0) {
+    Write-Host "W10 RELEASE: only 3 known untracked npm/Rust/Tauri generated artifacts are permitted; all preserved." -ForegroundColor Yellow
 }
 $tests = @(
     ".\apps\desktop\desktop-gate.test.mjs",
