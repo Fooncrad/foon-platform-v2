@@ -315,6 +315,92 @@ pub fn stop_durable_test_runtime(state: State<'_, DemoRuntime>) -> Result<Launch
     Ok(launcher(false,"DURABLE_TEST_STOPPED","none"))
 }
 
+
+/// W06: manually requested offline integrity inspection. It reads only the W05
+/// synthetic database using a dedicated bundled Node24 *read-only* process.
+/// The renderer receives aggregate counts, not the file path, token or orders.
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct DurableDiskReport {
+    healthy: bool,
+    orders: u64,
+    events: u64,
+    pending: u64,
+}
+
+#[tauri::command]
+pub fn inspect_durable_sqlite(app: AppHandle, state: State<'_, DemoRuntime>) -> Result<DurableDiskReport,String> {
+    {
+        let mut owned=state.0.lock().map_err(|_| "LAUNCHER_LOCK_FAILED".to_string())?;
+        if let Some(running)=owned.as_mut() {
+            if running.child.try_wait().map_err(|_| "LAUNCHER_PROCESS_ERROR".to_string())?.is_none() {
+                return Err("STOP_GATEWAY_BEFORE_DISK_CHECK".into());
+            }
+            // A crashed child has already exited; release its stale OS lock.
+            shutdown_owned(&mut owned);
+        }
+    }
+    // Never attach to or terminate an unknown listener.
+    if listener_present() { return Err("PORT_8787_IN_USE".into()); }
+
+    let dir=durable_test_dir(&app)?;
+    let file=dir.join("orders.sqlite");
+    if !file.is_file() { return Err("W05_NO_SAVED_ORDERS".into()); }
+    let identity=fs::read_to_string(dir.join("demo-branch.txt"))
+        .map_err(|_| "W05_BRANCH_MANIFEST_MISSING".to_string())?;
+    let parsed=Uuid::parse_str(identity.trim()).map_err(|_| "W05_BRANCH_MANIFEST_INVALID".to_string())?;
+    if identity.trim()!=parsed.to_string() {
+        return Err("W05_BRANCH_MANIFEST_INVALID".into());
+    }
+
+    let lock_file=OpenOptions::new().create(true).read(true).write(true)
+        .open(dir.join("w05.lock")).map_err(|_| "DURABLE_LOCK_OPEN_FAILED".to_string())?;
+    lock_file.try_lock_exclusive().map_err(|_| "DURABLE_DB_IN_USE".to_string())?;
+
+    let root=app.path().resource_dir().map_err(|_| "BUNDLED_RESOURCES_MISSING".to_string())?
+        .join("resources").join("edge-runtime");
+    let node=root.join("node.exe");
+    let inspector=root.join("scripts").join("w06-inspect-sqlite.mjs");
+    if !node.is_file() || !inspector.is_file() {return Err("W06_INSPECTOR_NOT_BUNDLED".into());}
+    let mut process=Command::new(node);
+    process.arg(inspector).arg(&file)
+        .current_dir(root)
+        .env_clear()
+        .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
+    for name in ["SystemRoot","WINDIR","TEMP","TMP","USERPROFILE"] {
+        if let Some(value)=env::var_os(name) {process.env(name,value);}
+    }
+    let mut child=process.spawn().map_err(|_| "W06_INSPECTOR_START_FAILED".to_string())?;
+    let mut complete=false;
+    for _ in 0..90 {
+        if child.try_wait().map_err(|_| "W06_INSPECTOR_WAIT_FAILED".to_string())?.is_some() {
+            complete=true;break;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+    if !complete {
+        let _=child.kill();let _=child.wait();
+        return Err("W06_INSPECTOR_TIMEOUT".into());
+    }
+    let result=child.wait_with_output().map_err(|_| "W06_INSPECTOR_OUTPUT_FAILED".to_string())?;
+    if !result.status.success() {return Err("W06_SQLITE_INTEGRITY_FAILED".into());}
+    if result.stdout.len()>1024 {return Err("W06_INSPECTOR_OUTPUT_INVALID".into());}
+    let report:serde_json::Value=serde_json::from_slice(&result.stdout)
+        .map_err(|_| "W06_INSPECTOR_OUTPUT_INVALID".to_string())?;
+    if report.get("healthy")!=Some(&serde_json::json!(true)) {
+        return Err("W06_SQLITE_INTEGRITY_FAILED".into());
+    }
+    Ok(DurableDiskReport {
+        healthy:true,
+        orders:report.get("orders").and_then(|x|x.as_u64())
+            .ok_or_else(|| "W06_INSPECTOR_OUTPUT_INVALID".to_string())?,
+        events:report.get("events").and_then(|x|x.as_u64())
+            .ok_or_else(|| "W06_INSPECTOR_OUTPUT_INVALID".to_string())?,
+        pending:report.get("pending").and_then(|x|x.as_u64())
+            .ok_or_else(|| "W06_INSPECTOR_OUTPUT_INVALID".to_string())?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
