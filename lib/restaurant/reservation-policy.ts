@@ -9,6 +9,6 @@ export function reservationTransitionAllowed(previous:string|null,next:string){
 
 export function reservationNoShowDue(scheduledAt:unknown,durationMinutes:unknown,now=Date.now()){
  const start=typeof scheduledAt==="string"?Date.parse(scheduledAt):NaN;
- const duration=durationMinutes==null||durationMinutes===""?90:Number(durationMinutes);
- return Number.isFinite(start)&&Number.isInteger(duration)&&duration>=30&&duration<=240&&Number.isFinite(now)&&now>=start+duration*60000;
+ const grace=durationMinutes==null||durationMinutes===""?30:Number(durationMinutes);
+ return Number.isFinite(start)&&Number.isInteger(grace)&&grace>=0&&grace<=1440&&Number.isFinite(now)&&now>=start+grace*60000;
 }

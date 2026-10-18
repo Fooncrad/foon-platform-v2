@@ -12,7 +12,7 @@ Updated 2026-10-16. This checklist is not a completion claim. Issue #32 remains 
 - Port useful workspace/POS changes from closed PR#17 onto current main without exposing customer email or replacing current sync architecture.
 - Complete activity-specific operational tools, variants/options and stock UI.
 - Complete delivery zones/fees, driver collection and returns per activity.
-- Complete preorder-linked reservations, no-show cancellation and notifications.
+- Complete preorder-linked reservations. Batch 92 adds scheduled no-show status changes and customer notifications; the trusted no-show worker still needs to be scheduled in production before the behavior is active there.
 - Complete registered hotel-room and configured pickup-point ordering journeys.
 - Complete saved customer information, loyalty and live status/notification acceptance tests.
 - Verify actual Windows/Edge LAN/offline operation, disconnect/reconnect, restart recovery and durable synchronization on real devices.

@@ -25,6 +25,13 @@ test("registered hotel rooms require a branch and normalize room numbers",()=>{
  assert.throws(()=>validateResource("hotelRooms",{name:"Room 101",status:"active",data:{roomNumber:"101"}}),{code:"REQUIRED_BRANCH"});
  for(const value of ["","  ","Room 101 / <script>"," ".repeat(25)])assert.throws(()=>validateResource("hotelRooms",{name:"Room",status:"active",branchId:branch,data:{roomNumber:value}}));
 });
+test("reservation no-show grace is an optional bounded branch setting",()=>{
+ const field=resourceModules.settings.fields.find(item=>item.key==="noShowGraceMinutes");
+ assert.ok(field);assert.equal(field.min,0);assert.equal(field.max,1440);assert.equal(field.integer,true);
+ for(const value of [-1,1441,2.5,"later"])
+  assert.throws(()=>validateResource("settings",{name:"Branch",status:"active",data:{noShowGraceMinutes:value}}));
+ assert.equal(validateResource("settings",{name:"Branch",status:"active",data:{noShowGraceMinutes:0}}).data.noShowGraceMinutes,0);
+});
 test("staff roles, coupon bounds and attendance chronology are constrained",()=>{
  assert.throws(()=>validateResource("team",{name:"X",status:"active",data:{email:"x@example.com",role:"owner"}}));
  assert.throws(()=>validateResource("coupons",{name:"X",status:"active",data:{code:"SAVE",discountType:"percent",value:101}}));
