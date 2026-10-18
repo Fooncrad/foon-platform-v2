@@ -33,10 +33,10 @@ On MariaDB 11.8, SHOW GRANTS may include inherited `TO PUBLIC` grants on `test` 
 
 The stage 1.5 result is only a readiness check. **Passing does not authorize any migration or mutation.** Stage 2 remains blocked: the pre-existing integration test creates/drops an extra `foon_edge_collation_*` database and may require global CREATE DATABASE, which this safety gate intentionally forbids. Do not grant global privileges just to make the old test pass. First refactor Stage 2 to stay within owned disposable fixture namespaces with separately reviewed credentials.
 
-## Stage 2: real local MariaDB integration — NOT AUTHORIZED OR EXECUTED YET
+## Legacy full real-MySQL integration — NOT AUTHORIZED OR EXECUTED
 A separate local MariaDB database named foon_edge_test on 127.0.0.1 is required. The existing foon-edge-cloud.integration.test.mjs calls scripts/migrate.mjs against that database and creates/drops additional isolated collation fixture databases. Therefore it is MUTATING, not read-only. It must NOT be run against production, any existing merchant dataset, or a database used by unrelated tests.
 
-Before running stage 2:
+Before running the legacy full migration test:
 - Review test code and migration list against the local MariaDB version and privileges.
 - Create and explicitly authorize a brand-new, disposable test-only database with no merchant data, restricted to loopback and dedicated credentials.
 - Verify the test user cannot access any database except the designated fixtures.
