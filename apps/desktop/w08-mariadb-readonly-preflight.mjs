@@ -1,6 +1,7 @@
 // W08 read-only gate. Requires a newly allocated, EMPTY localhost database.
 // Never runs migrations, test fixtures, DROP, DDL, writes, or a cloud request.
-import mysql from "mysql2/promise";
+// Validate the target before loading the database driver. This keeps the
+// fail-closed URL tests usable even before project dependencies are installed.
 
 function configuration() {
   const raw=process.env.EDGE_TEST_DATABASE_URL;
@@ -35,6 +36,12 @@ function checkGrants(grants) {
 
 async function main(){
   const address=configuration();
+  let mysql;
+  try{mysql=(await import("mysql2/promise")).default;}
+  catch(error){
+    if(error?.code==="ERR_MODULE_NOT_FOUND")throw Error("W08_MYSQL2_DEPENDENCY_MISSING");
+    throw error;
+  }
   let db;
   try{
     db=await mysql.createConnection({uri:address,connectTimeout:5000,multipleStatements:false});
@@ -61,7 +68,8 @@ main().catch(error=>{
     "W08_TEST_URL_REQUIRED","W08_INVALID_TEST_URL","W08_REJECT_NONLOCAL_OR_NONTEST_DATABASE",
     "W08_CONNECTED_TO_UNEXPECTED_DATABASE","W08_UNRECOGNIZED_DB_GRANT",
     "W08_ACCOUNT_HAS_GLOBAL_PRIVILEGES","W08_ACCOUNT_HAS_OTHER_DATABASE_PRIVILEGES",
-    "W08_DATABASE_SCOPED_PRIVILEGES_REQUIRED","W08_TEST_DATABASE_NOT_EMPTY"
+    "W08_DATABASE_SCOPED_PRIVILEGES_REQUIRED","W08_TEST_DATABASE_NOT_EMPTY",
+    "W08_MYSQL2_DEPENDENCY_MISSING"
   ]);
   const code=known.has(error?.message)?error.message:"W08_LOCAL_DATABASE_UNAVAILABLE";
   console.error(code);
