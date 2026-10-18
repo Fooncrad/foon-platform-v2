@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {auditFoonDistribution} from "./w11-distribution-policy.mjs";
-const tauri={bundle:{active:true,resources:["resources/edge-runtime/**/*"]},
+const tauri={build:{frontendDist:"../ui"},bundle:{active:true,resources:["resources/edge-runtime/**/*"]},
   app:{withGlobalTauri:true}};
 const asset=(path)=>({path});
 const safeResources=[asset("resources/edge-runtime/node.exe")];
