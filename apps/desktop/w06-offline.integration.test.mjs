@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn,spawnSync} from 'node:child_process';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {mkdtemp,rm,access} from 'node:fs/promises';
+import {mkdtemp,rm,access,writeFile} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {tmpdir} from 'node:os';
 import {join,dirname,resolve} from 'node:path';
@@ -115,5 +115,25 @@ test('W06 offline-only: synthetic orders, 100 Outbox events, idempotence and cra
   }finally{
     await stop(p);
     await rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:150});
+  }
+});
+
+
+test('W06: corrupt SQLite file is reported unhealthy without rewriting the existing file',{
+  timeout:15000
+},async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'foon-w06-corrupt-'));
+  const db=join(dir,'orders.sqlite');
+  const sentinel='not-a-sqlite-database-KEEP-THIS-INPUT';
+  try{
+    await writeFile(db,sentinel);
+    const attempt=spawnSync(process.execPath,[inspector,db],{
+      cwd:root,windowsHide:true,encoding:'utf8',timeout:9000
+    });
+    assert.notEqual(attempt.status,0,'corrupt SQLite must not pass integrity inspection');
+    const check=await import('node:fs/promises');
+    assert.equal(await check.readFile(db,'utf8'),sentinel,'inspector must not modify corrupt data');
+  }finally{
+    await rm(dir,{recursive:true,force:true});
   }
 });
