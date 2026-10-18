@@ -6,7 +6,9 @@ function printReceipt(row:Receipt,translate:(value:string)=>string){
  const popup=window.open("","_blank","width=440,height=640");
  if(!popup)throw new Error(translate("اسمح بالنوافذ المنبثقة لطباعة الإيصال."));
  const doc=popup.document;doc.title=translate("إيصال اشتراك FOON");
- const style=doc.createElement("style");style.textContent="@page{size:80mm auto;margin:5mm}body{font:15px Arial,sans-serif;max-width:70mm;margin:0 auto;color:#111;direction:"+(document.documentElement.lang==="ar"?"rtl":"ltr")}h1{text-align:center;font-size:20px}p{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed #aaa;padding:8px 0}.value{font-weight:700;text-align:end}";doc.head.appendChild(style);
+ const style=doc.createElement("style");
+ style.textContent=`@page{size:80mm auto;margin:5mm}body{font:15px Arial,sans-serif;max-width:70mm;margin:0 auto;color:#111;direction:${document.documentElement.lang==="ar"?"rtl":"ltr"}}h1{text-align:center;font-size:20px}p{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed #aaa;padding:8px 0}.value{font-weight:700;text-align:end}`;
+ doc.head.appendChild(style);
  const heading=doc.createElement("h1");heading.textContent=translate("إيصال اشتراك FOON");doc.body.appendChild(heading);
  const fields:[[string,string],[string,string],[string,string],[string,string]]=[["رقم الإيصال",row.receipt_number],["المنشأة",row.tenant_name],["المبلغ",row.amount+" "+row.currency],["تاريخ الإصدار",new Date(row.issued_at).toLocaleString("en-GB")]];
  for(const [label,value] of fields){const p=doc.createElement("p"),name=doc.createElement("span"),content=doc.createElement("span");name.textContent=translate(label);content.textContent=value;content.className="value";p.append(name,content);doc.body.appendChild(p);}
