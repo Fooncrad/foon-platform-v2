@@ -41,4 +41,7 @@ W10 is **not** the live Next.js `/api/edge/sync` endpoint or merchant identity a
 Next gates are: a dedicated migration-scoped disposable staging DB for the full Next.js endpoint and device enrollment; Windows key storage and a safe opt-in enrollment UI; real Windows packaging/install/uninstall, offline/reconnect/upgrade tests; independent tenant/branch and authorized merchant UAT; and human-approved production rollout. None may bypass the test isolation or automatic deployment ban.
 
 No GitHub Actions, automatic merge, or Hostinger changes.
-\n## No claim of finished installed application\n\nEven a green native build is a **v0.1.4 baseline shell installer**; W10 HTTP/MariaDB sync is a test-only Node harness, not a customer-facing Tauri sync button. A production-ready desktop requires user-device enrollment, a permitted staging server, operator roles/policy tests, protected OS key storage, real printer/POS hardware, and merchant acceptance.\n
+
+## No claim of finished installed application
+
+Even a green native build is a **v0.1.4 baseline shell installer**; W10 HTTP/MariaDB sync is a test-only Node harness, not a customer-facing Tauri sync button. A production-ready desktop requires user-device enrollment, a permitted staging server, operator roles/policy tests, protected OS key storage, real printer/POS hardware, and merchant acceptance.
