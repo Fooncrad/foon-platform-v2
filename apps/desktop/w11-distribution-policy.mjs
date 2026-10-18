@@ -15,8 +15,9 @@ export function auditFoonDistribution({tauri,resources,frontend,sourceTexts={}})
   const blocked=new Set(),warnings=new Set();
   if(tauri?.bundle?.active!==true)blocked.add("W11_BUNDLE_CONFIG_INVALID");
   const globs=tauri?.bundle?.resources;
-  if(!Array.isArray(globs)||!globs.includes("resources/edge-runtime/**/*"))
+  if(!Array.isArray(globs)||globs.length!==1||globs[0]!=="resources/edge-runtime/**/*")
     blocked.add("W11_UNEXPECTED_BUNDLE_RESOURCES");
+  if(tauri?.build?.frontendDist!=="../ui")blocked.add("W11_UNEXPECTED_FRONTEND_SOURCE");
   if(!Array.isArray(resources)||resources.length===0)
     blocked.add("W11_RUNTIME_NOT_STAGED");
   else for(const item of resources){
