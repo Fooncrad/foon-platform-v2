@@ -35,7 +35,7 @@ async function reloadDemo(){
       card.className='demo-order';
       card.append(makeText('strong','طلب #'+String(order.id).slice(0,8)));
       card.append(makeText('span',statusNames[order.status]||'حالة غير معروفة'));
-      card.append(makeText('small','أحداث معلقة: '+Number(order.pending_events||0)));
+      card.append(makeText('small','أحداث معلقة: '+Number(order.pendingEvents??0)));
       const next=nextStatus[order.status];
       if(next){
         const advance=makeText('button','انتقال إلى: '+statusNames[next]);
