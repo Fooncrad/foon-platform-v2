@@ -22,7 +22,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   await db.execute("UPDATE platform_tenant_support_sessions SET ended_at=NOW() WHERE auth_session_id=? AND ended_at IS NULL",[authSession]);
   const supportId=randomUUID();
   await db.execute("INSERT INTO platform_tenant_support_sessions(id,auth_session_id,actor_user_id,tenant_id,platform_role,expires_at) VALUES (?,?,?,?,?,DATE_ADD(NOW(),INTERVAL 2 HOUR))",[supportId,authSession,actor,id,role]);
-  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,expiresInMinutes:120})]);
-  await db.commit();return NextResponse.json({ok:true,url:"/restaurant?tenant="+encodeURIComponent(id),expiresInMinutes:120,readOnly:role==="support"});
+  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,accessMode:role==="support"?"read_only":"full",printerSettingsUnaffected:true,expiresInMinutes:120})]);
+  await db.commit();return NextResponse.json({ok:true,url:"/restaurant?tenant="+encodeURIComponent(id),expiresInMinutes:120,accessMode:role==="support"?"read_only":"full",readOnly:role==="support",printerSettingsUnaffected:true});
  }catch{await db.rollback();return NextResponse.json({ok:false,code:"SUPPORT_ACCESS_FAILED"},{status:503});}finally{db.release();}
 }
