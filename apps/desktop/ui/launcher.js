@@ -6,17 +6,19 @@ const runtimeStatus=document.getElementById('w04-status');
 const runtimeFeedback=document.getElementById('w04-feedback');
 let runtimeBusy=false;
 let runtimeRunning=false;
+let otherModeRunning=false;
 const nativeInvoke=(name)=>window.__TAURI__?.core?.invoke?.(name);
 function renderRuntime(){
-  startButton.disabled=runtimeBusy||runtimeRunning;
+  startButton.disabled=runtimeBusy||runtimeRunning||otherModeRunning;
   stopButton.disabled=runtimeBusy||!runtimeRunning;
-  runtimeStatus.textContent=runtimeRunning?'محرك W04 التجريبي يعمل':'المحرك التجريبي متوقف';
+  runtimeStatus.textContent=otherModeRunning?'محرك W05 المحفوظ يعمل':runtimeRunning?'محرك W04 التجريبي يعمل':'المحرك التجريبي متوقف';
 }
 async function reloadRuntime(){
   if(runtimeBusy)return;
   try{
     const result=await nativeInvoke('launcher_status');
-    runtimeRunning=result?.running===true;
+    runtimeRunning=result?.running===true&&result?.mode!=='durable';
+    otherModeRunning=result?.running===true&&result?.mode==='durable';
     renderRuntime();
   }catch{
     runtimeRunning=false;
@@ -61,6 +63,7 @@ stopButton.addEventListener('click',async()=>{
     await reloadRuntime();
   }
 });
+window.refreshFoonLauncher=reloadRuntime;
 void reloadRuntime();
 // Low-frequency read-only refresh; no cloud network calls from the frontend.
 if(typeof setInterval==='function'){
