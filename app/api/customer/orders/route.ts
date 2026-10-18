@@ -1,8 +1,9 @@
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
-import type {RowDataPacket} from "mysql2/promise";
+import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
+import {randomUUID} from "node:crypto";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
@@ -10,6 +11,17 @@ import {createOrder} from "@/lib/restaurant/operations";
 import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {customerCartAvailable} from "@/lib/platform/customer-checkout";
 export const runtime="nodejs";
+async function queueDeliveryDriverAlerts(db:PoolConnection,tenantId:string){
+ await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[tenantId]);
+ const [staff]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email FROM memberships m JOIN users u ON u.id=m.user_id AND u.status='active' WHERE m.tenant_id=? AND m.role IN ('owner','manager') AND m.status='active'",[tenantId]);
+ const recipients=new Set<string>(staff.map(row=>String(row.email).trim().toLowerCase()).filter(Boolean));
+ const platformEmail=String(process.env.PLATFORM_ADMIN_EMAIL??"").trim().toLowerCase();if(platformEmail)recipients.add(platformEmail);
+ for(const email of recipients){
+  const [[recent]]=await db.execute<RowDataPacket[]>("SELECT id FROM platform_notification_outbox WHERE tenant_id=? AND event_key='delivery_driver_unavailable' AND recipient_email=? AND created_at>=DATE_SUB(NOW(),INTERVAL 30 MINUTE) LIMIT 1",[tenantId,email]);
+  if(recent)continue;
+  await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'delivery_driver_unavailable',?,?,?,?)",[randomUUID(),tenantId,email,"Delivery unavailable: assign a driver","A delivery order could not be placed because this branch has no active, available driver assigned. Assign an active driver to the branch. No customer details are included.\n\nتعذر تسجيل طلب توصيل لعدم وجود سائق نشط ومتاح للفرع. يرجى تعيين سائق نشط. لم تُرفق بيانات العميل."]);
+ }
+}
 export async function POST(request:Request){
  const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
@@ -17,6 +29,7 @@ export async function POST(request:Request){
  const body=await request.json().catch(()=>null);
  if(!body||typeof body!=="object"||typeof body.storeSlug!=="string")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
+ let tenantIdForAlert:string|null=null;
  try{
   await db.query("SET time_zone='+00:00'");await db.beginTransaction();
   // Acquire the same exclusive customer lock used by createOrder before any
@@ -24,7 +37,7 @@ export async function POST(request:Request){
   const [actors]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   if(!actors.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id,t.kind,b.activity_code,u.display_name FROM tenants t LEFT JOIN tenant_business_profiles b ON b.tenant_id=t.id JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
-  if(!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");const tenantId=String(stores[0].id);
+  if(!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");const tenantId=String(stores[0].id);tenantIdForAlert=tenantId;
   if(!customerCartAvailable(String(stores[0].activity_code??""),String(stores[0].kind)))throw new ResourceError("CART_NOT_AVAILABLE");
   if(!(await tenantEntitlement(tenantId,"orders",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.couponCode&&!(await tenantEntitlement(tenantId,"coupons",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
@@ -37,5 +50,5 @@ export async function POST(request:Request){
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
- }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"?403:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
+ }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }

@@ -54,7 +54,7 @@ const translatedErrors:Record<string,[string,string,string]>={
  REFERENCE_NOT_FOUND:["المرجع المحدد غير موجود أو لا ينتمي إلى هذا الفرع.", "The selected reference was not found or belongs to another branch.", "La référence sélectionnée est introuvable ou appartient à une autre succursale."],
  SECTION_IN_USE:["لا يمكن حذف القسم لأنه مرتبط بسجلات نشطة.", "This section cannot be deleted while it has active records.", "Cette section ne peut pas être supprimée tant qu’elle est utilisée."],
  INVALID_INPUT:["بعض البيانات المدخلة غير صحيحة. راجع الحقول المطلوبة.","Some fields contain invalid data. Review the form.","Certaines données sont invalides. Vérifiez le formulaire."],
- DELIVERY_DRIVER_UNAVAILABLE:["لا يمكن قبول طلب التوصيل: لا يوجد سائق مكلّف بهذا الفرع.","Delivery unavailable: no driver is assigned to this branch.","Livraison indisponible : aucun livreur affecté à cette succursale."],
+ DELIVERY_DRIVER_UNAVAILABLE:["لا يمكن قبول طلب التوصيل: لا يوجد سائق نشط ومتاح لهذا الفرع.","Delivery unavailable: no active driver is available for this branch.","Livraison indisponible : aucun livreur actif n’est disponible pour cette succursale."],
  STORE_CLOSED:["المتجر مغلق حاليًا ولا يمكن قبول الطلب.","The store is closed and cannot accept orders.","La boutique est fermée et ne peut accepter de commandes."],
  ORDERS_DISABLED:["استقبال الطلبات متوقف مؤقتًا.","Orders are temporarily disabled.","Les commandes sont temporairement désactivées."],
  ORDER_CHANNEL_DISABLED:["نوع الطلب المحدد غير متاح حاليًا.","The selected ordering service is unavailable.","Ce service de commande est indisponible."],
