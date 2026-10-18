@@ -77,6 +77,7 @@ async function initializeDemo(){
     const result=await invokeDemo('demo_status');
     demoEnabled=result?.enabled===true;
     if(!demoEnabled){
+      demoOrders.replaceChildren();
       demoState.textContent='الوضع التجريبي غير مفعل';
       message('يُفعَّل فقط على قاعدة SQLite مؤقتة منفصلة، وليس متاحًا لمتجر حقيقي.');
       return;
@@ -86,4 +87,8 @@ async function initializeDemo(){
     await reloadDemo();
   }catch{demoEnabled=false;demoState.textContent='الوضع التجريبي غير متاح';}
 }
+window.refreshFoonDemo=initializeDemo;
 void initializeDemo();
+if(typeof setInterval==='function')setInterval(()=>{
+  if(demoEnabled&&!busy&&!document.hidden)void reloadDemo();
+},8000);
