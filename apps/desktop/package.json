@@ -1,0 +1,15 @@
+{
+  "name": "@foon/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FOON Windows station — native shell and local Edge readiness checks",
+  "scripts": {
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "test": "node --test desktop-gate.test.mjs",
+    "preflight": "node desktop-preflight.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
