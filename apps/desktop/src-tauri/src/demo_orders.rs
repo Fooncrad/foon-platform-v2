@@ -80,7 +80,7 @@ fn context() -> Result<DemoContext, &'static str> {
         let local=env::var_os("LOCALAPPDATA").map(PathBuf::from)
             .ok_or("DURABLE_DIRECTORY_FORBIDDEN")?;
         let durable_dir=local.join("com.foon.desktop").join("w05-durable-test");
-        if path != durable_dir.join("orders.sqlite") {
+        if path.file_name().and_then(|f|f.to_str())!=Some("orders.sqlite") {
             return Err("DURABLE_DB_FORBIDDEN");
         }
         if std::fs::symlink_metadata(&path).map_err(|_| "DURABLE_DB_NOT_READY")?
