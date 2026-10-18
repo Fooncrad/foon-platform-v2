@@ -122,7 +122,7 @@ fn station_status() -> StationStatus {
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![station_status, gateway_status])
+        .invoke_handler(tauri::generate_handler![station_status, gateway_status, demo_orders::demo_status, demo_orders::demo_list_orders, demo_orders::demo_create_order, demo_orders::demo_update_order])
         .run(tauri::generate_context!())
         .expect("Unable to start FOON desktop shell");
 }
