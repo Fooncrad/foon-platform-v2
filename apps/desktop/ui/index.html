@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; base-uri 'none'" />
+  <title>FOON Desktop</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script defer src="./station.js"></script>
+</head>
+<body>
+  <main>
+    <header class="top"><div class="brand">FOON <span>DESKTOP</span></div><div class="caption">محطة تشغيل محلية · نسخة تأسيسية</div></header>
+    <section class="hero"><p class="eyebrow">WINDOWS STATION</p><h1>محطة FOON المحلية</h1><p>لوحة تشغيل أصلية لنظام Windows. يتم إعداد ربط FOON Edge والمزامنة في مراحل مستقلة مع اختبار كل مرحلة قبل اعتمادها.</p></section>
+    <section class="card" aria-labelledby="status-title"><div class="card-head"><h2 id="status-title">حالة الخدمة المحلية</h2><span class="status" id="status-label" role="status" aria-live="polite">جارٍ الفحص</span></div><p id="status-details">نتحقق من وجود منفذ الخدمة على هذا الجهاز دون قراءة بيانات الدخول أو إرسالها.</p><p class="mono">127.0.0.1:8788</p><button id="refresh" type="button">إعادة الفحص</button></section>
+    <section class="card"><h2>حدود هذه الدفعة</h2><p>وجود مستمع على المنفذ لا يعني أن الخدمة موثوقة أو مُسجَّلة. التثبيت النهائي، التشغيل التلقائي، ربط الجهاز، نقاط البيع والمزامنة والطباعة تحتاج مراحل بناء واختبار لاحقة.</p></section>
+    <footer>FOON · لا يتم إرسال المفاتيح أو معلومات المطعم إلى هذه الشاشة.</footer>
+  </main>
+</body>
+</html>
