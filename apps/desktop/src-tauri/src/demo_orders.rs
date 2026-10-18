@@ -73,19 +73,42 @@ fn context() -> Result<DemoContext, &'static str> {
         return Err("DEMO_DB_FORBIDDEN");
     }
     let canonical = path.canonicalize().map_err(|_| "DEMO_DB_NOT_READY")?;
-    let temp = env::temp_dir().canonicalize().map_err(|_| "DEMO_TEMP_UNAVAILABLE")?;
-    let parent = canonical.parent().ok_or("DEMO_DB_FORBIDDEN")?;
-    if parent.parent() != Some(temp.as_path()) {
-        return Err("DEMO_DB_FORBIDDEN");
-    }
-    let folder = parent.file_name().and_then(|x| x.to_str()).ok_or("DEMO_DB_FORBIDDEN")?;
-    let suffix = folder.strip_prefix("FOON-W03-Demo-").ok_or("DEMO_DB_FORBIDDEN")?;
-    if suffix.len() != 32 || !suffix.bytes().all(|c| c.is_ascii_hexdigit()) {
-        return Err("DEMO_DB_FORBIDDEN");
-    }
-
     let branch = env::var("FOON_DESKTOP_DEMO_BRANCH_ID")
         .ok().and_then(|x| Uuid::parse_str(&x).ok()).ok_or("DEMO_BRANCH_REQUIRED")?;
+    if env::var("FOON_DESKTOP_DURABLE_TEST").as_deref()==Ok("1") {
+        // W05: only the app-owned, explicit synthetic store; never merchant SQLite.
+        let local=env::var_os("LOCALAPPDATA").map(PathBuf::from)
+            .ok_or("DURABLE_DIRECTORY_FORBIDDEN")?;
+        let durable_dir=local.join("com.foon.desktop").join("w05-durable-test");
+        if path != durable_dir.join("orders.sqlite") {
+            return Err("DURABLE_DB_FORBIDDEN");
+        }
+        if std::fs::symlink_metadata(&path).map_err(|_| "DURABLE_DB_NOT_READY")?
+            .file_type().is_symlink() {
+            return Err("DURABLE_DB_SYMLINK_FORBIDDEN");
+        }
+        let expected_parent=durable_dir.canonicalize().map_err(|_| "DURABLE_DB_NOT_READY")?;
+        if canonical.parent()!=Some(expected_parent.as_path()) {
+            return Err("DURABLE_DB_FORBIDDEN");
+        }
+        let stored=std::fs::read_to_string(durable_dir.join("demo-branch.txt"))
+            .map_err(|_| "DURABLE_BRANCH_NOT_READY")?;
+        if stored.trim()!=branch.to_string() {
+            return Err("DURABLE_BRANCH_MISMATCH");
+        }
+    } else {
+        // W03/W04 ephemeral demo still requires an isolated temporary directory.
+        let temp=env::temp_dir().canonicalize().map_err(|_| "DEMO_TEMP_UNAVAILABLE")?;
+        let parent=canonical.parent().ok_or("DEMO_DB_FORBIDDEN")?;
+        if parent.parent()!=Some(temp.as_path()) {
+            return Err("DEMO_DB_FORBIDDEN");
+        }
+        let folder=parent.file_name().and_then(|x| x.to_str()).ok_or("DEMO_DB_FORBIDDEN")?;
+        let suffix=folder.strip_prefix("FOON-W03-Demo-").ok_or("DEMO_DB_FORBIDDEN")?;
+        if suffix.len()!=32 || !suffix.bytes().all(|c| c.is_ascii_hexdigit()) {
+            return Err("DEMO_DB_FORBIDDEN");
+        }
+    }
     Ok(DemoContext {token,branch})
 }
 
