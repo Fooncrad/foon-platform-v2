@@ -50,14 +50,24 @@ async function api(path,init={}){
  if(!response.ok)throw Error(String(body.error||"PRINT_AGENT_HTTP_"+response.status));
  return body;
 }
-export async function runPrintAgentCycle({claim=()=>api(""),report=(id,result)=>api("/"+encodeURIComponent(id)+"/result",{method:"POST",body:JSON.stringify(result)}),print=job=>sendToNetworkPrinter(job)}={}){
+export async function runPrintAgentCycle({claim=()=>api(""),report=(id,result)=>api("/"+encodeURIComponent(id)+"/result",{method:"POST",body:JSON.stringify(result)}),print=job=>sendToNetworkPrinter(job),wait=delay,now=Date.now}={}){
  const response=await claim();const job=response?.job;
  if(!job)return {printed:false,idle:true};
- try{await print(job);await report(job.id,{leaseToken:job.leaseToken,outcome:"printed"});return {printed:true,idle:false};}
- catch(error){
-  try{await report(job.id,{leaseToken:job.leaseToken,outcome:"failed",error:String(error?.message||"PRINTER_CONNECTION_FAILED").slice(0,500)});}catch{}
-  return {printed:false,idle:false,error:"PRINT_ATTEMPT_FAILED"};
+ try{await print(job);}catch(error){
+  const detail=String(error?.message||"PRINTER_CONNECTION_FAILED").slice(0,500);let reportError=null;
+  try{await report(job.id,{leaseToken:job.leaseToken,outcome:"failed",error:detail});}catch(failure){reportError=String(failure?.message||"PRINT_RESULT_UNAVAILABLE");}
+  return {printed:false,idle:false,jobId:String(job.id),error:detail,...(reportError?{reportError}:{})};
  }
+ const leaseEnd=Date.parse(job.leaseExpiresAt),deadline=Number.isFinite(leaseEnd)?Math.max(now(),leaseEnd-10000):now()+70000;let pause=500,lastError="PRINT_RESULT_UNAVAILABLE";
+ while(now()<deadline){
+  try{await report(job.id,{leaseToken:job.leaseToken,outcome:"printed"});return {printed:true,idle:false,jobId:String(job.id),acknowledged:true};}
+  catch(error){
+   lastError=String(error?.message||lastError);
+   if(["PRINT_LEASE_EXPIRED","DEVICE_UNAUTHORIZED","EDGE_FORBIDDEN","PLAN_FEATURE_REQUIRED"].includes(lastError))break;
+   await wait(Math.min(pause,Math.max(1,deadline-now())));pause=Math.min(5000,pause*2);
+  }
+ }
+ return {printed:true,idle:false,jobId:String(job.id),acknowledged:false,error:lastError};
 }
 
 async function main(){
@@ -67,8 +77,8 @@ async function main(){
  for(const signal of ["SIGINT","SIGTERM"])process.once(signal,()=>controller.abort());
  process.stdout.write("FOON local print agent active; department tickets and customer receipts use their configured printers.\n");
  while(!controller.signal.aborted){
-  try{const result=await runPrintAgentCycle();if(result.idle)await delay(2000,undefined,{signal:controller.signal});}
-  catch{if(!controller.signal.aborted)await delay(5000,undefined,{signal:controller.signal});}
+  try{const result=await runPrintAgentCycle();if(result.error&&!controller.signal.aborted)process.stderr.write(`Print job ${result.jobId??"unknown"}: ${result.error}${result.reportError?"; result report failed: "+result.reportError:""}\n`);if(result.idle)await delay(2000,undefined,{signal:controller.signal});}
+  catch(error){if(!controller.signal.aborted){process.stderr.write(`Print agent connection problem: ${String(error?.message||"PRINT_AGENT_UNAVAILABLE")}\n`);await delay(5000,undefined,{signal:controller.signal});}}
  }
 }
 
