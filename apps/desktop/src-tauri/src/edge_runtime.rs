@@ -80,8 +80,8 @@ fn shutdown_owned(owned: &mut Option<OwnedGateway>) {
         let _ = runtime.child.kill();
         let _ = runtime.child.wait();
         let _ = fs::remove_dir_all(runtime.dir);
+        clear_demo_env();
     }
-    clear_demo_env();
 }
 
 impl DemoRuntime {
