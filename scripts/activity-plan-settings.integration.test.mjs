@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import mysql from 'mysql2/promise';
 test('activity plan overrides isolate grants, limits and administrator permissions',async()=>{
  const url=new URL(process.env.DATABASE_URL||'');assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/foon_migration_test');
@@ -14,12 +14,13 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+'/login',{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}assert.ok(ready,serverOutput);
   const admin=await register('restaurant'),grocery=await register('grocery'),clothing=await register('clothing');
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'admin',TRUE)",[admin.user]);
+  const supportAccess=await call(`/api/admin/tenants/${admin.tenant}/access`,'POST',{},admin.cookie);assert.equal(supportAccess.status,200,JSON.stringify(supportAccess.body));
   const [[free]]=await db.query("SELECT id FROM package_plans WHERE code='free'");const endpoint='/api/admin/plans/'+free.id+'/features';
   assert.equal((await call(endpoint,'GET',undefined,grocery.cookie)).status,403);
   assert.equal((await call(endpoint,'PUT',{feature_key:'orders',activity:'grocery',enabled:false},grocery.cookie)).status,403);
   assert.equal((await call(endpoint+'?activity=unknown','GET',undefined,admin.cookie)).status,400);
   for(const activity of ['restaurant','cafe','sweets','grocery','clothing','perfume','accessories','watches','gifts','ecommerce','carwash','laundry','automotive','salon','publicworks']){
-   const r=await call(endpoint+'?activity='+activity,'GET',undefined,admin.cookie);assert.equal(r.status,200);const menu=r.body.features.find(f=>f.feature_key==='digital_menu');assert.equal(Number(menu.enabled),1);assert.equal(menu.limit_value,20);assert.equal(Number(menu.overridden),1);
+   const r=await call(endpoint+'?activity='+activity,'GET',undefined,admin.cookie);assert.equal(r.status,200,JSON.stringify(r.body));const menu=r.body.features.find(f=>f.feature_key==='digital_menu');assert.equal(Number(menu.enabled),1);assert.equal(menu.limit_value,20);assert.equal(Number(menu.overridden),1);
   }
   const save=(activity,feature_key,enabled,limit_value)=>call(endpoint,'PUT',{activity,feature_key,enabled,limit_value},admin.cookie);
   // The UI filter is not security: the API must refuse unsupported grants.
@@ -30,7 +31,9 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'digital_menu'},admin.cookie)).status,200);
   assert.equal((await save('grocery','orders',false,null)).status,200);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
-  assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant)).status,200);
+  const [[clothingMembership]]=await db.execute("SELECT role,status FROM memberships WHERE tenant_id=? AND user_id=? LIMIT 1",[clothing.tenant,clothing.user]);
+  const [[clothingSession]]=await db.execute("SELECT id,user_id FROM auth_sessions WHERE token_hash=? LIMIT 1",[createHash('sha256').update(clothing.cookie.slice(clothing.cookie.indexOf('=')+1)).digest('hex')]);
+  const clothingOrders=await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant);assert.equal(clothingOrders.status,200,JSON.stringify({response:clothingOrders.body,membership:clothingMembership,session:clothingSession,tenant:clothing.tenant,user:clothing.user}));
   assert.equal((await save('grocery','digital_menu',true,2)).status,200);
   // Bootstrap is one-time initialization, not a reset of existing custom
   // settings. A deliberately removed override must continue to inherit.
@@ -51,7 +54,7 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   const rejectedImport=await call('/api/restaurant/catalog-import','POST',{kind:'items',requestKey:randomUUID(),rows:[{category:'Category',name:'Cannot bypass by import',price:'5'}]},grocery.cookie,grocery.tenant);assert.equal(rejectedImport.body.code,'PLAN_LIMIT_REACHED');
   const [[productsAfterImport]]=await db.execute('SELECT COUNT(*) AS n FROM catalog_products WHERE tenant_id=?',[grocery.tenant]);assert.equal(Number(productsAfterImport.n),2);
   assert.equal((await save('restaurant','digital_menu',true,1)).status,200);
-  const legacyCategory=await call('/api/restaurant/menu/categories','POST',{name:'Legacy category'},admin.cookie,admin.tenant);assert.equal(legacyCategory.status,201);
+  const legacyCategory=await call('/api/restaurant/menu/categories','POST',{name:'Legacy category'},admin.cookie,admin.tenant);assert.equal(legacyCategory.status,201,JSON.stringify({body:legacyCategory.body,serverOutput}));
   assert.equal((await call('/api/restaurant/menu/categories','POST',{name:'Denied category'},admin.cookie,admin.tenant)).body.code,'PLAN_LIMIT_REACHED');
   const legacyProduct={name:'Legacy item',price:'5',categoryId:legacyCategory.body.category.id};assert.equal((await call('/api/restaurant/menu/items','POST',legacyProduct,admin.cookie,admin.tenant)).status,201);
   assert.equal((await call('/api/restaurant/menu/items','POST',{...legacyProduct,name:'Denied item'},admin.cookie,admin.tenant)).body.code,'PLAN_LIMIT_REACHED');

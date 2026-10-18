@@ -8,8 +8,8 @@ import {assertSameOrigin} from "@/lib/security/origin";
 export const runtime="nodejs";
 const roles=["owner","manager","waiter","cashier","kitchen","driver","accountant"] as const;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-async function context(tenantId:string,user:string){
- const membership=await requireTenantMembership(user,tenantId,roles);
+async function context(tenantId:string,user:string,write=true){
+ const membership=await requireTenantMembership(user,tenantId,roles,write);
  const db=database();
  const [assigned]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE",[tenantId,user]);
  const branches=[...new Set(assigned.map(r=>String(r.branch_id)))];
@@ -24,7 +24,7 @@ export async function GET(request:Request){
  const q=new URL(request.url).searchParams,tenantId=q.get("tenantId")??"";
  if(!uuid.test(tenantId))return NextResponse.json({ok:false},{status:400});
  try{
-  const {role,branches,db}=await context(tenantId,user);
+  const {role,branches,db}=await context(tenantId,user,false);
   if(role!=="owner"&&!branches.length)return NextResponse.json({ok:true,requests:[]});
   const manager=role==="owner"||role==="manager";
   const [rows]=await db.execute<RowDataPacket[]>(
@@ -40,7 +40,7 @@ export async function POST(request:Request){
  if(!body||!uuid.test(body.tenantId??""))return NextResponse.json({ok:false},{status:400});
  try{
   const tenantId=String(body.tenantId);
-  const {role,branches,db}=await context(tenantId,user);
+  const {role,branches,db}=await context(tenantId,user,false);
   if(body.action==="resolve"){
    if(!["owner","manager"].includes(role)||!uuid.test(body.id??""))return NextResponse.json({ok:false},{status:403});
    const callId=String(body.id);

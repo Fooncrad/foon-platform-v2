@@ -22,13 +22,13 @@ export async function currentUserId(){
   const token=(await cookies()).get(COOKIE)?.value;
   if(!token) return null;
   const [rows]=await database().execute<RowDataPacket[]>(
-    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() LIMIT 1",[digest(token)]
+    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>UTC_TIMESTAMP() LIMIT 1",[digest(token)]
   );
   return (rows[0]?.user_id as string|undefined)??null;
 }
 export async function currentSessionId(){
  const token=(await cookies()).get(COOKIE)?.value;if(!token)return null;
- const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() LIMIT 1",[digest(token)]);
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM auth_sessions WHERE token_hash=? AND expires_at>UTC_TIMESTAMP() LIMIT 1",[digest(token)]);
  return rows[0]?.id as string|undefined??null;
 }
 export async function destroySession(){
@@ -43,14 +43,14 @@ export async function currentActiveAdminUserId(touch=true){
   if(!token)return null;
   const hash=digest(token);
   const [rows]=await database().execute<RowDataPacket[]>(
-    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL ? MINUTE) LIMIT 1",
+    "SELECT user_id FROM auth_sessions WHERE token_hash=? AND expires_at>UTC_TIMESTAMP() AND last_seen_at>DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? MINUTE) LIMIT 1",
     [hash,ADMIN_IDLE_MINUTES]
   );
   const userId=rows[0]?.user_id as string|undefined;
   if(!userId)return null;
   if(!touch)return userId;
   const [update]=await database().execute<ResultSetHeader>(
-    "UPDATE auth_sessions SET last_seen_at=NOW() WHERE token_hash=? AND expires_at>NOW() AND last_seen_at>DATE_SUB(NOW(), INTERVAL ? MINUTE)",
+    "UPDATE auth_sessions SET last_seen_at=UTC_TIMESTAMP() WHERE token_hash=? AND expires_at>UTC_TIMESTAMP() AND last_seen_at>DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? MINUTE)",
     [hash,ADMIN_IDLE_MINUTES]
   );
   if(update.affectedRows!==1)return null;

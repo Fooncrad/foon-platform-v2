@@ -65,10 +65,18 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   inventory=await resource(a,"inventory",undefined,"GET");assert.equal(inventory.body.resources[0].data.quantity,3);
   const coupon=await save(a,"coupons","Save",{code:"SAVE10",discountType:"percent",value:10,usageLimit:1});
   assert.ok(coupon);
+  const kitchen=await save(a,"departments","Kitchen",{departmentType:"kitchen"});
+  const kitchenPrinter=await save(a,"printers","Kitchen printer",{connection:"network",address:"192.0.2.10",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_accept"});
+  const prepPrinter=await save(a,"printers","Kitchen prep printer",{connection:"network",address:"192.0.2.11",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_prepare"});
+  const receiptPrinter=await save(a,"printers","Receipt printer",{connection:"network",address:"192.0.2.12",paperWidth:"80",copies:1,purpose:"customer_receipt",autoPrint:"yes",printOn:"on_paid",includePrices:"yes"});
+  await save(a,"departmentAssignments","Coffee to kitchen",{departmentId:kitchen,itemId:item,printCopies:2});
   const requestKey=randomUUID(),orderPayload={branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,couponCode:"SAVE10",requestKey,total:0,items:[{id:item,quantity:2,price:0}]};
   const order=await resource(a,"pos",orderPayload);
   assert.equal(order.status,201,JSON.stringify(order.body));assert.equal(order.body.total,18);
+  const [[printJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND status='pending'",[a.tenant,kitchenPrinter,order.body.id]);assert.equal(Number(printJobs.n),1,"one durable print job should be queued for the assigned department printer");
+  const [[printJob]]=await db.execute("SELECT payload_json FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=?",[a.tenant,kitchenPrinter,order.body.id]);const printPayload=typeof printJob.payload_json==="string"?JSON.parse(printJob.payload_json):printJob.payload_json;assert.equal(printPayload.items.length,1);assert.equal(printPayload.items[0].copies,2);assert.ok(Number(printPayload.orderNumber)>0);
   const replay=await resource(a,"pos",orderPayload);assert.equal(replay.status,201);assert.equal(replay.body.id,order.body.id);
+  const [[replayedPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND source_id=?",[a.tenant,order.body.id]);assert.equal(Number(replayedPrintJobs.n),1,"replaying checkout must not duplicate printer jobs");
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",couponCode:"SAVE10",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,a.cookie,b.tenant)).status,403);
   assert.equal((await resource(a,"categories",{id:categoryB,version:1},"DELETE")).status,404);
@@ -81,10 +89,12 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"GET",undefined,staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"PATCH",{id:order.body.id,version:1,status:"preparing"},staff.cookie,a.tenant)).status,403);
-  const kitchen=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchen.status,200);assert.equal(kitchen.body.orders[0].total,null);assert.equal(kitchen.body.orders[0].customer_phone,null);
+  const kitchenView=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchenView.status,200);assert.equal(kitchenView.body.orders[0].total,null);assert.equal(kitchenView.body.orders[0].customer_phone,null);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:1,paymentStatus:"paid"},"PATCH")).status,200);
+  const [[receiptJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_paid'",[a.tenant,receiptPrinter,order.body.id]);assert.equal(Number(receiptJobCount.n),1,"paid orders route to the customer receipt printer");
   assert.equal((await resource(a,"orders",{id:order.body.id,version:2,status:"cancelled"},"PATCH")).body.code,"REFUND_REQUIRED");
   assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:2,status:"preparing"},staff.cookie,a.tenant)).status,200);
+  const [[prepJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_prepare'",[a.tenant,prepPrinter,order.body.id]);assert.equal(Number(prepJobCount.n),1,"preparation events route to the assigned section printer");
   await db.execute("UPDATE restaurant_orders SET channel='delivery',order_notes='Private delivery address' WHERE id=?",[order.body.id]);
   const privateDelivery=await call('/api/restaurant/operations/kds','GET',undefined,staff.cookie,a.tenant);
   assert.equal(privateDelivery.body.orders.find(o=>o.id===order.body.id).order_notes,null);
@@ -566,7 +576,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const admin=await register("operations-platform-admin");
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403,"platform administration is not tenant ownership");
-  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,admin.tenant)).status,200,"an explicit own membership still works");
+  const adminSupport=await call("/api/admin/tenants/"+admin.tenant+"/access","POST",{},admin.cookie);assert.equal(adminSupport.status,200,JSON.stringify(adminSupport.body));
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,admin.tenant)).status,200,"an explicit own-tenant support session works");
   await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
  }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await workerPool.end();await db.end();}
