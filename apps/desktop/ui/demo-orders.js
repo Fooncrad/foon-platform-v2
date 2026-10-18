@@ -64,7 +64,7 @@ demoCreate.addEventListener('click',async()=>{
   setBusy(true);
   try{
     await invokeDemo('demo_create_order');
-    message('تم حفظ طلب تجريبي داخل قاعدة SQLite المؤقتة.');
+    message('تم حفظ طلب وهمي داخل قاعدة SQLite التجريبية.');
   }catch{message('تعذر إنشاء الطلب. الوضع التجريبي فقط، ويجب تشغيل المحرك بمفاتيح اختبار متطابقة.');}
   finally{setBusy(false);}
   await reloadDemo();
@@ -79,7 +79,7 @@ async function initializeDemo(){
     if(!demoEnabled){
       demoOrders.replaceChildren();
       demoState.textContent='الوضع التجريبي غير مفعل';
-      message('يُفعَّل فقط على قاعدة SQLite مؤقتة منفصلة، وليس متاحًا لمتجر حقيقي.');
+      message('يُفعَّل فقط ضمن W04 المؤقتة أو W05 المحفوظة، وليس لمتجر حقيقي.');
       return;
     }
     demoState.textContent='وضع W03 التجريبي مفعل';
