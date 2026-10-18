@@ -34,6 +34,10 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  let previous:RowDataPacket|undefined;
  if(body.id!==undefined){const [rows]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data,branch_id,version,lookup_key FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind=? AND archived=FALSE FOR UPDATE",[id,tenantId,config.kind]);previous=rows[0];if(!previous)throw new ResourceError("RESOURCE_NOT_FOUND");if(!Number.isInteger(body.version)||Number(body.version)!==Number(previous.version))throw new ResourceError("CONFLICT");}
  if(archive&&!previous)throw new ResourceError("INVALID_INPUT");
+ if(module==="reservations"&&previous&&(archive||["cancelled","no_show"].includes(String(body.status)))){
+  const [linkedOrders]=await db.execute<RowDataPacket[]>("SELECT id,status FROM restaurant_orders WHERE tenant_id=? AND reservation_id=? LIMIT 1 FOR UPDATE",[tenantId,id]);
+  if(linkedOrders.length&&(archive||linkedOrders.some(order=>String(order.status)!=="cancelled")))throw new ResourceError("RESERVATION_HAS_PREORDER");
+ }
  if(archive){
   if(module==="serviceOrders"){
    if(!serviceOrderArchiveAllowed(String(previous!.status)))throw new ResourceError("SERVICE_ORDER_ARCHIVE_FORBIDDEN");
@@ -309,7 +313,7 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
   if(employees.length!==1)return [];
   filter+=" AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=?";values.push(String(employees[0].id));
  }
- const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
+ const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
  if(!orders.length)return [];
  const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
  return orders.map(o=>({...o,checkout_snapshot:financial&&o.checkout_snapshot?parseData(o.checkout_snapshot):null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)}));
@@ -323,13 +327,28 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const requestKey=body.requestKey==null?null:String(body.requestKey);
  if(requestKey&&!/^[a-f0-9-]{36}$/i.test(requestKey))throw new ResourceError("INVALID_REQUEST_KEY");
  if(cart.some(item=>item.options!==undefined&&(!Array.isArray(item.options)||item.options.length>100||item.options.some(id=>typeof id!=="string"||id.length>36))))throw new ResourceError("INVALID_OPTIONS");
- const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
+ const reservationId=body.reservationId==null?null:String(body.reservationId);
+ if(reservationId&&!/^[a-f0-9-]{36}$/i.test(reservationId))throw new ResourceError("INVALID_INPUT");
+ const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
  if(requestKey){
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,total,currency,request_fingerprint FROM restaurant_orders WHERE tenant_id=? AND created_by=? AND request_key=? FOR UPDATE",[tenantId,actor,requestKey]);
   if(existing.length){if(existing[0].request_fingerprint!==fingerprint)throw new ResourceError("CONFLICT");return{id:String(existing[0].id),total:Number(existing[0].total),currency:String(existing[0].currency)};}
  }
  await branchExists(db,tenantId,branchId);
+ let reservationData:Record<string,unknown>|null=null;
+ if(reservationId){
+  if(body.channel!=="dine_in"||!customerId)throw new ResourceError("RESERVATION_ORDER_INVALID");
+  const [reservations]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,status,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed') AND branch_id=? FOR UPDATE",[tenantId,reservationId,branchId]);
+  if(!reservations.length)throw new ResourceError("RESERVATION_NOT_AVAILABLE");
+  reservationData=parseData(reservations[0].data);
+  const scheduledAt=Date.parse(String(reservationData.scheduledAt??""));
+  if(String(reservationData.customerUserId??"")!==customerId||!Number.isFinite(scheduledAt)||scheduledAt<=Date.now())throw new ResourceError("RESERVATION_NOT_AVAILABLE");
+  const partySize=Number(reservationData.partySize);
+  if(!Number.isInteger(partySize)||partySize<1||partySize>100)throw new ResourceError("RESERVATION_NOT_AVAILABLE");
+  const [priorOrders]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND reservation_id=? LIMIT 1 FOR UPDATE",[tenantId,reservationId]);
+  if(priorOrders.length)throw new ResourceError("RESERVATION_ALREADY_ORDERED");
+ }
  // Enforce the same availability rules for POS, public menu, and all activity stores.
  const [orderPolicies]=await db.execute<RowDataPacket[]>(
   "SELECT kind,data FROM restaurant_resources WHERE tenant_id=? AND archived=FALSE AND status='active' AND (kind='storefront_config' OR (kind='branch_config' AND branch_id=?)) ORDER BY created_at DESC",
@@ -377,8 +396,9 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   const total=Math.round(price*Math.round(item.quantity*1000)/1000);subtotal+=total;lines.push({id:item.id,name:profile.catalog&&catalogQuantityPolicy(rows[0].attributes).measured?String(rows[0].name).slice(0,166)+" / "+catalogQuantityPolicy(rows[0].attributes).unit:String(rows[0].name),quantity:item.quantity,price:price/100,total:total/100,options});
  }
  if(subtotal>999999999999)throw new ResourceError("INVALID_CART");
- const tableId=body.channel==="dine_in"&&body.tableId?String(body.tableId):null;
- if(body.channel==="dine_in"&&(!tableId||!Number.isInteger(body.partySize)||Number(body.partySize)<1))throw new ResourceError("DINING_DETAILS_REQUIRED");
+ const tableId=body.channel==="dine_in"&&!reservationId&&body.tableId?String(body.tableId):null;
+ const partySize=reservationData?Number(reservationData.partySize):Number(body.partySize);
+ if(body.channel==="dine_in"&&(!tableId&&!reservationData||!Number.isInteger(partySize)||partySize<1))throw new ResourceError("DINING_DETAILS_REQUIRED");
  const dining=tableId?await diningTable(db,tenantId,branchId,tableId,Number(body.partySize)):null;
  if(tableId){
   // Serialize orders for a table to prevent two concurrent checkouts from taking it.
@@ -402,9 +422,9 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if((kitchenNotes?.length??0)>1000||(orderNotes?.length??0)>1000)throw new ResourceError("INVALID_INPUT");
  const settings=await checkoutSettings(db,tenantId);
  const totals=checkoutTotals(subtotal/100,discount/100,String(body.channel),settings.policy);
- const snapshot={version:1,...settings,...totals,...(assignedDriverId?{assignedDriverId}:{})};
+ const snapshot={version:1,...settings,...totals,...(assignedDriverId?{assignedDriverId}:{}),...(reservationId?{reservationId}:{})};
  const id=randomUUID();
- await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,dining?.sectionId??null,dining?Number(body.partySize):null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
+ await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,reservationId,dining?.sectionId??null,body.channel==="dine_in"?partySize:null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
  await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
