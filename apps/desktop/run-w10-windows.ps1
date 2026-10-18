@@ -19,6 +19,7 @@ if (-not (Get-NetTCPConnection -LocalPort 3306 -State Listen -ErrorAction Silent
 
 $pureTests = @(
     ".\apps\desktop\w10-http-mariadb-guard.test.mjs",
+    ".\apps\desktop\w10-http-mariadb-receiver.test.mjs",
     ".\apps\desktop\w09-loopback-http.integration.test.mjs",
     ".\apps\desktop\w07-sync-sandbox.integration.test.mjs",
     ".\apps\desktop\w08-mariadb-stage2-safety.test.mjs",
