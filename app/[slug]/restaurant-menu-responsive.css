@@ -290,7 +290,7 @@
 }
 
 .publicMenu .publicMenuItem .publicMenuItemImage {
-  order: 0 !important;
+  order: -1 !important;
   display: block;
   width: 100% !important;
   height: auto !important;
