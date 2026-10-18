@@ -63,4 +63,524 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   let inventory=await resource(a,"inventory",undefined,"GET");assert.equal(inventory.body.resources[0].data.quantity,3);
   const repeated=await resource(a,"purchases",{id:purchase,version:1,name:"Receipt",status:"received",branchId:a.branch,data:{inventoryId:stock,quantity:3,unitCost:15}},"PATCH");assert.equal(repeated.status,400);
   inventory=await resource(a,"inventory",undefined,"GET");assert.equal(inventory.body.resources[0].data.quantity,3);
-  const coup×Ÿ;êÚ$z{-®éÜj×Ğ„É•™Õ¹…µ½Õ¹Ğˆ¤ì(€½¹ÍĞ™½É•¥¹I•™Õ¹õ…İ…¥ĞÉ•Ù¥•Ü¡ˆ±É•Ù¥•İI•ÅÕ•ÍĞ¤ì(€…ÍÍ•ÉĞ¹¹½ÑÅÕ…°¡™½É•¥¹I•™Õ¹¹ÍÑ…ÑÕÌ°ÈÀÄ°‰…¹½Ñ¡•Èµ•É¡…¹Ğµ…ä¹½ĞÉ•ÅÕ•ÍĞ…¸¥¹Ù½¥”É•™Õ¹ˆ¤ì(€½¹ÍĞm™¥ÉÍÑI•Ù¥•Ü±Í•½¹‘I•Ù¥•İtõ…İ…¥ĞAÉ½µ¥Í”¹…±°¡mÉ•Ù¥•Ü¡„±É•Ù¥•İI•ÅÕ•ÍĞ¤±É•Ù¥•Ü¡„±É•Ù¥•İI•ÅÕ•ÍĞ¥t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡™¥ÉÍÑI•Ù¥•Ü¹ÍÑ…ÑÕÌôôôÈÀÅññ™¥ÉÍÑI•Ù¥•Ü¹ÍÑ…ÑÕÌôôôÈÀÀ±ÑÉÕ”±)M=8¹ÍÑÉ¥¹¥™ä¡™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í•½¹‘I•Ù¥•Ü¹ÍÑ…ÑÕÌôôôÈÀÅññÍ•½¹‘I•Ù¥•Ü¹ÍÑ…ÑÕÌôôôÈÀÀ±ÑÉÕ”±)M=8¹ÍÑÉ¥¹¥™ä¡Í•½¹‘I•Ù¥•Ü¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¹¥±Í•½¹‘I•Ù¥•Ü¹‰½‘ä¹¥¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡	½½±•…¸¡™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¹•á¥ÍÑ¥¹œ¤¤­9Õµ‰•È¡	½½±•…¸¡Í•½¹‘I•Ù¥•Ü¹‰½‘ä¹•á¥ÍÑ¥¹œ¤¤°Ä¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¹™¥¹…¹¥…±™™•Ğ°‰¹½¹”ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í•½¹‘I•Ù¥•Ü¹‰½‘ä¹™¥¹…¹¥…±™™•Ğ°‰¹½¹”ˆ¤ì(€½¹ÍĞmmÉ•™Õ¹‘…Í•½Õ¹Ñutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P=U9P ¨¤L¸I=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!IÑ•¹…¹Ñ}¥ôü9­¥¹ô¥¹Ù½¥•}É•™Õ¹‘}É•Ù¥•Üœ9±½½­ÕÁ}­•äôüˆ±m„¹Ñ•¹…¹Ğ±‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥‘t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡É•™Õ¹‘…Í•½Õ¹Ğ¹¸¤°Ä¤ì(€½¹ÍĞÉ•…‘I•Ù¥•Üõ…İ…¥ĞÉ•Ù¥•Ü¡„±Õ¹‘•™¥¹•°‰Pˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•…‘I•Ù¥•Ü¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡É•…‘I•Ù¥•Ü¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹½¬¡É•…‘I•Ù¥•Ü¹‰½‘ä¹É•Ù¥•İÌ¹Í½µ”¡É½ÜôùÉ½Ü¹¥¹Ù½¥•%ôôõ‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥˜™É½Ü¹ÍÑ…ÑÕÌôôô‰É•Ù¥•İ}Á•¹‘¥¹œˆ˜™É½Ü¹Í½ÕÉ”ôôô‰µ…¹Õ…°ˆ¤¤ì(€½¹ÍĞ¡…¹•‘I•™Õ¹‘I•…Í½¸õ…İ…¥ĞÉ•Ù¥•Ü¡„±ì¸¸¹É•Ù¥•İI•ÅÕ•ÍĞ±É•…Í½¸è‰‘¥™™•É•¹Ğ±½¹œÉ•…Í½¸™½È„Í•½¹É•™Õ¹É•ÅÕ•ÍĞ‰ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡¡…¹•‘I•™Õ¹‘I•…Í½¸¹‰½‘ä¹½‘”°‰IU9}IY%]}1Ie}a%MQLˆ¤ì(€½¹ÍĞmmÉ•Ù¥•İ•‘%¹Ù½¥•utõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1PÍÑ…ÑÕÌI=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!I¥ôü9Ñ•¹…¹Ñ}¥ôüˆ±m‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥±„¹Ñ•¹…¹Ñt¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•Ù¥•İ•‘%¹Ù½¥”¹ÍÑ…ÑÕÌ°‰Á…¥ˆ°‰É•™Õ¹É•Ù¥•Ü¥Ì¹½Ğ„É•…°É•™Õ¹ˆ¤ì(€½¹ÍĞmmÉ•™Õ¹‘Õ‘¥Ñ½Õ¹Ñutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P=U9P ¨¤L¸I=4É•ÍÑ…ÕÉ…¹Ñ}…Õ‘¥Ñ}•Ù•¹ÑÌ]!IÑ•¹…¹Ñ}¥ôü9É•Í½ÕÉ•}¥ôü9…Ñ¥½¸ôÕÍÑ½µ•É}¥¹Ù½¥”¹É•™Õ¹‘}É•Ù¥•İ}É•ÅÕ•ÍÑ•œˆ±m„¹Ñ•¹…¹Ğ±‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥‘t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡É•™Õ¹‘Õ‘¥Ñ½Õ¹Ğ¹¸¤°Ä°‰‘ÕÁ±¥…Ñ”É•Ù¥•İÌµÕÍĞ¹½Ğ•¹•É…Ñ”µÕ±Ñ¥Á±”…Õ‘¥Ğ•Ù•¹ÑÌˆ¤ì(€€¼¼=¹±ä…¹½Ñ¡•È½İ¹•È…¸…ÕÑ¡½É¥é”½É•™ÕÍ”„É•™Õ¹ì¹•Ù•ÈÑ¡”É•ÅÕ•ÍÑ•È¸(€½¹ÍĞÉ•™Õ¹‘ÁÁÉ½Ù•Èõ…İ…¥ĞÉ•¥ÍÑ•È ‰½Á•É…Ñ¥½¹ÌµÉ•™Õ¹µ…ÁÁÉ½Ù•Èˆ¤ì(€…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰%9MIP%9Q<µ•µ‰•ÉÍ¡¥ÁÌ¡¥±Ñ•¹…¹Ñ}¥±ÕÍ•É}¥±É½±”±ÍÑ…ÑÕÌ¤Y1UL€ ü°ü°ü°½İ¹•Èœ°…Ñ¥Ù”œ¤ˆ±mÉ…¹‘½µUU% ¤±„¹Ñ•¹…¹Ğ±É•™Õ¹‘ÁÁÉ½Ù•È¹ÕÍ•Ét¤ì(€½¹ÍĞÉ•™Õ¹‘5…¹…•Èõ…İ…¥ĞÉ•¥ÍÑ•È ‰½Á•É…Ñ¥½¹ÌµÉ•™Õ¹µµ…¹…•Èˆ¤ì(€…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰%9MIP%9Q<µ•µ‰•ÉÍ¡¥ÁÌ¡¥±Ñ•¹…¹Ñ}¥±ÕÍ•É}¥±É½±”±ÍÑ…ÑÕÌ¤Y1UL€ ü°ü°ü°µ…¹…•Èœ°…Ñ¥Ù”œ¤ˆ±mÉ…¹‘½µUU% ¤±„¹Ñ•¹…¹Ğ±É•™Õ¹‘5…¹…•È¹ÕÍ•Ét¤ì(€½¹ÍĞÉ•Ù¥•İ•¥Í¥½¸ô¡µ•µ‰•È±‰½‘ä¤ôù…±° ˆ½…Á¤½É•ÍÑ…ÕÉ…¹Ğ½Á…åµ•¹ÑÌ½É•™Õ¹µÉ•Ù¥•İÌˆ°‰AQ ˆ±‰½‘ä±µ•µ‰•È¹½½­¥”±„¹Ñ•¹…¹Ğ¤ì(€½¹ÍĞ‘•¥Í¥½¹	…Í”õíÉ•Ù¥•İ%é™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¹¥±‘•¥Í¥½¸è‰…ÁÁÉ½Ù”ˆ±¹½Ñ”è‰ÕÍÑ½µ•ÈÉ•ÅÕ•ÍĞÙ•É¥™¥•ìÁÉ½Ù¥‘•ÈÉ•™Õ¹ÍÑ¥±°Á•¹‘¥¹œˆ±…­¹½İ±•‘•9½I•™Õ¹éÑÉÕ•ôì(€½¹ÍĞÍ•±™ÁÁÉ½Ù•õ…İ…¥ĞÉ•Ù¥•İ•¥Í¥½¸¡„±‘•¥Í¥½¹	…Í”¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í•±™ÁÁÉ½Ù•¹‰½‘ä¹½‘”°‰IU9}M1}AAI=Y1}=I	%8ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í•±™ÁÁÉ½Ù•¹ÍÑ…ÑÕÌ°ĞÀÌ¤ì(€½¹ÍĞµ…¹…•ÉÁÁÉ½Ù•õ…İ…¥ĞÉ•Ù¥•İ•¥Í¥½¸¡É•™Õ¹‘5…¹…•È±‘•¥Í¥½¹	…Í”¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡µ…¹…•ÉÁÁÉ½Ù•¹ÍÑ…ÑÕÌ°ĞÀÌ°‰„µ…¹…•È…¹¹½Ğ…ÕÑ¡½É¥é”µ½¹•Ñ…ÉäÉ•Ù•ÉÍ…±Ìˆ¤ì(€½¹ÍĞÍ­¥ÁÁ•‘­¹½İ±•‘µ•¹Ğõ…İ…¥ĞÉ•Ù¥•İ•¥Í¥½¸¡É•™Õ¹‘ÁÁÉ½Ù•È±ì¸¸¹‘•¥Í¥½¹	…Í”±…­¹½İ±•‘•9½I•™Õ¹é™…±Í•ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í­¥ÁÁ•‘­¹½İ±•‘µ•¹Ğ¹ÍÑ…ÑÕÌ°ĞÀÀ¤ì(€½¹ÍĞÍ½Á•‘I•Ù¥•Üõ…İ…¥Ğ…±° ˆ½…Á¤½É•ÍÑ…ÕÉ…¹Ğ½Á…åµ•¹ÑÌ½É•™Õ¹µÉ•Ù¥•İÌˆ°‰Pˆ±Õ¹‘•™¥¹•±É•™Õ¹‘ÁÁÉ½Ù•È¹½½­¥”±„¹Ñ•¹…¹Ğ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í½Á•‘I•Ù¥•Ü¹ÍÑ…ÑÕÌ°ÈÀÀ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í½Á•‘I•Ù¥•Ü¹‰½‘ä¹É•Ù¥•İÌ¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¹¥¤ü¹…¹•¥‘”±ÑÉÕ”¤ì(€½¹ÍĞÉ•ÅÕ•ÍÑ•ÉI•Ù¥•Üõ…İ…¥ĞÉ•Ù¥•Ü¡„±Õ¹‘•™¥¹•°‰Pˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•ÅÕ•ÍÑ•ÉI•Ù¥•Ü¹‰½‘ä¹É•Ù¥•İÌ¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ™¥ÉÍÑI•Ù¥•Ü¹‰½‘ä¹¥¤ü¹…¹•¥‘”±™…±Í”¤ì(€½¹ÍĞm‘•¥‘•¥ÉÍĞ±‘•¥‘•…¥¹tõ…İ…¥ĞAÉ½µ¥Í”¹…±°¡mÉ•Ù¥•İ•¥Í¥½¸¡É•™Õ¹‘ÁÁÉ½Ù•È±‘•¥Í¥½¹	…Í”¤±É•Ù¥•İ•¥Í¥½¸¡É•™Õ¹‘ÁÁÉ½Ù•È±‘•¥Í¥½¹	…Í”¥t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‘•¥‘•¥ÉÍĞ¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡‘•¥‘•¥ÉÍĞ¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‘•¥‘•…¥¸¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡‘•¥‘•…¥¸¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‘•¥‘•¥ÉÍĞ¹‰½‘ä¹ÍÑ…ÑÕÌ°‰…ÁÁÉ½Ù•‘}Á•¹‘¥¹}•á•ÕÑ¥½¸ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‘•¥‘•…¥¸¹‰½‘ä¹ÍÑ…ÑÕÌ°‰…ÁÁÉ½Ù•‘}Á•¹‘¥¹}•á•ÕÑ¥½¸ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡	½½±•…¸¡‘•¥‘•¥ÉÍĞ¹‰½‘ä¹•á¥ÍÑ¥¹œ¤¤­9Õµ‰•È¡	½½±•…¸¡‘•¥‘•…¥¸¹‰½‘ä¹•á¥ÍÑ¥¹œ¤¤°Ä¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‘•¥‘•¥ÉÍĞ¹‰½‘ä¹™¥¹…¹¥…±™™•Ğ°‰¹½¹”ˆ¤ì(€½¹ÍĞ…ÑÑ•µÁÑ•‘=Ù•ÉÉ¥‘”õ…İ…¥ĞÉ•Ù¥•İ•¥Í¥½¸¡É•™Õ¹‘ÁÁÉ½Ù•È±ì¸¸¹‘•¥Í¥½¹	…Í”±‘•¥Í¥½¸è‰É•©•Ğˆ±¹½Ñ”è‰•¥‘•Ñ¼É•Ù•ÉÍ”É•Ù¥•Ü…™Ñ•È…ÁÁÉ½Ù…°‰ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…ÑÑ•µÁÑ•‘=Ù•ÉÉ¥‘”¹‰½‘ä¹½‘”°‰IU9}%M%=9}1Ie}%90ˆ¤ì(€½¹ÍĞmm…ÁÁÉ½Ù•‘%¹Ù½¥•utõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1PÍÑ…ÑÕÌI=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!IÑ•¹…¹Ñ}¥ôü9¥ôüˆ±m„¹Ñ•¹…¹Ğ±‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥‘t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…ÁÁÉ½Ù•‘%¹Ù½¥”¹ÍÑ…ÑÕÌ°‰Á…¥ˆ°‰…ÁÁÉ½Ù…°¥Ì¹½Ğ„É•™Õ¹½È¥¹Ù½¥”ÍÑ…ÑÕÌ¡…¹”ˆ¤ì(€½¹ÍĞmm‘•¥Í¥½¹Õ‘¥ÑÍutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P=U9P ¨¤L¸I=4É•ÍÑ…ÕÉ…¹Ñ}…Õ‘¥Ñ}•Ù•¹ÑÌ]!IÑ•¹…¹Ñ}¥ôü9É•Í½ÕÉ•}¥ôü9…Ñ¥½¸ôÕÍÑ½µ•É}¥¹Ù½¥”¹É•™Õ¹‘}É•Ù¥•İ}…ÁÁÉ½Ù”œˆ±m„¹Ñ•¹…¹Ğ±‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥‘t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡‘•¥Í¥½¹Õ‘¥ÑÌ¹¸¤°Ä°‰É•Á±…å•…ÁÁÉ½Ù…°µÕÍĞ¹½Ğ‘ÕÁ±¥…Ñ”…Õ‘¥Ğ•Ù•¹ÑÌˆ¤ì(€½¹ÍĞÁ…¥‘%¹Ù½¥•I½İÌõ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±Õ¹‘•™¥¹•°‰Pˆ¤ì(€½¹ÍĞÁ…¥‘M¹…ÁÍ¡½ĞõÁ…¥‘%¹Ù½¥•I½İÌ¹‰½‘ä¹É•Í½ÕÉ•Ì¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥¤ì(€½¹ÍĞÉ•½Á•¹•‘M•ÉÙ¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±í¥é‰¥±±•‘M•ÉÙ¥”¹‰½‘ä¹¥±Ù•ÉÍ¥½¸éÁ…¥‘M¹…ÁÍ¡½Ğ¹Ù•ÉÍ¥½¸±¹…µ”éÁ…¥‘M¹…ÁÍ¡½Ğ¹¹…µ”±ÍÑ…ÑÕÌè‰‘É…™Ğˆ±‰É…¹¡%éÁ…¥‘M¹…ÁÍ¡½Ğ¹‰É…¹¡%üı„¹‰É…¹ ±‘…Ñ„éÁ…¥‘M¹…ÁÍ¡½Ğ¹‘…Ñ…ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹¹½ÑÅÕ…°¡É•½Á•¹•‘M•ÉÙ¥”¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡É•½Á•¹•‘M•ÉÙ¥”¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•½Á•¹•‘M•ÉÙ¥”¹‰½‘ä¹½‘”°‰%9Y1%}%9Y=%}QI9M%Q%=8ˆ¤ì(€½¹ÍĞmmÍ•ÉÙ¥•%¹Ù½¥•½Õ¹Ñutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P=U9P ¨¤L¸I=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!IÑ•¹…¹Ñ}¥ôü9­¥¹ôÕÍÑ½µ•É}¥¹Ù½¥”œ9…É¡¥Ù•õ1Mˆ±m„¹Ñ•¹…¹Ñt¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡Í•ÉÙ¥•%¹Ù½¥•½Õ¹Ğ¹¸¤°È¤ì(€½¹ÍĞÕ¹ÁÉ½Ù•‘%õÉ…¹‘½µUU% ¤ì(€…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰%9MIP%9Q<É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì¡¥±Ñ•¹…¹Ñ}¥±‰É…¹¡}¥±­¥¹±¹…µ”±ÍÑ…ÑÕÌ±‘…Ñ„¤Y1UL€ ü°ü°ü°ü°ü°ü°ü¤ˆ±mÕ¹ÁÉ½Ù•‘%±„¹Ñ•¹…¹Ğ±„¹‰É…¹ °‰ÕÍÑ½µ•É}¥¹Ù½¥”ˆ°‰U¹ÁÉ½Ù•Á…¥¥¹Ù½¥”ˆ°‰Á…¥ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡íÍÕ‰Ñ½Ñ…°èÔ±Ñ…áµ½Õ¹ĞèÀ±Í•ÉÙ¥••”èÁô¥t¤ì(€½¹ÍĞ¹½AÉ½½™I•™Õ¹õ…İ…¥ĞÉ•Ù¥•Ü¡„±í¥¹Ù½¥•%éÕ¹ÁÉ½Ù•‘%±É•…Í½¸è‰I•Ù¥•ÜÉ•ÅÕ•ÍĞİ¥Ñ¡½ÕĞ™¥¹…¹¥…°•Ù¥‘•¹”ˆ±É•Ù¥•İ­¹½İ±•‘•éÑÉÕ•ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡¹½AÉ½½™I•™Õ¹¹‰½‘ä¹½‘”°‰Ae59Q}Y%9}IEU%Iˆ¤ì(€½¹ÍĞÕ¹Á…¥‘%¹Ù½¥”õ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P¥I=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!IÑ•¹…¹Ñ}¥ôü9­¥¹ôÕÍÑ½µ•É}¥¹Ù½¥”œ9ÍÑ…ÑÕÌô‘É…™Ğœ1%5%P€Äˆ±m„¹Ñ•¹…¹Ñt¤ì(€¥˜¡Õ¹Á…¥‘%¹Ù½¥•lÁt¹±•¹Ñ ¥ì(€€½¹ÍĞ¹½ÑA…¥‘I•Ù¥•Üõ…İ…¥ĞÉ•Ù¥•Ü¡„±í¥¹Ù½¥•%éÕ¹Á…¥‘%¹Ù½¥•lÁulÁt¹¥±É•…Í½¸è‰I•Ù¥•Ü™½È…¸¥¹Ù½¥”Ñ¡…Ğ¥Ì¹½ĞÁ…¥ˆ±É•Ù¥•İ­¹½İ±•‘•éÑÉÕ•ô¤ì(€€…ÍÍ•ÉĞ¹•ÅÕ…°¡¹½ÑA…¥‘I•Ù¥•Ü¹‰½‘ä¹½‘”°‰%9Y=%}9=Q}A%ˆ¤ì(€ô((€€¼¼á•É¥Í”Ñ¡”É•…°!QQ@±¥™•å±”°½ÁÑ¥µ¥ÍÑ¥ŒÙ•ÉÍ¥½¹Ì…¹¥µµÕÑ…‰±”Ñ•Éµ¥¹…°É•½É‘Ì¸(€½¹ÍĞÉ•…‘M•ÉÙ¥”õ…Íå¹Œ¥ôùì(€€½¹ÍĞÉ•ÍÁ½¹Í”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±Õ¹‘•™¥¹•°‰Pˆ¤ì(€€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•ÍÁ½¹Í”¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡É•ÍÁ½¹Í”¹‰½‘ä¤¤ì(€€½¹ÍĞÉ½ÜõÉ•ÍÁ½¹Í”¹‰½‘ä¹É•Í½ÕÉ•Ì¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ¥¤í…ÍÍ•ÉĞ¹½¬¡É½Ü¤íÉ•ÑÕÉ¸É½Üì(€ôì(€½¹ÍĞÍ•ÉÙ¥•A…å±½…õÉ½Üôø¡í¥éÉ½Ü¹¥±Ù•ÉÍ¥½¸éÉ½Ü¹Ù•ÉÍ¥½¸±¹…µ”éÉ½Ü¹¹…µ”±ÍÑ…ÑÕÌéÉ½Ü¹ÍÑ…ÑÕÌ±‰É…¹¡%éÉ½Ü¹‰É…¹¡%üıÉ½Ü¹‰É…¹¡}¥üı„¹‰É…¹ ±‘…Ñ„éÉ½Ü¹‘…Ñ…ô¤ì(€½¹ÍĞ½µÁ±•Ñ•‘M½ÕÉ”õ…İ…¥ĞÉ•…‘M•ÉÙ¥”¡É•…Ñ•‘M•ÉÙ¥•=É‘•È¹‰½‘ä¹¥¤ì(€½¹ÍĞ½µÁ±•Ñ•M•ÉÙ¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡½µÁ±•Ñ•‘M½ÕÉ”¤±ÍÑ…ÑÕÌè‰½µÁ±•Ñ•‰ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡½µÁ±•Ñ•M•ÉÙ¥”¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡½µÁ±•Ñ•M•ÉÙ¥”¹‰½‘ä¤¤ì(€½¹ÍĞ½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğõ…İ…¥ĞÉ•…‘M•ÉÙ¥”¡É•…Ñ•‘M•ÉÙ¥•=É‘•È¹‰½‘ä¹¥¤ì(€™½È¡½¹ÍĞÍÑ…ÑÕÌ½˜l‰¹•Üˆ°‰Í¡•‘Õ±•ˆ°‰¥¹}ÁÉ½É•ÍÌˆ°‰…¹•±±•‰t¥ì(€€½¹ÍĞÉ•½Á•¹•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¤±ÍÑ…ÑÕÍô°‰AQ ˆ¤ì(€€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•½Á•¹•¹‰½‘ä¹½‘”°‰%9Y1%}MIY%}=II}QI9M%Q%=8ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡É•½Á•¹•¹‰½‘ä¤¤ì(€ô(€™½È¡½¹ÍĞ¡…¹”½˜mí¹…µ”è‰¡…¹•™¥¹…°½É‘•È‰ô±í‘…Ñ„éì¸¸¹½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¹‘…Ñ„±…µ½Õ¹ĞèÌÙõô±í‘…Ñ„éì¸¸¹½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¹‘…Ñ„±¹½Ñ•Ìè‰¡…¹•…™Ñ•È½µÁ±•Ñ¥½¸‰õõt¥ì(€€½¹ÍĞ•‘¥Ñ•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¤°¸¸¹¡…¹•ô°‰AQ ˆ¤ì(€€…ÍÍ•ÉĞ¹•ÅÕ…°¡•‘¥Ñ•¹‰½‘ä¹½‘”°‰MIY%}=II}%91}%55UQ	1ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡•‘¥Ñ•¹‰½‘ä¤¤ì(€ô(€½¹ÍĞ…É¡¥Ù•‘½µÁ±•Ñ•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥é½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¹¥±Ù•ÉÍ¥½¸é½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¹Ù•ÉÍ¥½¹ô°‰1Qˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…É¡¥Ù•‘½µÁ±•Ñ•¹‰½‘ä¹½‘”°‰MIY%}=II}I!%Y}=I	%8ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡…É¡¥Ù•‘½µÁ±•Ñ•¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹‘••ÁÅÕ…°¡…İ…¥ĞÉ•…‘M•ÉÙ¥”¡½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¹¥¤±½µÁ±•Ñ•‘M¹…ÁÍ¡½Ğ¤ì(€½¹ÍĞÍÑ…±•M•ÉÙ¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡½µÁ±•Ñ•‘M½ÕÉ”¤±ÍÑ…ÑÕÌè‰½µÁ±•Ñ•‰ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÍÑ…±•M•ÉÙ¥”¹ÍÑ…ÑÕÌ°ĞÀä±)M=8¹ÍÑÉ¥¹¥™ä¡ÍÑ…±•M•ÉÙ¥”¹‰½‘ä¤¤ì(€½¹ÍĞÍÑ…¹‘…±½¹•A…å±½…õí¹…µ”è‰M¡•‘Õ±•ÍÑ…¹‘…±½¹”Í•ÉÙ¥”ˆ±ÍÑ…ÑÕÌè‰Í¡•‘Õ±•ˆ±‰É…¹¡%é„¹‰É…¹ ±‘…Ñ„éíÕÍÑ½µ•É9…µ”è‰1¥™•å±”±¥•¹Ğˆ±Í•ÉÙ¥••ÍÉ¥ÁÑ¥½¸è‰5…¥¹Ñ•¹…¹”ˆ±…µ½Õ¹ĞèÄÁõôì(€½¹ÍĞÍ¡•‘Õ±•‘É•…Ñ•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ÍÑ…¹‘…±½¹•A…å±½…¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í¡•‘Õ±•‘É•…Ñ•¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡Í¡•‘Õ±•‘É•…Ñ•¹‰½‘ä¤¤ì(€½¹ÍĞÍ¡•‘Õ±•‘M¹…ÁÍ¡½Ğõ…İ…¥ĞÉ•…‘M•ÉÙ¥”¡Í¡•‘Õ±•‘É•…Ñ•¹‰½‘ä¹¥¤ì(€½¹ÍĞÉ•É•ÍÍ•‘M•ÉÙ¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡Í¡•‘Õ±•‘M¹…ÁÍ¡½Ğ¤±ÍÑ…ÑÕÌè‰¹•Ü‰ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•É•ÍÍ•‘M•ÉÙ¥”¹‰½‘ä¹½‘”°‰%9Y1%}MIY%}=II}QI9M%Q%=8ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡É•É•ÍÍ•‘M•ÉÙ¥”¹‰½‘ä¤¤ì(€½¹ÍĞ…É¡¥Ù•‘M¡•‘Õ±•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥éÍ¡•‘Õ±•‘M¹…ÁÍ¡½Ğ¹¥±Ù•ÉÍ¥½¸éÍ¡•‘Õ±•‘M¹…ÁÍ¡½Ğ¹Ù•ÉÍ¥½¹ô°‰1Qˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…É¡¥Ù•‘M¡•‘Õ±•¹‰½‘ä¹½‘”°‰MIY%}=II}I!%Y}=I	%8ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡…É¡¥Ù•‘M¡•‘Õ±•¹‰½‘ä¤¤ì(€½¹ÍĞ…¹•±M•ÉÙ¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡Í¡•‘Õ±•‘M¹…ÁÍ¡½Ğ¤±ÍÑ…ÑÕÌè‰…¹•±±•‰ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…¹•±M•ÉÙ¥”¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡…¹•±M•ÉÙ¥”¹‰½‘ä¤¤ì(€½¹ÍĞ…¹•±±•‘M¹…ÁÍ¡½Ğõ…İ…¥ĞÉ•…‘M•ÉÙ¥”¡Í¡•‘Õ±•‘M¹…ÁÍ¡½Ğ¹¥¤ì(€½¹ÍĞÉ•½Á•¹•‘…¹•±±•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡…¹•±±•‘M¹…ÁÍ¡½Ğ¤±ÍÑ…ÑÕÌè‰¥¹}ÁÉ½É•ÍÌ‰ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•½Á•¹•‘…¹•±±•¹‰½‘ä¹½‘”°‰%9Y1%}MIY%}=II}QI9M%Q%=8ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡É•½Á•¹•‘…¹•±±•¹‰½‘ä¤¤ì(€½¹ÍĞ•‘¥Ñ•‘…¹•±±•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹Í•ÉÙ¥•A…å±½…¡…¹•±±•‘M¹…ÁÍ¡½Ğ¤±¹…µ”è‰¡…¹•…¹•±±•½É‘•È‰ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡•‘¥Ñ•‘…¹•±±•¹‰½‘ä¹½‘”°‰MIY%}=II}%91}%55UQ	1ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡•‘¥Ñ•‘…¹•±±•¹‰½‘ä¤¤ì(€½¹ÍĞ…É¡¥Ù•‘…¹•±±•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥é…¹•±±•‘M¹…ÁÍ¡½Ğ¹¥±Ù•ÉÍ¥½¸é…¹•±±•‘M¹…ÁÍ¡½Ğ¹Ù•ÉÍ¥½¹ô°‰1Qˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…É¡¥Ù•‘…¹•±±•¹‰½‘ä¹½‘”°‰MIY%}=II}I!%Y}=I	%8ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡…É¡¥Ù•‘…¹•±±•¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹‘••ÁÅÕ…°¡…İ…¥ĞÉ•…‘M•ÉÙ¥”¡…¹•±±•‘M¹…ÁÍ¡½Ğ¹¥¤±…¹•±±•‘M¹…ÁÍ¡½Ğ¤ì(€½¹ÍĞ‘É…™ÑM•ÉÙ¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹ÍÑ…¹‘…±½¹•A…å±½…±¹…µ”è‰U¹Í¡•‘Õ±•Í•ÉÙ¥”ˆ±ÍÑ…ÑÕÌè‰¹•Ü‰ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‘É…™ÑM•ÉÙ¥”¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡‘É…™ÑM•ÉÙ¥”¹‰½‘ä¤¤ì(€½¹ÍĞ‘É…™ÑM¹…ÁÍ¡½Ğõ…İ…¥ĞÉ•…‘M•ÉÙ¥”¡‘É…™ÑM•ÉÙ¥”¹‰½‘ä¹¥¤ì(€½¹ÍĞ±¥¹­•‘É…™Ñ%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±í¹…µ”è‰1¥¹­•¹•ÜÍ•ÉÙ¥”¥¹Ù½¥”ˆ±ÍÑ…ÑÕÌè‰‘É…™Ğˆ±‰É…¹¡%é„¹‰É…¹ ±‘…Ñ„éíÍ•ÉÙ¥•=É‘•É%é‘É…™ÑM¹…ÁÍ¡½Ğ¹¥±ÍÕ‰Ñ½Ñ…°èÄÀ±Ñ…áµ½Õ¹ĞèÀ±Í•ÉÙ¥••”èÁõô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡±¥¹­•‘É…™Ñ%¹Ù½¥”¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡±¥¹­•‘É…™Ñ%¹Ù½¥”¹‰½‘ä¤¤ì(€½¹ÍĞ…É¡¥Ù•‘%¹Ù½¥•õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥é‘É…™ÑM¹…ÁÍ¡½Ğ¹¥±Ù•ÉÍ¥½¸é‘É…™ÑM¹…ÁÍ¡½Ğ¹Ù•ÉÍ¥½¹ô°‰1Qˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡…É¡¥Ù•‘%¹Ù½¥•¹‰½‘ä¹½‘”°‰MIY%}=II}1Ie}%9Y=%ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡…É¡¥Ù•‘%¹Ù½¥•¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹‘••ÁÅÕ…°¡…İ…¥ĞÉ•…‘M•ÉÙ¥”¡‘É…™ÑM¹…ÁÍ¡½Ğ¹¥¤±‘É…™ÑM¹…ÁÍ¡½Ğ¤ì(€½¹ÍĞÕ¹‰¥±±•‘É…™Ğõ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±ì¸¸¹ÍÑ…¹‘…±½¹•A…å±½…±¹…µ”è‰U¹ÕÍ•Í•ÉÙ¥”ˆ±ÍÑ…ÑÕÌè‰¹•Ü‰ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Õ¹‰¥±±•‘É…™Ğ¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡Õ¹‰¥±±•‘É…™Ğ¹‰½‘ä¤¤ì(€½¹ÍĞÕ¹‰¥±±•‘M¹…ÁÍ¡½Ğõ…İ…¥ĞÉ•…‘M•ÉÙ¥”¡Õ¹‰¥±±•‘É…™Ğ¹‰½‘ä¹¥¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥éÕ¹‰¥±±•‘M¹…ÁÍ¡½Ğ¹¥±Ù•ÉÍ¥½¸éÕ¹‰¥±±•‘M¹…ÁÍ¡½Ğ¹Ù•ÉÍ¥½¹ô°‰1Qˆ¤¤¹ÍÑ…ÑÕÌ°ÈÀÀ¤ì(€€¼¼%¹Ù½¥”‘É…™ÑÌ‘•É¥Ù”•á±ÕÍ¥Ù•±ä™É½´½µÁ±•Ñ•Í•ÉÙ¥”½É‘•ÉÌìÁ…åµ•¹ĞÍÑ…åÌÕ¹Á…¥¸(€½¹ÍĞ¥¹Ù½¥•M½ÕÉ”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¹…µ”è‰¥á•™•”Í•ÉÙ¥”ˆ±ÍÑ…ÑÕÌè‰¹•Üˆ±‰É…¹¡%é„¹‰É…¹ ±‘…Ñ„éíÕÍÑ½µ•É9…µ”è‰M•ÉÙ¥”ÕÍÑ½µ•Èˆ±Í•ÉÙ¥••ÍÉ¥ÁÑ¥½¸è‰ÅÕ¥Áµ•¹ĞÉ•Á…¥Èˆ±…µ½Õ¹ĞèØÈ¸ÜÕõô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡¥¹Ù½¥•M½ÕÉ”¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡¥¹Ù½¥•M½ÕÉ”¹‰½‘ä¤¤ì(€½¹ÍĞ¥¹Ù½¥•M½ÕÉ•%õ¥¹Ù½¥•M½ÕÉ”¹‰½‘ä¹¥ì(€½¹ÍĞ‰•™½É•½µÁ±•Ñ¥½¸õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±í¥¹Ù½¥•É½µM•ÉÙ¥•=É‘•É%é¥¹Ù½¥•M½ÕÉ•%±‰É…¹¡%é„¹‰É…¹¡ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡‰•™½É•½µÁ±•Ñ¥½¸¹‰½‘ä¹½‘”°‰MIY%}=II}9=Q}=5A1Qˆ¤ì(€½¹ÍĞ‘É…™ÑM½ÕÉ”ô¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±Õ¹‘•™¥¹•°‰Pˆ¤¤¹‰½‘ä¹É•Í½ÕÉ•Ì¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ¥¹Ù½¥•M½ÕÉ•%¤ì(€…ÍÍ•ÉĞ¹½¬¡‘É…™ÑM½ÕÉ”¤ì(€½¹ÍĞÍÑ…ÉÑ•‘M½ÕÉ•%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥é¥¹Ù½¥•M½ÕÉ•%±Ù•ÉÍ¥½¸é‘É…™ÑM½ÕÉ”¹Ù•ÉÍ¥½¸±¹…µ”é‘É…™ÑM½ÕÉ”¹¹…µ”±ÍÑ…ÑÕÌè‰¥¹}ÁÉ½É•ÍÌˆ±‰É…¹¡%é„¹‰É…¹ ±‘…Ñ„é‘É…™ÑM½ÕÉ”¹‘…Ñ…ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡ÍÑ…ÉÑ•‘M½ÕÉ•%¹Ù½¥”¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡ÍÑ…ÉÑ•‘M½ÕÉ•%¹Ù½¥”¹‰½‘ä¤¤ì(€½¹ÍĞÍÑ…ÉÑ•‘%¹Ù½¥•I½Üô¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±Õ¹‘•™¥¹•°‰Pˆ¤¤¹‰½‘ä¹É•Í½ÕÉ•Ì¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ¥¹Ù½¥•M½ÕÉ•%¤ì(€…ÍÍ•ÉĞ¹½¬¡ÍÑ…ÉÑ•‘%¹Ù½¥•I½Ü¤ì(€½¹ÍĞ½µÁ±•Ñ•‘M½ÕÉ•%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÉÙ¥•=É‘•ÉÌˆ±í¥é¥¹Ù½¥•M½ÕÉ•%±Ù•ÉÍ¥½¸éÍÑ…ÉÑ•‘%¹Ù½¥•I½Ü¹Ù•ÉÍ¥½¸±¹…µ”éÍÑ…ÉÑ•‘%¹Ù½¥•I½Ü¹¹…µ”±ÍÑ…ÑÕÌè‰½µÁ±•Ñ•ˆ±‰É…¹¡%é„¹‰É…¹ ±‘…Ñ„éÍÑ…ÉÑ•‘%¹Ù½¥•I½Ü¹‘…Ñ…ô°‰AQ ˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡½µÁ±•Ñ•‘M½ÕÉ•%¹Ù½¥”¹ÍÑ…ÑÕÌ°ÈÀÀ±)M=8¹ÍÑÉ¥¹¥™ä¡½µÁ±•Ñ•‘M½ÕÉ•%¹Ù½¥”¹‰½‘ä¤¤ì(€½¹ÍĞİÉ½¹	É…¹¡%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±í¥¹Ù½¥•É½µM•ÉÙ¥•=É‘•É%é¥¹Ù½¥•M½ÕÉ•%±‰É…¹¡%éˆ¹‰É…¹¡ô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡İÉ½¹	É…¹¡%¹Ù½¥”¹‰½‘ä¹½‘”°‰II9}9=Q}=U9ˆ¤ì(€½¹ÍĞ¥¹©•Ñ•‘%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±í¥¹Ù½¥•É½µM•ÉÙ¥•=É‘•É%é¥¹Ù½¥•M½ÕÉ•%±‰É…¹¡%é„¹‰É…¹ ±‘…Ñ„éíÍÕ‰Ñ½Ñ…°èÀ±ÍÑ…ÑÕÌè‰Á…¥‰õô¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡¥¹©•Ñ•‘%¹Ù½¥”¹‰½‘ä¹½‘”°‰%9Y1%}%9AUPˆ¤ì(€½¹ÍĞ¥¹Ù½¥•É…™ÑA…å±½…õí¥¹Ù½¥•É½µM•ÉÙ¥•=É‘•É%é¥¹Ù½¥•M½ÕÉ•%±‰É…¹¡%é„¹‰É…¹¡ôì(€½¹ÍĞm™¥ÉÍÑ%¹Ù½¥”±Í•½¹‘%¹Ù½¥•tõ…İ…¥ĞAÉ½µ¥Í”¹…±°¡mÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±¥¹Ù½¥•É…™ÑA…å±½…¤±É•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±¥¹Ù½¥•É…™ÑA…å±½…¥t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡™¥ÉÍÑ%¹Ù½¥”¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡™¥ÉÍÑ%¹Ù½¥”¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡Í•½¹‘%¹Ù½¥”¹ÍÑ…ÑÕÌ°ÈÀÄ±)M=8¹ÍÑÉ¥¹¥™ä¡Í•½¹‘%¹Ù½¥”¹‰½‘ä¤¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡™¥ÉÍÑ%¹Ù½¥”¹‰½‘ä¹¥±Í•½¹‘%¹Ù½¥”¹‰½‘ä¹¥¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡	½½±•…¸¡™¥ÉÍÑ%¹Ù½¥”¹‰½‘ä¹•á¥ÍÑ¥¹œ¤¤­9Õµ‰•È¡	½½±•…¸¡Í•½¹‘%¹Ù½¥”¹‰½‘ä¹•á¥ÍÑ¥¹œ¤¤°Ä¤ì(€½¹ÍĞ•¹•É…Ñ•ô¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±Õ¹‘•™¥¹•°‰Pˆ¤¤¹‰½‘ä¹É•Í½ÕÉ•Ì¹™¥¹¡É½ÜôùÉ½Ü¹¥ôôõ™¥ÉÍÑ%¹Ù½¥”¹‰½‘ä¹¥¤ì(€…ÍÍ•ÉĞ¹½¬¡•¹•É…Ñ•¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡•¹•É…Ñ•¹ÍÑ…ÑÕÌ°‰‘É…™Ğˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡•¹•É…Ñ•¹‰É…¹¡}¥±„¹‰É…¹ ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡•¹•É…Ñ•¹‘…Ñ„¹Í•ÉÙ¥•=É‘•É%±¥¹Ù½¥•M½ÕÉ•%¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡•¹•É…Ñ•¹‘…Ñ„¹ÍÕ‰Ñ½Ñ…°¤°ØÈ¸ÜÔ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡•¹•É…Ñ•¹‘…Ñ„¹Ñ…áµ½Õ¹ĞüüÀ¤°À¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡•¹•É…Ñ•¹‘…Ñ„¹Í•ÉÙ¥••”üüÀ¤°À¤ì(€½¹ÍĞmmÁ…¥‘É…™Ñutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P=U9P ¨¤L¸I=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!I¥ôü9Ñ•¹…¹Ñ}¥ôü9ÍÑ…ÑÕÌôÁ…¥œˆ±m™¥ÉÍÑ%¹Ù½¥”¹‰½‘ä¹¥±„¹Ñ•¹…¹Ñt¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡Á…¥‘É…™Ğ¹¸¤°À¤ì(€½¹ÍĞÉ•Á±…å%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±¥¹Ù½¥•É…™ÑA…å±½…¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•Á±…å%¹Ù½¥”¹‰½‘ä¹¥±™¥ÉÍÑ%¹Ù½¥”¹‰½‘ä¹¥¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡É•Á±…å%¹Ù½¥”¹‰½‘ä¹•á¥ÍÑ¥¹œ±ÑÉÕ”¤ì(€½¹ÍĞ½Ñ¡•ÉQ•¹…¹Ñ%¹Ù½¥”õ…İ…¥ĞÉ•Í½ÕÉ”¡ˆ°‰ÕÍÑ½µ•É%¹Ù½¥•Ìˆ±¥¹Ù½¥•É…™ÑA…å±½…¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡½Ñ¡•ÉQ•¹…¹Ñ%¹Ù½¥”¹‰½‘ä¹½‘”°‰II9}9=Q}=U9ˆ±)M=8¹ÍÑÉ¥¹¥™ä¡½Ñ¡•ÉQ•¹…¹Ñ%¹Ù½¥”¹‰½‘ä¤¤ì(€½¹ÍĞmm•¹•É…Ñ•‘%¹Ù½¥•½Õ¹Ñutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P=U9P ¨¤L¸I=4É•ÍÑ…ÕÉ…¹Ñ}É•Í½ÕÉ•Ì]!IÑ•¹…¹Ñ}¥ôü9­¥¹ôÕÍÑ½µ•É}¥¹Ù½¥”œ9)M=9}U9EU=Q¡)M=9}aQIP¡‘…Ñ„°œ¹Í•ÉÙ¥•=É‘•É%œ¤¤ôüˆ±m„¹Ñ•¹…¹Ğ±¥¹Ù½¥•M½ÕÉ•%‘t¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…°¡9Õµ‰•È¡•¹•É…Ñ•‘%¹Ù½¥•½Õ¹Ğ¹¸¤°Ä¤ì(€½¹ÍĞmmÕÍÑ½µ•É=É‘•Éutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1PÕÍÑ½µ•É}ÕÍ•É}¥I=4É•ÍÑ…ÕÉ…¹Ñ}½É‘•ÉÌ]!I¥ôüˆ±mÁ±…•¹‰½‘ä¹¥‘t¤í…ÍÍ•ÉĞ¹•ÅÕ…°¡ÕÍÑ½µ•É=É‘•È¹ÕÍÑ½µ•É}ÕÍ•É}¥±ÕÍÑ½µ•È¹‰½‘ä¹ÕÍ•È¹¥¤ì(€½¹ÍĞmmÍ…Ù•‘=ÁÑ¥½¹Íutõ…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰M1P½ÁÑ¥½¹Í}Í¹…ÁÍ¡½ĞI=4É•ÍÑ…ÕÉ…¹Ñ}½É‘•É}¥Ñ•µÌ]!I½É‘•É}¥ôüˆ±mÁ±…•¹‰½‘ä¹¥‘t¤í…ÍÍ•ÉĞ¹µ…Ñ ¡)M=8¹ÍÑÉ¥¹¥™ä¡Í…Ù•‘=ÁÑ¥½¹Ì¹½ÁÑ¥½¹Í}Í¹…ÁÍ¡½Ğ¤°½1…É”¼¤ì(€½¹ÍĞÍ•ÍÍ¥½¹Ìõ…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÕÉ¥Ñäˆ±Õ¹‘•™¥¹•°‰Pˆ¤í…ÍÍ•ÉĞ¹•ÅÕ…°¡Í•ÍÍ¥½¹Ì¹ÍÑ…ÑÕÌ°ÈÀÀ¤ì(€½¹ÍĞÕÉÉ•¹ĞõÍ•ÍÍ¥½¹Ì¹‰½‘ä¹Í•ÍÍ¥½¹Ì¹™¥¹¡ÌôùÌ¹ÕÉÉ•¹Ğ¤í…ÍÍ•ÉĞ¹½¬¡ÕÉÉ•¹Ğ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÕÉ¥Ñäˆ±í¥éÕÉÉ•¹Ğ¹¥‘ô°‰1Qˆ¤¤¹ÍÑ…ÑÕÌ°ĞÀÀ¤ì(€½¹ÍĞ™½É•¥¹M•ÍÍ¥½¹Ìõ…İ…¥ĞÉ•Í½ÕÉ”¡ˆ°‰Í•ÕÉ¥Ñäˆ±Õ¹‘•™¥¹•°‰Pˆ¤í…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰Í•ÕÉ¥Ñäˆ±í¥é™½É•¥¹M•ÍÍ¥½¹Ì¹‰½‘ä¹Í•ÍÍ¥½¹ÍlÁt¹¥‘ô°‰1Qˆ¤¤¹ÍÑ…ÑÕÌ°ĞÀĞ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥ĞÉ•Í½ÕÉ”¡„°‰¡•…±Ñ ˆ±Õ¹‘•™¥¹•°‰Pˆ¤¤¹‰½‘ä¹‘…Ñ…‰…Í”°‰½¹¹•Ñ•ˆ¤ì(€½¹ÍĞ…Ñ¥Ù¥Ñå¥áÑÕÉ•Ìõ…İ…¥ĞÉÕ¹Ñ¥Ù¥ÑåA½Í¡•­Ì¡í‘ˆ±…±°±É•Í½ÕÉ”±É•¥ÍÑ•Éô¤ì(€…İ…¥ĞÉÕ¹Ñ¥Ù¥Ñå¹Ñ¥Ñ±•µ•¹Ñ…Ñ•¡•­Ì¡í‘ˆ±…±°±É•Í½ÕÉ”±É•ÍÑ…ÕÉ…¹Ğé„±ÍÑ…™˜±™¥áÑÕÉ•Ìé…Ñ¥Ù¥Ñå¥áÑÕÉ•Íô¤ì(€½¹ÍĞ…‘µ¥¸õ…İ…¥ĞÉ•¥ÍÑ•È ‰½Á•É…Ñ¥½¹ÌµÁ±…Ñ™½É´µ…‘µ¥¸ˆ¤ì(€…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰%9MIP%9Q<Á±…Ñ™½Éµ}…‘µ¥¹Ì¡ÕÍ•É}¥±É½±”±•¹…‰±•¤Y1UL€ ü°ÍÕÁ•É}…‘µ¥¸œ±QIU¤ˆ±m…‘µ¥¸¹ÕÍ•Ét¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥Ğ…±° ˆ½…Á¤½É•ÍÑ…ÕÉ…¹Ğ½½Á•É…Ñ¥½¹Ì½µ•¹Ôˆ°‰Pˆ±Õ¹‘•™¥¹•±…‘µ¥¸¹½½­¥”±ˆ¹Ñ•¹…¹Ğ¤¤¹ÍÑ…ÑÕÌ°ĞÀÌ°‰Á±…Ñ™½É´…‘µ¥¹¥ÍÑÉ…Ñ¥½¸¥Ì¹½ĞÑ•¹…¹Ğ½İ¹•ÉÍ¡¥Àˆ¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥Ğ…±° ˆ½…Á¤½É•ÍÑ…ÕÉ…¹Ğ½½Á•É…Ñ¥½¹Ì½µ•¹Ôˆ°‰Pˆ±Õ¹‘•™¥¹•±…‘µ¥¸¹½½­¥”±…‘µ¥¸¹Ñ•¹…¹Ğ¤¤¹ÍÑ…ÑÕÌ°ÈÀÀ°‰…¸•áÁ±¥¥Ğ½İ¸µ•µ‰•ÉÍ¡¥ÀÍÑ¥±°İ½É­Ìˆ¤ì(€…İ…¥Ğ‘ˆ¹•á•ÕÑ” ‰UAQ…ÕÑ¡}Í•ÍÍ¥½¹ÌMP±…ÍÑ}Í••¹}…ĞõQ}MU¡9=\ ¤±%9QIY0€ØÄ5%9UQ¤]!IÕÍ•É}¥ôüˆ±m…‘µ¥¸¹ÕÍ•Ét¤ì(€…ÍÍ•ÉĞ¹•ÅÕ…° ¡…İ…¥Ğ…±° ˆ½…Á¤½É•ÍÑ…ÕÉ…¹Ğ½½Á•É…Ñ¥½¹Ì½µ•¹Ôˆ°‰Pˆ±Õ¹‘•™¥¹•±…‘µ¥¸¹½½­¥”±ˆ¹Ñ•¹…¹Ğ¤¤¹ÍÑ…ÑÕÌ°ĞÀÌ¤ì(õ…Ñ ¡•ÉÉ½È¥í½¹Í½±”¹•ÉÉ½È ‰m=Á•É…Ñ¥½¹ÌÑ•ÍĞÍ•ÉÙ•ÈÍÑ‘•ÉÈÑ…¥±tˆ±Í•ÉÙ•ÉÉÉ½ÉÌ¤íÑ¡É½Ü•ÉÉ½Èíõ™¥¹…±±åíÍ•ÉÙ•È¹­¥±° ¤í…İ…¥Ğİ½É­•ÉA½½°¹•¹ ¤í…İ…¥Ğ‘ˆ¹•¹ ¤íô)ô¤ì(((
+  const coupon=await save(a,"coupons","Save",{code:"SAVE10",discountType:"percent",value:10,usageLimit:1});
+  assert.ok(coupon);
+  const kitchen=await save(a,"departments","Kitchen",{deptType:"kitchen"});
+  const kitchenPrinter=await save(a,"printers","Kitchen printer",{connection:"network",address:"192.0.2.10",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_accept"});
+  const prepPrinter=await save(a,"printers","Kitchen prep printer",{connection:"network",address:"192.0.2.11",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_prepare"});
+  const receiptPrinter=await save(a,"printers","Receipt printer",{connection:"network",address:"192.0.2.12",paperWidth:"80",copies:1,purpose:"customer_receipt",autoPrint:"yes",printOn:"on_paid",includePrices:"yes"});
+  await save(a,"departmentAssignments","Coffee to kitchen",{departmentId:kitchen,itemId:item,printCopies:2});
+  const requestKey=randomUUID(),orderPayload={branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,couponCode:"SAVE10",requestKey,total:0,items:[{id:item,quantity:2,price:0}]};
+  const order=await resource(a,"pos",orderPayload);
+  assert.equal(order.status,201,JSON.stringify(order.body));assert.equal(order.body.total,18);
+  const [[printJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND status='pending'",[a.tenant,kitchenPrinter,order.body.id]);assert.equal(Number(printJobs.n),1,"one durable print job should be queued for the assigned department printer");
+  const [[printJob]]=await db.execute("SELECT payload_json FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=?",[a.tenant,kitchenPrinter,order.body.id]);const printPayload=typeof printJob.payload_json==="string"?JSON.parse(printJob.payload_json):printJob.payload_json;assert.equal(printPayload.items.length,1);assert.equal(printPayload.items[0].copies,2);assert.ok(Number(printPayload.orderNumber)>0);
+  const replay=await resource(a,"pos",orderPayload);assert.equal(replay.status,201);assert.equal(replay.body.id,order.body.id);
+  const [[replayedPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND source_id=?",[a.tenant,order.body.id]);assert.equal(Number(replayedPrintJobs.n),1,"replaying checkout must not duplicate printer jobs");
+  assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",couponCode:"SAVE10",items:[{id:item,quantity:1}]})).status,400);
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,a.cookie,b.tenant)).status,403);
+  assert.equal((await resource(a,"categories",{id:categoryB,version:1},"DELETE")).status,404);
+  await save(a,"team","Kitchen employee",{email:staff.email,role:"kitchen"});
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,staff.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
+  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'kitchen',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'kitchen.view',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'kitchen.edit',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"GET",undefined,staff.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"PATCH",{id:order.body.id,version:1,status:"preparing"},staff.cookie,a.tenant)).status,403);
+  const kitchen=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchen.status,200);assert.equal(kitchen.body.orders[0].total,null);assert.equal(kitchen.body.orders[0].customer_phone,null);
+  assert.equal((await resource(a,"orders",{id:order.body.id,version:1,paymentStatus:"paid"},"PATCH")).status,200);
+  const [[receiptJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_paid'",[a.tenant,receiptPrinter,order.body.id]);assert.equal(Number(receiptJobCount.n),1,"paid orders route to the customer receipt printer");
+  assert.equal((await resource(a,"orders",{id:order.body.id,version:2,status:"cancelled"},"PATCH")).body.code,"REFUND_REQUIRED");
+  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:2,status:"preparing"},staff.cookie,a.tenant)).status,200);
+  const [[prepJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_prepare'",[a.tenant,prepPrinter,order.body.id]);assert.equal(Number(prepJobCount.n),1,"preparation events route to the assigned section printer");
+  await db.execute("UPDATE restaurant_orders SET channel='delivery',order_notes='Private delivery address' WHERE id=?",[order.body.id]);
+  const privateDelivery=await call('/api/restaurant/operations/kds','GET',undefined,staff.cookie,a.tenant);
+  assert.equal(privateDelivery.body.orders.find(o=>o.id===order.body.id).order_notes,null);
+  await db.execute("UPDATE restaurant_orders SET channel='dine_in',order_notes=NULL WHERE id=?",[order.body.id]);
+  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,paymentStatus:"refunded"},staff.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,status:"ready"},staff.cookie,a.tenant)).status,200);
+  assert.equal((await resource(a,"orders",{id:order.body.id,version:4,status:"completed"},"PATCH")).status,200);
+  const branchList=await call("/api/restaurant/branches","GET",undefined,a.cookie,a.tenant);
+  const mainBranch=branchList.body.branches.find(x=>x.id===a.branch);
+  assert.equal((await call("/api/restaurant/branches","PATCH",{id:a.branch,version:mainBranch.version,name:"Renamed main"},a.cookie,a.tenant)).status,200);
+  assert.equal((await call("/api/restaurant/branches","PATCH",{id:a.branch,version:mainBranch.version,name:"Stale change"},a.cookie,a.tenant)).status,409);
+  const itemVersion=(await resource(a,"menu",undefined,"GET")).body.resources.find(r=>r.id===item).version;
+  assert.equal((await resource(a,"menu",{id:item,version:itemVersion,name:"Coffee",status:"active",branchId:a.branch,data:{price:20,categoryId:categoryA}},"PATCH")).status,200);
+  assert.equal((await resource(a,"menu",{id:item,version:itemVersion,name:"Coffee",status:"active",data:{price:30,categoryId:categoryA}},"PATCH")).status,409);
+  const orders=await resource(a,"orders",undefined,"GET");assert.equal(orders.body.orders[0].total,18);assert.equal(orders.body.orders[0].items[0].price,10);
+  const summary=await resource(a,"overview",undefined,"GET");assert.equal(summary.body.summary.sales,18);assert.equal(summary.body.summary.orders,1);
+  const today=new Date(Date.now()+3*3600000).toISOString().slice(0,10);
+  const report=await call("/api/restaurant/operations/reports?from="+today+"&to="+today,"GET",undefined,a.cookie,a.tenant);assert.equal(report.status,200);assert.equal(report.body.daily[0].sales,18);
+  const unavailableDelivery=await resource(a,"pos",{branchId:a.branch,channel:"delivery",items:[{id:item,quantity:1}]});assert.equal(unavailableDelivery.status,409);assert.equal(unavailableDelivery.body.code,"DELIVERY_DRIVER_UNAVAILABLE");
+  const [driverOne,driverTwo]=await Promise.all([addDriver(a,"operations-driver-one"),addDriver(a,"operations-driver-two")]);
+  const deliveryPayload={branchId:a.branch,channel:"delivery",items:[{id:item,quantity:1}]};
+  const deliveryOne=await resource(a,"pos",deliveryPayload),deliveryTwo=await resource(a,"pos",deliveryPayload);assert.equal(deliveryOne.status,201,JSON.stringify(deliveryOne.body));assert.equal(deliveryTwo.status,201,JSON.stringify(deliveryTwo.body));
+  assert.equal((await resource(a,"pos",deliveryPayload)).body.code,"DELIVERY_DRIVER_UNAVAILABLE","busy drivers must not be double-booked");
+  const [[deliveryRecord]]=await db.execute("SELECT checkout_snapshot FROM restaurant_orders WHERE id=?",[deliveryOne.body.id]);const deliveryAssignment=typeof deliveryRecord.checkout_snapshot==="string"?JSON.parse(deliveryRecord.checkout_snapshot):deliveryRecord.checkout_snapshot;assert.ok([driverOne.employeeId,driverTwo.employeeId].includes(deliveryAssignment.assignedDriverId));
+  const assignedAccount=deliveryAssignment.assignedDriverId===driverOne.employeeId?driverOne:driverTwo,otherDriver=assignedAccount.user===driverOne.user?driverTwo:driverOne;
+  const assignedOrders=await call("/api/restaurant/operations/orders","GET",undefined,assignedAccount.cookie,a.tenant),otherOrders=await call("/api/restaurant/operations/orders","GET",undefined,otherDriver.cookie,a.tenant);assert.equal(assignedOrders.status,200);assert.ok(assignedOrders.body.orders.some(row=>row.id===deliveryOne.body.id));assert.equal(otherOrders.status,200);assert.ok(!otherOrders.body.orders.some(row=>row.id===deliveryOne.body.id));
+  const crossDriverUpdate=await call("/api/restaurant/operations/orders","PATCH",{id:deliveryOne.body.id,version:1,status:"completed"},otherDriver.cookie,a.tenant);assert.equal(crossDriverUpdate.status,403,"drivers cannot update another driver's delivery");
+  const employeeRows=await resource(a,"team",undefined,"GET"),employeeId=employeeRows.body.resources[0].id;
+  const remoteTask=await save(a,"remote","Assigned task",{description:"Review menu",employeeId,budget:100},"assigned");
+  await save(a,"remoteWorkers","Worker",{employeeId,skills:"Menu review"},"active");
+  await save(a,"remoteMessages","Task message",{taskId:remoteTask,message:"Please review the menu."},"posted");
+  await save(a,"remoteDeliveries","Delivery",{taskId:remoteTask,notes:"Review complete."},"submitted");
+  // Occupied tables may call a waiter, but cannot receive a new booking or dine-in order.
+  assert.equal((await resource(a,"reservations",{name:"Occupied booking",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:table}})).body.code,"TABLE_NOT_FOUND");
+  assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,items:[{id:item,quantity:1}]})).body.code,"TABLE_NOT_FOUND");
+  const reservationTable=await save(a,"tables","Booking table",{capacity:4,sectionId:family,number:20},"available");
+  for(const [module,name,data,status] of [
+   ["attendance","Attendance",{employeeId,date:"2026-10-09"},"present"],
+   ["reservations","Guest",{partySize:2,scheduledAt:new Date(Date.now()+10*86400000).toISOString(),tableId:reservationTable},"confirmed"],
+   ["waitlist","Waiting guest",{partySize:2},"waiting"],
+   ["remote","Remote task",{description:"Review menu",employeeId,budget:100},"assigned"],
+   ["marketing","Campaign",{message:"Test draft only",channel:"email"},"draft"],
+   ["settings","Branch settings",{timeZone:"UTC"},"active"],
+   ["storefront","Brand",{primaryColor:"#224466",brandName:"Published brand",menuTheme:"modern",platformBranding:"hidden",roomServiceEnabled:"yes",checkoutRoomServiceFee:3},"active"]
+  ])await save(a,module,name,data,status);
+  const appearancePath="/api/restaurant/menu/appearance";
+  assert.equal((await call(appearancePath,"PUT",{template:"classic",colorMode:"light"},a.cookie,b.tenant)).status,403);
+  assert.equal((await call(appearancePath,"PUT",{template:"not-a-template"},a.cookie,a.tenant)).status,400);
+  assert.equal((await call(appearancePath,"PUT",{template:"classic",colorMode:"invalid"},a.cookie,a.tenant)).status,400);
+  for(const template of ["classic","minimal","modern","sufra"]){assert.equal((await call(appearancePath,"PUT",{template,colorMode:"dark"},a.cookie,a.tenant)).status,200);const saved=await call(appearancePath,"GET",undefined,a.cookie,a.tenant);assert.equal(saved.body.template,template);assert.equal(saved.body.colorMode,"dark");assert.equal(saved.body.preview.name,"operations-owner-a");const page=await fetch(origin+"/operations-owner-a");assert.equal(page.status,200);const html=await page.text();assert.ok(html.includes('data-template="'+template+'"'));assert.ok(html.includes('data-color-mode="dark"'));}
+  assert.equal((await call(appearancePath,"GET",undefined,b.cookie,b.tenant)).body.template,"sufra");
+  const publicMenu=await fetch(origin+"/operations-owner-a/order");assert.equal(publicMenu.status,200);assert.match(await publicMenu.text(),/Published brand/);
+  const group=await save(a,"menuGroups","Size",{itemId:item,selectionType:"single",requiredFlag:"yes",minSelect:1,maxSelect:1});
+  const option=await save(a,"menuValues","Large",{groupId:group,priceDelta:2});
+  assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]})).status,400);
+  assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1,options:[categoryB]}]})).status,400);
+  const customer=await call("/api/customer/register","POST",{email:"operations-customer@test.example",name:"Customer",password,storeSlug:"operations-owner-a"});assert.equal(customer.status,201);
+  assert.equal((await call("/api/customer/services?storeSlug=operations-owner-a","GET")).status,401);
+  const waiterPayload={storeSlug:"operations-owner-a",branchId:a.branch,action:"waiter",tableId:table,notes:"Water please",requestKey:randomUUID()};
+  assert.equal((await call("/api/customer/services","POST",waiterPayload)).status,401);
+  assert.equal((await call("/api/customer/services","POST",{...waiterPayload,storeSlug:"operations-owner-b",branchId:b.branch},customer.cookie)).status,403);
+  assert.equal((await call("/api/customer/services","POST",{...waiterPayload,branchId:b.branch},customer.cookie)).status,404);
+  const waiterCall=await call("/api/customer/services","POST",waiterPayload,customer.cookie);assert.equal(waiterCall.status,201,JSON.stringify(waiterCall.body));
+  const replayCall=await call("/api/customer/services","POST",waiterPayload,customer.cookie);assert.equal(replayCall.status,200);assert.equal(replayCall.body.id,waiterCall.body.id);
+  assert.equal((await call("/api/customer/services","POST",{...waiterPayload,requestKey:randomUUID()},customer.cookie)).status,429);
+  const calls=await resource(a,"waiterCalls",undefined,"GET");assert.equal(calls.body.resources[0].status,"pending");assert.equal(calls.body.resources[0].data.tableId,table);
+  assert.equal((await call("/api/restaurant/operations/waiterCalls","GET",undefined,customer.cookie,a.tenant)).status,403);
+  const bookingPayload={storeSlug:"operations-owner-a",branchId:a.branch,action:"reservation",sectionId:family,partySize:3,phone:"0500000000",scheduledAt:new Date(Date.now()+86400000).toISOString(),requestKey:randomUUID()};
+  assert.equal((await call("/api/customer/services","POST",{...bookingPayload,scheduledAt:new Date(Date.now()-60000).toISOString()},customer.cookie)).status,400);
+  const booking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);assert.equal(booking.status,201,JSON.stringify(booking.body));
+  const savedBookings=await resource(a,"reservations",undefined,"GET");assert.equal(savedBookings.body.resources.find(row=>row.id===booking.body.id).status,"pending");
+  const customerBookings=await call("/api/customer/services?storeSlug=operations-owner-a","GET",undefined,customer.cookie);assert.equal(customerBookings.status,200);assert.equal(customerBookings.body.reservations.some(row=>row.id===booking.body.id),true);assert.equal(customerBookings.body.reservations.find(row=>row.id===booking.body.id).partySize,3);
+  await save(a,"settings","No-show grace",{noShowGraceMinutes:5});
+  const [[graceRow]]=await db.execute("SELECT data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='branch_config' AND archived=FALSE AND JSON_TYPE(JSON_EXTRACT(data,'$.noShowGraceMinutes')) IN ('INTEGER','DOUBLE') ORDER BY updated_at DESC,created_at DESC LIMIT 1",[a.tenant,a.branch]);
+  assert.equal((typeof graceRow.data==="string"?JSON.parse(graceRow.data):graceRow.data).noShowGraceMinutes,5);
+  const autoCustomer=await call("/api/customer/register","POST",{email:"operations-auto-customer@test.example",name:"Auto Customer",password,storeSlug:"operations-owner-a"});assert.equal(autoCustomer.status,201,JSON.stringify(autoCustomer.body));
+  const autoBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},autoCustomer.cookie);assert.equal(autoBooking.status,201,JSON.stringify(autoBooking.body));
+  const pendingAuto=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===autoBooking.body.id);assert.ok(pendingAuto);
+  const confirmedAuto=await resource(a,"reservations",{id:autoBooking.body.id,version:pendingAuto.version,name:pendingAuto.name,status:"confirmed",branchId:a.branch,data:resourceData("reservations",pendingAuto.data)},"PATCH");assert.equal(confirmedAuto.status,200,JSON.stringify(confirmedAuto.body));
+  await db.execute("UPDATE restaurant_resources SET data=JSON_SET(data,'$.scheduledAt',?) WHERE id=? AND tenant_id=?",[new Date(Date.now()-60*60000).toISOString(),autoBooking.body.id,a.tenant]);
+  const noShowSweep=await markOverdueReservationsNoShow(workerPool);assert.equal(noShowSweep.marked,1,JSON.stringify(noShowSweep));
+  const [[autoReservation]]=await db.execute("SELECT status,version FROM restaurant_resources WHERE id=? AND tenant_id=?",[autoBooking.body.id,a.tenant]);assert.equal(autoReservation.status,"no_show");
+  const [[noShowNotice]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND tenant_id=? AND event_key='reservation_no_show' AND resource_id=?",[autoCustomer.body.user.id,a.tenant,autoBooking.body.id]);assert.equal(Number(noShowNotice.n),1);
+  const [[noShowAudit]]=await db.execute("SELECT actor_user_id,action FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='reservation.auto_no_show'",[a.tenant,autoBooking.body.id]);assert.equal(noShowAudit.actor_user_id,null);assert.equal(noShowAudit.action,"reservation.auto_no_show");
+  assert.equal((await markOverdueReservationsNoShow(workerPool)).marked,0,"repeated worker runs must not duplicate transitions or notices");
+  const manualCustomer=await call("/api/customer/register","POST",{email:"operations-manual-customer@test.example",name:"Manual Customer",password,storeSlug:"operations-owner-a"});assert.equal(manualCustomer.status,201,JSON.stringify(manualCustomer.body));
+  const manualBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},manualCustomer.cookie);assert.equal(manualBooking.status,201,JSON.stringify(manualBooking.body));
+  const pendingManual=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===manualBooking.body.id);assert.ok(pendingManual);
+  const confirmedManual=await resource(a,"reservations",{id:manualBooking.body.id,version:pendingManual.version,name:pendingManual.name,status:"confirmed",branchId:a.branch,data:resourceData("reservations",pendingManual.data)},"PATCH");assert.equal(confirmedManual.status,200,JSON.stringify(confirmedManual.body));
+  await db.execute("UPDATE restaurant_resources SET data=JSON_SET(data,'$.scheduledAt',?) WHERE id=? AND tenant_id=?",[new Date(Date.now()-60*60000).toISOString(),manualBooking.body.id,a.tenant]);
+  const dueManual=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===manualBooking.body.id);
+  const manualNoShow=await resource(a,"reservations",{id:manualBooking.body.id,version:dueManual.version,name:dueManual.name,status:"no_show",branchId:a.branch,data:resourceData("reservations",dueManual.data)},"PATCH");assert.equal(manualNoShow.status,200,JSON.stringify(manualNoShow.body));
+  const [[manualNoShowData]]=await db.execute("SELECT JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId')) AS customer_user_id FROM restaurant_resources WHERE id=? AND tenant_id=?",[manualBooking.body.id,a.tenant]);assert.equal(manualNoShowData.customer_user_id,manualCustomer.body.user.id,"status changes must preserve the customer's private reservation link");
+  const [[manualNotice]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND tenant_id=? AND event_key='reservation_no_show' AND resource_id=?",[manualCustomer.body.user.id,a.tenant,manualBooking.body.id]);assert.equal(Number(manualNotice.n),1);
+  const reservationOrderPayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"dine_in",reservationId:booking.body.id,requestKey:randomUUID(),items:[{id:item,quantity:1,options:[option]}]};
+  const reservationOrder=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationOrder.status,201,JSON.stringify(reservationOrder.body));
+  const reservationReplay=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationReplay.status,201);assert.equal(reservationReplay.body.id,reservationOrder.body.id);
+  const [[linkedReservationOrder]]=await db.execute("SELECT reservation_id,table_id,party_size FROM restaurant_orders WHERE id=?",[reservationOrder.body.id]);assert.equal(linkedReservationOrder.reservation_id,booking.body.id);assert.equal(linkedReservationOrder.table_id,null);assert.equal(linkedReservationOrder.party_size,3);
+  const otherCustomer=await call("/api/customer/register","POST",{email:"operations-other-customer@test.example",name:"Other customer",password,storeSlug:"operations-owner-a"});assert.equal(otherCustomer.status,201);
+  const stolenReservationOrder=await call("/api/customer/orders","POST",{...reservationOrderPayload,requestKey:randomUUID()},otherCustomer.cookie);assert.equal(stolenReservationOrder.body.code,"RESERVATION_NOT_AVAILABLE");
+  const duplicateReservationOrder=await call("/api/customer/orders","POST",{...reservationOrderPayload,requestKey:randomUUID()},customer.cookie);assert.equal(duplicateReservationOrder.body.code,"RESERVATION_ALREADY_ORDERED");
+  const linkedBooking=savedBookings.body.resources.find(row=>row.id===booking.body.id);const cancelLinkedBooking=await resource(a,"reservations",{id:booking.body.id,version:linkedBooking.version,name:linkedBooking.name,status:"cancelled",branchId:a.branch,data:linkedBooking.data},"PATCH");assert.equal(cancelLinkedBooking.body.code,"RESERVATION_HAS_PREORDER");
+  const serviceOverview=await resource(a,"overview",undefined,"GET");assert.equal(serviceOverview.body.summary.waiterCalls,1);assert.equal(serviceOverview.body.summary.reservations,1);
+  const bookingTime=new Date(Date.now()+2*86400000).toISOString();
+  const allocated=await save(a,"reservations","Allocated guest",{partySize:2,scheduledAt:bookingTime,durationMinutes:90,sectionId:family,tableId:diningTable},"confirmed");assert.ok(allocated);
+  assert.equal((await resource(a,"reservations",{name:"Overlap",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:new Date(Date.parse(bookingTime)+60000).toISOString(),sectionId:family,tableId:diningTable}})).body.code,"BOOKING_CONFLICT");
+  assert.equal((await resource(a,"reservations",{name:"Wrong section",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:bookingTime,sectionId:terrace,tableId:diningTable}})).body.code,"SECTION_TABLE_MISMATCH");
+  await save(a,"reservations","Next guest",{partySize:2,scheduledAt:new Date(Date.parse(bookingTime)+90*60000).toISOString(),tableId:diningTable},"confirmed");
+  const ranged=await call("/api/restaurant/operations/reservations?from="+encodeURIComponent(bookingTime)+"&to="+encodeURIComponent(new Date(Date.parse(bookingTime)+86400000).toISOString()),"GET",undefined,a.cookie,a.tenant);assert.equal(ranged.status,200);assert.equal(ranged.body.resources.length,2);
+  const waiterAccount=await register("operations-floor-waiter"),supervisorAccount=await register("operations-floor-supervisor");
+  const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterAccount.email,role:"waiter"}),supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorAccount.email,role:"manager"});
+  const assignment=await resource(a,"sections",{id:family,version:1,name:"Families",status:"active",branchId:a.branch,data:{waiterId:waiterEmployee,supervisorId:supervisorEmployee}},"PATCH");assert.equal(assignment.status,200,JSON.stringify(assignment.body));
+  assert.equal((await resource(a,"sections",{name:"Wrong role",status:"active",branchId:a.branch,data:{waiterId:supervisorEmployee}})).body.code,"INVALID_SECTION_STAFF");
+  assert.equal((await call("/api/restaurant/operations/sections","POST",{branchId:a.branch,sections:[{name:"Unauthorised",start:1,count:1,capacity:4}]},waiterAccount.cookie,a.tenant)).status,403);
+  const dinePayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"dine_in",items:[{id:item,quantity:1,options:[option]}]};
+  assert.equal((await call("/api/customer/orders","POST",dinePayload,customer.cookie)).body.code,"DINING_DETAILS_REQUIRED");
+  assert.equal((await call("/api/customer/orders","POST",{...dinePayload,tableId:diningTable,partySize:5},customer.cookie)).body.code,"TABLE_CAPACITY_EXCEEDED");
+  assert.equal((await call("/api/customer/orders","POST",{...dinePayload,tableId:randomUUID(),partySize:2},customer.cookie)).body.code,"TABLE_NOT_FOUND");
+  const diningOrder=await call("/api/customer/orders","POST",{...dinePayload,tableId:diningTable,partySize:3},customer.cookie);assert.equal(diningOrder.status,201,JSON.stringify(diningOrder.body));
+  const [[diningContext]]=await db.execute("SELECT dining_section_id,party_size,dining_snapshot FROM restaurant_orders WHERE id=?",[diningOrder.body.id]);assert.equal(diningContext.dining_section_id,family);assert.equal(diningContext.party_size,3);assert.match(JSON.stringify(diningContext.dining_snapshot),/Families/);
+  const privateOverview=await call("/api/restaurant/operations/overview","GET",undefined,staff.cookie,a.tenant);assert.equal(privateOverview.status,403);
+  const [[noStaff]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=? AND tenant_id=?",[customer.body.user.id,a.tenant]);assert.equal(noStaff.n,0);
+  assert.equal((await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie)).status,403);
+  const placed=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",total:0,items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(placed.status,201);assert.equal(placed.body.total,22);
+  const pickupPoint=await resource(a,"pickupPoints",{name:"North pickup",status:"active",branchId:a.branch,data:{nameEn:"North pickup",address:"King Fahd Road",addressEn:"King Fahd Road",instructions:"Show the order number"}});assert.equal(pickupPoint.status,201,JSON.stringify(pickupPoint.body));
+  const pickupUrl="/api/customer/pickup-points?storeSlug=operations-owner-a&branchId="+encodeURIComponent(a.branch),publicPoints=await fetch(origin+pickupUrl);assert.equal(publicPoints.status,200);assert.deepEqual((await publicPoints.json()).points.map(point=>point.id),[pickupPoint.body.id]);
+  const missingPickup=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(missingPickup.body.code,"PICKUP_POINT_REQUIRED");
+  const pickupOrder=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-a",branchId:a.branch,channel:"takeaway",pickupPointId:pickupPoint.body.id,items:[{id:item,quantity:1,options:[option]}]},customer.cookie);assert.equal(pickupOrder.status,201,JSON.stringify(pickupOrder.body));
+  const [[pickupSnapshot]]=await db.execute("SELECT checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[pickupOrder.body.id,a.tenant]);const savedPickupSnapshot=typeof pickupSnapshot.checkout_snapshot==="string"?JSON.parse(pickupSnapshot.checkout_snapshot):pickupSnapshot.checkout_snapshot;assert.equal(savedPickupSnapshot.pickupPoint.address,"King Fahd Road");
+  const foreignPoints=await fetch(origin+"/api/customer/pickup-points?storeSlug=operations-owner-a&branchId="+encodeURIComponent(b.branch));assert.equal(foreignPoints.status,404);
+  const hotelRoom=await resource(a,"hotelRooms",{name:"Room 101",status:"active",branchId:a.branch,data:{roomNumber:"101"}});assert.equal(hotelRoom.status,201,JSON.stringify(hotelRoom.body));
+  const duplicateHotelRoom=await resource(a,"hotelRooms",{name:"Suite 101",status:"active",branchId:a.branch,data:{roomNumber:"101"}});assert.equal(duplicateHotelRoom.body.code,"DUPLICATE_HOTEL_ROOM");
+  const roomServicePayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"room_service",roomNumber:"101",requestKey:randomUUID(),items:[{id:item,quantity:1,options:[option]}]};
+  const unregisteredRoom=await call("/api/customer/orders","POST",{...roomServicePayload,roomNumber:"999",requestKey:randomUUID()},customer.cookie);assert.equal(unregisteredRoom.status,409);assert.equal(unregisteredRoom.body.code,"HOTEL_ROOM_UNAVAILABLE");
+  const roomServiceOrder=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceOrder.status,201,JSON.stringify(roomServiceOrder.body));assert.equal(roomServiceOrder.body.total,25);
+  const roomServiceReplay=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceReplay.status,201);assert.equal(roomServiceReplay.body.id,roomServiceOrder.body.id);
+  const [[roomServiceSnapshot]]=await db.execute("SELECT channel,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[roomServiceOrder.body.id,a.tenant]);assert.equal(roomServiceSnapshot.channel,"room_service");const savedRoomSnapshot=typeof roomServiceSnapshot.checkout_snapshot==="string"?JSON.parse(roomServiceSnapshot.checkout_snapshot):roomServiceSnapshot.checkout_snapshot;assert.equal(savedRoomSnapshot.hotelRoom.roomNumber,"101");
+  const tenantOrders=await resource(a,"orders",undefined,"GET");assert.equal(tenantOrders.status,200);assert.equal(tenantOrders.body.orders.find(row=>row.id===roomServiceOrder.body.id).hotel_room.roomNumber,"101");
+  // Real HTTP + database coverage for quote -> invoice references, tenant isolation and duplicate billing.
+  const quoteData={customerName:"Integration customer",serviceDescription:"Approved service",amount:22};
+  const quoteCreated=await resource(a,"quotations",{name:"Service quote",status:"sent",branchId:a.branch,data:quoteData});
+  assert.equal(quoteCreated.status,201,JSON.stringify(quoteCreated.body));
+  const quoteId=quoteCreated.body.id;
+  const quoteRows=await resource(a,"quotations",undefined,"GET");
+  assert.equal(quoteRows.status,200);
+  const savedQuote=quoteRows.body.resources.find(row=>row.id===quoteId);
+  assert.ok(savedQuote,"newly created quotation should be readable");
+  const quoteAccepted=await resource(a,"quotations",{id:quoteId,version:savedQuote.version,name:savedQuote.name,status:"accepted",branchId:savedQuote.branchId??a.branch,data:savedQuote.data},"PATCH");
+  assert.equal(quoteAccepted.status,200,JSON.stringify(quoteAccepted.body));
+  const invoicePayload={name:"Approved service invoice",status:"draft",branchId:a.branch,data:{quotationId:quoteId,orderId:placed.body.id,subtotal:22,taxAmount:0,serviceFee:0}};
+  const createdInvoice=await resource(a,"customerInvoices",invoicePayload);
+  assert.equal(createdInvoice.status,201,JSON.stringify(createdInvoice.body));
+  const [[storedInvoice]]=await db.execute("SELECT data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='customer_invoice'",[createdInvoice.body.id,a.tenant]);
+  const storedInvoiceData=typeof storedInvoice.data==="string"?JSON.parse(storedInvoice.data):storedInvoice.data;
+  assert.equal(storedInvoiceData.quotationId,quoteId);
+  assert.equal(storedInvoiceData.orderId,placed.body.id);
+  const duplicateInvoice=await resource(a,"customerInvoices",{...invoicePayload,name:"Duplicate invoice"});
+  assert.notEqual(duplicateInvoice.status,201,JSON.stringify(duplicateInvoice.body));
+  assert.ok(["QUOTATION_ALREADY_INVOICED","ORDER_ALREADY_INVOICED"].includes(duplicateInvoice.body.code),JSON.stringify(duplicateInvoice.body));
+  // An invoice must not silently adopt another order or change its billed amount.
+  const existingInvoice=(await resource(a,"customerInvoices",undefined,"GET")).body.resources.find(row=>row.id===createdInvoice.body.id);
+  assert.ok(existingInvoice,"issued invoice should be visible to its tenant");
+  const changedOrder=await resource(a,"customerInvoices",{id:createdInvoice.body.id,version:existingInvoice.version,name:existingInvoice.name,status:"draft",branchId:a.branch,data:{...existingInvoice.data,orderId:diningOrder.body.id}},"PATCH");
+  assert.notEqual(changedOrder.status,200,JSON.stringify(changedOrder.body));
+  assert.equal(changedOrder.body.code,"INVOICE_ORDER_LINK_IMMUTABLE");
+  const wrongTotal=await resource(a,"customerInvoices",{...invoicePayload,name:"Incorrect amount",data:{...invoicePayload.data,subtotal:21}});
+  assert.notEqual(wrongTotal.status,201,JSON.stringify(wrongTotal.body));
+  assert.ok(["QUOTATION_INVOICE_AMOUNT_MISMATCH","ORDER_INVOICE_AMOUNT_MISMATCH"].includes(wrongTotal.body.code),JSON.stringify(wrongTotal.body));
+  // A quotation accepted by one tenant cannot be billed against another tenant's order.
+  const foreignOrder=await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie);
+  assert.notEqual(foreignOrder.status,201,JSON.stringify(foreignOrder.body));
+  const rejectedQuoteEdit=await resource(a,"quotations",{id:quoteId,version:quoteAccepted.body.version??savedQuote.version+1,name:savedQuote.name,status:"sent",branchId:a.branch,data:savedQuote.data},"PATCH");
+  assert.notEqual(rejectedQuoteEdit.status,200,JSON.stringify(rejectedQuoteEdit.body));
+  assert.equal(rejectedQuoteEdit.body.code,"INVALID_QUOTATION_TRANSITION");
+  const foreignInvoice=await resource(b,"customerInvoices",{...invoicePayload,branchId:b.branch});
+  assert.notEqual(foreignInvoice.status,201,JSON.stringify(foreignInvoice.body));
+  const [[invoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
+  assert.equal(Number(invoiceCount.n),1);
+  // Quote conversion must read the saved server-side terms and serialize duplicate clicks.
+  const convertQuote=await resource(a,"quotations",{name:"Conversion source",status:"sent",branchId:a.branch,data:{customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5,notes:"Accepted scope"}});
+  assert.equal(convertQuote.status,201,JSON.stringify(convertQuote.body));
+  const conversionId=convertQuote.body.id;
+  const invalidConversion=await resource(a,"serviceOrders",{convertQuotationId:"not-a-uuid",branchId:a.branch});
+  assert.equal(invalidConversion.body.code,"INVALID_INPUT");
+
+  const notYetAccepted=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch});
+  assert.equal(notYetAccepted.body.code,"QUOTATION_NOT_ACCEPTED");
+  const source=(await resource(a,"quotations",undefined,"GET")).body.resources.find(row=>row.id===conversionId);
+  assert.ok(source);
+  const approved=await resource(a,"quotations",{id:conversionId,version:source.version,name:source.name,status:"accepted",branchId:a.branch,data:source.data},"PATCH");
+  assert.equal(approved.status,200,JSON.stringify(approved.body));
+  const wrongBranchConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:b.branch});
+  assert.equal(wrongBranchConversion.body.code,"REFERENCE_NOT_FOUND");
+  const tamperedConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch,data:{amount:0}});
+  assert.equal(tamperedConversion.body.code,"INVALID_INPUT");
+  const conversionPayload={convertQuotationId:conversionId,branchId:a.branch};
+  const [firstConversion,secondConversion]=await Promise.all([resource(a,"serviceOrders",conversionPayload),resource(a,"serviceOrders",conversionPayload)]);
+  assert.equal(firstConversion.status,201,JSON.stringify(firstConversion.body));
+  assert.equal(secondConversion.status,201,JSON.stringify(secondConversion.body));
+  assert.equal(firstConversion.body.id,secondConversion.body.id);
+  assert.equal(Number(Boolean(firstConversion.body.existing))+Number(Boolean(secondConversion.body.existing)),1);
+  const [[conversionCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='service_order' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.quotationId'))=?",[a.tenant,conversionId]);
+  assert.equal(Number(conversionCount.n),1);
+  const storedConversion=(await resource(a,"serviceOrders",undefined,"GET")).body.resources.find(row=>row.id===firstConversion.body.id);
+  assert.ok(storedConversion);
+  assert.equal(storedConversion.status,"new");
+  assert.equal(storedConversion.branch_id,a.branch);
+  assert.equal(storedConversion.data.quotationId,conversionId);
+  assert.equal(storedConversion.data.customerName,"Converted customer");
+  assert.equal(storedConversion.data.customerPhone,"0551234567");
+  assert.equal(storedConversion.data.serviceDescription,"Fixed-price service");
+  assert.equal(Number(storedConversion.data.amount),47.5);
+  const forbiddenArchive=await resource(a,"serviceOrders",{id:storedConversion.id,version:storedConversion.version},"DELETE");
+  assert.equal(forbiddenArchive.body.code,"SERVICE_ORDER_LINKED_ARCHIVE_FORBIDDEN");
+  const replayConversion=await resource(a,"serviceOrders",conversionPayload);
+  assert.equal(replayConversion.body.id,firstConversion.body.id);
+  assert.equal(replayConversion.body.existing,true);
+  await db.execute("UPDATE tenant_subscriptions SET plan_id=? WHERE tenant_id=?",["operations-enterprise",b.tenant]);
+  const foreignConversion=await resource(b,"serviceOrders",conversionPayload);
+  assert.equal(foreignConversion.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(foreignConversion.body));
+  const directDuplicate=await resource(a,"serviceOrders",{name:"Manual duplicate",status:"new",branchId:a.branch,data:{quotationId:conversionId,customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5}});
+  assert.equal(directDuplicate.body.code,"SERVICE_ORDER_ALREADY_CREATED");
+
+  // Service activities can bill an accepted quotation without a restaurant menu order.
+  const serviceQuote=await resource(a,"quotations",{name:"Standalone service quotation",status:"sent",branchId:a.branch,data:{customerName:"Service client",serviceDescription:"Repair service",amount:35}});
+  assert.equal(serviceQuote.status,201,JSON.stringify(serviceQuote.body));
+  const serviceQuoteId=serviceQuote.body.id;
+  const serviceQuotes=await resource(a,"quotations",undefined,"GET");
+  const savedServiceQuote=serviceQuotes.body.resources.find(row=>row.id===serviceQuoteId);
+  assert.ok(savedServiceQuote);
+  const acceptedService=await resource(a,"quotations",{id:serviceQuoteId,version:savedServiceQuote.version,name:savedServiceQuote.name,status:"accepted",branchId:savedServiceQuote.branchId??a.branch,data:savedServiceQuote.data},"PATCH");
+  assert.equal(acceptedService.status,200,JSON.stringify(acceptedService.body));
+  const serviceOrderPayload={name:"Repair service order",status:"new",branchId:a.branch,data:{quotationId:serviceQuoteId,customerName:"Service client",serviceDescription:"Repair service",amount:35}};
+  // A create request must not jump directly to running or final states.
+  for(const status of ["in_progress","completed","cancelled"]){
+   const invalidCreate=await resource(a,"serviceOrders",{...serviceOrderPayload,status});
+   assert.equal(invalidCreate.status,400,JSON.stringify(invalidCreate.body));
+   assert.equal(invalidCreate.body.code,"INVALID_SERVICE_ORDER_TRANSITION");
+  }
+  const createdServiceOrder=await resource(a,"serviceOrders",serviceOrderPayload);
+  assert.equal(createdServiceOrder.status,201,JSON.stringify(createdServiceOrder.body));
+  const repeatedOrder=await resource(a,"serviceOrders",{...serviceOrderPayload,name:"Duplicate repair"});
+  assert.notEqual(repeatedOrder.status,201,JSON.stringify(repeatedOrder.body));
+  assert.equal(repeatedOrder.body.code,"SERVICE_ORDER_ALREADY_CREATED");
+  const serviceOrders=await resource(a,"serviceOrders",undefined,"GET");
+  const savedOrder=serviceOrders.body.resources.find(row=>row.id===createdServiceOrder.body.id);
+  assert.ok(savedOrder);
+  const activeService=await resource(a,"serviceOrders",{id:savedOrder.id,version:savedOrder.version,name:savedOrder.name,status:"in_progress",branchId:savedOrder.branchId??a.branch,data:savedOrder.data},"PATCH");
+  assert.equal(activeService.status,200,JSON.stringify(activeService.body));
+  const otherTenantOrder=await resource(b,"serviceOrders",{...serviceOrderPayload,branchId:b.branch});
+  assert.notEqual(otherTenantOrder.status,201,JSON.stringify(otherTenantOrder.body));
+  assert.ok(["SERVICE_ORDER_QUOTATION_NOT_ACCEPTED","PLAN_FEATURE_REQUIRED"].includes(otherTenantOrder.body.code),JSON.stringify(otherTenantOrder.body));
+  const serviceInvoice={name:"Standalone service invoice",status:"draft",branchId:a.branch,data:{quotationId:serviceQuoteId,serviceOrderId:createdServiceOrder.body.id,subtotal:35,taxAmount:0,serviceFee:0}};
+  const billedService=await resource(a,"customerInvoices",serviceInvoice);
+  assert.equal(billedService.status,201,JSON.stringify(billedService.body));
+  const repeatedService=await resource(a,"customerInvoices",{...serviceInvoice,name:"Duplicate standalone service invoice"});
+  assert.notEqual(repeatedService.status,201,JSON.stringify(repeatedService.body));
+  assert.ok(["SERVICE_ORDER_ALREADY_INVOICED","QUOTATION_ALREADY_INVOICED"].includes(repeatedService.body.code),JSON.stringify(repeatedService.body));
+  const mismatchedServiceInvoice=await resource(a,"customerInvoices",{...serviceInvoice,name:"Mismatched service invoice",data:{...serviceInvoice.data,subtotal:34,quotationId:null}});
+  assert.notEqual(mismatchedServiceInvoice.status,201,JSON.stringify(mismatchedServiceInvoice.body));
+  assert.equal(mismatchedServiceInvoice.body.code,"SERVICE_ORDER_INVOICE_AMOUNT_MISMATCH");
+  const cancelledSourceInvoice=await resource(a,"customerInvoices",{...serviceInvoice,name:"Wrong source invoice",data:{...serviceInvoice.data,orderId:placed.body.id}});
+  assert.notEqual(cancelledSourceInvoice.status,201,JSON.stringify(cancelledSourceInvoice.body));
+  assert.equal(cancelledSourceInvoice.body.code,"INVOICE_MULTIPLE_ORDER_SOURCES");
+  const mismatchedQuotationInvoice=await resource(a,"customerInvoices",{...serviceInvoice,name:"Mismatched quotation invoice",data:{...serviceInvoice.data,quotationId:quoteId}});
+  assert.notEqual(mismatchedQuotationInvoice.status,201,JSON.stringify(mismatchedQuotationInvoice.body));
+  assert.equal(mismatchedQuotationInvoice.body.code,"INVOICE_SOURCE_QUOTATION_MISMATCH");
+  // Verify the full standalone service invoice lifecycle and immutable issued/paid records.
+  const serviceInvoices=await resource(a,"customerInvoices",undefined,"GET");
+  const savedServiceInvoice=serviceInvoices.body.resources.find(row=>row.id===billedService.body.id);
+  assert.ok(savedServiceInvoice);
+  const issuedService=await resource(a,"customerInvoices",{id:billedService.body.id,version:savedServiceInvoice.version,name:savedServiceInvoice.name,status:"issued",branchId:savedServiceInvoice.branchId??a.branch,data:savedServiceInvoice.data},"PATCH");
+  assert.equal(issuedService.status,200,JSON.stringify(issuedService.body));
+  const issuedInvoiceRows=await resource(a,"customerInvoices",undefined,"GET");
+  const issuedSnapshot=issuedInvoiceRows.body.resources.find(row=>row.id===billedService.body.id);
+  const editedIssued=await resource(a,"customerInvoices",{id:billedService.body.id,version:issuedSnapshot.version,name:issuedSnapshot.name,status:"issued",branchId:a.branch,data:{...issuedSnapshot.data,notes:"Tampered after issue"}},"PATCH");
+  assert.notEqual(editedIssued.status,200,JSON.stringify(editedIssued.body));
+  assert.equal(editedIssued.body.code,"ISSUED_INVOICE_IMMUTABLE");
+  const forged=await resource(a,"customerInvoices",{id:billedService.body.id,version:issuedSnapshot.version,name:issuedSnapshot.name,status:"paid",branchId:a.branch,data:issuedSnapshot.data},"PATCH");
+  assert.equal(forged.body.code,"INVOICE_SETTLEMENT_REQUIRED");
+  const proof={confirmManualReceiptId:billedService.body.id,branchId:a.branch,method:"bank_transfer",reference:"BANK-123456",amount:35,attested:true};
+  const noAttestation=await resource(a,"customerInvoices",{...proof,attested:false});
+  assert.equal(noAttestation.body.code,"MANUAL_RECEIPT_CONFIRMATION_REQUIRED");
+  const wrongAmount=await resource(a,"customerInvoices",{...proof,amount:34});
+  assert.equal(wrongAmount.body.code,"INVOICE_SETTLEMENT_AMOUNT_MISMATCH");
+  const foreign=await resource(b,"customerInvoices",{...proof,branchId:b.branch});
+  assert.equal(foreign.body.code,"REFERENCE_NOT_FOUND");
+  const [firstReceipt,secondReceipt]=await Promise.all([resource(a,"customerInvoices",proof),resource(a,"customerInvoices",proof)]);
+  assert.equal(firstReceipt.status,201,JSON.stringify(firstReceipt.body));
+  assert.equal(secondReceipt.status,201,JSON.stringify(secondReceipt.body));
+  assert.equal(firstReceipt.body.settlementId,secondReceipt.body.settlementId);
+  assert.equal(Number(Boolean(firstReceipt.body.existing))+Number(Boolean(secondReceipt.body.existing)),1);
+  const [[settlementCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_settlement' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.invoiceId'))=?",[a.tenant,billedService.body.id]);
+  assert.equal(Number(settlementCount.n),1);
+  const replayedReceipt=await resource(a,"customerInvoices",proof);
+  assert.equal(replayedReceipt.body.existing,true);
+  const changed=await resource(a,"customerInvoices",{...proof,reference:"BANK-123457"});
+  assert.equal(changed.body.code,"INVOICE_ALREADY_SETTLED");
+  // A refund review is an audited request only; it never refunds money.
+  const review=(owner,body,method="POST")=>call("/api/restaurant/payments/refund-reviews",method,body,owner.cookie,owner.tenant);
+  const reviewRequest={invoiceId:billedService.body.id,reason:"Customer requested a full refund after service delivery",reviewAcknowledged:true};
+  const invalidReview=await review(a,{...reviewRequest,reason:"short"});
+  assert.equal(invalidReview.body.code,"REFUND_REASON_REQUIRED");
+  const selfDeclared=await review(a,{...reviewRequest,amount:1});
+  assert.equal(selfDeclared.status,400,"clients cannot select a refund amount");
+  const foreignRefund=await review(b,reviewRequest);
+  assert.notEqual(foreignRefund.status,201,"another merchant may not request an invoice refund");
+  const [firstReview,secondReview]=await Promise.all([review(a,reviewRequest),review(a,reviewRequest)]);
+  assert.equal(firstReview.status===201||firstReview.status===200,true,JSON.stringify(firstReview.body));
+  assert.equal(secondReview.status===201||secondReview.status===200,true,JSON.stringify(secondReview.body));
+  assert.equal(firstReview.body.id,secondReview.body.id);
+  assert.equal(Number(Boolean(firstReview.body.existing))+Number(Boolean(secondReview.body.existing)),1);
+  assert.equal(firstReview.body.financialEffect,"none");
+  assert.equal(secondReview.body.financialEffect,"none");
+  const [[refundCaseCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='invoice_refund_review' AND lookup_key=?",[a.tenant,billedService.body.id]);
+  assert.equal(Number(refundCaseCount.n),1);
+  const readReview=await review(a,undefined,"GET");
+  assert.equal(readReview.status,200,JSON.stringify(readReview.body));
+  assert.ok(readReview.body.reviews.some(row=>row.invoiceId===billedService.body.id&&row.status==="review_pending"&&row.source==="manual"));
+  const changedRefundReason=await review(a,{...reviewRequest,reason:"A different long reason for a second refund request"});
+  assert.equal(changedRefundReason.body.code,"REFUND_REVIEW_ALREADY_EXISTS");
+  const [[reviewedInvoice]]=await db.execute("SELECT status FROM restaurant_resources WHERE id=? AND tenant_id=?",[billedService.body.id,a.tenant]);
+  assert.equal(reviewedInvoice.status,"paid","refund review is not a real refund");
+  const [[refundAuditCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='customer_invoice.refund_review_requested'",[a.tenant,billedService.body.id]);
+  assert.equal(Number(refundAuditCount.n),1,"duplicate reviews must not generate multiple audit events");
+  // Only another owner can authorize/refuse a refund; never the requester.
+  const refundApprover=await register("operations-refund-approver");
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'owner','active')",[randomUUID(),a.tenant,refundApprover.user]);
+  const refundManager=await register("operations-refund-manager");
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'manager','active')",[randomUUID(),a.tenant,refundManager.user]);
+  const reviewDecision=(member,body)=>call("/api/restaurant/payments/refund-reviews","PATCH",body,member.cookie,a.tenant);
+  const decisionBase={reviewId:firstReview.body.id,decision:"approve",note:"Customer request verified; provider refund still pending",acknowledgeNoRefund:true};
+  const selfApproved=await reviewDecision(a,decisionBase);
+  assert.equal(selfApproved.body.code,"REFUND_SELF_APPROVAL_FORBIDDEN");
+  assert.equal(selfApproved.status,403);
+  const managerApproved=await reviewDecision(refundManager,decisionBase);
+  assert.equal(managerApproved.status,403,"a manager cannot authorize monetary reversals");
+  const skippedAcknowledgment=await reviewDecision(refundApprover,{...decisionBase,acknowledgeNoRefund:false});
+  assert.equal(skippedAcknowledgment.status,400);
+  const scopedReview=await call("/api/restaurant/payments/refund-reviews","GET",undefined,refundApprover.cookie,a.tenant);
+  assert.equal(scopedReview.status,200);
+  assert.equal(scopedReview.body.reviews.find(row=>row.id===firstReview.body.id)?.canDecide,true);
+  const requesterReview=await review(a,undefined,"GET");
+  assert.equal(requesterReview.body.reviews.find(row=>row.id===firstReview.body.id)?.canDecide,false);
+  const [decideFirst,decideAgain]=await Promise.all([reviewDecision(refundApprover,decisionBase),reviewDecision(refundApprover,decisionBase)]);
+  assert.equal(decideFirst.status,200,JSON.stringify(decideFirst.body));
+  assert.equal(decideAgain.status,200,JSON.stringify(decideAgain.body));
+  assert.equal(decideFirst.body.status,"approved_pending_execution");
+  assert.equal(decideAgain.body.status,"approved_pending_execution");
+  assert.equal(Number(Boolean(decideFirst.body.existing))+Number(Boolean(decideAgain.body.existing)),1);
+  assert.equal(decideFirst.body.financialEffect,"none");
+  const attemptedOverride=await reviewDecision(refundApprover,{...decisionBase,decision:"reject",note:"Decided to reverse review after approval"});
+  assert.equal(attemptedOverride.body.code,"REFUND_DECISION_ALREADY_FINAL");
+  const [[approvedInvoice]]=await db.execute("SELECT status FROM restaurant_resources WHERE tenant_id=? AND id=?",[a.tenant,billedService.body.id]);
+  assert.equal(approvedInvoice.status,"paid","approval is not a refund or invoice status change");
+  const [[decisionAudits]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='customer_invoice.refund_review_approve'",[a.tenant,billedService.body.id]);
+  assert.equal(Number(decisionAudits.n),1,"replayed approval must not duplicate audit events");
+  const paidInvoiceRows=await resource(a,"customerInvoices",undefined,"GET");
+  const paidSnapshot=paidInvoiceRows.body.resources.find(row=>row.id===billedService.body.id);
+  const reopenedService=await resource(a,"customerInvoices",{id:billedService.body.id,version:paidSnapshot.version,name:paidSnapshot.name,status:"draft",branchId:paidSnapshot.branchId??a.branch,data:paidSnapshot.data},"PATCH");
+  assert.notEqual(reopenedService.status,200,JSON.stringify(reopenedService.body));
+  assert.equal(reopenedService.body.code,"INVALID_INVOICE_TRANSITION");
+  const [[serviceInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND archived=FALSE",[a.tenant]);
+  assert.equal(Number(serviceInvoiceCount.n),2);
+  const unprovedId=randomUUID();
+  await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,?,?,?,?,?)",[unprovedId,a.tenant,a.branch,"customer_invoice","Unproved paid invoice","paid",JSON.stringify({subtotal:5,taxAmount:0,serviceFee:0})]);
+  const noProofRefund=await review(a,{invoiceId:unprovedId,reason:"Review request without financial evidence",reviewAcknowledged:true});
+  assert.equal(noProofRefund.body.code,"PAYMENT_EVIDENCE_REQUIRED");
+  const unpaidInvoice=await db.execute("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND status='draft' LIMIT 1",[a.tenant]);
+  if(unpaidInvoice[0].length){
+   const notPaidReview=await review(a,{invoiceId:unpaidInvoice[0][0].id,reason:"Review for an invoice that is not paid",reviewAcknowledged:true});
+   assert.equal(notPaidReview.body.code,"INVOICE_NOT_PAID");
+  }
+
+  // Exercise the real HTTP lifecycle, optimistic versions and immutable terminal records.
+  const readService=async id=>{
+   const response=await resource(a,"serviceOrders",undefined,"GET");
+   assert.equal(response.status,200,JSON.stringify(response.body));
+   const row=response.body.resources.find(row=>row.id===id);assert.ok(row);return row;
+  };
+  const servicePayload=row=>({id:row.id,version:row.version,name:row.name,status:row.status,branchId:row.branchId??row.branch_id??a.branch,data:row.data});
+  const completedSource=await readService(createdServiceOrder.body.id);
+  const completeService=await resource(a,"serviceOrders",{...servicePayload(completedSource),status:"completed"},"PATCH");
+  assert.equal(completeService.status,200,JSON.stringify(completeService.body));
+  const completedSnapshot=await readService(createdServiceOrder.body.id);
+  for(const status of ["new","scheduled","in_progress","cancelled"]){
+   const reopened=await resource(a,"serviceOrders",{...servicePayload(completedSnapshot),status},"PATCH");
+   assert.equal(reopened.body.code,"INVALID_SERVICE_ORDER_TRANSITION",JSON.stringify(reopened.body));
+  }
+  for(const change of [{name:"Changed final order"},{data:{...completedSnapshot.data,amount:36}},{data:{...completedSnapshot.data,notes:"Changed after completion"}}]){
+   const edited=await resource(a,"serviceOrders",{...servicePayload(completedSnapshot),...change},"PATCH");
+   assert.equal(edited.body.code,"SERVICE_ORDER_FINAL_IMMUTABLE",JSON.stringify(edited.body));
+  }
+  const archivedCompleted=await resource(a,"serviceOrders",{id:completedSnapshot.id,version:completedSnapshot.version},"DELETE");
+  assert.equal(archivedCompleted.body.code,"SERVICE_ORDER_ARCHIVE_FORBIDDEN",JSON.stringify(archivedCompleted.body));
+  assert.deepEqual(await readService(completedSnapshot.id),completedSnapshot);
+  const staleService=await resource(a,"serviceOrders",{...servicePayload(completedSource),status:"completed"},"PATCH");
+  assert.equal(staleService.status,409,JSON.stringify(staleService.body));
+  const standalonePayload={name:"Scheduled standalone service",status:"scheduled",branchId:a.branch,data:{customerName:"Lifecycle client",serviceDescription:"Maintenance",amount:10}};
+  const scheduledCreated=await resource(a,"serviceOrders",standalonePayload);
+  assert.equal(scheduledCreated.status,201,JSON.stringify(scheduledCreated.body));
+  const scheduledSnapshot=await readService(scheduledCreated.body.id);
+  const regressedService=await resource(a,"serviceOrders",{...servicePayload(scheduledSnapshot),status:"new"},"PATCH");
+  assert.equal(regressedService.body.code,"INVALID_SERVICE_ORDER_TRANSITION",JSON.stringify(regressedService.body));
+  const archivedScheduled=await resource(a,"serviceOrders",{id:scheduledSnapshot.id,version:scheduledSnapshot.version},"DELETE");
+  assert.equal(archivedScheduled.body.code,"SERVICE_ORDER_ARCHIVE_FORBIDDEN",JSON.stringify(archivedScheduled.body));
+  const cancelService=await resource(a,"serviceOrders",{...servicePayload(scheduledSnapshot),status:"cancelled"},"PATCH");
+  assert.equal(cancelService.status,200,JSON.stringify(cancelService.body));
+  const cancelledSnapshot=await readService(scheduledSnapshot.id);
+  const reopenedCancelled=await resource(a,"serviceOrders",{...servicePayload(cancelledSnapshot),status:"in_progress"},"PATCH");
+  assert.equal(reopenedCancelled.body.code,"INVALID_SERVICE_ORDER_TRANSITION",JSON.stringify(reopenedCancelled.body));
+  const editedCancelled=await resource(a,"serviceOrders",{...servicePayload(cancelledSnapshot),name:"Changed cancelled order"},"PATCH");
+  assert.equal(editedCancelled.body.code,"SERVICE_ORDER_FINAL_IMMUTABLE",JSON.stringify(editedCancelled.body));
+  const archivedCancelled=await resource(a,"serviceOrders",{id:cancelledSnapshot.id,version:cancelledSnapshot.version},"DELETE");
+  assert.equal(archivedCancelled.body.code,"SERVICE_ORDER_ARCHIVE_FORBIDDEN",JSON.stringify(archivedCancelled.body));
+  assert.deepEqual(await readService(cancelledSnapshot.id),cancelledSnapshot);
+  const draftService=await resource(a,"serviceOrders",{...standalonePayload,name:"Unscheduled service",status:"new"});
+  assert.equal(draftService.status,201,JSON.stringify(draftService.body));
+  const draftSnapshot=await readService(draftService.body.id);
+  const linkedDraftInvoice=await resource(a,"customerInvoices",{name:"Linked new service invoice",status:"draft",branchId:a.branch,data:{serviceOrderId:draftSnapshot.id,subtotal:10,taxAmount:0,serviceFee:0}});
+  assert.equal(linkedDraftInvoice.status,201,JSON.stringify(linkedDraftInvoice.body));
+  const archivedInvoiced=await resource(a,"serviceOrders",{id:draftSnapshot.id,version:draftSnapshot.version},"DELETE");
+  assert.equal(archivedInvoiced.body.code,"SERVICE_ORDER_ALREADY_INVOICED",JSON.stringify(archivedInvoiced.body));
+  assert.deepEqual(await readService(draftSnapshot.id),draftSnapshot);
+  const unbilledDraft=await resource(a,"serviceOrders",{...standalonePayload,name:"Unused service",status:"new"});
+  assert.equal(unbilledDraft.status,201,JSON.stringify(unbilledDraft.body));
+  const unbilledSnapshot=await readService(unbilledDraft.body.id);
+  assert.equal((await resource(a,"serviceOrders",{id:unbilledSnapshot.id,version:unbilledSnapshot.version},"DELETE")).status,200);
+  // Invoice drafts derive exclusively from completed service orders; payment stays unpaid.
+  const invoiceSource=await resource(a,"serviceOrders",{name:"Fixed fee service",status:"new",branchId:a.branch,data:{customerName:"Service customer",serviceDescription:"Equipment repair",amount:62.75}});
+  assert.equal(invoiceSource.status,201,JSON.stringify(invoiceSource.body));
+  const invoiceSourceId=invoiceSource.body.id;
+  const beforeCompletion=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch});
+  assert.equal(beforeCompletion.body.code,"SERVICE_ORDER_NOT_COMPLETED");
+  const draftSource=(await resource(a,"serviceOrders",undefined,"GET")).body.resources.find(row=>row.id===invoiceSourceId);
+  assert.ok(draftSource);
+  const startedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:draftSource.version,name:draftSource.name,status:"in_progress",branchId:a.branch,data:draftSource.data},"PATCH");
+  assert.equal(startedSourceInvoice.status,200,JSON.stringify(startedSourceInvoice.body));
+  const startedInvoiceRow=(await resource(a,"serviceOrders",undefined,"GET")).body.resources.find(row=>row.id===invoiceSourceId);
+  assert.ok(startedInvoiceRow);
+  const completedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:startedInvoiceRow.version,name:startedInvoiceRow.name,status:"completed",branchId:a.branch,data:startedInvoiceRow.data},"PATCH");
+  assert.equal(completedSourceInvoice.status,200,JSON.stringify(completedSourceInvoice.body));
+  const wrongBranchInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:b.branch});
+  assert.equal(wrongBranchInvoice.body.code,"REFERENCE_NOT_FOUND");
+  const injectedInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch,data:{subtotal:0,status:"paid"}});
+  assert.equal(injectedInvoice.body.code,"INVALID_INPUT");
+  const invoiceDraftPayload={invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch};
+  const [firstInvoice,secondInvoice]=await Promise.all([resource(a,"customerInvoices",invoiceDraftPayload),resource(a,"customerInvoices",invoiceDraftPayload)]);
+  assert.equal(firstInvoice.status,201,JSON.stringify(firstInvoice.body));
+  assert.equal(secondInvoice.status,201,JSON.stringify(secondInvoice.body));
+  assert.equal(firstInvoice.body.id,secondInvoice.body.id);
+  assert.equal(Number(Boolean(firstInvoice.body.existing))+Number(Boolean(secondInvoice.body.existing)),1);
+  const generated=(await resource(a,"customerInvoices",undefined,"GET")).body.resources.find(row=>row.id===firstInvoice.body.id);
+  assert.ok(generated);
+  assert.equal(generated.status,"draft");
+  assert.equal(generated.branch_id,a.branch);
+  assert.equal(generated.data.serviceOrderId,invoiceSourceId);
+  assert.equal(Number(generated.data.subtotal),62.75);
+  assert.equal(Number(generated.data.taxAmount??0),0);
+  assert.equal(Number(generated.data.serviceFee??0),0);
+  const [[paidDraft]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE id=? AND tenant_id=? AND status='paid'",[firstInvoice.body.id,a.tenant]);
+  assert.equal(Number(paidDraft.n),0);
+  const replayInvoice=await resource(a,"customerInvoices",invoiceDraftPayload);
+  assert.equal(replayInvoice.body.id,firstInvoice.body.id);
+  assert.equal(replayInvoice.body.existing,true);
+  const otherTenantInvoice=await resource(b,"customerInvoices",invoiceDraftPayload);
+  assert.equal(otherTenantInvoice.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(otherTenantInvoice.body));
+  const [[generatedInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=?",[a.tenant,invoiceSourceId]);
+  assert.equal(Number(generatedInvoiceCount.n),1);
+  const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);
+  const [[savedOptions]]=await db.execute("SELECT options_snapshot FROM restaurant_order_items WHERE order_id=?",[placed.body.id]);assert.match(JSON.stringify(savedOptions.options_snapshot),/Large/);
+  const sessions=await resource(a,"security",undefined,"GET");assert.equal(sessions.status,200);
+  const current=sessions.body.sessions.find(s=>s.current);assert.ok(current);
+  assert.equal((await resource(a,"security",{id:current.id},"DELETE")).status,400);
+  const foreignSessions=await resource(b,"security",undefined,"GET");assert.equal((await resource(a,"security",{id:foreignSessions.body.sessions[0].id},"DELETE")).status,404);
+  assert.equal((await resource(a,"health",undefined,"GET")).body.database,"connected");
+  const activityFixtures=await runActivityPosChecks({db,call,resource,register});
+  await runActivityEntitlementGateChecks({db,call,resource,restaurant:a,staff,fixtures:activityFixtures});
+  const admin=await register("operations-platform-admin");
+  await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403,"platform administration is not tenant ownership");
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,admin.tenant)).status,200,"an explicit own membership still works");
+  await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
+  assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
+ }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await workerPool.end();await db.end();}
+});
+
+
+
