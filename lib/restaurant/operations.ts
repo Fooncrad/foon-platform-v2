@@ -11,6 +11,7 @@ import {diningTable,prepareDiningResource} from "./dining";
 import {canonicalMenuModules,canonicalMenuRows,saveCanonicalMenu,menuOptions} from "./menu";
 import {catalogQuantityPolicy,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 import {debitCatalogVariant,salesProfile,activityPosOptions,activitySaleItem,debitActivityStock,ensureActivitySaleReference,restoreActivityStock,type StockDebit} from "./activity-pos";
+import {printerHandlesOrderEvent,shouldQueueFinalReceipt} from "./print-policy";
 
 export type StoredResource={currency?:string;id:string;branch_id:string|null;name:string;status:string;data:Record<string,string|number|null>;version:number|string;created_at:string};
 export const parseData=(value:unknown):Record<string,string|number|null>=>typeof value==="string"?JSON.parse(value):value as Record<string,string|number|null>;
@@ -24,10 +25,10 @@ async function queueOrderPrintJobs(db:PoolConnection,tenantId:string,orderId:str
  const routes=assignments.map(row=>parseData(row.data));let queued=0;
  for(const printer of printers){
   const config=parseData(printer.data),departmentId=String(config.departmentId??"");
-  if(config.autoPrint!=="yes"||config.printOn!==triggerEvent)continue;
+  if(!printerHandlesOrderEvent(config,triggerEvent))continue;
   const purpose=String(config.purpose??"preparation");if(triggerEvent==="on_paid"?!["customer_receipt","both"].includes(purpose):!["preparation","both"].includes(purpose))continue;
-  const routed=items.filter(item=>!departmentId||routes.some(route=>String(route.itemId??"")===String(item.menu_item_id)&&String(route.departmentId??"")===departmentId));if(!routed.length)continue;
-  const includePrices=config.includePrices==="yes",includeCustomer=config.includeCustomer==="yes",includeNotes=config.includeNotes==="yes";
+  const routed=triggerEvent==="on_paid"&&["customer_receipt","both"].includes(purpose)?items:items.filter(item=>!departmentId||routes.some(route=>String(route.itemId??"")===String(item.menu_item_id)&&String(route.departmentId??"")===departmentId));if(!routed.length)continue;
+  const includePrices=config.includePrices==="yes"||triggerEvent==="on_paid"&&["customer_receipt","both"].includes(purpose),includeCustomer=config.includeCustomer==="yes",includeNotes=config.includeNotes==="yes";
   const payload={version:1,orderId:String(order.id),orderNumber:Number(order.order_number),branchId:String(order.branch_id),channel:String(order.channel),tableId:order.table_id?String(order.table_id):null,triggerEvent,printer:{name:String(printer.name),paperWidth:Number(config.paperWidth??80),copies:Number(config.copies??1),purpose,cutPaper:config.cutPaper==="yes",openDrawer:triggerEvent==="on_paid"&&config.openDrawer==="yes",headerText:String(config.headerText??""),footerText:String(config.footerText??"")},...(includeCustomer?{customer:{name:order.customer_name??null,phone:order.customer_phone??null}}:{}),...(includeNotes?{notes:{kitchen:order.kitchen_notes??null,order:order.order_notes??null}}:{}),...(includePrices?{total:Number(order.total),currency:String(order.currency)}:{}),items:routed.map(item=>{const route=routes.find(value=>String(value.itemId??"")===String(item.menu_item_id)&&(!departmentId||String(value.departmentId??"")===departmentId));let options:unknown=item.options_snapshot;try{if(typeof options==="string")options=JSON.parse(options);}catch{options=null;}return{name:String(item.item_name),quantity:Number(item.quantity),...(includePrices?{unitPrice:Number(item.unit_price),lineTotal:Number(item.line_total)}:{}),copies:Math.max(1,Math.min(10,Number(route?.printCopies??1))),options};})};
   await db.execute("INSERT IGNORE INTO restaurant_print_jobs(id,tenant_id,branch_id,printer_id,source_type,source_id,event_key,payload_json,status) VALUES (?,?,?,?,'order',?,?,?,'pending')",[randomUUID(),tenantId,String(order.branch_id),String(printer.id),orderId,orderId+":"+triggerEvent,JSON.stringify(payload)]);queued++;
  }
@@ -470,7 +471,6 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,reservationId,dining?.sectionId??null,body.channel==="dine_in"?partySize:null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
- await queueOrderPrintJobs(db,tenantId,id,"on_accept");
  await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
  await notifyOrder(db,tenantId,id,"new");
  return {id,total:totals.total,currency:profile.currency};
@@ -500,8 +500,12 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
  if(status==="cancelled"&&order.status!=="cancelled")await restoreActivityStock(db,tenantId,String(order.id));
  await db.execute("UPDATE restaurant_orders SET status=?,payment_status=?,version=version+1 WHERE id=? AND tenant_id=?",[status,payment,order.id,tenantId]);
- if(status!==String(order.status)&&status==="preparing")await queueOrderPrintJobs(db,tenantId,String(order.id),"on_prepare");
- if(payment!==String(order.payment_status)&&payment==="paid")await queueOrderPrintJobs(db,tenantId,String(order.id),"on_paid");
+ if(status!==String(order.status)&&status==="preparing"){
+  // The current lifecycle combines merchant acceptance with the kitchen handoff.
+  await queueOrderPrintJobs(db,tenantId,String(order.id),"on_accept");
+  await queueOrderPrintJobs(db,tenantId,String(order.id),"on_prepare");
+ }
+ if(shouldQueueFinalReceipt({status,paymentStatus:payment},{status:String(order.status),paymentStatus:String(order.payment_status)}))await queueOrderPrintJobs(db,tenantId,String(order.id),"on_paid");
  // A completed order does not prove that the guest has left.
  // Keep the table occupied until staff explicitly confirms departure.
  if(status!==String(order.status))await notifyOrder(db,tenantId,String(order.id),status);
