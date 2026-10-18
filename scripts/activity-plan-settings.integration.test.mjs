@@ -14,6 +14,7 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+'/login',{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}assert.ok(ready,serverOutput);
   const admin=await register('restaurant'),grocery=await register('grocery'),clothing=await register('clothing');
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'admin',TRUE)",[admin.user]);
+  const supportAccess=await call(`/api/admin/tenants/${admin.tenant}/access`,'POST',{},admin.cookie);assert.equal(supportAccess.status,200,JSON.stringify(supportAccess.body));
   const [[free]]=await db.query("SELECT id FROM package_plans WHERE code='free'");const endpoint='/api/admin/plans/'+free.id+'/features';
   assert.equal((await call(endpoint,'GET',undefined,grocery.cookie)).status,403);
   assert.equal((await call(endpoint,'PUT',{feature_key:'orders',activity:'grocery',enabled:false},grocery.cookie)).status,403);
