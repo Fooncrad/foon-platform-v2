@@ -56,4 +56,8 @@ async function refresh(){
   }finally{button.disabled=false;}
 }
 button.addEventListener('click',refresh);
+window.refreshFoonStation=refresh;
 void refresh();
+if(typeof setInterval==='function')setInterval(()=>{
+  if(!document.hidden&&!button.disabled)void refresh();
+},8000);
