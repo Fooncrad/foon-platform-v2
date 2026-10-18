@@ -1,6 +1,6 @@
 # FOON Windows W02 — isolated SQLite persistence gate
 
-Status: **test harness only**. The native Tauri application does NOT start FOON Edge yet. A passing test is necessary but not sufficient for releasing an offline POS.
+Status: **isolated persistence test + native authenticated health screen**. The native Tauri application does NOT start FOON Edge or create orders yet. A passing test is necessary but not sufficient for releasing an offline POS.
 
 ## Why this batch
 
@@ -33,3 +33,27 @@ This test creates **temporary synthetic credentials and a temporary SQLite file*
 - Build and install the updated NSIS on Windows and verify uninstall, upgrade and rollback, plus Node 24 acceptance.
 
 Manual review and test first. No GitHub Actions, auto-merge, automatic Hostinger deployment or production migration.
+
+## W02 native gateway health — follow-up build gate
+
+This unmerged branch adds a native Rust-only read-only check of `http://127.0.0.1:8787/health` using `FOON_LAN_TOKEN` from the **native process environment only**. The token is never returned to JavaScript or printed. The client requires a successful HTTP response with `storage=sqlite-wal-full`; a raw open port is not accepted as proof. A successful bearer response is **not** an OS process identity guarantee.
+
+With the current W01 installer, no gateway credentials or background service are configured, so the expected UI is **"محرك الطلبات غير مهيأ"**. Do not paste production tokens into PowerShell, source code, GitHub, chat, or browser storage merely to make the indicator green.
+
+On Windows, test this precise branch in a **new** folder without overwriting W01/W02:
+
+```powershell
+$path = "$env:USERPROFILE\Desktop\FOON-Windows-W02-native"
+git clone --depth 1 --branch feat/foon-windows-w02-native-gateway-health-20261018 https://github.com/Fooncrad/foon-platform-v2.git $path
+if ($LASTEXITCODE -ne 0) { throw "GIT_CLONE_FAILED" }
+Set-Location $path
+node --test .\apps\desktop\w02-sqlite.integration.test.mjs .\apps\desktop\w02-native-health.test.mjs
+if ($LASTEXITCODE -ne 0) { throw "LOCAL_TESTS_FAILED" }
+Set-Location .\apps\desktop
+npm install
+if ($LASTEXITCODE -ne 0) { throw "NPM_INSTALL_FAILED" }
+npm run desktop:build
+if ($LASTEXITCODE -ne 0) { throw "WINDOWS_BUILD_FAILED" }
+```
+
+**Do not merge** until the six Node test cases and real Windows Rust/NSIS build pass, and the screenshot shows the unconfigured state without exposing any secret. This branch changes only `apps/desktop/`; it must not modify `nfoodz.com`, customer data, store enrollment, or server settings.
