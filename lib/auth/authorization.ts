@@ -1,7 +1,7 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { database } from "@/lib/db/mysql";
 import { tenantId, type TenantId } from "@/lib/tenant/scope";
-import { currentActiveAdminUserId,currentSessionId } from "./session";
+import { currentSessionId } from "./session";
 import type { PlatformRole, TenantRole } from "./roles";
 
 export async function requireTenantMembership(userId:string, rawTenantId:string, allowed:readonly TenantRole[],touchAdminSession=true){
@@ -9,22 +9,20 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
  // Admin access is explicit, tenant-scoped, audited, time-limited, and tied to
  // the current login session. Platform roles alone never grant tenant access.
  const sessionId=await currentSessionId();
- const activeAdmin=await currentActiveAdminUserId(false);
  const [platformAdmins]=await database().execute<RowDataPacket[]>(
   "SELECT role FROM platform_admins WHERE user_id=? AND enabled=TRUE LIMIT 1",[userId]
  );
  if(platformAdmins.length){
-  if(!sessionId||activeAdmin!==userId){console.error("[tenant support auth] active admin session check failed");throw new Error("FORBIDDEN");}
+  if(!sessionId)throw new Error("FORBIDDEN");
   const [support]=await database().execute<RowDataPacket[]>(
-   "SELECT s.id,s.platform_role,pa.role AS current_role FROM platform_tenant_support_sessions s JOIN platform_admins pa ON pa.user_id=s.actor_user_id AND pa.enabled=TRUE JOIN users u ON u.id=s.actor_user_id AND u.status='active' JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
+   "SELECT s.id,s.platform_role,pa.role AS current_role FROM platform_tenant_support_sessions s JOIN auth_sessions a ON a.id=s.auth_session_id AND a.user_id=s.actor_user_id AND a.expires_at>UTC_TIMESTAMP() AND a.last_seen_at>DATE_SUB(UTC_TIMESTAMP(), INTERVAL 60 MINUTE) JOIN platform_admins pa ON pa.user_id=s.actor_user_id AND pa.enabled=TRUE JOIN users u ON u.id=s.actor_user_id AND u.status='active' JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
    [sessionId,userId,id]
   );
   if(support.length){
    const role=String(support[0].platform_role)==="support"||String(support[0].current_role)==="support"?"support":"admin";
-   if(!allowed.includes("manager")||touchAdminSession&&role==="support"){console.error("[tenant support auth] role is read-only or not allowed");throw new Error("FORBIDDEN");}
+   if(!allowed.includes("manager")||touchAdminSession&&role==="support")throw new Error("FORBIDDEN");
    return {tenantId:id,role:"manager" as TenantRole,adminAccess:true,platformRole:role};
   }
-  console.error("[tenant support auth] no active tenant support session found");
   throw new Error("FORBIDDEN");
  }
   const [rows]=await database().execute<RowDataPacket[]>(
