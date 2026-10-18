@@ -4,7 +4,9 @@ use reqwest::blocking::Client;
 use reqwest::header::AUTHORIZATION;
 use serde::Serialize;
 use std::env;
-use std::fs;
+use std::fs::{self, File, OpenOptions};
+use std::io::Write;
+use fs2::FileExt;
 use std::net::{SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -17,9 +19,18 @@ use uuid::Uuid;
 #[derive(Default)]
 pub struct DemoRuntime(Mutex<Option<OwnedGateway>>);
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum RuntimeMode { Temporary, Durable }
+impl RuntimeMode {
+    fn label(self) -> &'static str {
+        match self { Self::Temporary => "temporary", Self::Durable => "durable" }
+    }
+}
 struct OwnedGateway {
     child: Child,
     dir: PathBuf,
+    mode: RuntimeMode,
+    lock: Option<File>,
 }
 
 #[derive(Serialize)]
@@ -27,6 +38,10 @@ struct OwnedGateway {
 pub struct LauncherState {
     running: bool,
     code: &'static str,
+    mode: &'static str,
+}
+fn launcher(running: bool, code: &'static str, mode: &'static str) -> LauncherState {
+    LauncherState {running,code,mode}
 }
 
 const PORT: u16 = 8787;
@@ -45,7 +60,7 @@ fn secret() -> String {
 
 fn clear_demo_env() {
     for name in [
-        "FOON_DESKTOP_DEMO_MODE", "FOON_DESKTOP_DEMO_BRANCH_ID",
+        "FOON_DESKTOP_DEMO_MODE", "FOON_DESKTOP_DURABLE_TEST", "FOON_DESKTOP_DEMO_BRANCH_ID",
         "FOON_LAN_TOKEN", "FOON_EDGE_ACK_SECRET", "FOON_LAN_DB",
         "FOON_LAN_HOST", "FOON_LAN_PORT", "FOON_EDGE_TENANT_ID",
         "FOON_EDGE_BRANCH_ID", "FOON_EDGE_DEVICE_ID",
@@ -79,7 +94,10 @@ fn shutdown_owned(owned: &mut Option<OwnedGateway>) {
         // Kill and wait only for the exact child handle we created.
         let _ = runtime.child.kill();
         let _ = runtime.child.wait();
-        let _ = fs::remove_dir_all(runtime.dir);
+        if runtime.mode == RuntimeMode::Temporary {
+            let _ = fs::remove_dir_all(runtime.dir);
+        }
+        drop(runtime.lock.take());
         clear_demo_env();
     }
 }
@@ -94,23 +112,33 @@ impl DemoRuntime {
 pub fn launcher_status(state: State<'_, DemoRuntime>) -> LauncherState {
     let mut guard = match state.0.lock() {
         Ok(g) => g,
-        Err(_) => return LauncherState { running: false, code: "LAUNCHER_LOCK_FAILED" },
+        Err(_) => return launcher(false,"LAUNCHER_LOCK_FAILED","none"),
     };
     if let Some(running) = guard.as_mut() {
         if running.child.try_wait().ok().flatten().is_none() {
-            return LauncherState { running: true, code: "OWNED_DEMO_RUNNING" };
+            return launcher(true,"OWNED_DEMO_RUNNING",running.mode.label());
         }
         shutdown_owned(&mut guard);
     }
-    LauncherState { running: false, code: "DEMO_NOT_STARTED" }
+    launcher(false,"DEMO_NOT_STARTED","none")
 }
 
 #[tauri::command]
 pub fn start_demo_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Result<LauncherState, String> {
+    start_runtime(app,state,RuntimeMode::Temporary)
+}
+
+#[tauri::command]
+pub fn start_durable_test_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Result<LauncherState, String> {
+    start_runtime(app,state,RuntimeMode::Durable)
+}
+
+fn start_runtime(app: AppHandle, state: State<'_, DemoRuntime>, mode: RuntimeMode) -> Result<LauncherState,String> {
     let mut guard = state.0.lock().map_err(|_| "LAUNCHER_LOCK_FAILED".to_string())?;
     if let Some(owned) = guard.as_mut() {
         if owned.child.try_wait().map_err(|_| "LAUNCHER_PROCESS_ERROR".to_string())?.is_none() {
-            return Ok(LauncherState { running: true, code: "OWNED_DEMO_RUNNING" });
+            if owned.mode != mode { return Err("OTHER_DEMO_MODE_RUNNING".into()); }
+            return Ok(launcher(true,"OWNED_DEMO_RUNNING",owned.mode.label()));
         }
         shutdown_owned(&mut guard);
     }
@@ -119,6 +147,7 @@ pub fn start_demo_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Resu
     for key in [
         "FOON_EDGE_CLOUD_SYNC_URL", "FOON_EDGE_TENANT_ID", "FOON_EDGE_BRANCH_ID",
         "FOON_EDGE_DEVICE_ID", "FOON_LAN_DB", "FOON_LAN_TOKEN",
+        "FOON_DESKTOP_DEMO_MODE", "FOON_DESKTOP_DURABLE_TEST",
     ] {
         if env::var(key).is_ok_and(|x| !x.is_empty()) {
             return Err("EXISTING_EDGE_CONTEXT_FORBIDDEN".into());
@@ -135,11 +164,23 @@ pub fn start_demo_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Resu
         return Err("BUNDLED_NODE24_EDGE_MISSING".into());
     }
 
-    let dir = env::temp_dir().join(format!("FOON-W03-Demo-{}",Uuid::new_v4().simple()));
-    fs::create_dir(&dir).map_err(|_| "DEMO_FOLDER_CREATE_FAILED".to_string())?;
+    let (dir,branch,lock)=match mode {
+        RuntimeMode::Temporary => {
+            let dir=env::temp_dir().join(format!("FOON-W03-Demo-{}",Uuid::new_v4().simple()));
+            fs::create_dir(&dir).map_err(|_| "DEMO_FOLDER_CREATE_FAILED".to_string())?;
+            (dir,Uuid::new_v4().to_string(),None)
+        }
+        RuntimeMode::Durable => {
+            let dir=durable_test_dir(&app)?;
+            let lock_file=OpenOptions::new().create(true).read(true).write(true)
+                .open(dir.join("w05.lock")).map_err(|_| "DURABLE_LOCK_OPEN_FAILED".to_string())?;
+            lock_file.try_lock_exclusive().map_err(|_| "DURABLE_DB_IN_USE".to_string())?;
+            let branch=load_or_create_branch(&dir)?;
+            (dir,branch,Some(lock_file))
+        }
+    };
     let token=secret();
     let ack=secret();
-    let branch=Uuid::new_v4().to_string();
     let db=dir.join("orders.sqlite");
 
     let mut command = Command::new(node);
@@ -162,7 +203,7 @@ pub fn start_demo_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Resu
     }
     let mut child=match command.spawn() {
         Ok(child)=>child,
-        Err(_)=>{let _=fs::remove_dir_all(&dir);return Err("BUNDLED_NODE24_START_FAILED".into());}
+        Err(_)=>{if mode==RuntimeMode::Temporary {let _=fs::remove_dir_all(&dir);} return Err("BUNDLED_NODE24_START_FAILED".into());}
     };
 
     let mut ready=false;
@@ -172,13 +213,15 @@ pub fn start_demo_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Resu
         thread::sleep(Duration::from_millis(90));
     }
     if !ready {
-        let _=child.kill();let _=child.wait();let _=fs::remove_dir_all(&dir);
+        let _=child.kill();let _=child.wait();if mode==RuntimeMode::Temporary {let _=fs::remove_dir_all(&dir);}
         return Err("DEMO_GATEWAY_HEALTH_FAILED".into());
     }
 
     // Publish native-only test credentials *after* authenticating the child.
     // No cloud identity is provisioned, and JavaScript never receives the token.
     env::set_var("FOON_DESKTOP_DEMO_MODE","1");
+    if mode==RuntimeMode::Durable {env::set_var("FOON_DESKTOP_DURABLE_TEST","1");}
+    else {env::remove_var("FOON_DESKTOP_DURABLE_TEST");}
     env::set_var("FOON_DESKTOP_DEMO_BRANCH_ID",&branch);
     env::set_var("FOON_LAN_HOST","127.0.0.1");
     env::set_var("FOON_LAN_PORT","8787");
@@ -187,15 +230,73 @@ pub fn start_demo_runtime(app: AppHandle, state: State<'_, DemoRuntime>) -> Resu
     for key in ["FOON_EDGE_TENANT_ID","FOON_EDGE_BRANCH_ID","FOON_EDGE_DEVICE_ID","FOON_EDGE_CLOUD_SYNC_URL"] {
         env::remove_var(key);
     }
-    *guard=Some(OwnedGateway{child,dir});
-    Ok(LauncherState { running: true, code: "OWNED_DEMO_RUNNING" })
+    *guard=Some(OwnedGateway{child,dir,mode,lock});
+    Ok(launcher(true,"OWNED_DEMO_RUNNING",mode.label()))
 }
 
 #[tauri::command]
 pub fn stop_demo_runtime(state: State<'_, DemoRuntime>) -> Result<LauncherState, String> {
     let mut owned=state.0.lock().map_err(|_| "LAUNCHER_LOCK_FAILED".to_string())?;
+    if owned.as_ref().is_some_and(|runtime| runtime.mode != RuntimeMode::Temporary) {return Err("OTHER_DEMO_MODE_RUNNING".into());}
     shutdown_owned(&mut owned);
-    Ok(LauncherState { running: false, code: "DEMO_STOPPED" })
+    Ok(launcher(false,"DEMO_STOPPED","none"))
+}
+
+
+/// Fixed, per-user Windows location; it is never supplied by web UI or environment as a DB path.
+fn durable_test_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let local=env::var_os("LOCALAPPDATA").map(PathBuf::from)
+        .ok_or_else(|| "WINDOWS_LOCALAPPDATA_REQUIRED".to_string())?;
+    let base=app.path().app_local_data_dir()
+        .map_err(|_| "APP_LOCAL_DATA_UNAVAILABLE".to_string())?;
+    if base != local.join("com.foon.desktop") {
+        return Err("DURABLE_DIRECTORY_UNEXPECTED".into());
+    }
+    fs::create_dir_all(&base).map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?;
+    let dir=base.join("w05-durable-test");
+    fs::create_dir_all(&dir).map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?;
+    for candidate in [&base,&dir] {
+        if fs::symlink_metadata(candidate).map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?
+            .file_type().is_symlink() {
+            return Err("DURABLE_SYMLINK_FORBIDDEN".into());
+        }
+    }
+    let base_real=base.canonicalize().map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?;
+    let dir_real=dir.canonicalize().map_err(|_| "DURABLE_DIRECTORY_UNAVAILABLE".to_string())?;
+    if dir_real.parent()!=Some(base_real.as_path()) {return Err("DURABLE_DIRECTORY_FORBIDDEN".into());}
+    Ok(dir_real)
+}
+
+/// Stable NON-SECRET synthetic branch; never regenerate metadata for an existing SQLite DB.
+fn load_or_create_branch(dir: &PathBuf) -> Result<String, String> {
+    let file=dir.join("demo-branch.txt");
+    if file.exists() {
+        let raw=fs::read_to_string(&file).map_err(|_| "DURABLE_BRANCH_READ_FAILED".to_string())?;
+        let value=raw.trim();
+        let parsed=Uuid::parse_str(value).map_err(|_| "DURABLE_BRANCH_INVALID".to_string())?;
+        if value!=parsed.to_string() {return Err("DURABLE_BRANCH_INVALID".into());}
+        return Ok(value.to_string());
+    }
+    if ["orders.sqlite","orders.sqlite-wal","orders.sqlite-shm"].iter()
+        .any(|name|dir.join(name).exists()) {
+        return Err("DURABLE_BRANCH_MISSING_FOR_EXISTING_DB".into());
+    }
+    let branch=Uuid::new_v4().to_string();
+    let mut writer=OpenOptions::new().write(true).create_new(true)
+        .open(&file).map_err(|_| "DURABLE_BRANCH_CREATE_FAILED".to_string())?;
+    writer.write_all(branch.as_bytes()).map_err(|_| "DURABLE_BRANCH_WRITE_FAILED".to_string())?;
+    writer.sync_all().map_err(|_| "DURABLE_BRANCH_FLUSH_FAILED".to_string())?;
+    Ok(branch)
+}
+
+#[tauri::command]
+pub fn stop_durable_test_runtime(state: State<'_, DemoRuntime>) -> Result<LauncherState, String> {
+    let mut guard=state.0.lock().map_err(|_| "LAUNCHER_LOCK_FAILED".to_string())?;
+    if guard.as_ref().is_some_and(|runtime|runtime.mode!=RuntimeMode::Durable) {
+        return Err("OTHER_DEMO_MODE_RUNNING".into());
+    }
+    shutdown_owned(&mut guard);
+    Ok(launcher(false,"DURABLE_TEST_STOPPED","none"))
 }
 
 #[cfg(test)]
