@@ -54,7 +54,7 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   const rejectedImport=await call('/api/restaurant/catalog-import','POST',{kind:'items',requestKey:randomUUID(),rows:[{category:'Category',name:'Cannot bypass by import',price:'5'}]},grocery.cookie,grocery.tenant);assert.equal(rejectedImport.body.code,'PLAN_LIMIT_REACHED');
   const [[productsAfterImport]]=await db.execute('SELECT COUNT(*) AS n FROM catalog_products WHERE tenant_id=?',[grocery.tenant]);assert.equal(Number(productsAfterImport.n),2);
   assert.equal((await save('restaurant','digital_menu',true,1)).status,200);
-  const legacyCategory=await call('/api/restaurant/menu/categories','POST',{name:'Legacy category'},admin.cookie,admin.tenant);assert.equal(legacyCategory.status,201);
+  const legacyCategory=await call('/api/restaurant/menu/categories','POST',{name:'Legacy category'},admin.cookie,admin.tenant);assert.equal(legacyCategory.status,201,JSON.stringify(legacyCategory.body));
   assert.equal((await call('/api/restaurant/menu/categories','POST',{name:'Denied category'},admin.cookie,admin.tenant)).body.code,'PLAN_LIMIT_REACHED');
   const legacyProduct={name:'Legacy item',price:'5',categoryId:legacyCategory.body.category.id};assert.equal((await call('/api/restaurant/menu/items','POST',legacyProduct,admin.cookie,admin.tenant)).status,201);
   assert.equal((await call('/api/restaurant/menu/items','POST',{...legacyProduct,name:'Denied item'},admin.cookie,admin.tenant)).body.code,'PLAN_LIMIT_REACHED');
