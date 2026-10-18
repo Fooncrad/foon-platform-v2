@@ -12,6 +12,7 @@ try{
   db.exec("PRAGMA query_only=ON");
   const check=db.prepare("PRAGMA integrity_check").all();
   if(check.length!==1||check[0].integrity_check!=="ok")process.exit(4);
+  if(db.prepare("PRAGMA foreign_key_check").all().length!==0)process.exit(7);
   const tables=new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(x=>x.name));
   if(!["orders","events","outbox"].every(x=>tables.has(x)))process.exit(5);
   const orders=db.prepare("SELECT count(*) AS n FROM orders").get().n;
