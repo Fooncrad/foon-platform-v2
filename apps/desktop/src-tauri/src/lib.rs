@@ -132,7 +132,8 @@ pub fn run() {
             edge_runtime::launcher_status, edge_runtime::start_demo_runtime,
             edge_runtime::stop_demo_runtime,
             edge_runtime::start_durable_test_runtime,
-            edge_runtime::stop_durable_test_runtime
+            edge_runtime::stop_durable_test_runtime,
+            edge_runtime::inspect_durable_sqlite
         ])
         .build(tauri::generate_context!())
         .expect("Unable to build FOON desktop shell");
