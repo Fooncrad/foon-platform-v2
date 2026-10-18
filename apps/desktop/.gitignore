@@ -11,3 +11,6 @@ operators*.json
 *.key
 *.msi
 *.exe
+
+# W04 runtime downloads and bundled Edge snapshots; never commit generated binaries.
+src-tauri/resources/edge-runtime/
