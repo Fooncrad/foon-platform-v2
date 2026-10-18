@@ -4,9 +4,9 @@ The cloud creates a durable job when the configured order event occurs. This Nod
 
 ## Events
 
-- Preparation printers receive only their configured `on_accept` or `on_prepare` event. Item-to-department routing stays data-driven through each printer's `departmentId` and the saved item assignments; for example, food prints in the kitchen and coffee at the bar. There is no fixed department-name list, so a newly created department can be routed without a code change.
-- Customer receipt printers receive `on_paid` after the order is both completed and paid. A `both` printer can receive preparation tickets and the complete paid receipt according to its settings.
-- Failed connections return the job to the durable queue with bounded exponential retry. After the configured attempt limit it is marked failed for operator review.
+- Preparation tickets are queued when staff advances an order from `new` to `preparing`, never when a customer first submits it. The current order lifecycle uses that transition for acceptance and start of preparation, so a printer configured for `on_accept` or `on_prepare` receives one ticket at that point. Item-to-department routing stays data-driven through each printer's `departmentId` and saved item assignments; for example, food prints in the kitchen and coffee at the bar. New departments need no code change.
+- Customer receipt printers receive `on_paid` only after the order is both completed and paid, regardless of which happens first. A `both` printer can receive its section ticket and the complete paid receipt according to its settings.
+- Failed connections and expired agent leases return the job to the durable queue with exponential retry, capped at five minutes between attempts. There is no terminal attempt limit: the job remains queued until it prints or an operator changes its printer/policy. Old `failed` jobs are eligible for recovery too. A successful physical send retries only its cloud acknowledgement; it is never reported as a printer failure.
 
 ## Initial supported connection
 
@@ -27,5 +27,7 @@ FOON_EDGE_CLOUD_DEVICE_TOKEN=THE_BRANCH_DEVICE_TOKEN
 5. Install Node.js 24 and run `npm run print:agent`. Configure Windows Task Scheduler to start it at boot and restart it if it exits. Keep the computer and printers on the same trusted LAN.
 6. Configure each section's active printer with connection `network`, its private IPv4 address, purpose `preparation`, and automatic event. Configure the customer invoice printer with purpose `customer_receipt` and event `on_paid`. Assign menu items to their operating departments in the restaurant settings.
 7. Submit a test order, confirm the department ticket, complete and mark it paid, then confirm the customer receipt. Verify the queue reports both jobs as `printed` before relying on it during service.
+
+To check for work awaiting repair, inspect `restaurant_print_jobs` for `status IN ('pending','retry','leased','failed')` and review `last_error`, `attempts`, and `updated_at`. Retry status is retained while the agent reconnects or the printer is repaired; do not delete queued jobs to clear an error.
 
 `printed` means the local agent successfully sent the bytes to the printer's TCP socket; common ESC/POS printers do not provide a paper-out confirmation over port 9100. If the socket drops after printing but before the cloud acknowledgement, a retry can produce a duplicate. Do not configure cash drawer opening for this general agent; it sends print data only.

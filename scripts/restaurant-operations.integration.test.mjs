@@ -73,10 +73,9 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const requestKey=randomUUID(),orderPayload={branchId:a.branch,channel:"dine_in",tableId:table,partySize:2,couponCode:"SAVE10",requestKey,total:0,items:[{id:item,quantity:2,price:0}]};
   const order=await resource(a,"pos",orderPayload);
   assert.equal(order.status,201,JSON.stringify(order.body));assert.equal(order.body.total,18);
-  const [[printJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND status='pending'",[a.tenant,kitchenPrinter,order.body.id]);assert.equal(Number(printJobs.n),1,"one durable print job should be queued for the assigned department printer");
-  const [[printJob]]=await db.execute("SELECT payload_json FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=?",[a.tenant,kitchenPrinter,order.body.id]);const printPayload=typeof printJob.payload_json==="string"?JSON.parse(printJob.payload_json):printJob.payload_json;assert.equal(printPayload.items.length,1);assert.equal(printPayload.items[0].copies,2);assert.ok(Number(printPayload.orderNumber)>0);
+  const [[checkoutPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND source_id=?",[a.tenant,order.body.id]);assert.equal(Number(checkoutPrintJobs.n),0,"kitchen tickets wait until staff accepts the new order");
   const replay=await resource(a,"pos",orderPayload);assert.equal(replay.status,201);assert.equal(replay.body.id,order.body.id);
-  const [[replayedPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND source_id=?",[a.tenant,order.body.id]);assert.equal(Number(replayedPrintJobs.n),1,"replaying checkout must not duplicate printer jobs");
+  const [[replayedPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND source_id=?",[a.tenant,order.body.id]);assert.equal(Number(replayedPrintJobs.n),0,"replaying checkout must not enqueue printer jobs");
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",couponCode:"SAVE10",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,a.cookie,b.tenant)).status,403);
   assert.equal((await resource(a,"categories",{id:categoryB,version:1},"DELETE")).status,404);
@@ -91,9 +90,11 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"PATCH",{id:order.body.id,version:1,status:"preparing"},staff.cookie,a.tenant)).status,403);
   const kitchenView=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchenView.status,200);assert.equal(kitchenView.body.orders[0].total,null);assert.equal(kitchenView.body.orders[0].customer_phone,null);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:1,paymentStatus:"paid"},"PATCH")).status,200);
-  const [[receiptJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_paid'",[a.tenant,receiptPrinter,order.body.id]);assert.equal(Number(receiptJobCount.n),1,"paid orders route to the customer receipt printer");
+  const [[uncompletedReceiptJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_paid'",[a.tenant,receiptPrinter,order.body.id]);assert.equal(Number(uncompletedReceiptJobCount.n),0,"customer receipts wait until the order is completed as well as paid");
   assert.equal((await resource(a,"orders",{id:order.body.id,version:2,status:"cancelled"},"PATCH")).body.code,"REFUND_REQUIRED");
   assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:2,status:"preparing"},staff.cookie,a.tenant)).status,200);
+  const [[acceptedPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND status='pending'",[a.tenant,kitchenPrinter,order.body.id]);assert.equal(Number(acceptedPrintJobs.n),1,"the accepted order prints once at the section printer");
+  const [[printJob]]=await db.execute("SELECT payload_json FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=?",[a.tenant,kitchenPrinter,order.body.id]);const printPayload=typeof printJob.payload_json==="string"?JSON.parse(printJob.payload_json):printJob.payload_json;assert.equal(printPayload.items.length,1);assert.equal(printPayload.items[0].copies,2);assert.ok(Number(printPayload.orderNumber)>0);
   const [[prepJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_prepare'",[a.tenant,prepPrinter,order.body.id]);assert.equal(Number(prepJobCount.n),1,"preparation events route to the assigned section printer");
   await db.execute("UPDATE restaurant_orders SET channel='delivery',order_notes='Private delivery address' WHERE id=?",[order.body.id]);
   const privateDelivery=await call('/api/restaurant/operations/kds','GET',undefined,staff.cookie,a.tenant);
@@ -102,6 +103,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,paymentStatus:"refunded"},staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,status:"ready"},staff.cookie,a.tenant)).status,200);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:4,status:"completed"},"PATCH")).status,200);
+  const [[receiptJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_paid'",[a.tenant,receiptPrinter,order.body.id]);assert.equal(Number(receiptJobCount.n),1,"completed and paid orders route to the customer receipt printer");
   const branchList=await call("/api/restaurant/branches","GET",undefined,a.cookie,a.tenant);
   const mainBranch=branchList.body.branches.find(x=>x.id===a.branch);
   assert.equal((await call("/api/restaurant/branches","PATCH",{id:a.branch,version:mainBranch.version,name:"Renamed main"},a.cookie,a.tenant)).status,200);

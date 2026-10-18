@@ -1,5 +1,5 @@
 import {checkoutSettings} from "./checkout-settings";
-import {printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
+import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
@@ -58,6 +58,10 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
   if(linkedOrders.length&&(archive||linkedOrders.some(order=>String(order.status)!=="cancelled")))throw new ResourceError("RESERVATION_HAS_PREORDER");
  }
  if(archive){
+  if(module==="printers"){
+   const [queued]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND status IN ('pending','leased','retry','failed') LIMIT 1 FOR UPDATE",[tenantId,id]);
+   if(queued.length)throw new ResourceError("PRINTER_HAS_PENDING_JOBS");
+  }
   if(module==="serviceOrders"){
    if(!serviceOrderArchiveAllowed(String(previous!.status)))throw new ResourceError("SERVICE_ORDER_ARCHIVE_FORBIDDEN");
    if(parseData(previous!.data).quotationId)throw new ResourceError("SERVICE_ORDER_LINKED_ARCHIVE_FORBIDDEN");
@@ -470,7 +474,6 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,reservationId,dining?.sectionId??null,body.channel==="dine_in"?partySize:null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
- await queueOrderPrintJobs(db,tenantId,id,"on_accept");
  await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
  await notifyOrder(db,tenantId,id,"new");
  return {id,total:totals.total,currency:profile.currency};
@@ -500,8 +503,9 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
  if(status==="cancelled"&&order.status!=="cancelled")await restoreActivityStock(db,tenantId,String(order.id));
  await db.execute("UPDATE restaurant_orders SET status=?,payment_status=?,version=version+1 WHERE id=? AND tenant_id=?",[status,payment,order.id,tenantId]);
- if(status!==String(order.status)&&status==="preparing")await queueOrderPrintJobs(db,tenantId,String(order.id),"on_prepare");
- if(payment!==String(order.payment_status)&&payment==="paid")await queueOrderPrintJobs(db,tenantId,String(order.id),"on_paid");
+ // Staff acceptance and preparation start share one status transition in this lifecycle.
+ for(const event of preparationPrintEvents(String(order.status),status))await queueOrderPrintJobs(db,tenantId,String(order.id),event);
+ if(customerReceiptPrintDue(String(order.status),String(order.payment_status),status,payment))await queueOrderPrintJobs(db,tenantId,String(order.id),"on_paid");
  // A completed order does not prove that the guest has left.
  // Keep the table occupied until staff explicitly confirms departure.
  if(status!==String(order.status))await notifyOrder(db,tenantId,String(order.id),status);

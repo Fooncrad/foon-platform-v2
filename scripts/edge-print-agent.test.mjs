@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {isPrivatePrinterAddress} from "../lib/platform/edge-print-jobs.mjs";
-import {printerDispatchAllowed,routePreparationItems} from "../lib/restaurant/print-policy.mjs";
+import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "../lib/restaurant/print-policy.mjs";
 import {renderEscPos,runPrintAgentCycle} from "./foon-print-agent.mjs";
 
 test("print relay accepts only private IPv4 printer endpoints",()=>{
@@ -17,6 +17,16 @@ test("dispatch covers configurable departments and both preparation and receipt 
  assert.equal(printerDispatchAllowed({triggerEvent:"on_paid"},{autoPrint:"yes",purpose:"both",printOn:"on_accept"}),true);
  assert.equal(printerDispatchAllowed({triggerEvent:"on_accept"},{autoPrint:"no",purpose:"preparation",printOn:"on_accept"}),false);
  assert.equal(printerDispatchAllowed({triggerEvent:"on_accept"},{autoPrint:"yes",purpose:"preparation",printOn:"manual"}),false);
+});
+
+test("kitchen tickets wait for staff acceptance and receipts wait for both completion and payment",()=>{
+ assert.deepEqual(preparationPrintEvents("new","preparing"),["on_accept","on_prepare"]);
+ assert.deepEqual(preparationPrintEvents("new","new"),[]);
+ assert.equal(customerReceiptPrintDue("new","unpaid","new","paid"),false);
+ assert.equal(customerReceiptPrintDue("ready","unpaid","completed","unpaid"),false);
+ assert.equal(customerReceiptPrintDue("completed","unpaid","completed","paid"),true);
+ assert.equal(customerReceiptPrintDue("ready","paid","completed","paid"),true);
+ assert.equal(customerReceiptPrintDue("completed","paid","completed","paid"),false);
 });
 
 test("items print only at the printer assigned to their current department",()=>{
@@ -45,7 +55,17 @@ test("agent acknowledges department and receipt jobs only after sending each one
  assert.deepEqual(printed,["on_accept","on_paid"]);assert.deepEqual(reports.map(row=>[row.id,row.outcome]),[["prep","printed"],["receipt","printed"]]);
 });
 
-test("print failure is reported for bounded retry instead of a false success",async()=>{
+test("printer failures are reported to the durable queue without a false success",async()=>{
  const reports=[];const result=await runPrintAgentCycle({claim:async()=>({job:{id:"job",leaseToken:"lease",payload:{triggerEvent:"on_prepare"}}}),print:async()=>{throw Error("printer offline");},report:async(id,body)=>reports.push({id,...body})});
  assert.equal(result.printed,false);assert.equal(reports[0].outcome,"failed");assert.equal(reports[0].error,"printer offline");
+});
+
+test("a successful print retries only its cloud acknowledgement, never the physical print",async()=>{
+ let prints=0;const reports=[];const result=await runPrintAgentCycle({claim:async()=>({job:{id:"job",leaseToken:"lease",leaseExpiresAt:new Date(Date.now()+60000).toISOString(),payload:{triggerEvent:"on_paid"}}}),print:async()=>{prints++;},report:async(id,body)=>{reports.push(body.outcome);if(reports.length===1)throw Error("temporary cloud outage");},wait:async()=>{}});
+ assert.equal(result.printed,true);assert.equal(result.acknowledged,true);assert.equal(prints,1);assert.deepEqual(reports,["printed","printed"]);
+});
+
+test("a printed job is never reported as a printer failure when cloud acknowledgement is unavailable",async()=>{
+ let prints=0;const reports=[];const result=await runPrintAgentCycle({claim:async()=>({job:{id:"job",leaseToken:"lease",leaseExpiresAt:new Date(Date.now()+60000).toISOString(),payload:{triggerEvent:"on_paid"}}}),print:async()=>{prints++;},report:async(id,body)=>{reports.push(body.outcome);throw Error("PRINT_LEASE_EXPIRED");}});
+ assert.equal(result.printed,true);assert.equal(result.acknowledged,false);assert.equal(prints,1);assert.deepEqual(reports,["printed"]);
 });
