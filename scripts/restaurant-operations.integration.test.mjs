@@ -123,7 +123,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const reservationTable=await save(a,"tables","Booking table",{capacity:4,sectionId:family,number:20},"available");
   for(const [module,name,data,status] of [
    ["attendance","Attendance",{employeeId,date:"2026-10-09"},"present"],
-   ["reservations","Guest",{partySize:2,scheduledAt:"2026-10-09T18:00:00Z",tableId:reservationTable},"confirmed"],
+   ["reservations","Guest",{partySize:2,scheduledAt:new Date(Date.now()+3*86400000).toISOString(),tableId:reservationTable},"confirmed"],
    ["waitlist","Waiting guest",{partySize:2},"waiting"],
    ["remote","Remote task",{description:"Review menu",employeeId,budget:100},"assigned"],
    ["marketing","Campaign",{message:"Test draft only",channel:"email"},"draft"],
