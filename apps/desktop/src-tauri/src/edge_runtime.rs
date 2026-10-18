@@ -303,6 +303,37 @@ pub fn stop_durable_test_runtime(state: State<'_, DemoRuntime>) -> Result<Launch
 mod tests {
     use super::*;
     #[test]
+    fn durable_branch_id_survives_a_new_gateway_session() {
+        let dir=env::temp_dir().join(format!("foon-w05-branch-unit-{}",Uuid::new_v4().simple()));
+        fs::create_dir(&dir).expect("create isolated temporary fixture");
+        let first=load_or_create_branch(&dir).expect("initial identity");
+        let next=load_or_create_branch(&dir).expect("reopen identity");
+        assert_eq!(first,next);
+        assert!(Uuid::parse_str(&first).is_ok());
+        fs::remove_dir_all(&dir).expect("remove only isolated fixture");
+    }
+    #[test]
+    fn durable_branch_rejects_existing_orphaned_database() {
+        let dir=env::temp_dir().join(format!("foon-w05-orphan-unit-{}",Uuid::new_v4().simple()));
+        fs::create_dir(&dir).expect("isolated temporary fixture");
+        fs::write(dir.join("orders.sqlite"),b"fixture").expect("fixture data");
+        assert_eq!(load_or_create_branch(&dir).unwrap_err(),
+            "DURABLE_BRANCH_MISSING_FOR_EXISTING_DB");
+        fs::remove_dir_all(&dir).expect("remove only isolated fixture");
+    }
+    #[test]
+    fn os_lock_blocks_concurrent_durable_sqlite_owner() {
+        let dir=env::temp_dir().join(format!("foon-w05-lock-unit-{}",Uuid::new_v4().simple()));
+        fs::create_dir(&dir).expect("isolated temporary fixture");
+        let lock=dir.join("w05.lock");
+        let first=OpenOptions::new().create(true).read(true).write(true).open(&lock).unwrap();
+        first.try_lock_exclusive().expect("first owner");
+        let second=OpenOptions::new().create(true).read(true).write(true).open(&lock).unwrap();
+        assert!(second.try_lock_exclusive().is_err(),"second owner must not start");
+        drop(first);drop(second);
+        fs::remove_dir_all(&dir).expect("remove only isolated fixture");
+    }
+    #[test]
     fn generated_secrets_are_long_and_independent() {
         let a=secret();let b=secret();
         assert_eq!(a.len(),128);
