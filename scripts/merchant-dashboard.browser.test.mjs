@@ -129,6 +129,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await publicPage.goto(origin+"/"+visualSlug);
   await expect(publicPage.getByRole("heading",{name:"مطعم المعاينة",exact:true})).toHaveCount(1);
   await expect(publicPage.locator(".publicMenu")).toHaveAttribute("data-template",template);
+  console.log("MENU_DIAG",JSON.stringify(await publicPage.evaluate(()=>[...document.querySelectorAll("h2")].filter(h=>h.textContent?.trim()==="قهوة المعاينة").map(h=>{const chain=[];for(let n=h;n&&chain.length<8;n=n.parentElement){const c=getComputedStyle(n),r=n.getBoundingClientRect();chain.push({tag:n.tagName,cls:n.className,display:c.display,visibility:c.visibility,opacity:c.opacity,rect:[Math.round(r.x),Math.round(r.y),Math.round(r.width),Math.round(r.height)]});}return chain;}))));
   await expect(publicPage.getByRole("heading",{name:"قهوة المعاينة",exact:true})).toBeVisible();
   await publicPage.getByRole("searchbox",{name:"البحث في المنيو"}).fill("لا يوجد صنف بهذا الاسم");
   await expect(publicPage.getByRole("heading",{name:"لا توجد أصناف مطابقة",exact:true})).toBeVisible();
