@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import mysql from 'mysql2/promise';
 test('activity plan overrides isolate grants, limits and administrator permissions',async()=>{
  const url=new URL(process.env.DATABASE_URL||'');assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/foon_migration_test');
@@ -31,7 +31,8 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   assert.equal((await save('grocery','orders',false,null)).status,200);
   assert.equal((await call('/api/restaurant/operations/orders','GET',undefined,grocery.cookie,grocery.tenant)).status,403);
   const [[clothingMembership]]=await db.execute("SELECT role,status FROM memberships WHERE tenant_id=? AND user_id=? LIMIT 1",[clothing.tenant,clothing.user]);
-  const clothingOrders=await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant);assert.equal(clothingOrders.status,200,JSON.stringify({response:clothingOrders.body,membership:clothingMembership,tenant:clothing.tenant}));
+  const [[clothingSession]]=await db.execute("SELECT id,user_id FROM auth_sessions WHERE token_hash=? LIMIT 1",[createHash('sha256').update(clothing.cookie.slice(clothing.cookie.indexOf('=')+1)).digest('hex')]);
+  const clothingOrders=await call('/api/restaurant/operations/orders','GET',undefined,clothing.cookie,clothing.tenant);assert.equal(clothingOrders.status,200,JSON.stringify({response:clothingOrders.body,membership:clothingMembership,session:clothingSession,tenant:clothing.tenant,user:clothing.user}));
   assert.equal((await save('grocery','digital_menu',true,2)).status,200);
   // Bootstrap is one-time initialization, not a reset of existing custom
   // settings. A deliberately removed override must continue to inherit.
