@@ -9,6 +9,7 @@
   <script defer src="./station.js"></script>
   <script defer src="./demo-orders.js"></script>
   <script defer src="./launcher.js"></script>
+  <script defer src="./durable.js"></script>
 </head>
 <body>
   <main>
@@ -22,9 +23,15 @@
       <div class="demo-actions"><button id="w04-start" type="button" disabled>تشغيل المحرك التجريبي</button><button id="w04-stop" type="button" disabled>إيقاف التجربة وتنظيف بياناتها</button></div>
       <p id="w04-feedback" role="status" aria-live="polite"></p>
     </section>
+    <section class="card" aria-labelledby="w05-title">
+      <div class="card-head"><h2 id="w05-title">W05 · اختبار الحفظ الدائم في SQLite</h2><span class="status" id="w05-status" role="status" aria-live="polite">جارٍ التحقق</span></div>
+      <p>قاعدة اختبار محفوظة في بيانات Windows المحلية. تبقى الطلبات والأحداث بعد إيقاف التطبيق وإعادة فتحه. بيانات وهمية فقط، ولا توجد مزامنة سحابية.</p>
+      <div class="demo-actions"><button id="w05-start" type="button" disabled>تشغيل الاختبار المحفوظ</button><button id="w05-stop" type="button" disabled>إيقاف المحرك مع الاحتفاظ بالبيانات</button></div>
+      <p id="w05-feedback" role="status" aria-live="polite"></p>
+    </section>
     <section class="card" aria-labelledby="demo-title">
       <div class="card-head"><h2 id="demo-title">W03 · طلبات SQLite التجريبية</h2><span class="status" id="demo-state" role="status" aria-live="polite">التحقق من وضع التجربة...</span></div>
-      <p>هذه الأداة مخصصة لقاعدة اختبار مؤقتة فقط. لا تُنشئ طلبات فعلية ولا تشغّل مزامنة أو دفعًا إلكترونيًا.</p>
+      <p>هذه الأداة مخصصة للطلبات الوهمية في تجربة W04 المؤقتة أو W05 المحفوظة. لا تنشئ طلبات فعلية ولا تشغّل مزامنة أو دفعًا إلكترونيًا.</p>
       <p id="demo-feedback" role="status" aria-live="polite"></p>
       <div class="demo-actions"><button id="demo-create" type="button" disabled>إضافة طلب وهمي · 9.50 SAR</button><button id="demo-reload" type="button" disabled>تحديث الطلبات</button></div>
       <div id="demo-orders" class="demo-orders" aria-label="الطلبات التجريبية"></div>
