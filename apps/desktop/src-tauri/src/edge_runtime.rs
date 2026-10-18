@@ -194,7 +194,7 @@ fn start_runtime(app: AppHandle, state: State<'_, DemoRuntime>, mode: RuntimeMod
         .env("FOON_LAN_DB", &db)
         .env("FOON_EDGE_RECEIPT_KEYS", "{}")
         .env("FOON_EDGE_TENANT_ID", "")
-        .env("FOON_EDGE_BRANCH_ID", "")
+        .env("FOON_EDGE_BRANCH_ID", if mode==RuntimeMode::Durable {branch.as_str()} else {""})
         .env("FOON_EDGE_DEVICE_ID", "")
         .env("FOON_EDGE_CLOUD_SYNC_URL", "")
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
