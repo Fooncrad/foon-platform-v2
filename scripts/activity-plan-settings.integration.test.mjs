@@ -19,7 +19,7 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   assert.equal((await call(endpoint,'PUT',{feature_key:'orders',activity:'grocery',enabled:false},grocery.cookie)).status,403);
   assert.equal((await call(endpoint+'?activity=unknown','GET',undefined,admin.cookie)).status,400);
   for(const activity of ['restaurant','cafe','sweets','grocery','clothing','perfume','accessories','watches','gifts','ecommerce','carwash','laundry','automotive','salon','publicworks']){
-   const r=await call(endpoint+'?activity='+activity,'GET',undefined,admin.cookie);assert.equal(r.status,200);const menu=r.body.features.find(f=>f.feature_key==='digital_menu');assert.equal(Number(menu.enabled),1);assert.equal(menu.limit_value,20);assert.equal(Number(menu.overridden),1);
+   const r=await call(endpoint+'?activity='+activity,'GET',undefined,admin.cookie);assert.equal(r.status,200,JSON.stringify(r.body));const menu=r.body.features.find(f=>f.feature_key==='digital_menu');assert.equal(Number(menu.enabled),1);assert.equal(menu.limit_value,20);assert.equal(Number(menu.overridden),1);
   }
   const save=(activity,feature_key,enabled,limit_value)=>call(endpoint,'PUT',{activity,feature_key,enabled,limit_value},admin.cookie);
   // The UI filter is not security: the API must refuse unsupported grants.
