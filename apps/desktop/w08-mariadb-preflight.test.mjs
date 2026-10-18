@@ -33,3 +33,36 @@ test("W08 read-only MariaDB preflight rejects every nonlocal or privileged targe
   assert.equal(r.stdout,"");
  }
 });
+
+import {checkMariaDbTestGrants} from "./w08-mariadb-grants.mjs";
+
+const grant=(value)=>({"Grants for test user":value});
+const base=[
+  grant("GRANT USAGE ON *.* TO \u0060foon_edge_runner\u0060@\u0060localhost\u0060 IDENTIFIED BY PASSWORD 'PLACEHOLDER_HASH'"),
+  grant("GRANT ALL PRIVILEGES ON \u0060foon_edge_test\u0060.* TO \u0060foon_edge_runner\u0060@\u0060localhost\u0060")
+];
+
+test("W08 allows only MariaDB PUBLIC test fixture grants in read-only checks",()=>{
+  const actual=checkMariaDbTestGrants([...base,
+    grant("GRANT SELECT, INSERT, UPDATE, DELETE ON \u0060test\u0060.* TO PUBLIC"),
+    grant("GRANT SELECT, INSERT, CREATE ON \u0060test\\_%\u0060.* TO PUBLIC")
+  ]);
+  assert.deepEqual(actual,{publicFixtureGrants:2});
+});
+
+test("W08 fails closed on non-fixture PUBLIC rights and elevated account privileges",()=>{
+  const cases=[
+    {extra:grant("GRANT ALL PRIVILEGES ON *.* TO \u0060foon_edge_runner\u0060@\u0060localhost\u0060"),error:"W08_ACCOUNT_HAS_GLOBAL_PRIVILEGES"},
+    {extra:grant("GRANT ALL PRIVILEGES ON \u0060production\u0060.* TO \u0060foon_edge_runner\u0060@\u0060localhost\u0060"),error:"W08_ACCOUNT_HAS_OTHER_DATABASE_PRIVILEGES"},
+    {extra:grant("GRANT SELECT ON \u0060production\u0060.* TO PUBLIC"),error:"W08_UNEXPECTED_PUBLIC_GRANT"},
+    {extra:grant("GRANT ALL PRIVILEGES ON \u0060foon_edge_test\u0060.* TO PUBLIC"),error:"W08_UNEXPECTED_PUBLIC_GRANT"},
+    {extra:grant("GRANT SELECT ON \u0060test_but_not_fixture\u0060.* TO PUBLIC"),error:"W08_UNEXPECTED_PUBLIC_GRANT"},
+    {extra:grant("GRANT SELECT ON \u0060foon_edge_test\u0060.* TO \u0060unexpected\u0060@\u0060localhost\u0060"),error:"W08_UNEXPECTED_GRANT_RECIPIENT"}
+  ];
+  for(const {extra,error} of cases)
+    assert.throws(()=>checkMariaDbTestGrants([...base,extra]),new RegExp(error));
+  assert.throws(()=>checkMariaDbTestGrants([
+    base[0],grant("GRANT SELECT ON \u0060foon_edge_test\u0060.* TO \u0060foon_edge_runner\u0060@\u0060localhost\u0060")
+  ]),/W08_DATABASE_SCOPED_PRIVILEGES_REQUIRED/);
+  assert.throws(()=>checkMariaDbTestGrants([]),/W08_UNRECOGNIZED_DB_GRANT/);
+});
