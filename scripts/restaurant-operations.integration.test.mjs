@@ -65,7 +65,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   inventory=await resource(a,"inventory",undefined,"GET");assert.equal(inventory.body.resources[0].data.quantity,3);
   const coupon=await save(a,"coupons","Save",{code:"SAVE10",discountType:"percent",value:10,usageLimit:1});
   assert.ok(coupon);
-  const kitchen=await save(a,"departments","Kitchen",{deptType:"kitchen"});
+  const kitchen=await save(a,"departments","Kitchen",{departmentType:"kitchen"});
   const kitchenPrinter=await save(a,"printers","Kitchen printer",{connection:"network",address:"192.0.2.10",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_accept"});
   const prepPrinter=await save(a,"printers","Kitchen prep printer",{connection:"network",address:"192.0.2.11",paperWidth:"80",copies:1,purpose:"preparation",departmentId:kitchen,autoPrint:"yes",printOn:"on_prepare"});
   const receiptPrinter=await save(a,"printers","Receipt printer",{connection:"network",address:"192.0.2.12",paperWidth:"80",copies:1,purpose:"customer_receipt",autoPrint:"yes",printOn:"on_paid",includePrices:"yes"});
