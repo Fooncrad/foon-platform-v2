@@ -9,6 +9,15 @@ test("resource validation rejects unknown keys, nonfinite prices and unsafe asse
  for(const imageUrl of ["javascript:alert(1)","http://example.com/image.png","https://user:secret@example.com/image.png"])assert.throws(()=>validateResource("menu",{name:"X",status:"active",data:{price:10,imageUrl}}));
  assert.equal(validateResource("menu",{name:"X",status:"active",data:{price:10,categoryId:"11111111-1111-4111-8111-111111111111",imageUrl:"/api/restaurant/assets/11111111-1111-4111-8111-111111111111"}}).data.price,10);
 });
+test("registered pickup points require a usable address and remain branch-scoped resources",()=>{
+ const point=validateResource("pickupPoints",{name:"الفرع الشمالي",status:"active",branchId:"11111111-1111-4111-8111-111111111111",data:{address:"شارع الملك فهد",nameEn:"North branch",mapUrl:"https://maps.example.com/location",instructions:"اذكر رقم الطلب"}});
+ assert.equal(resourceModules.pickupPoints.kind,"pickup_point");
+ assert.equal(point.branchId,"11111111-1111-4111-8111-111111111111");
+ assert.equal(point.data.address,"شارع الملك فهد");
+ assert.throws(()=>validateResource("pickupPoints",{name:"نقطة بلا فرع",status:"active",data:{address:"عنوان"}}));
+ assert.throws(()=>validateResource("pickupPoints",{name:"نقطة بلا عنوان",status:"active",data:{}}));
+ assert.throws(()=>validateResource("pickupPoints",{name:"نقطة",status:"active",data:{address:"عنوان",mapUrl:"javascript:alert(1)"}}));
+});
 test("staff roles, coupon bounds and attendance chronology are constrained",()=>{
  assert.throws(()=>validateResource("team",{name:"X",status:"active",data:{email:"x@example.com",role:"owner"}}));
  assert.throws(()=>validateResource("coupons",{name:"X",status:"active",data:{code:"SAVE",discountType:"percent",value:101}}));

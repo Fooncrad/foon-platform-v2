@@ -3,7 +3,7 @@ import {useUiText} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 import {isActivityType,localizedActivityModules,type ActivityLanguage} from "@/lib/platform/activity-presets";
 import {activityWorkspaceUrl,activityPaymentsUrl,activityMediaStudioUrl} from "@/lib/tenant/workspace-routes";
-const destinations:Record<string,string>={serviceOrders:"serviceOrders",orders:"orders",pos:"pos",tables:"tables",reservations:"reservations",waitlist:"reservations",kitchen:"kds",waiter:"tables",inventory:"inventory",barcode:"inventory",suppliers:"inventory",delivery:"orders",pickup:"orders",variants:"menu",bookings:"serviceOrders",quotes:"quotes",staff:"team",invoices:"printers",reports:"reports",branches:"branches",customers:"customers",marketing:"marketing",security:"security"};
+const destinations:Record<string,string>={serviceOrders:"serviceOrders",orders:"orders",pos:"pos",tables:"tables",reservations:"reservations",waitlist:"reservations",kitchen:"kds",waiter:"tables",inventory:"inventory",barcode:"inventory",suppliers:"inventory",delivery:"orders",pickup:"pickupPoints",variants:"menu",bookings:"serviceOrders",quotes:"quotes",staff:"team",invoices:"printers",reports:"reports",branches:"branches",customers:"customers",marketing:"marketing",security:"security"};
 export default function ActivityTools({tenantId,activity,language}:{tenantId:string;activity:string;language?:ActivityLanguage}){
  const translateUi=useUiText();
 
