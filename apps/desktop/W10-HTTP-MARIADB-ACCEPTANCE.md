@@ -29,10 +29,10 @@ From `C:\Users\ejaan\Desktop\FOON-Windows-W05` after the clean W09 checkout:
 ```powershell
 git fetch origin feat/foon-windows-w10-http-mariadb-20261019
 git switch --track origin/feat/foon-windows-w10-http-mariadb-20261019
-& ".\apps\desktop\run-w10-windows.ps1"
+& ".\apps\desktop\run-w10-all-windows.ps1"
 ```
 
-The runner runs W07/W08/W09/W10 **read-only/pure regression tests first**. It then requests the exact confirmation `WRITE W10 LOCAL ONLY`, username `foon_edge_runner` and a hidden local password. W10 creates a single W10 fixture table, writes only synthetic test rows and leaves fixtures for inspection. It NEVER drops tables, grants permissions, or touches W05/W06 preserved SQLite. **DO NOT RERUN** once the W10 table exists (including after partial failures). If it fails, report the exact stage and safe error code before modifying test data.
+The **combined** runner runs W07/W08/W09/W10 **read-only/pure regression tests first**, then the one-time W10 local MariaDB/HTTP fixture, then a separate Node/Rust/Tauri NSIS baseline build gate (if the existing native toolchain and pinned Node resources are present). It then requests the exact confirmation `WRITE W10 LOCAL ONLY`, username `foon_edge_runner` and a hidden local password. W10 creates a single W10 fixture table, writes only synthetic test rows and leaves fixtures for inspection. It NEVER drops tables, grants permissions, or touches W05/W06 preserved SQLite. **DO NOT RERUN** the combined command once the W10 table exists (including after partial failures). If the database test succeeds but the native build later fails, run **only** `apps/desktop/run-w10-native-release-gates.ps1` after resolving the toolchain issue; this native gate makes no test database writes. If it fails, report the exact stage and safe error code before modifying test data.
 
 ## What remains before launch
 
@@ -41,3 +41,4 @@ W10 is **not** the live Next.js `/api/edge/sync` endpoint or merchant identity a
 Next gates are: a dedicated migration-scoped disposable staging DB for the full Next.js endpoint and device enrollment; Windows key storage and a safe opt-in enrollment UI; real Windows packaging/install/uninstall, offline/reconnect/upgrade tests; independent tenant/branch and authorized merchant UAT; and human-approved production rollout. None may bypass the test isolation or automatic deployment ban.
 
 No GitHub Actions, automatic merge, or Hostinger changes.
+\n## No claim of finished installed application\n\nEven a green native build is a **v0.1.4 baseline shell installer**; W10 HTTP/MariaDB sync is a test-only Node harness, not a customer-facing Tauri sync button. A production-ready desktop requires user-device enrollment, a permitted staging server, operator roles/policy tests, protected OS key storage, real printer/POS hardware, and merchant acceptance.\n
