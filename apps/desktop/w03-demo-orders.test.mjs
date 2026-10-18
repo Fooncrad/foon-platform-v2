@@ -23,7 +23,7 @@ async function render(enabled){
  const ids=["demo-state","demo-feedback","demo-create","demo-reload","demo-orders"];
  const elements=Object.fromEntries(ids.map(id=>[id,element(id)]));
  const actions=[];
- const data=[{id:"11111111-1111-4111-8111-111111111111",status:"new",pending_events:1}];
+ const data=[{id:"11111111-1111-4111-8111-111111111111",status:"new",pendingEvents:1}];
  const commands={
    demo_status:async()=>({enabled,reason:enabled?"ISOLATED_DEMO_CONFIGURED":"DEMO_DISABLED"}),
    demo_list_orders:async()=>data,
@@ -68,6 +68,7 @@ test("W03: opted-in demo shows native orders and enables test controls",async()=
  assert.equal(elements["demo-reload"].disabled,false);
  assert.equal(elements["demo-orders"].children.length,1);
  assert.equal(elements["demo-orders"].children[0].children[0].textContent,"طلب #11111111");
+ assert.equal(elements["demo-orders"].children[0].children[2].textContent,"أحداث معلقة: 1");
 });
 test("W03: explicit user clicks trigger order creation or status changes",async()=>{
  const {elements,actions}=await render(true);
