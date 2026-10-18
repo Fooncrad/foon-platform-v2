@@ -31,7 +31,7 @@ C:\Users\ejaan\Desktop\FOON-Windows-W05
 
     $ErrorActionPreference="Stop"
     Set-Location "$env:USERPROFILE\Desktop\FOON-Windows-W05"
-    if (git status --porcelain) {throw "LOCAL_CHANGES_FOUND"}
+    if (git status --porcelain --untracked-files=no) {throw "TRACKED_LOCAL_CHANGES_FOUND"}
     git fetch origin feat/foon-windows-w07-sync-sandbox-20261018
     if ($LASTEXITCODE -ne 0) {throw "W07_FETCH_FAILED"}
     git switch -c feat/foon-windows-w07-sync-sandbox-20261018 --track origin/feat/foon-windows-w07-sync-sandbox-20261018
