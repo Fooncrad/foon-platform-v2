@@ -43,8 +43,8 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  const channelAvailable=Boolean((channel==="takeaway"&&controls.takeaway)||(channel==="delivery"&&controls.delivery));
  const [enteredPhone,setPhone]=useState<string|null>(null),[enteredAddress,setAddress]=useState<string|null>(null),[deliveryCountryCode,setDeliveryCountryCode]=useState("");
  const phone=enteredPhone??customerPhone,address=enteredAddress??deliveryAddress;
- const [city,setCity]=useState(deliveryCity);
- useEffect(()=>{if(deliveryCity)setCity(current=>current||deliveryCity);},[deliveryCity]);
+ const [cityInput,setCity]=useState<string|null>(null);
+ const city=cityInput??deliveryCity;
  const [addressConfirmed,setAddressConfirmed]=useState(false);
  const [geoStatus,setGeoStatus]=useState("");
  const [geoBusy,setGeoBusy]=useState(false);
