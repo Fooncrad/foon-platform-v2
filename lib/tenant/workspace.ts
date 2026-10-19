@@ -3,7 +3,7 @@ import {cookies} from "next/headers";
 import {database} from "@/lib/db/mysql";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 export const ACTIVE_TENANT_COOKIE="foon_active_tenant";
-type Workspace={tenant_id:string;name:string;role:string;adminAccess:boolean;supportReadOnly:boolean};
+export type Workspace={tenant_id:string;name:string;role:string;adminAccess:boolean;supportReadOnly:boolean};
 export async function resolveWorkspace(userId:string,requested?:string):Promise<Workspace>{
  if(requested){
   // Never trust a URL parameter or active cookie as authorization.
