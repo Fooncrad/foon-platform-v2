@@ -10,6 +10,7 @@
 
 use std::ffi::{c_char, c_int, c_void, CString};
 use std::fs;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
 use serde_json::Value;
@@ -118,7 +119,7 @@ pub(crate) struct CreatedOrder {
     pub(crate) digest_hex:String
 }
 #[derive(Clone,Copy)]
-pub(crate) enum FaultPoint {None,AfterOrder,AfterEvent,AfterOutbox}
+pub(crate) enum FaultPoint {None,AfterCatalog,AfterOrder,AfterEvent,AfterOutbox}
 fn validate(event:&TrustedOrder<'_>)->Result<(),&'static str>{
     if !valid_id(event.id,128)||!valid_id(event.tenant_id,128)||
        !valid_id(event.branch_id,128)||!valid_id(event.device_id,128)||
@@ -141,6 +142,54 @@ fn validate(event:&TrustedOrder<'_>)->Result<(),&'static str>{
 }
 fn hex(bytes:&[u8])->String{bytes.iter().map(|b|format!("{b:02x}")).collect()}
 
+// W25 has a separate opt-in path using ONLY a synthetic scoped local catalog.
+// SQL inside the SAME BEGIN IMMEDIATE as the order and Outbox commits.
+// This is not a substitute for a central signed catalog or real permissions.
+const RESERVE_CATALOG:&[u8]=b"UPDATE synthetic_catalog SET stock_qty=stock_qty-? WHERE tenant_id=? AND branch_id=? AND item_id=? AND stock_qty>=? AND unit_cents=? AND currency=? AND enabled=1\0";
+fn reserve_synthetic_catalog(
+    db:*mut c_void,
+    order:&TrustedOrder<'_>
+)->Result<(),&'static str>{
+    let payload:Value=serde_json::from_str(order.payload_json)
+        .map_err(|_|"W25_INVALID_ITEMS")?;
+    let items=payload.get("items").and_then(Value::as_array)
+        .ok_or("W25_INVALID_ITEMS")?;
+    if items.is_empty()||items.len()>100{return Err("W25_INVALID_ITEMS");}
+    let mut seen=HashSet::new();
+    for item in items {
+        let obj=item.as_object().ok_or("W25_INVALID_ITEMS")?;
+        if obj.len()!=4||!["id","quantity","expectedUnitCents","expectedCurrency"]
+            .iter().all(|key|obj.contains_key(*key)){
+            return Err("W25_INVALID_ITEMS");
+        }
+        let item_id=obj.get("id").and_then(Value::as_str)
+            .ok_or("W25_INVALID_ITEMS")?;
+        let qty=obj.get("quantity").and_then(Value::as_u64)
+            .ok_or("W25_INVALID_ITEMS")?;
+        let cents=obj.get("expectedUnitCents").and_then(Value::as_u64)
+            .ok_or("W25_INVALID_ITEMS")?;
+        let currency=obj.get("expectedCurrency").and_then(Value::as_str)
+            .ok_or("W25_INVALID_ITEMS")?;
+        if !valid_id(item_id,128)||!seen.insert(item_id)||
+           !(1..=1000).contains(&qty)||cents>1_000_000_000||
+           currency.len()!=3||!currency.bytes().all(|b|b.is_ascii_uppercase()){
+           return Err("W25_INVALID_ITEMS");
+        }
+        let stmt=prepared(db,RESERVE_CATALOG)?;
+        bind_i64(stmt.0,1,qty as i64)?;
+        bind_text(stmt.0,2,order.tenant_id)?;
+        bind_text(stmt.0,3,order.branch_id)?;
+        bind_text(stmt.0,4,item_id)?;
+        bind_i64(stmt.0,5,qty as i64)?;
+        bind_i64(stmt.0,6,cents as i64)?;
+        bind_text(stmt.0,7,currency)?;
+        if unsafe{sqlite3_step(stmt.0)}!=DONE||unsafe{sqlite3_changes(db)}!=1{
+            return Err("W25_CATALOG_PRICE_STOCK_OR_ITEM_UNAVAILABLE");
+        }
+    }
+    Ok(())
+}
+
 const SCOPE:&[u8]=b"SELECT 1 FROM scope_lock WHERE tenant_id=? AND branch_id=? AND device_id=? AND enabled=1 LIMIT 1\0";
 const EXISTS:&[u8]=b"SELECT 1 FROM orders WHERE id=? LIMIT 1\0";
 const INSERT_ORDER:&[u8]=b"INSERT INTO orders(id,branch_id,payload,status,created_at,updated_at) VALUES(?,?,?,'new',?,?)\0";
@@ -151,6 +200,21 @@ pub(crate) fn create_synthetic_order_atomic(
     db_file:&Path,
     order:TrustedOrder<'_>,
     injected_failure:FaultPoint
+)->Result<CreatedOrder,&'static str>{
+    create_order_inner(db_file,order,injected_failure,false)
+}
+pub(crate) fn create_synthetic_order_with_catalog_atomic(
+    db_file:&Path,
+    order:TrustedOrder<'_>,
+    injected_failure:FaultPoint
+)->Result<CreatedOrder,&'static str>{
+    create_order_inner(db_file,order,injected_failure,true)
+}
+fn create_order_inner(
+    db_file:&Path,
+    order:TrustedOrder<'_>,
+    injected_failure:FaultPoint,
+    enforce_catalog:bool
 )->Result<CreatedOrder,&'static str>{
     validate(&order)?;
     let path=path_for_synthetic_only(db_file)?;
@@ -179,6 +243,14 @@ pub(crate) fn create_synthetic_order_atomic(
             ROW=>return Err("W24_ORDER_ID_ALREADY_EXISTS"),
             DONE=>{},
             _=>return Err("W24_ORDER_LOOKUP_FAILED")
+        }
+    }
+    // Both catalog stock and order/event/outbox mutation share the SAME
+    // transaction, so validation and stock reservation cannot race.
+    if enforce_catalog {
+        reserve_synthetic_catalog(db.0,&order)?;
+        if matches!(injected_failure,FaultPoint::AfterCatalog) {
+            return Err("W24_SYNTHETIC_INJECTED_ROLLBACK");
         }
     }
     {
@@ -262,6 +334,63 @@ mod tests {
         changed.payload_json=r#"{"id":"order-fixture-w24"}"#;
         assert!(matches!(validate(&changed),Err("W24_INVALID_TRUSTED_PAYLOAD")));
     }
+    #[test]
+    fn w25_rejects_invalid_scoped_catalog_payload_without_database_mutation(){
+        let mut order=fixture();
+        order.payload_json=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":0,"expectedUnitCents":950,"expectedCurrency":"SAR"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        // The original W24 trusted caller path only checks payload shape;
+        // the W25 catalog writer performs stronger per-item validation.
+        assert!(validate(&order).is_ok());
+        assert!(matches!(create_synthetic_order_with_catalog_atomic(
+            Path::new("orders.sqlite"),order,FaultPoint::None
+        ),Err("W24_SYNTHETIC_DB_REQUIRED")));
+    }
+    #[test]
+    #[ignore="W25 requires a newly created synthetic Temp scoped catalog"]
+    fn w25_native_catalog_order_case(){
+        let path=std::env::var_os("FOON_W25_TEST_DB_PATH")
+            .expect("W25_TEMP_DB_REQUIRED");
+        let case=std::env::var("FOON_W25_TEST_CASE")
+            .expect("W25_TEST_CASE_REQUIRED");
+        let mut order=fixture();
+        const PRICE_CHANGED:&str=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":2,"expectedUnitCents":951,"expectedCurrency":"SAR"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        const BAD_QUANTITY:&str=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":0,"expectedUnitCents":950,"expectedCurrency":"SAR"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        const DUPLICATE:&str=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":2,"expectedUnitCents":950,"expectedCurrency":"SAR"},{"id":"item-A","quantity":1,"expectedUnitCents":950,"expectedCurrency":"SAR"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        const MIXED:&str=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":2,"expectedUnitCents":950,"expectedCurrency":"SAR"},{"id":"item-MISSING","quantity":1,"expectedUnitCents":500,"expectedCurrency":"SAR"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        const EXTRA:&str=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":2,"expectedUnitCents":950,"expectedCurrency":"SAR","printer":"untrusted"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        const WRONG_CURRENCY:&str=r#"{"id":"order-fixture-w24","branchId":"branch-fixture-w24","items":[{"id":"item-A","quantity":2,"expectedUnitCents":950,"expectedCurrency":"USD"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        if case=="price-changed"{order.payload_json=PRICE_CHANGED;}
+        if case=="bad-quantity"{order.payload_json=BAD_QUANTITY;}
+        if case=="duplicate-item"{order.payload_json=DUPLICATE;}
+        if case=="mixed-rollback"{order.payload_json=MIXED;}
+        if case=="extra-field"{order.payload_json=EXTRA;}
+        if case=="wrong-currency"{order.payload_json=WRONG_CURRENCY;}
+        if case=="wrong-tenant"{order.tenant_id="other-tenant";}
+        if case=="wrong-device"{order.device_id="other-device";}
+        let fault=if case=="after-catalog"{FaultPoint::AfterCatalog}else{FaultPoint::None};
+        let result=create_synthetic_order_with_catalog_atomic(Path::new(&path),order,fault);
+        match case.as_str(){
+            "success"=>{
+                let made=result.expect("W25_VALID_ORDER_MUST_PERSIST_ATOMICALLY");
+                assert_eq!(made.event_seq,1);
+                assert_eq!(made.outbox_seq,1);
+                assert_eq!(made.digest_hex.len(),64);
+                assert!(matches!(create_synthetic_order_with_catalog_atomic(
+                    Path::new(&path),fixture(),FaultPoint::None
+                ),Err("W24_ORDER_ID_ALREADY_EXISTS")));
+            },
+            "after-catalog"=>assert!(matches!(result,Err("W24_SYNTHETIC_INJECTED_ROLLBACK"))),
+            "price-changed"|"missing-item"|"disabled-item"|"insufficient-stock"|
+            "wrong-currency"|"mixed-rollback"=>
+                assert!(matches!(result,Err("W25_CATALOG_PRICE_STOCK_OR_ITEM_UNAVAILABLE"))),
+            "bad-quantity"|"duplicate-item"|"extra-field"=>
+                assert!(matches!(result,Err("W25_INVALID_ITEMS"))),
+            "wrong-tenant"|"wrong-device"=>
+                assert!(matches!(result,Err("W24_SCOPE_FORBIDDEN"))),
+            _=>panic!("W25_UNKNOWN_SYNTHETIC_CASE")
+        }
+    }
+
     #[test]
     #[ignore="W24 requires a newly created synthetic Temp SQLite fixture"]
     fn atomic_native_order_outbox_case(){
