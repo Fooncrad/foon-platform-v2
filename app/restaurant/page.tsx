@@ -4,7 +4,6 @@ import {resolveWorkspace} from "@/lib/tenant/workspace";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
-import {isEmployeeAccount} from "@/lib/auth/account-surface";
 import {database} from "@/lib/db/mysql";
 import {branchVersion} from "@/lib/restaurant/branch-version";
 import MerchantDashboard,{type MerchantData} from "./merchant-dashboard";
@@ -13,7 +12,6 @@ import "./merchant-operations.css";
 
 export default async function RestaurantPage({searchParams}:{searchParams:Promise<{tenant?:string}>}){
  const userId=await currentUserId();if(!userId)redirect("/login");
- const personalMediaAllowed=!await isEmployeeAccount(userId);
  const {tenant}=await searchParams;
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
  const tenantId=workspace.tenant_id,canManage=workspace.adminAccess?!workspace.supportReadOnly:["owner","manager"].includes(workspace.role);
@@ -50,7 +48,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  const subscription=subscriptions[0];
  const now=new Date();
  const data:MerchantData={
-  tenantId,emailVerified:Boolean(identity[0]?.email_verified_at),activityCode,currency:String(activityRows[0]?.currency??"SAR"),activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,supportReadOnly:workspace.supportReadOnly,personalMediaAllowed,
+  tenantId,emailVerified:Boolean(identity[0]?.email_verified_at),activityCode,currency:String(activityRows[0]?.currency??"SAR"),activityModules,name:workspace.name,slug:String(tenants[0].slug),role:workspace.role,adminAccess:workspace.adminAccess,supportReadOnly:workspace.supportReadOnly,
   staffPermissions,tenantChoices:choices.map(t=>({id:String(t.id),name:String(t.name)})),
   date:new Intl.DateTimeFormat("ar-SA",{dateStyle:"full",timeZone:"Asia/Riyadh"}).format(new Date()),
   reportDay:new Date(now.getTime()+3*3600000).toISOString().slice(0,10),
