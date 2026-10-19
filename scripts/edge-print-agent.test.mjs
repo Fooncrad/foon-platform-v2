@@ -72,3 +72,21 @@ test("a printed job is never reported as a printer failure when cloud acknowledg
  let prints=0;const reports=[];const result=await runPrintAgentCycle({claim:async()=>({job:{id:"job",leaseToken:"lease",leaseExpiresAt:new Date(Date.now()+60000).toISOString(),payload:{triggerEvent:"on_paid"}}}),print:async()=>{prints++;},report:async(id,body)=>{reports.push(body.outcome);throw Error("PRINT_LEASE_EXPIRED");}});
  assert.equal(result.printed,true);assert.equal(result.acknowledged,false);assert.equal(prints,1);assert.deepEqual(reports,["printed"]);
 });
+
+
+test("ESC/POS tickets honor paper width and retain long product descriptions",()=>{
+ const itemName="FRESH_BEVERAGE_".repeat(6);
+ const payload={orderNumber:57,channel:"delivery",triggerEvent:"on_paid",items:[{name:itemName,quantity:1}],total:25,currency:"SAR"};
+ for(const width of [58,80]){
+  const output=renderEscPos({payload,printer:{address:"192.168.1.50",paperWidth:width,copies:1}}).toString("utf8");
+  const columns=width===58?32:48;
+  assert.match(output,new RegExp("-{"+columns+"}\\n"),"separator should match thermal paper width");
+  const lines=output.split("\n").filter(line=>!line.includes("\x1b")&&!line.includes("\x1d"));
+  assert(lines.every(line=>Array.from(line).length<=columns),"printed text should stay inside paper columns");
+  const start=lines.findIndex(line=>line.startsWith("1 x "));
+  assert(start>=0,"first product line should exist");
+  let joined=lines[start],cursor=start+1;
+  while(joined.length<("1 x "+itemName).length&&cursor<lines.length)joined+=lines[cursor++];
+  assert.equal(joined,"1 x "+itemName);
+ }
+});

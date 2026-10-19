@@ -3,31 +3,33 @@ import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {setTimeout as delay} from "node:timers/promises";
 import {isPrivatePrinterAddress} from "../lib/platform/edge-print-jobs.mjs";
+import {wrappedReceiptLines,receiptColumns} from "../lib/restaurant/receipt-paper.mjs";
 
 const apiUrl=process.env.FOON_EDGE_PRINT_API_URL||"";
 const token=process.env.FOON_EDGE_CLOUD_DEVICE_TOKEN||"";
 
 function text(value){return String(value??"").replace(/[\u0000-\u001f\u007f]/g,"").trim();}
-function line(value){return Buffer.from(text(value)+"\n","utf8");}
+
 export function renderEscPos(job){
  const payload=job?.payload,printer=job?.printer;
  if(!payload||!printer||!Array.isArray(payload.items)||!isPrivatePrinterAddress(printer.address))throw Error("INVALID_PRINT_JOB");
+ const write=value=>Buffer.from(wrappedReceiptLines(value,printer.paperWidth).join("\n")+"\n","utf8");
  const parts=[Buffer.from([0x1b,0x40]),Buffer.from([0x1b,0x61,0x01])];
- if(printer.headerText)parts.push(line(printer.headerText));
- parts.push(line("#"+text(payload.orderNumber)),line(String(payload.channel||"order").toUpperCase()),Buffer.from([0x1b,0x61,0x00]),line("--------------------------------"));
+ if(printer.headerText)parts.push(write(printer.headerText));
+ parts.push(write("#"+text(payload.orderNumber)),write(String(payload.channel||"order").toUpperCase()),Buffer.from([0x1b,0x61,0x00]),write("-".repeat(receiptColumns(printer.paperWidth))));
  for(const item of payload.items){
   const quantity=Math.max(1,Math.min(999,Number(item.quantity)||1));
   const itemCopies=payload.triggerEvent==="on_paid"?1:Math.max(1,Math.min(10,Number(item.copies)||1));
   for(let copy=0;copy<itemCopies;copy++){
-   parts.push(line(`${quantity} x ${item.name}`));
-   if(item.options)for(const option of (Array.isArray(item.options)?item.options:[]))parts.push(line("  - "+(typeof option==="string"?option:option?.name)));
-   if(Number.isFinite(Number(item.lineTotal)))parts.push(line("  "+Number(item.lineTotal).toFixed(2)+(payload.currency?" "+payload.currency:"")));
+   parts.push(write(`${quantity} x ${item.name}`));
+   if(item.options)for(const option of (Array.isArray(item.options)?item.options:[]))parts.push(write("  - "+(typeof option==="string"?option:option?.name)));
+   if(Number.isFinite(Number(item.lineTotal)))parts.push(write("  "+Number(item.lineTotal).toFixed(2)+(payload.currency?" "+payload.currency:"")));
   }
  }
- if(payload.notes){for(const [key,value] of Object.entries(payload.notes))if(value)parts.push(line(key+": "+value));}
- if(payload.customer){if(payload.customer.name)parts.push(line("Customer: "+payload.customer.name));if(payload.customer.phone)parts.push(line("Phone: "+payload.customer.phone));}
- if(Number.isFinite(Number(payload.total)))parts.push(line("TOTAL: "+Number(payload.total).toFixed(2)+(payload.currency?" "+payload.currency:"")));
- if(printer.footerText)parts.push(line(printer.footerText));
+ if(payload.notes){for(const [key,value] of Object.entries(payload.notes))if(value)parts.push(write(key+": "+value));}
+ if(payload.customer){if(payload.customer.name)parts.push(write("Customer: "+payload.customer.name));if(payload.customer.phone)parts.push(write("Phone: "+payload.customer.phone));}
+ if(Number.isFinite(Number(payload.total)))parts.push(write("TOTAL: "+Number(payload.total).toFixed(2)+(payload.currency?" "+payload.currency:"")));
+ if(printer.footerText)parts.push(write(printer.footerText));
  parts.push(Buffer.from([0x0a,0x0a,0x0a]));
  if(printer.cutPaper)parts.push(Buffer.from([0x1d,0x56,0x00]));
  const one=Buffer.concat(parts),copies=payload.triggerEvent==="on_paid"?Math.max(1,Math.min(10,Number(printer.copies)||1)):1;
