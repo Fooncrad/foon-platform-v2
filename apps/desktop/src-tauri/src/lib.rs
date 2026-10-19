@@ -6,6 +6,8 @@ mod windows_secret_store;
 mod native_cloud_receipt;
 #[cfg(windows)]
 mod protected_receipt_path;
+#[cfg(windows)]
+mod native_event_digest;
 use tauri::Manager;
 use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
