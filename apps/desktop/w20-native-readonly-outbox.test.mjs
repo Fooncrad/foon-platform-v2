@@ -50,7 +50,7 @@ test("W20 fixture is synthetic, created only inside system temp with 3 pending a
   assert.match(fixture,/index===3\?"2026-10-19T00:01:00.000Z":null/);
   assert.match(fixture,/W20_FIXTURE_CHANGED_OR_INVALID/);
   assert.match(fixture,/W20_FIXTURE_DELETE_REFUSED/);
-  assert.doesNotMatch(fixture,/W05|W06|foon_v2_test|foon_edge_test|mysql2/);
+  assert.doesNotMatch(fixture,/FOON_LAN_DB|EDGE_TEST_DATABASE_URL|foon_edge_test|mysql2/);
 });
 
 test("W20 report contains digest but excludes order, payload, device and receipt secrets",()=>{
