@@ -42,3 +42,22 @@ Neither command installs the NSIS package, modifies saved SQLite, authorizes a p
 ## Future product migration
 
 Port production-class order validation, local SQLite WAL/outbox writes, signed ACK and printer queue into a protected native Rust service with independent device enrollment, rotation/revocation and tenant scoping. Replace the old bundled Node runtime in the full product, validate migration/rollback on cloned fixtures, and repeat W11 plus a real extracted-installer audit before customer release.
+
+## W23 post-build independent extraction audit
+
+The user's Windows machine successfully built the 2.00 MiB independent probe. 12/12 Node and 19/19 selected Rust tests passed. As 7z.exe was absent, NSIS content extraction was not verified.
+
+Known built installer SHA256: 2571034EFE767E1F16FD9EA1E70977CF30D8FCFC38A94E23B5586526640E2F19.
+
+Install 7-Zip separately if unavailable, for example with winget install --id 7zip.7zip -e.
+
+After pulling the current W23 branch, run:
+
+~~~powershell
+node --test .\apps\desktop\w23-extracted-file-policy.test.mjs
+& '.\apps\desktop\run-w23-extracted-installer-audit.ps1' -ExpectedSHA256 '2571034EFE767E1F16FD9EA1E70977CF30D8FCFC38A94E23B5586526640E2F19'
+~~~
+
+The verifier checks the exact known SHA256, then recursively extracts the existing NSIS and nested archives into a new temporary folder and rejects exposed Node backend modules, script files, secrets and databases. It never rebuilds or installs the program, and cleanup is limited to that randomly created temp directory.
+
+This is a test-only package inventory, NOT certification, POS completion, security of compiled code, or authority to release the legacy installer. W11 commercial gate stays blocked. No saved W05/W06 SQLite, W08/W10 MariaDB, cloud or printer access.
