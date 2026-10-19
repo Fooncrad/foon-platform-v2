@@ -22,7 +22,7 @@ export function activityWorkspaceUrl(activity:string,tenantId?:string):string{
 }
 export function activitySectionUrl(activity:string,section:string):string{
  const path=activityWorkspacePath(activity);
- return section==="overview"?path:section==="menu"&&["carwash","automotive","laundry","salon","publicworks"].includes(activity)?path+"/services":path+"/"+encodeURIComponent(section);
+ return section==="overview"?path:section==="menu"&&activity==="restaurant"?path+"?section=menu":section==="menu"&&["carwash","automotive","laundry","salon","publicworks"].includes(activity)?path+"/services":path+"/"+encodeURIComponent(section);
 }
 export function activityPaymentsUrl(activity:string,tenantId?:string):string{
  const path=activityWorkspacePath(activity)+"/payments";
