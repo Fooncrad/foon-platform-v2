@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 
+function sessionCookie(response){
+ const value=response.headers.get("set-cookie")||"";
+ const match=value.match(/(?:^|,\s*)foon_session=[^;,\s]+/);
+ assert.ok(match,"authentication must issue the foon_session cookie");
+ return match[0].trim();
+}
+
 test("production registration routes activate owners and isolate store customers",async()=>{
  const url=new URL(process.env.DATABASE_URL||"");
  assert.equal(url.hostname,"127.0.0.1");assert.equal(url.pathname,"/foon_migration_test");
@@ -34,7 +41,7 @@ test("production registration routes activate owners and isolate store customers
   const ownerVerifiedBefore=await db.execute("SELECT email_verified_at FROM users WHERE id=?",[result.user.id]);
   assert.equal(ownerVerifiedBefore[0][0].email_verified_at,null);
   assert.equal((await post("/api/auth/verify-email",{token:verificationToken},"https://foreign.example")).status,403);
-  const ownerCookieForVerification=created.headers.get("set-cookie").split(";")[0];
+  const ownerCookieForVerification=sessionCookie(created);
   const resend=await fetch(origin+"/api/auth/resend-verification",{method:"POST",headers:{origin,cookie:ownerCookieForVerification,"content-type":"application/json"},body:"{}"});
   assert.equal(resend.status,200);
   assert.equal((await resend.json()).queued,false,"a recent link may not be resent immediately");
@@ -58,7 +65,7 @@ test("production registration routes activate owners and isolate store customers
   assert.equal((await post("/api/auth/register",{...owner,email:"slug-collision@test.example"})).status,409);
   const [[rollback]]=await db.query("SELECT COUNT(*) AS n FROM users WHERE email='slug-collision@test.example'");assert.equal(Number(rollback.n),0);
   // Existing accounts create the selected activity directly, without admin provisioning.
-  const ownerCookie=created.headers.get("set-cookie").split(";")[0];
+  const ownerCookie=sessionCookie(created);
   const onboard=(body,cookie=ownerCookie,source=origin)=>fetch(origin+"/api/restaurant/onboard",{method:"POST",headers:{origin:source,"content-type":"application/json",cookie},body:JSON.stringify(body)});
   const input={name:"Additional business",slug:"additional-business",activity:"clothing",countryCode:"AE",currency:"AED",region:"دبي",taxNumber:"123456789"};
   assert.equal((await onboard(input,"")).status,401);
