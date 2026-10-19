@@ -1,6 +1,7 @@
 import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
 import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
@@ -10,7 +11,7 @@ import MerchantDashboard,{type MerchantData} from "./merchant-dashboard";
 import "./merchant-dashboard.css";
 import "./merchant-operations.css";
 
-export default async function RestaurantPage({searchParams}:{searchParams:Promise<{tenant?:string}>}){
+export default async function RestaurantPage({searchParams,expectedActivity}:{searchParams:Promise<{tenant?:string}>;expectedActivity?:string}){
  const userId=await currentUserId();if(!userId)redirect("/login");
  const {tenant}=await searchParams;
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
@@ -25,6 +26,7 @@ export default async function RestaurantPage({searchParams}:{searchParams:Promis
  // their own module presets; RBAC and subscription checks remain unchanged.
  const activityCode=isActivityType(storedActivityCode)?storedActivityCode:activityRows[0]?.kind==="restaurant"?"restaurant":null;
  if(!activityCode)redirect("/business?tenant="+encodeURIComponent(tenantId));
+ if(activityCode!==(expectedActivity??"restaurant"))redirect(activityWorkspaceUrl(activityCode));
  const activityModules=[...defaultActivityModules(activityCode)];
  const [[branches],[subscriptions],[features],[tenants],[choices],[identity]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
