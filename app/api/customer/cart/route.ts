@@ -8,6 +8,7 @@ import {activityPosOptions} from "@/lib/restaurant/activity-pos";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
+import {tenantPublicControls,publicControlAllowed} from "@/lib/tenant/public-controls";
 export const runtime="nodejs";
 export async function GET(request:Request){
  const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
@@ -18,6 +19,7 @@ export async function GET(request:Request){
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id,t.kind,b.activity_code FROM tenants t LEFT JOIN tenant_business_profiles b ON b.tenant_id=t.id WHERE t.slug=? AND t.status='active' LIMIT 1",[slug]);
   const store=stores[0];if(!store)return NextResponse.json({ok:false,code:"ITEM_UNAVAILABLE"},{status:404});
   if(!customerCartAvailable(String(store.activity_code??""),String(store.kind)))return NextResponse.json({ok:false,code:"CART_NOT_AVAILABLE"},{status:403});
+  if(!publicControlAllowed(await tenantPublicControls(String(store.id),db),"cart"))return NextResponse.json({ok:false,code:"PUBLIC_FEATURE_DISABLED"},{status:403});
   if(!(await tenantEntitlement(String(store.id),"orders",db)).enabled)return NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403});
   const [rows]=await db.execute<RowDataPacket[]>("SELECT p.id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.branch_id,p.stock_quantity,p.product_type,p.attributes,c.branch_id AS category_branch FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.id=? AND p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE LIMIT 1",[id,store.id]);
   const p=rows[0];if(!p||p.product_type!=="service"&&p.stock_quantity!==null&&Number(p.stock_quantity)<=0)return NextResponse.json({ok:false,code:"ITEM_UNAVAILABLE"},{status:404});

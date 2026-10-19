@@ -13,6 +13,8 @@ import ActivityStorefront from "./activity-storefront";
 import {isTemplateForActivity} from "@/lib/platform/activity-templates";
 import {currentUserId} from "@/lib/auth/session";
 import {publicMenuData} from "@/lib/restaurant/public-menu";
+import {tenantPublicControls} from "@/lib/tenant/public-controls";
+import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
 
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 
@@ -25,7 +27,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
   const tenant=rows[0];
   if(!tenant||tenant.status!=="active")return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
   const name=String(tenant.name);
-  const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
+  const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code,country_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
   const activity=String(profiles[0]?.activity_code??"");
   const description=activity==="restaurant"||!activity&&tenant.kind==="restaurant"?"اكتشف مطعم ":"اكتشف نشاط ";
   return {title:name+" | FOON",description:description+name+" على منصة FOON.",alternates:{canonical:"/"+encodeURIComponent(slug)}};
@@ -41,7 +43,7 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
  );
  const tenant=rows[0];
  if(!tenant||tenant.status!=="active")notFound();
- const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
+ const [profiles]=await database().execute<RowDataPacket[]>("SELECT activity_code,country_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[String(tenant.id)]);
  const activity=String(profiles[0]?.activity_code??"");
  if(activity==="restaurant"||!activity&&String(tenant.kind)==="restaurant")return <PublicMenu {...await publicMenuData({id:String(tenant.id),name:String(tenant.name)},slug)}/>;
  const query=await searchParams;
@@ -92,18 +94,23 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
    if(membership.length)selected=previewTemplate;
   }
  }
- const checkoutEnabled=customerCartAvailable(activity)&&(await tenantEntitlement(String(tenant.id),"orders")).enabled;
+ const publicControls=await tenantPublicControls(String(tenant.id));
+ const merchantCountry=String(profiles[0]?.country_code??"SA").toUpperCase();
+ const deliveryCountries=await allowedDeliveryCountries(String(tenant.id),merchantCountry,activity);
+ const checkoutEnabled=publicControls.sales&&publicControls.cart&&publicControls.catalog&&customerCartAvailable(activity)&&(await tenantEntitlement(String(tenant.id),"orders")).enabled;
  const serviceActivities=["carwash","laundry","automotive","salon","publicworks"];
  const serviceCatalogEnabled=serviceActivities.includes(activity)&&(await tenantEntitlement(String(tenant.id),"catalog")).enabled;
  const appointmentEnabled=serviceCatalogEnabled&&["carwash","automotive","salon"].includes(activity)&&(await tenantEntitlement(String(tenant.id),"appointments")).enabled;
- const requestMode=serviceCatalogEnabled?(activity==="publicworks"?"quote":appointmentEnabled?"appointment":"inquiry"):null;
+ const requestMode=serviceCatalogEnabled&&publicControls.serviceRequests&&publicControls.catalog?(activity==="publicworks"?"quote":appointmentEnabled?"appointment":"inquiry"):null;
  const cartUser=(checkoutEnabled||serviceCatalogEnabled)?await currentUserId():null;
  const [cartLinks]=cartUser?await database().execute<RowDataPacket[]>("SELECT 1 FROM tenant_customers WHERE tenant_id=? AND user_id=? LIMIT 1",[String(tenant.id),cartUser]):[[]];
  const [contactRows]=cartUser?await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[cartUser]):[[]];
+ const [addressRows]=cartUser?await database().execute<RowDataPacket[]>("SELECT country_code,city,district,street_address,latitude,longitude,phone FROM customer_delivery_addresses WHERE user_id=? ORDER BY is_default DESC,updated_at DESC LIMIT 1",[cartUser]):[[]];
+ const customerAddress=addressRows[0];
  const [lastDelivery]=cartUser?await database().execute<RowDataPacket[]>("SELECT order_notes FROM restaurant_orders WHERE customer_user_id=? AND channel='delivery' AND order_notes LIKE 'Delivery address: %' ORDER BY created_at DESC LIMIT 1",[cartUser]):[[]];
  const savedAddress=String(lastDelivery[0]?.order_notes??"").replace(/^Delivery address: /,"");
  const [brandingRows]=await database().execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND status='active' AND archived=FALSE LIMIT 1",[String(tenant.id)]);
- return <ActivityStorefront branding={brandingRows.length?parseData(brandingRows[0].data):{}} checkoutEnabled={checkoutEnabled} requestMode={requestMode as "appointment"|"quote"|"inquiry"|null} customerPhone={String(contactRows[0]?.phone??"")} deliveryAddress={savedAddress} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??""),description:language==="en"?String(c.description_en??""):language==="fr"?String(c.description_fr??""):String(c.description_ar??""),imageUrl:c.image_url?String(c.image_url):null}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),description:language==="en"?String(p.description_en??""):language==="fr"?String(p.description_fr??""):String(p.description_ar??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),productType:String(p.product_type),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ return <ActivityStorefront merchantCountry={merchantCountry} deliveryCountries={deliveryCountries} controls={publicControls} branding={brandingRows.length?parseData(brandingRows[0].data):{}} checkoutEnabled={checkoutEnabled} requestMode={requestMode as "appointment"|"quote"|"inquiry"|null} customerPhone={String(contactRows[0]?.phone??customerAddress?.phone??"")} deliveryAddress={customerAddress?String([customerAddress.city,customerAddress.district,customerAddress.street_address].filter(Boolean).join("، ")):savedAddress} deliveryCity={String(customerAddress?.city??"")} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??""),description:language==="en"?String(c.description_en??""):language==="fr"?String(c.description_fr??""):String(c.description_ar??""),imageUrl:c.image_url?String(c.image_url):null}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),description:language==="en"?String(p.description_en??""):language==="fr"?String(p.description_fr??""):String(p.description_ar??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),productType:String(p.product_type),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
 
 }
 

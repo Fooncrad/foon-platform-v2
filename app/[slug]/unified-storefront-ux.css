@@ -424,3 +424,267 @@
   inset: auto !important;
   margin: 0 !important;
 }
+
+
+/* Product hierarchy: readable name and price, square image, no compressed laptop cards. */
+.publicMenu .publicMenuItem,
+.foonActivityStorefront .foonActivityProduct {
+ min-width:0;
+ height:100%;
+ overflow:hidden;
+}
+.publicMenu .publicMenuItemBody h2,
+.foonActivityStorefront .foonActivityProductInfo h3 {
+ font-weight:800 !important;
+ font-size:clamp(14px,1.15vw,17px) !important;
+ line-height:1.45 !important;
+ overflow-wrap:anywhere;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage,
+.foonActivityStorefront .foonActivityProductMedia {
+ display:grid;
+ place-items:center;
+ aspect-ratio:1/1 !important;
+ width:100%;
+ height:auto !important;
+ padding:0 !important;
+ border:0;
+ overflow:hidden;
+ cursor:pointer;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage img,
+.foonActivityStorefront .foonActivityProductMedia img {width:100%;height:100%;object-fit:cover !important;object-position:center;}
+.publicMenu .publicMenuItemFooter,
+.foonActivityStorefront .foonActivityProductPurchase {
+ margin-top:auto !important;
+ gap:8px !important;
+ align-items:center !important;
+}
+.publicMenu .publicMenuItem .publicMenuProductPrice,
+.foonActivityStorefront .foonActivityProductPurchase strong {
+ min-width:0;
+ font-variant-numeric:tabular-nums;
+ font-size:clamp(13px,1.2vw,18px) !important;
+}
+.publicMenu .publicMenuItemBody .publicMenuItemSummary,
+.foonActivityStorefront:not([data-layout="services"]) .foonActivityProductInfo > p {display:none !important;}
+@media(min-width:951px) and (max-width:1199px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+}
+@media(min-width:1200px) and (max-width:1499px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media(min-width:1500px) and (max-width:1899px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
+}
+@media(min-width:1900px) and (max-width:2299px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(5,minmax(0,1fr)) !important;}
+}
+@media(min-width:2300px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(6,minmax(0,1fr)) !important;}
+}
+/* Product details stay available on photo tap/click, without cluttering cards. */
+.foonActivityStorefront .foonActivityPhotoButton {font:inherit;color:inherit;background:transparent;border:none;border-radius:0;cursor:pointer;}
+.foonActivityStorefront .foonActivityPhotoButton:focus-visible {outline:3px solid var(--activity-accent);outline-offset:-3px;}
+.foonActivityProductDialog {width:min(96vw,640px);max-height:90dvh;overflow:auto;padding:0;border:1px solid var(--activity-border);border-radius:22px;background:var(--activity-panel);color:var(--activity-ink);box-shadow:0 25px 85px #0005;}
+.foonActivityProductDialog::backdrop {background:#0009;backdrop-filter:blur(3px);}
+.foonActivityProductDialogInner {display:grid;gap:16px;position:relative;max-width:100%;padding:clamp(14px,3vw,24px);}
+.foonActivityProductDialogInner h2{font-size:clamp(20px,3vw,28px);line-height:1.4;margin:0;}
+.foonActivityProductDialogInner p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:0;}
+.foonActivityDialogClose{position:sticky;top:0;justify-self:end;z-index:2;background:var(--activity-panel);color:inherit;border:1px solid var(--activity-border);border-radius:50%;width:42px;height:42px;font-size:22px;cursor:pointer;}
+.foonActivityDialogImage{display:block;width:100%;height:auto;max-height:65vh;aspect-ratio:1/1;object-fit:contain;border-radius:16px;background:var(--activity-bg);}
+.foonActivityDialogPurchase{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;font-weight:800;}
+.foonActivityDialogPurchase .foonCartAdd{width:auto !important;min-width:48px;max-width:none !important;flex:0 0 auto;margin:0;}
+.foonActivityDialogPurchase .foonCartAddLabel{position:static !important;width:auto !important;height:auto !important;clip-path:none !important;overflow:visible !important;margin:0 !important;white-space:normal !important;}
+
+
+/* Full product photographs inside details: no enforced square crop. */
+.publicMenu .publicMenuProductDialog {
+ width:min(94vw,820px);
+ max-width:94vw;
+}
+.publicMenu .publicMenuProductPhoto {
+ height:min(65dvh,630px);
+ min-height:250px;
+ background:var(--public-bg);
+}
+.publicMenu .publicMenuProductPhoto img {
+ object-fit:contain !important;
+ object-position:center !important;
+}
+.publicMenu .publicMenuProductGallery nav img {object-fit:cover !important;}
+.foonActivityStorefront .foonActivityProductDialog {width:min(94vw,820px);}
+.foonActivityStorefront .foonActivityDialogImage {
+ aspect-ratio:auto !important;
+ max-height:70dvh;
+ width:100%;
+ height:auto;
+ object-fit:contain !important;
+}
+/* Square logo stays inside the original header height and does not replace the name. */
+.publicMenu .foonStorefrontBrandIcon,
+.foonActivityStorefront .foonStorefrontBrandIcon {
+ display:block;
+ width:36px;
+ height:36px;
+ min-width:36px;
+ max-width:36px;
+ min-height:36px;
+ max-height:36px;
+ flex:0 0 36px;
+ object-fit:cover;
+ border-radius:9px;
+}
+.foonActivityStorefront .foonActivityStoreName {
+ display:flex;
+ align-items:center;
+ gap:9px;
+}
+.foonActivityStorefront .foonActivityStoreName span {
+ overflow:hidden;
+ white-space:nowrap;
+ text-overflow:ellipsis;
+ min-width:0;
+}
+@media(max-width:576px) {
+ .publicMenu .foonStorefrontBrandIcon,
+ .foonActivityStorefront .foonStorefrontBrandIcon {
+  width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;flex-basis:30px;
+ }
+ .publicMenu .publicMenuProductPhoto{height:min(55dvh,470px);}
+}
+
+/* Merchant-controlled visibility is shared by restaurant and activity storefronts. */
+.publicMenu[data-public-catalog="off"] .publicMenuCatalog,
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityCatalog,
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityCount,
+.publicMenu[data-public-catalog="off"] .publicMenuMobileDock a[href="#menu-items"],
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityMobileDock a[href="#activity-products"],
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityMobileDock a[href="#activity-categories"] {
+  display:none !important;
+}
+.publicMenu[data-public-search="off"] .publicMenuSearch,
+.foonActivityStorefront[data-public-search="off"] .foonActivitySearch {
+  display:none !important;
+}
+.publicMenu[data-public-categories="off"] .publicMenuCategoryRail,
+.publicMenu[data-public-categories="off"] .publicMenuQuickNav,
+.publicMenu[data-public-categories="off"] .publicMenuMobileDock > button:first-of-type,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCategoryRail,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityMobileDock a[href="#activity-categories"] {
+  display:none !important;
+}
+.publicMenu[data-public-categories="off"] .publicMenuCatalog,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog {
+  grid-template-columns: minmax(0,1fr) !important;
+}
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog:has(.foonActivityCartRail){
+  grid-template-columns: minmax(0,1fr) minmax(250px,288px) !important;
+}
+@media(max-width:1199px){
+ .foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog:has(.foonActivityCartRail){
+  grid-template-columns:minmax(0,1fr) !important;
+ }
+}
+.publicMenu[data-public-contact="off"] .publicMenuBusinessDetails {display:none !important;}
+
+
+/* The QR belongs to the opening-hours/location control below the banner, not the header. */
+.foonActivityStorefront .foonActivityBusinessDetails {position:relative;display:inline-flex;align-items:center;flex:0 0 auto;}
+.foonActivityStorefront .foonActivityBusinessDetails > summary {
+ list-style:none;display:grid;place-items:center;cursor:pointer;
+ width:44px;height:44px;min-width:44px;border-radius:12px;
+ border:1px solid var(--activity-border);background:var(--activity-panel);color:var(--activity-ink);
+ font-size:24px;
+}
+.foonActivityStorefront .foonActivityBusinessDetails > summary::-webkit-details-marker {display:none;}
+.foonActivityStorefront .foonActivityBusinessPanel {
+ position:absolute;z-index:25;top:calc(100% + 8px);inset-inline-start:0;
+ width:min(310px,calc(100vw - 28px));padding:16px;display:grid;gap:12px;
+ border:1px solid var(--activity-border);border-radius:16px;
+ background:var(--activity-panel);color:var(--activity-ink);box-shadow:0 16px 36px #0002;
+}
+.foonActivityStorefront .foonActivityBusinessPanel h3,
+.foonActivityStorefront .foonActivityBusinessPanel p{margin:0;line-height:1.55;overflow-wrap:anywhere;}
+.foonActivityStorefront .foonActivityBusinessPanel button,
+.publicMenu .publicMenuBusinessPanel button {
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:42px;padding:9px 16px;border-radius:12px;border:1px solid currentColor;
+ font:inherit;cursor:pointer;
+}
+.foonActivityStorefront .foonActivityHeaderActions {justify-content:flex-end;}
+.foonActivityStorefront .foonActivityHeaderBrand {flex:1 1 100%;}
+.foonActivityStorefront .foonActivityHeaderNav {display:none;}
+@media (max-width:700px) {
+ .foonActivityStorefront .foonActivityBusinessPanel {inset-inline-start:auto;inset-inline-end:0;}
+}
+
+
+/* Keep business-hours/QR disclosures inside the mobile viewport.
+   The old absolute popover could extend past the right edge in LTR mode. */
+.publicMenu .publicMenuBusinessDetails,
+.foonActivityStorefront .foonActivityBusinessDetails {position:relative;min-width:0;}
+.publicMenu .publicMenuBusinessPanel,
+.foonActivityStorefront .foonActivityBusinessPanel {
+ box-sizing:border-box;
+ max-width:min(360px,calc(100vw - 24px));
+ overflow-wrap:anywhere;
+}
+@media(max-width:700px){
+ .publicMenu .publicMenuBusinessDetails[open] .publicMenuBusinessPanel,
+ .foonActivityStorefront .foonActivityBusinessDetails[open] .foonActivityBusinessPanel {
+  position:fixed !important;
+  top:clamp(84px,16vh,136px) !important;
+  inset-inline:12px !important;
+  inset-block-end:auto !important;
+  left:12px !important;
+  right:12px !important;
+  width:auto !important;
+  max-width:none !important;
+  max-height:min(66dvh,540px) !important;
+  overflow-y:auto;
+  overflow-x:hidden;
+  z-index:100 !important;
+  box-sizing:border-box;
+ }
+ .foonActivityStorefront .foonActivityHeaderNav {display:none !important;}
+ .foonActivityStorefront .foonActivityHeaderActions {flex-wrap:nowrap !important;}
+}
+
+
+/* Shared business-details QR and quick-access polish. */
+.foonActivityStorefront .foonActivityBusinessDetails > summary,
+.publicMenu .publicMenuBusinessDetails > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.foonActivityStorefront .foonStorefrontQrAction,
+.publicMenu .foonStorefrontQrAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--activity-border, var(--public-line));
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.foonActivityStorefront .foonStorefrontQrAction:focus-visible,
+.publicMenu .foonStorefrontQrAction:focus-visible {
+  outline: 3px solid var(--activity-accent, #c59a43);
+  outline-offset: 2px;
+}

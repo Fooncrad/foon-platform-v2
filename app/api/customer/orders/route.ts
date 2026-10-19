@@ -10,6 +10,8 @@ import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {createOrder} from "@/lib/restaurant/operations";
 import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {customerCartAvailable,deliveryCountryMatches} from "@/lib/platform/customer-checkout";
+import {tenantPublicControls,channelControl,publicControlAllowed} from "@/lib/tenant/public-controls";
+import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
 export const runtime="nodejs";
 async function queueDeliveryDriverAlerts(db:PoolConnection,tenantId:string){
  await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[tenantId]);
@@ -39,6 +41,11 @@ export async function POST(request:Request){
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id,t.kind,b.activity_code,b.country_code,u.display_name FROM tenants t LEFT JOIN tenant_business_profiles b ON b.tenant_id=t.id JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
   if(!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");const tenantId=String(stores[0].id);tenantIdForAlert=tenantId;
   if(!customerCartAvailable(String(stores[0].activity_code??""),String(stores[0].kind)))throw new ResourceError("CART_NOT_AVAILABLE");
+  const publicControls=await tenantPublicControls(tenantId,db);
+  if(!publicControlAllowed(publicControls,"cart"))throw new ResourceError("PUBLIC_FEATURE_DISABLED");
+  const requestedControl=channelControl[String(body.channel??"")];
+  if(requestedControl&&!publicControlAllowed(publicControls,requestedControl))throw new ResourceError("PUBLIC_FEATURE_DISABLED");
+  if(body.reservationId&&!publicControls.reservations)throw new ResourceError("PUBLIC_FEATURE_DISABLED");
   if(!(await tenantEntitlement(tenantId,"orders",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.couponCode&&!(await tenantEntitlement(tenantId,"coupons",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   if(body.channel==="dine_in"&&!(await tenantEntitlement(tenantId,"tables",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
@@ -47,10 +54,10 @@ export async function POST(request:Request){
   const customerPhone=typeof body.customerPhone==="string"&&body.customerPhone.trim()?body.customerPhone.trim():String(profiles[0]?.phone||"");
   const catalogDelivery=body.channel==="delivery"&&String(stores[0].activity_code??"")!=="restaurant"&&Boolean(stores[0].activity_code);
   if(catalogDelivery&&(typeof body.deliveryAddress!=="string"||body.deliveryAddress.trim().length<5||body.deliveryAddress.length>900||!/^\+?[\d ()-]{7,40}$/.test(customerPhone)||customerPhone.replace(/\D/g,"").length<7))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
-  if(body.channel==="delivery"&&!deliveryCountryMatches(body.deliveryCountryCode,stores[0].country_code))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");
+  if(body.channel==="delivery"){const destination=String(body.deliveryCountryCode??"").trim().toUpperCase();const approved=await allowedDeliveryCountries(tenantId,String(stores[0].country_code??""),String(stores[0].activity_code??""),db);if(!approved.includes(destination))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");}
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
- }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
+ }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }

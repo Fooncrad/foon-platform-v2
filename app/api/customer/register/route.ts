@@ -10,6 +10,8 @@ import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { assertSameOrigin } from "@/lib/security/origin";
 import { registerCustomer } from "@/scripts/register-customer.mjs";
+import {tenantPublicControls} from "@/lib/tenant/public-controls";
+import type {RowDataPacket} from "mysql2/promise";
 
 export const runtime="nodejs";
 export async function POST(request:Request){
@@ -23,6 +25,9 @@ export async function POST(request:Request){
  const storeSlug=typeof body.storeSlug==="string"?body.storeSlug.trim().toLowerCase():"";
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||password.length<9||password.length>128||name.length>180||!/^[a-z0-9][a-z0-9-]{1,118}[a-z0-9]$/.test(storeSlug))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{
+  const [stores]=await database().execute<RowDataPacket[]>("SELECT id FROM tenants WHERE slug=? AND status='active' LIMIT 1",[storeSlug]);
+  if(!stores.length)return NextResponse.json({ok:false,code:"STORE_NOT_FOUND"},{status:404});
+  if(!(await tenantPublicControls(String(stores[0].id))).customerLogin)return NextResponse.json({ok:false,code:"PUBLIC_FEATURE_DISABLED"},{status:403});
   const hash=await hashPassword(password),id=randomUUID(),db=await database().getConnection();
   try{
    await db.beginTransaction();
