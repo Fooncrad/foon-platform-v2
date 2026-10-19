@@ -1,4 +1,6 @@
+#[cfg(not(feature = "native-probe"))]
 mod demo_orders;
+#[cfg(not(feature = "native-probe"))]
 mod edge_runtime;
 #[cfg(windows)]
 mod windows_secret_store;
@@ -134,6 +136,7 @@ fn station_status() -> StationStatus {
     }
 }
 
+#[cfg(not(feature = "native-probe"))]
 pub fn run() {
     let app = tauri::Builder::default()
         .manage(edge_runtime::DemoRuntime::default())
@@ -154,4 +157,15 @@ pub fn run() {
             app_handle.state::<edge_runtime::DemoRuntime>().shutdown();
         }
     });
+}
+
+
+// W23 source exposure probe: no legacy demo Node runtime, no WebView API
+// commands, and a distinct app identifier/config. Not a merchant POS.
+#[cfg(feature = "native-probe")]
+pub fn run() {
+    tauri::Builder::default()
+        .build(tauri::generate_context!())
+        .expect("Unable to build FOON native security probe")
+        .run(|_, _| {});
 }

@@ -1,0 +1,31 @@
+{
+  "productName": "FOON Native Security Probe",
+  "identifier": "com.foon.desktop.nativeprobe",
+  "build": {
+    "frontendDist": "../ui-native-probe"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "FOON Native Security Probe - Not POS",
+        "width": 860,
+        "height": 540,
+        "minWidth": 340,
+        "minHeight": 400,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; script-src 'none'; style-src 'self'; img-src 'self' data:; connect-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "resources": []
+  }
+}
