@@ -48,3 +48,7 @@
 @media(prefers-contrast:more){
  .customerDashboard :is(input,button,select,textarea):focus-visible{outline-width:3px;}
 }
+
+.restaurantApp .foonBulkImportSteps{display:grid;gap:8px;margin:0;padding-inline-start:24px;max-width:80ch;font-size:13px;line-height:1.65;}
+.restaurantApp .foonBulkImportSteps li{padding-inline-start:6px;color:var(--rc-text,#182230);}
+.restaurantApp .foonBulkImportSteps li::marker{font-weight:800;color:var(--rc-accent,#e76f3c);}
