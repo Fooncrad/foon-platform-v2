@@ -158,11 +158,11 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const localeSelect=publicPage.getByRole('combobox',{name:'Language / اللغة'}),menuRoot=publicPage.locator('.publicMenu');
  for(const language of ['ar','en','fr']){
   await localeSelect.selectOption(language);await expect(menuRoot).toHaveAttribute('lang',language);await expect(menuRoot).toHaveAttribute('dir',language==='ar'?'rtl':'ltr');
-  for(const width of [320,390,576,577,768,992,993,1024,1400,1401,1440]){
+  for(const width of [320,390,576,577,768,992,993,1024,1150,1151,1366,1440,1680,1919,1920]){
    await publicPage.setViewportSize({width,height:900});
    const layout=await publicPage.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,direction:getComputedStyle(document.querySelector('.publicMenu')).direction,titleDirection:getComputedStyle(document.querySelector('.publicMenuSectionTitle')).direction,columns:getComputedStyle(document.querySelector('.publicMenu .publicMenuLayout .publicMenuItems')).gridTemplateColumns.split(' ').length}));
    expect(layout.scrollWidth,`${language} ${width}px overflow`).toBeLessThanOrEqual(layout.width);expect(layout.direction).toBe(language==='ar'?'rtl':'ltr');expect(layout.titleDirection).toBe(layout.direction);
-   const expectedColumns=width<=576?2:width<=992?4:width<=1400?6:8;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
+   const expectedColumns=width<=576?2:width<=1150?4:width<1920?6:8;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
    if(language==='ar'&&width===320||language==='en'&&width===768||language==='fr'&&width===1440)await captureScreenshot(publicPage,{path:`work/menu-responsive-${language}-${width}.png`,fullPage:true});
   }
  }
