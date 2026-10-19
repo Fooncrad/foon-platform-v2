@@ -696,8 +696,11 @@ test('all activity storefront templates retain distinct direction and responsive
       await expect(dock).toBeVisible();
       await expect(dock.locator('a[href="#activity-products"]')).toHaveCount(1);
       await expect(dock.locator('a[href="#activity-categories"]')).toHaveCount(1);
+       await expect(page.locator('.foonActivityHeaderNav')).toBeHidden();
+       await expect(page.locator('.foonActivityBusinessDetails')).toHaveCount(1);
+       await expect(page.locator('.foonActivityBusinessDetails summary')).toBeVisible();
       const dockBounds=await dock.boundingBox();expect(dockBounds).not.toBeNull();expect(dockBounds.x).toBeGreaterThanOrEqual(-1);expect(dockBounds.x+dockBounds.width).toBeLessThanOrEqual(width+1);expect(dockBounds.y+dockBounds.height).toBeLessThanOrEqual(851);
-      const actions=await page.locator('.foonActivityHeaderActions').evaluate(el=>Array.from(el.querySelectorAll(':scope > button, :scope > label')).map(child=>{const r=child.getBoundingClientRect();return {y:r.y}}));expect(actions.length).toBe(3);expect(Math.max(...actions.map(r=>r.y))-Math.min(...actions.map(r=>r.y))).toBeLessThanOrEqual(2);
+      const actions=await page.locator('.foonActivityHeaderActions').evaluate(el=>Array.from(el.querySelectorAll(':scope > button, :scope > label')).map(child=>{const r=child.getBoundingClientRect();return {y:r.y}}));expect(actions.length).toBe(2);expect(Math.max(...actions.map(r=>r.y))-Math.min(...actions.map(r=>r.y))).toBeLessThanOrEqual(2);
      }else await expect(dock).toBeHidden();
      const imageSize=await page.locator('.foonActivityProductMedia').first().evaluate(n=>{const r=n.getBoundingClientRect();return {width:r.width,height:r.height}});expect(Math.abs(imageSize.width-imageSize.height)).toBeLessThanOrEqual(1);
      if(activity==='cafe'&&i===0&&width===320){
