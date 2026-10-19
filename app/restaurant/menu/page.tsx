@@ -6,7 +6,7 @@ import {database} from "@/lib/db/mysql";
 import ActivityTemplateEditor from "../activity-template-editor";
 import ActivityCatalogEditor from "../activity-catalog-editor";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {isActivityType} from "@/lib/platform/activity-presets";
 import {activitySectionUrl,activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import CanonicalTenantUrl from "../canonical-tenant-url";
@@ -21,7 +21,7 @@ export default async function RestaurantMenuPage({searchParams}:{searchParams:Pr
  const userId=await currentUserId();if(!userId)redirect("/login");
  const {tenant}=await searchParams;
  let workspace;
- try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
+ try{workspace=await resolveWorkspaceForActivity(userId,"restaurant",tenant)}catch{redirect("/account")}
  if(!["owner","manager"].includes(workspace.role)&&!workspace.adminAccess)redirect("/account");
  const [[profiles],[tenants]]=await Promise.all([database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[workspace.tenant_id]),database().execute<RowDataPacket[]>("SELECT slug FROM tenants WHERE id=? LIMIT 1",[workspace.tenant_id])]);
  const activity=String(profiles[0]?.activity_code??"restaurant");
