@@ -20,6 +20,6 @@ export default async function ActivityWorkspacePage({
  if(!actual)notFound();
  // A URL cannot elevate access or select another activity. Membership is
  // resolved before reading the stored activity; mismatch returns to its own ID.
- if(activity!==actual)redirect(activityWorkspaceUrl(actual));
+ if(activity!==actual)redirect(activityWorkspaceUrl(actual,workspace.tenant_id));
  return <MerchantWorkspace searchParams={Promise.resolve({tenant:workspace.tenant_id})} params={Promise.resolve({activity})}/>;
 }
