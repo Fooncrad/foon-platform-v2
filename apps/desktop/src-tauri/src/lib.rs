@@ -14,6 +14,8 @@ mod native_event_digest;
 mod native_outbox_readonly;
 #[cfg(windows)]
 mod native_order_outbox;
+#[cfg(windows)]
+mod native_signed_catalog;
 #[cfg(all(test, windows))]
 mod native_ack_sandbox;
 use tauri::Manager;
