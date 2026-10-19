@@ -33,7 +33,8 @@ test("public menus and activity stores have persistent light/dark themes and res
  assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{[\s\S]{0,100}grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
  assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
  assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
- assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/@media \(min-width: 1920px\)[\s\S]*\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/@media \(min-width: 993px\) and \(max-width: 1150px\)[\s\S]*\.publicMenu \.publicMenuLayout \.publicMenuItems \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
  assert.match(storefrontCss,/\.publicMenu \.publicMenuItem \.publicMenuItemImage/);
  assert.match(storefrontCss,/\.publicMenu \.publicMenuItemBody h2/);
  assert.match(storefrontCss,/\.publicMenu \.publicMenuItem footer\.publicMenuItemFooter/);
