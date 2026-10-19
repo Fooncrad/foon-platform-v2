@@ -199,7 +199,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const occupiedDining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة مشغولة 8',branchId:visualTenant.branch,status:'occupied',data:{sectionId:familySection,number:8,capacity:4}}});expect(occupiedDining.status()).toBe(201);
  const occupiedTableId=(await occupiedDining.json()).id;
  await publicPage.reload();
- await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'نداء النادل',exact:true}).click();
+ await publicPage.locator('.publicMenuHeaderActions').getByRole('button',{name:'نداء النادل',exact:true}).click();
  await publicPage.getByRole('dialog').getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
  await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
  await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill(visualSlug+"-guest@test.example");
@@ -568,7 +568,7 @@ test('storefront carts support retail variants and laundry collection without le
   const [[payment]]=await db.execute('SELECT payment_status FROM restaurant_orders WHERE id=?',[order.id]);expect(payment.payment_status).toBe('unpaid');
   const laundry=await create('laundry');await page.goto(origin+'/'+laundry.slug);await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await expect(cart.getByRole('heading',{name:/سلة الخدمات/})).toBeVisible();
   await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByRole('button',{name:'متابعة بهذا الحساب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeDisabled();
-  await cart.getByLabel('رقم التواصل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await cart.locator('select[name="deliveryCountryCode"]').selectOption('SA');await cart.getByLabel(/^عنوان الاستلام والتوصيل/).fill('Test street, building 12');
+  await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByLabel('رقم التواصل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await cart.locator('select[name="deliveryCountryCode"]').selectOption('SA');await cart.getByLabel(/^عنوان الاستلام والتوصيل/).fill('Test street, building 12');
   const laundryResult=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();const delivery=await laundryResult;expect(delivery.status(),await delivery.text()).toBe(409);expect((await delivery.json()).code).toBe('DELIVERY_DRIVER_UNAVAILABLE');
   // Delivery is rejected until an active branch driver has been assigned.
   await page.reload();await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');
