@@ -5,8 +5,11 @@ import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 
 export async function POST(request:NextRequest){
- const origin=request.headers.get("origin");
- if(origin&&new URL(origin).host!==request.nextUrl.host)return NextResponse.json({code:"FORBIDDEN"},{status:403});
+ try{
+  const origin=request.headers.get("origin");
+  if(origin&&new URL(origin).origin!==request.nextUrl.origin)
+   return NextResponse.json({code:"FORBIDDEN"},{status:403});
+ }catch{return NextResponse.json({code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();
  if(!userId)return NextResponse.json({code:"UNAUTHORIZED"},{status:401});
  let requested:string;
