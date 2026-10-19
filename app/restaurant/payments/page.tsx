@@ -1,6 +1,6 @@
 import CanonicalTenantUrl from "../canonical-tenant-url";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
-import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
+import {activityWorkspaceUrl,activityPaymentsUrl} from "@/lib/tenant/workspace-routes";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import PaymentEditor from "./payment-editor";
 import AccountLanguageSwitcher from "../account-language-switcher";
@@ -17,7 +17,7 @@ export default async function MerchantPaymentsPage({searchParams,params}:{search
  const tenantId=String(workspace.tenant_id),lang=(await cookies()).get("foon_language")?.value;
  const storedActivity=await tenantWorkspaceActivity(tenantId);
  if(!storedActivity)redirect("/business?tenant="+encodeURIComponent(tenantId));
- if(storedActivity!==((await params)?.activity??"restaurant"))redirect(activityWorkspaceUrl(storedActivity,tenantId));
+ if(storedActivity!==((await params)?.activity??"restaurant"))redirect(activityPaymentsUrl(storedActivity,tenantId));
  const t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
  const [[branches],[profiles]]=await Promise.all([
   database().execute<RowDataPacket[]>("SELECT id,name FROM branches WHERE tenant_id=? AND enabled=TRUE ORDER BY name",[tenantId]),
