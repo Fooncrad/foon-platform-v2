@@ -27,9 +27,14 @@ test("W23 isolates native-only probe from W05 saved POS and legacy JS backend",(
 test("W23 security audit accepts only equivalent Windows CRLF or Unix LF source lines",()=>{
   const checkedOutLikeWindows={
     ...input,
-    cargo:cargo.replace(/\n/g,"\r\n"),
-    rust:rust.replace(/\n/g,"\r\n")
+    // Git on Windows can already supply CRLF. First make LF, then
+    // synthesize exactly one CRLF per line (never accidental CRCRLF).
+    cargo:cargo.replace(/\r\n?/g,"\n").replace(/\n/g,"\r\n"),
+    rust:rust.replace(/\r\n?/g,"\n").replace(/\n/g,"\r\n")
   };
+  // Confirm inputs are CRLF even when checked-out sources already were CRLF.
+  assert(!checkedOutLikeWindows.rust.includes("\r\r\n"));
+  assert(!checkedOutLikeWindows.cargo.includes("\r\r\n"));
   const result=inspectNativeProbe(checkedOutLikeWindows);
   assert.deepEqual(result,{ok:true,blockers:[]});
 
