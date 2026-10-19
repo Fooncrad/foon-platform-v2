@@ -17,7 +17,15 @@ export default function RestaurantRegisterPage(){
   try{
    const response=await fetch("/api/restaurant/onboard",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),slug:data.get("slug"),activity,countryCode:country,currency:currencyForCountry(country),region,taxNumber:data.get("taxNumber")})});
    const result=await response.json().catch(()=>({}));
-   if(response.ok){router.replace(activityWorkspaceUrl(activity,result.tenant.id));router.refresh();return;}
+   if(response.ok){
+    // The active tenant is bound to the authenticated session, not the URL.
+    const selected=await fetch("/api/tenant/active",{
+     method:"POST",headers:{"content-type":"application/json"},
+     body:JSON.stringify({tenantId:result.tenant.id})
+    }).catch(()=>null);
+    router.replace(selected?.ok?activityWorkspaceUrl(activity):activityWorkspaceUrl(activity,result.tenant.id));
+    router.refresh();return;
+   }
    if(response.status===401){router.push("/login");return;}
    setError(result.code==="SLUG_EXISTS"?t("الرابط مستخدم، اختر رابطًا آخر.","This store URL is taken. Choose another.","Cette adresse est déjà utilisée. Choisissez-en une autre."):t("راجع بيانات النشاط والرابط والدولة والمدينة وحاول مجددًا.","Check the business details, URL, country and city, then try again.","Vérifiez les informations, l’adresse, le pays et la ville, puis réessayez."));
   }catch{setError(t("تعذر الاتصال بالخادم. حاول مجددًا.","Unable to connect. Please try again.","Connexion impossible. Réessayez."));}finally{setBusy(false);}
