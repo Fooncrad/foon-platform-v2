@@ -7,6 +7,7 @@ import "./public-menu.css";
 import "./mobile-product-cards.css";
 import "./restaurant-menu-responsive.css";
 import "./storefront-refresh.css";
+import "./unified-storefront-ux.css";
 import MenuProductDetails,{ProductPrice,type ProductItem} from "./menu-product-details";
 import MenuCover from "./menu-cover";
 import StorefrontThemeToggle from "./storefront-theme-toggle";
