@@ -3,7 +3,7 @@ import CheckoutBreakdown from "../restaurant/checkout-breakdown";
 import type {CheckoutPolicy} from "@/lib/restaurant/checkout-pricing";
 import {validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 import {useUiText} from "@/lib/i18n/ui-language";
-import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls";
+import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls-core";
 import {useEffect,useRef,useState,useSyncExternalStore} from "react";
 import {useRouter} from "next/navigation";
 import InlineCustomerAuth from "./inline-customer-auth";
