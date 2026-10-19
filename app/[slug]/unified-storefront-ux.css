@@ -623,3 +623,35 @@
 @media (max-width:700px) {
  .foonActivityStorefront .foonActivityBusinessPanel {inset-inline-start:auto;inset-inline-end:0;}
 }
+
+
+/* Keep business-hours/QR disclosures inside the mobile viewport.
+   The old absolute popover could extend past the right edge in LTR mode. */
+.publicMenu .publicMenuBusinessDetails,
+.foonActivityStorefront .foonActivityBusinessDetails {position:relative;min-width:0;}
+.publicMenu .publicMenuBusinessPanel,
+.foonActivityStorefront .foonActivityBusinessPanel {
+ box-sizing:border-box;
+ max-width:min(360px,calc(100vw - 24px));
+ overflow-wrap:anywhere;
+}
+@media(max-width:700px){
+ .publicMenu .publicMenuBusinessDetails[open] .publicMenuBusinessPanel,
+ .foonActivityStorefront .foonActivityBusinessDetails[open] .foonActivityBusinessPanel {
+  position:fixed !important;
+  top:clamp(84px,16vh,136px) !important;
+  inset-inline:12px !important;
+  inset-block-end:auto !important;
+  left:12px !important;
+  right:12px !important;
+  width:auto !important;
+  max-width:none !important;
+  max-height:min(66dvh,540px) !important;
+  overflow-y:auto;
+  overflow-x:hidden;
+  z-index:100 !important;
+  box-sizing:border-box;
+ }
+ .foonActivityStorefront .foonActivityHeaderNav {display:none !important;}
+ .foonActivityStorefront .foonActivityHeaderActions {flex-wrap:nowrap !important;}
+}
