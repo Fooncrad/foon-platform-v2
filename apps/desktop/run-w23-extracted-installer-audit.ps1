@@ -82,7 +82,7 @@ function Inspect-Archive {
     $manifestPaths=@()
     $nested=@()
     foreach($file in $files) {
-        $rel=$file.FullName.Substring($target.Length).TrimStart('\','/')
+        $rel=$file.FullName.Substring($target.Length).TrimStart([char[]]@('\','/'))
         if ($rel -match '(?i)\.(?:7z|zip|tar|tgz|gz|cab|nupkg)$') {
             $nested += $file.FullName
         } else {
