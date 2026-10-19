@@ -12,6 +12,7 @@ import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {customerCartAvailable,deliveryCountryMatches} from "@/lib/platform/customer-checkout";
 import {tenantPublicControls,channelControl,publicControlAllowed} from "@/lib/tenant/public-controls";
 import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
+import {saveCheckoutDeliveryAddress} from "@/lib/tenant/delivery-address-sync";
 export const runtime="nodejs";
 async function queueDeliveryDriverAlerts(db:PoolConnection,tenantId:string){
  await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[tenantId]);
@@ -58,6 +59,7 @@ export async function POST(request:Request){
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
+  if(catalogDelivery)await saveCheckoutDeliveryAddress(db,user,{countryCode:body.deliveryCountryCode,city:body.deliveryCity,address:body.deliveryAddress,phone:customerPhone,latitude:body.latitude,longitude:body.longitude});
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
  }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }
