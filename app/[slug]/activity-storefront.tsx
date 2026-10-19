@@ -3,7 +3,7 @@ import Image from "next/image";
 import {checkoutPolicy} from "@/lib/restaurant/checkout-pricing";
 import StorefrontInfo from "./storefront-info";
 import ActivityProductDetails from "./activity-product-details";
-import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls";
+import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls-core";
 import StorefrontQr from "./storefront-qr";
 import ServiceRequestAction from "./service-request-action";
 import ServiceRequestHistory from "./service-request-history";
