@@ -558,3 +558,37 @@
  }
  .publicMenu .publicMenuProductPhoto{height:min(55dvh,470px);}
 }
+
+/* Merchant-controlled visibility is shared by restaurant and activity storefronts. */
+.publicMenu[data-public-catalog="off"] .publicMenuCatalog,
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityCatalog,
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityCount,
+.publicMenu[data-public-catalog="off"] .publicMenuMobileDock a[href="#menu-items"],
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityMobileDock a[href="#activity-products"],
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityMobileDock a[href="#activity-categories"] {
+  display:none !important;
+}
+.publicMenu[data-public-search="off"] .publicMenuSearch,
+.foonActivityStorefront[data-public-search="off"] .foonActivitySearch {
+  display:none !important;
+}
+.publicMenu[data-public-categories="off"] .publicMenuCategoryRail,
+.publicMenu[data-public-categories="off"] .publicMenuQuickNav,
+.publicMenu[data-public-categories="off"] .publicMenuMobileDock > button:first-of-type,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCategoryRail,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityMobileDock a[href="#activity-categories"] {
+  display:none !important;
+}
+.publicMenu[data-public-categories="off"] .publicMenuCatalog,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog {
+  grid-template-columns: minmax(0,1fr) !important;
+}
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog:has(.foonActivityCartRail){
+  grid-template-columns: minmax(0,1fr) minmax(250px,288px) !important;
+}
+@media(max-width:1199px){
+ .foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog:has(.foonActivityCartRail){
+  grid-template-columns:minmax(0,1fr) !important;
+ }
+}
+.publicMenu[data-public-contact="off"] .publicMenuBusinessDetails {display:none !important;}
