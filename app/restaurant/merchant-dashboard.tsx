@@ -4,7 +4,7 @@ import {activityWorkspaceUrl,activityPaymentsUrl,activityMediaStudioUrl,activity
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
 import {useEffect,useRef,useState,type FormEvent,type KeyboardEvent as ReactKeyboardEvent} from "react";
 import Link from "next/link";
-import {useRouter,usePathname} from "next/navigation";
+import {useRouter,usePathname,useSearchParams} from "next/navigation";
 import {MerchantIcon} from "./merchant-icon";
 import ActivityTools from "./activity-tools";
 import ActivityCatalogEditor from "./activity-catalog-editor";
@@ -94,7 +94,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const fullAdminAccess=data.adminAccess&&!data.supportReadOnly;const personalMediaAllowed=data.role==="owner"||fullAdminAccess;
  const canManage=fullAdminAccess||["owner","manager"].includes(data.role)&&!data.supportReadOnly,canPayments=fullAdminAccess||["owner","manager","accountant"].includes(data.role)&&!data.supportReadOnly;
  const router=useRouter(),searchRef=useRef<HTMLInputElement>(null),drawerCloseRef=useRef<HTMLButtonElement>(null);
- const pathname=usePathname();
+ const pathname=usePathname(),routeParams=useSearchParams();
  const [wideWorkspace,setWideWorkspace]=useState(false);
  const uiLanguage=useUiLanguage();
 
@@ -149,7 +149,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  // Keep internal section state in sync with clean deep links and browser back/forward.
  const visibleKeys=visible.map(m=>m.key).join("|");
  useEffect(()=>{
-  const params=new URLSearchParams(window.location.search);
+  const params=new URLSearchParams(routeParams.toString());
   const pathnameSection=window.location.pathname.split("/").filter(Boolean)[1];
   const sectionAlias=pathnameSection==="services"?"menu":pathnameSection;
   const requested=sectionAlias&&visibleKeys.split("|").includes(sectionAlias)?sectionAlias:params.get("section");
@@ -158,13 +158,18 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   const target=requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview";
   queueMicrotask(()=>{if(!cancelled)setActive(target);});
   return ()=>{cancelled=true;};
- },[pathname,data.tenantId,visibleKeys]);
+ },[pathname,routeParams,data.tenantId,visibleKeys]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
  // and save the requested tenant before removing identifiers from the address.
  useEffect(()=>{
-  const params=new URLSearchParams(window.location.search);
+  const params=new URLSearchParams(routeParams.toString());
   const tenant=params.get("tenant"),legacySection=params.get("section");
   if(!tenant&&!legacySection)return;
+  // /restaurant?section=menu intentionally coexists with the standalone
+  // /restaurant/menu editor and is already a canonical dashboard URL.
+  const sectionPath=legacySection&&visibleKeys.split("|").includes(legacySection)
+   ?activitySectionUrl(data.activityCode,legacySection):window.location.pathname;
+  if(!tenant&&sectionPath.startsWith(window.location.pathname+"?section="))return;
   let cancelled=false;
   const normalize=async()=>{
    if(tenant){
@@ -176,14 +181,14 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
    }
    if(cancelled)return;
    params.delete("tenant");params.delete("section");
-   const base=legacySection&&visibleKeys.split("|").includes(legacySection)?activitySectionUrl(data.activityCode,legacySection):window.location.pathname;
-   const rest=params.toString();
+   const canonical=new URL(sectionPath,window.location.origin);
+   for(const [key,value] of params)canonical.searchParams.append(key,value);
    // Already authorized and rendered: clean the address without a new server navigation.
-   window.history.replaceState(null,"",base+(rest?"?"+rest:"")+window.location.hash);
+   window.history.replaceState(null,"",canonical.pathname+canonical.search+window.location.hash);
   };
   void normalize();
   return()=>{cancelled=true;};
- },[pathname,data.tenantId,data.activityCode,visibleKeys,router]);
+ },[pathname,routeParams,data.tenantId,data.activityCode,visibleKeys]);
  // Platform admin access is an audited support override. It opens the tenant
  // workspace independently of subscription switches; printer auto-print remains
  // governed by each tenant printer's own enabled/autoPrint configuration.
