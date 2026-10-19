@@ -32,6 +32,7 @@ const nextConfig = {
       return [
         {source:`/${slug}/payments`,destination:`/workspace/${activity}/payments`},
         {source:`/${slug}/media-studio`,destination:`/workspace/${activity}/media-studio`},
+        {source:`/${slug}/setup`,destination:`/restaurant/activity-setup?activity=${activity}`},
         {source:`/${slug}/:section(${sections.join("|")})`,destination:`/workspace/${activity}?section=:section`},
         ...(slug==="restaurant"?[]:[{source:`/${slug}`,destination:`/workspace/${activity}`}])
       ];
