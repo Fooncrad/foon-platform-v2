@@ -11,7 +11,7 @@ import MerchantDashboard,{type MerchantData} from "./merchant-dashboard";
 import "./merchant-dashboard.css";
 import "./merchant-operations.css";
 
-export default async function RestaurantPage({searchParams,expectedActivity}:{searchParams:Promise<{tenant?:string}>;expectedActivity?:string}){
+export default async function RestaurantPage({searchParams,params}:{searchParams:Promise<{tenant?:string}>;params?:Promise<{activity?:string}>}){
  const userId=await currentUserId();if(!userId)redirect("/login");
  const {tenant}=await searchParams;
  let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
@@ -26,7 +26,7 @@ export default async function RestaurantPage({searchParams,expectedActivity}:{se
  // their own module presets; RBAC and subscription checks remain unchanged.
  const activityCode=isActivityType(storedActivityCode)?storedActivityCode:activityRows[0]?.kind==="restaurant"?"restaurant":null;
  if(!activityCode)redirect("/business?tenant="+encodeURIComponent(tenantId));
- if(activityCode!==(expectedActivity??"restaurant"))redirect(activityWorkspaceUrl(activityCode));
+ if(activityCode!==((await params)?.activity??"restaurant"))redirect(activityWorkspaceUrl(activityCode,tenantId));
  const activityModules=[...defaultActivityModules(activityCode)];
  const [[branches],[subscriptions],[features],[tenants],[choices],[identity]]=await Promise.all([
   db.execute<RowDataPacket[]>("SELECT id,name,slug,enabled FROM branches WHERE tenant_id=? ORDER BY created_at",[tenantId]),
