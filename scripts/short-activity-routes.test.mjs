@@ -27,7 +27,7 @@ test("Next redirects and rewrites use the same activity aliases",()=>{
  assert.match(config,/async redirects\(/);
  assert.match(config,/async rewrites\(/);
  assert.match(config,/beforeFiles/);
- assert.match(config,/Content-Security-Policy/);
+ assert.doesNotMatch(config,/Content-Security-Policy/);
  assert.match(config,/\/workspace\/\$\{activity\}/);
  assert.match(config,/\/\$\{slug\}\/payments/);
 });
@@ -41,6 +41,8 @@ test("tenant identifiers stay server-authorized and absent from canonical naviga
  assert.ok(!merchant.includes('"/restaurant?tenant="'));
  assert.ok(selection.includes("resolveWorkspace(userId,requested)"));
  assert.ok(resolver.includes("requireTenantMembership"));
+ assert.ok(resolver.includes("resolveWorkspaceForActivity"));
+ assert.ok(resolver.includes("tenantWorkspaceActivity(account.tenant_id)===activity"));
  assert.ok(selection.includes("httpOnly:true"));
 });
 
