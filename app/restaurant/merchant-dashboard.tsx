@@ -191,7 +191,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route=activityWorkspaceUrl(data.activityCode),paymentRoute=activityPaymentsUrl(data.activityCode);
- function navigate(section:Section){if(!visible.some(m=>m.key===section))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");router.push(activitySectionUrl(data.activityCode,section));}
+ function navigate(section:Section){if(!visible.some(m=>m.key===section))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
  async function switchTenant(nextTenant:string){
   if(nextTenant===data.tenantId||busy)return;
   setBusy(true);setMessage("");
