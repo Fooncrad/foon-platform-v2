@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { splitSqlStatements } from "./sql-statements.mjs";
 import {ensureDiningContext} from "./dining-context-migration.mjs";
 import {ensureMarketplaceVisibility} from "./marketplace-visibility-migration.mjs";
+import {assertAvailableActivityRouteSlugs} from "./activity-route-slug-migration.mjs";
 
 const url=process.env.DATABASE_URL;
 if(!url) throw new Error("DATABASE_URL_MISSING");
@@ -44,7 +45,7 @@ try {
       throw error;
     }
   }
-  // Reconcile reference language keys on every migration/deployment run.
+  // Do not steal an existing customer-facing /car or /fashion URL.\n  await assertAvailableActivityRouteSlugs(db);\n  // Reconcile reference language keys on every migration/deployment run.
   // Existing human-edited translations are never overwritten.
   const seedSql=sources.get("0008_seed_reference_translations.sql");
   for(const statement of seedSql)await db.query(statement);
