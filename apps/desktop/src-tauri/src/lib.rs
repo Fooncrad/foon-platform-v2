@@ -2,6 +2,8 @@ mod demo_orders;
 mod edge_runtime;
 #[cfg(windows)]
 mod windows_secret_store;
+#[cfg(windows)]
+mod native_cloud_receipt;
 use tauri::Manager;
 use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
