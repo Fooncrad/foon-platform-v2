@@ -23,7 +23,7 @@ test("each of 15 activities has its exact canonical identifier, not one store al
 
 test("activity URL mismatch redirects after checking the user's tenant membership",()=>{
  const route=read("app/workspace/[activity]/page.tsx");
- assert.ok(route.indexOf("resolveWorkspace(userId,requested.tenant)")<route.indexOf("tenantWorkspaceActivity(workspace.tenant_id)"));
+ assert.ok(route.indexOf("resolveWorkspaceForActivity(userId,activity,requested.tenant)")<route.indexOf("tenantWorkspaceActivity(workspace.tenant_id)"));
  assert.match(route,/activity!==actual\)redirect\(activityWorkspaceUrl\(actual,workspace.tenant_id\)\)/);
  assert.match(route,/if\(!isActivityType\(activity\)\)notFound\(\)/);
  const profile=read("lib/tenant/workspace-activity.ts");
