@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {ACTIVITY_PRESETS,localizedActivityModules} from "../lib/platform/activity-presets.ts";
+import {activityToolLinks} from "../lib/platform/activity-tool-links.ts";
 
 const tools=readFileSync(new URL("../app/restaurant/activity-tools.tsx",import.meta.url),"utf8");
 const codes=Object.keys(ACTIVITY_PRESETS);
@@ -17,10 +18,30 @@ test("all 15 activity types have translated and unique capability links",()=>{
   }
  }
 });
-test("business tool shortcuts include payment settings and shared media studio",()=>{
- assert.match(tools,/module\.code==="payments"\?activityPaymentsUrl\(activity,tenantId\)/);
- assert.match(tools,/module\.code==="mediaStudio"\?activityMediaStudioUrl\(activity,tenantId\)/);
- assert.match(tools,/mediaStudio:\[(?:translateUi\()?"إدارة الميديا"\)?,"Media Studio","Studio média"\]/);
+test("all 15 activities expose working shared tools and a library shortcut in Arabic, English and French",()=>{
+ const shared=["staff","invoices","reports","branches","customers","marketing","mediaStudio","mediaLibrary","security"];
+ for(const activity of codes){
+  for(const language of ["ar","en","fr"]){
+   const links=activityToolLinks(activity,"tenant-123",language);
+   assert.ok(links.every(link=>link.href&&link.label.trim()),activity+":"+language);
+   const linkedCodes=new Set(links.flatMap(link=>link.codes));
+   for(const code of shared)assert.ok(linkedCodes.has(code),activity+":"+language+":"+code);
+   assert.ok(links.some(link=>link.href==="/account/library"&&link.codes.includes("mediaLibrary")),activity+":"+language+":library");
+  }
+ }
+});
+test("every activity capability maps to a real workspace route",()=>{
+ for(const activity of codes){
+  const links=activityToolLinks(activity,"tenant-123","ar"),linkedCodes=new Set(links.flatMap(link=>link.codes));
+  for(const code of ACTIVITY_PRESETS[activity])assert.ok(linkedCodes.has(code),activity+":"+code);
+ }
+});
+test("pickup point shortcut targets an enabled dashboard section",()=>{
+ const grocery=activityToolLinks("grocery","tenant-123","ar");
+ assert.ok(grocery.some(link=>link.href==="/workspace/grocery?tenant=tenant-123&section=pickupPoints"&&link.codes.includes("pickup")));
+ const dashboard=readFileSync(new URL("../app/restaurant/merchant-dashboard.tsx",import.meta.url),"utf8");
+ assert.match(dashboard,/key:"pickupPoints",label:"نقاط الاستلام",icon:"store",feature:"pickup"/);
+ assert.match(dashboard,/pickupPoints:"pickup"/);
 });
 test("service activities do not accidentally receive restaurant tables and waiter tools",()=>{
  for(const code of ["carwash","laundry","automotive","salon","publicworks"]){
@@ -40,7 +61,7 @@ test("activity setup fails closed on unknown types and preserves selected langua
 });
 
 test("activity dashboard guards against invalid activity codes before resolving modules",()=>{
- assert.match(tools,/isActivityType\(activity\)\?localizedActivityModules\(activity,lang\):\[\]/);
+ assert.match(tools,/isActivityType\(activity\)\?activityToolLinks\(activity,tenantId,lang\):\[\]/);
  assert.match(tools,/if\(!isActivityType\(activity\)\)return <section role="alert"/);
 });
 
@@ -132,7 +153,7 @@ test("public works quotation capability reaches a real merchant resource workspa
  const schema=readFileSync(new URL("./restaurant-resource-schema.mjs",import.meta.url),"utf8");
  assert.ok(ACTIVITY_PRESETS.publicworks.includes("quotes"));
  assert.ok(!ACTIVITY_PRESETS.restaurant.includes("quotes"));
- assert.match(tools,/quotes:"quotes"/);
+ assert.ok(activityToolLinks("publicworks","tenant-123","ar").some(link=>link.href==="/workspace/publicworks?tenant=tenant-123&section=quotes"&&link.codes.includes("quotes")));
  assert.match(dashboard,/quotes:"quotes"/);
  assert.match(dashboard,/key:"quotes",label:"عروض الأسعار"/);
  assert.match(workspace,/quotes:\[\{key:"quotations",label:"عروض أسعار الخدمات"\}\]/);
