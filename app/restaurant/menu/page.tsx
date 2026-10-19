@@ -6,7 +6,7 @@ import {database} from "@/lib/db/mysql";
 import ActivityTemplateEditor from "../activity-template-editor";
 import ActivityCatalogEditor from "../activity-catalog-editor";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity} from "@/lib/tenant/workspace";
 import {isActivityType} from "@/lib/platform/activity-presets";
 import {activitySectionUrl,activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import CanonicalTenantUrl from "../canonical-tenant-url";
