@@ -47,15 +47,22 @@ export async function queuePosOrderIfAbsent(order:PendingPosOrder):Promise<boole
  });
 }
 export async function pendingPosOrders():Promise<PendingPosOrder[]>{return (await transaction<PendingPosOrder[]>("readonly",store=>store.getAll())).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));}
+// Browser storage is shared across tabs, branches and sometimes operators on one
+// device. Only the explicitly selected, authorized branch may be displayed,
+// synced, backed up or retried. The server still re-checks membership on replay.
+export function scopedPosOrders(rows:PendingPosOrder[],tenantId:string,branchId:string):PendingPosOrder[]{
+ if(!tenantId||!branchId)return [];
+ return rows.filter(order=>order.tenantId===tenantId&&order.branchId===branchId&&order.payload?.branchId===branchId);
+}
 export async function removePosOrder(id:string){await transaction<undefined>("readwrite",store=>store.delete(id));}
 export async function markPosOrder(order:PendingPosOrder,error:string){await queuePosOrder({...order,status:"needs_review",lastError:error});}
-export async function retryReviewedPosOrder(id:string,tenantId:string):Promise<void>{
+export async function retryReviewedPosOrder(id:string,tenantId:string,branchId:string):Promise<void>{
  const database=await db();
  return new Promise<void>((resolve,reject)=>{
   const tx=database.transaction(STORE,"readwrite"),store=tx.objectStore(STORE),read=store.get(id);
   read.onsuccess=()=>{
    const order=read.result as PendingPosOrder|undefined;
-   if(!order||order.tenantId!==tenantId||order.status!=="needs_review"){tx.abort();return;}
+   if(!order||!branchId||!scopedPosOrders([order],tenantId,branchId).length||order.status!=="needs_review"){tx.abort();return;}
    store.put({...order,status:"pending",lastError:undefined});
   };
   tx.oncomplete=()=>{database.close();resolve();};
@@ -63,20 +70,22 @@ export async function retryReviewedPosOrder(id:string,tenantId:string):Promise<v
   tx.onerror=()=>{database.close();reject(tx.error??new Error("OFFLINE_RETRY_FAILED"));};
  });
 }
-export async function exportPendingPosOrders(tenantId:string):Promise<string>{
- const rows=(await pendingPosOrders()).filter(row=>row.tenantId===tenantId);
- return JSON.stringify({format:"foon-pos-recovery-v1",exportedAt:new Date().toISOString(),tenantId:tenantId,orders:rows},null,2);
+export async function exportPendingPosOrders(tenantId:string,branchId:string):Promise<string>{
+ if(!tenantId||!branchId)throw new Error("OFFLINE_BRANCH_REQUIRED");
+ const rows=scopedPosOrders(await pendingPosOrders(),tenantId,branchId);
+ return JSON.stringify({format:"foon-pos-recovery-v1",exportedAt:new Date().toISOString(),tenantId,branchId,orders:rows},null,2);
 }
-export async function importPendingPosOrders(json:string,tenantId:string):Promise<number>{
+export async function importPendingPosOrders(json:string,tenantId:string,branchId:string):Promise<number>{
+ if(!tenantId||!branchId)throw new Error("OFFLINE_BRANCH_REQUIRED");
  const parsed:unknown=JSON.parse(json);
  if(!parsed||typeof parsed!=="object")throw new Error("INVALID_OFFLINE_BACKUP");
- const backup=parsed as {format?:unknown;tenantId?:unknown;orders?:unknown};
- if(backup.format!=="foon-pos-recovery-v1"||backup.tenantId!==tenantId||!Array.isArray(backup.orders)||backup.orders.length>5000)throw new Error("INVALID_OFFLINE_BACKUP");
+ const backup=parsed as {format?:unknown;tenantId?:unknown;branchId?:unknown;orders?:unknown};
+ if(backup.format!=="foon-pos-recovery-v1"||backup.tenantId!==tenantId||(backup.branchId!==undefined&&backup.branchId!==branchId)||!Array.isArray(backup.orders)||backup.orders.length>5000)throw new Error("INVALID_OFFLINE_BACKUP");
  let count=0;
  for(const item of backup.orders){
   if(!item||typeof item!=="object")throw new Error("INVALID_OFFLINE_ORDER");
   const order=item as PendingPosOrder;
-  if(typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.tenantId!==tenantId||typeof order.branchId!=="string"||!order.branchId||typeof order.createdAt!=="string"||!Number.isFinite(Date.parse(order.createdAt))||!order.payload||typeof order.payload!=="object"||Array.isArray(order.payload)||order.payload.requestKey!==order.id||!["pending","needs_review"].includes(order.status))throw new Error("INVALID_OFFLINE_ORDER");
+  if(typeof order.id!=="string"||!/^[a-f0-9-]{36}$/i.test(order.id)||order.tenantId!==tenantId||order.branchId!==branchId||order.payload?.branchId!==branchId||typeof order.createdAt!=="string"||!Number.isFinite(Date.parse(order.createdAt))||!order.payload||typeof order.payload!=="object"||Array.isArray(order.payload)||order.payload.requestKey!==order.id||!["pending","needs_review"].includes(order.status))throw new Error("INVALID_OFFLINE_ORDER");
  }
  if(new Set((backup.orders as PendingPosOrder[]).map(order=>order.id)).size!==backup.orders.length)throw new Error("DUPLICATE_OFFLINE_BACKUP_ORDER");
  const database=await db();
