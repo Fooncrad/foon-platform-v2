@@ -53,7 +53,20 @@ test('employees stay in their employer workspace and platform admins never inher
    for(const [path,method] of [['/api/customer/orders','POST'],['/api/customer/services','POST'],['/api/customer/payments','POST'],['/api/customer/join-store','POST'],['/api/customer/stores','POST'],['/api/customer/register','POST'],['/api/customer/order-revision','GET'],['/api/customer/notifications','POST'],['/api/customer/invoices','GET'],['/api/customer/cart','GET'],['/api/account/library','GET'],['/api/account/library','POST'],['/api/account/library','DELETE'],['/api/account/library/'+randomUUID(),'GET'],['/api/restaurant/onboard','POST']]){
     const r=await request(path,method,method==='GET'?undefined:{},cookie);assert.equal(r.status,403,role+' '+path);assert.equal((await r.json()).code,'EMPLOYEE_OPERATIONAL_ACCESS_ONLY');
    }
-   for(const path of ['/customer','/account/library','/restaurant/register','/'+owner.slug,'/'+owner.slug+'/order','/'+owner.slug+'/register','/'+owner.slug+'/login']){const r=await request(path,'GET',undefined,cookie);assert.ok([307,308].includes(r.status),role+' '+path+' '+r.status);assert.match(r.headers.get('location')||'',/\/restaurant$/);}
+   for(const path of ['/customer','/account/library','/restaurant/register','/'+owner.slug,'/'+owner.slug+'/order','/'+owner.slug+'/register','/'+owner.slug+'/login']){
+    const denied=await request(path,'GET',undefined,cookie);
+    assert.ok([307,308].includes(denied.status),role+' '+path+' '+denied.status);
+    // Restricted personal surfaces may redirect through /account or legacy
+    // /restaurant, but must end in the staff member's authorized activity.
+    let target=denied.headers.get('location')||'';
+    for(let hop=0;hop<4&&new URL(target,origin).pathname!=='/grocery';hop++){
+     assert.ok(target.startsWith('/'),role+' unsafe redirect '+target);
+     const next=await request(target,'GET',undefined,cookie);
+     assert.ok([307,308].includes(next.status),role+' must never render '+target);
+     target=next.headers.get('location')||'';
+    }
+    assert.equal(new URL(target,origin).pathname,'/grocery',role+' must return to employer activity, not a personal storefront');
+   }
    if(role==='manager'){const copied=await request('/api/restaurant/assets','POST',{libraryId:randomUUID()},cookie,owner.tenant.id);assert.equal(copied.status,403);assert.equal((await copied.json()).code,'EMPLOYEE_OPERATIONAL_ACCESS_ONLY');}
    // Even a historical customer link cannot restore shopping privileges.
    await db.execute('INSERT INTO tenant_customers(tenant_id,user_id) VALUES (?,?)',[owner.tenant.id,staff]);
