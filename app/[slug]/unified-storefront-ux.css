@@ -424,3 +424,80 @@
   inset: auto !important;
   margin: 0 !important;
 }
+
+
+/* Product hierarchy: readable name and price, square image, no compressed laptop cards. */
+.publicMenu .publicMenuItem,
+.foonActivityStorefront .foonActivityProduct {
+ min-width:0;
+ height:100%;
+ overflow:hidden;
+}
+.publicMenu .publicMenuItemBody h2,
+.foonActivityStorefront .foonActivityProductInfo h3 {
+ font-weight:800 !important;
+ font-size:clamp(14px,1.15vw,17px) !important;
+ line-height:1.45 !important;
+ overflow-wrap:anywhere;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage,
+.foonActivityStorefront .foonActivityProductMedia {
+ display:grid;
+ place-items:center;
+ aspect-ratio:1/1 !important;
+ width:100%;
+ height:auto !important;
+ padding:0 !important;
+ border:0;
+ overflow:hidden;
+ cursor:pointer;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage img,
+.foonActivityStorefront .foonActivityProductMedia img {width:100%;height:100%;object-fit:cover !important;object-position:center;}
+.publicMenu .publicMenuItemFooter,
+.foonActivityStorefront .foonActivityProductPurchase {
+ margin-top:auto !important;
+ gap:8px !important;
+ align-items:center !important;
+}
+.publicMenu .publicMenuItem .publicMenuProductPrice,
+.foonActivityStorefront .foonActivityProductPurchase strong {
+ min-width:0;
+ font-variant-numeric:tabular-nums;
+ font-size:clamp(13px,1.2vw,18px) !important;
+}
+.publicMenu .publicMenuItemBody .publicMenuItemSummary,
+.foonActivityStorefront:not([data-layout="services"]) .foonActivityProductInfo > p {display:none !important;}
+@media(min-width:951px) and (max-width:1199px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+}
+@media(min-width:1200px) and (max-width:1499px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media(min-width:1500px) and (max-width:1899px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
+}
+@media(min-width:1900px) and (max-width:2299px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(5,minmax(0,1fr)) !important;}
+}
+@media(min-width:2300px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(6,minmax(0,1fr)) !important;}
+}
+/* Product details stay available on photo tap/click, without cluttering cards. */
+.foonActivityStorefront .foonActivityPhotoButton {font:inherit;color:inherit;background:transparent;border:none;border-radius:0;cursor:pointer;}
+.foonActivityStorefront .foonActivityPhotoButton:focus-visible {outline:3px solid var(--activity-accent);outline-offset:-3px;}
+.foonActivityProductDialog {width:min(96vw,640px);max-height:90dvh;overflow:auto;padding:0;border:1px solid var(--activity-border);border-radius:22px;background:var(--activity-panel);color:var(--activity-ink);box-shadow:0 25px 85px #0005;}
+.foonActivityProductDialog::backdrop {background:#0009;backdrop-filter:blur(3px);}
+.foonActivityProductDialogInner {display:grid;gap:16px;position:relative;max-width:100%;padding:clamp(14px,3vw,24px);}
+.foonActivityProductDialogInner h2{font-size:clamp(20px,3vw,28px);line-height:1.4;margin:0;}
+.foonActivityProductDialogInner p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:0;}
+.foonActivityDialogClose{position:sticky;top:0;justify-self:end;z-index:2;background:var(--activity-panel);color:inherit;border:1px solid var(--activity-border);border-radius:50%;width:42px;height:42px;font-size:22px;cursor:pointer;}
+.foonActivityDialogImage{display:block;width:100%;height:auto;max-height:65vh;aspect-ratio:1/1;object-fit:contain;border-radius:16px;background:var(--activity-bg);}
+.foonActivityDialogPurchase{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;font-weight:800;}
+.foonActivityDialogPurchase .foonCartAdd{width:auto !important;min-width:48px;max-width:none !important;flex:0 0 auto;margin:0;}
+.foonActivityDialogPurchase .foonCartAddLabel{position:static !important;width:auto !important;height:auto !important;clip-path:none !important;overflow:visible !important;margin:0 !important;white-space:normal !important;}
