@@ -1,3 +1,4 @@
+import CanonicalTenantUrl from "../canonical-tenant-url";
 import {resolveWorkspace} from "@/lib/tenant/workspace";
 import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
@@ -22,5 +23,5 @@ export default async function MerchantPaymentsPage({searchParams,params}:{search
   database().execute<RowDataPacket[]>("SELECT id,name FROM branches WHERE tenant_id=? AND enabled=TRUE ORDER BY name",[tenantId]),
   database().execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId])
  ]);
- return <main className="workspace" dir={lang==="en"||lang==="fr"?"ltr":"rtl"}><header className="workspace-head"><div><h1>{t("الدفع وبوابة النشاط","Business payments and gateway","Paiements et passerelle")}</h1><p>{String(workspace.name)}</p></div><AccountLanguageSwitcher/><Link href={activityWorkspaceUrl(storedActivity)}>{t("العودة للوحة النشاط","Back to business workspace","Retour au tableau de bord")}</Link></header><PaymentEditor key={tenantId} tenantId={tenantId} canEdit={["owner","manager"].includes(workspace.role)} activityCode={String(profiles[0]?.activity_code??"")} defaultCurrency={String(profiles[0]?.currency??"SAR")} branches={branches.map(b=>({id:String(b.id),name:String(b.name)}))}/></main>;
+ return <main className="workspace" dir={lang==="en"||lang==="fr"?"ltr":"rtl"}><CanonicalTenantUrl tenantId={tenantId}/><header className="workspace-head"><div><h1>{t("الدفع وبوابة النشاط","Business payments and gateway","Paiements et passerelle")}</h1><p>{String(workspace.name)}</p></div><AccountLanguageSwitcher/><Link href={activityWorkspaceUrl(storedActivity)}>{t("العودة للوحة النشاط","Back to business workspace","Retour au tableau de bord")}</Link></header><PaymentEditor key={tenantId} tenantId={tenantId} canEdit={["owner","manager"].includes(workspace.role)} activityCode={String(profiles[0]?.activity_code??"")} defaultCurrency={String(profiles[0]?.currency??"SAR")} branches={branches.map(b=>({id:String(b.id),name:String(b.name)}))}/></main>;
 }
