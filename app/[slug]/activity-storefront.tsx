@@ -89,7 +89,7 @@ export default function ActivityStorefront({name,slug,activity,template,branding
    </div>{cart&&<aside className="foonActivityCartRail" id="activity-cart"><StorefrontCart controls={controls} checkoutPolicy={checkoutPolicy(branding)} key={slug} slug={slug} language={language} signedIn={signedIn} linked={linked} customerPhone={customerPhone} deliveryAddress={deliveryAddress} service={serviceCart}/></aside>}</div>
   </section>
   {service&&controls.serviceRequests&&requestMode&&<ServiceRequestHistory slug={slug} language={language} visible={signedIn}/>}
-  <StorefrontInfo slug={slug} branding={branding} language={language}/>
+  <StorefrontInfo slug={slug} branding={branding} language={language} controls={controls}/>
   <footer className="foonActivityFooter">{branding.platformBranding!=="hidden"&&<Link href="/">FOON</Link>}</footer>
   <nav className="foonActivityMobileDock" aria-label={language==="ar"?"التنقل في المتجر":language==="fr"?"Navigation de la boutique":"Store navigation"}><a href="#activity-products"><span aria-hidden="true">⌂</span><span>{service?t.services:t.browse}</span></a><a href="#activity-categories"><span aria-hidden="true">☷</span><span>{language==="ar"?"الأقسام":language==="fr"?"Catégories":"Categories"}</span></a>{cart&&<a href="#activity-cart"><span aria-hidden="true">🛒</span><span>{language==="ar"?"السلة":language==="fr"?"Panier":"Cart"}</span></a>}{(signedIn||controls.customerLogin)&&<Link href={signedIn?"/customer":"/"+encodeURIComponent(slug)+"/login"}><span aria-hidden="true">◯</span><span>{t.account}</span></Link>}</nav>
  </main>;
