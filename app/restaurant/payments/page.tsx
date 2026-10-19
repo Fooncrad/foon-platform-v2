@@ -9,14 +9,14 @@ import {cookies} from "next/headers";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {database} from "@/lib/db/mysql";
-export default async function MerchantPaymentsPage({searchParams,expectedActivity}:{searchParams:Promise<{tenant?:string}>;expectedActivity?:string}){
+export default async function MerchantPaymentsPage({searchParams,params}:{searchParams:Promise<{tenant?:string}>;params?:Promise<{activity?:string}>}){
  const user=await currentUserId();if(!user)redirect("/login");
  const {tenant}=await searchParams;
  let workspace;try{workspace=await resolveWorkspace(user,tenant);if(!["owner","manager","accountant"].includes(String(workspace.role)))throw Error();}catch{redirect("/account");}
  const tenantId=String(workspace.tenant_id),lang=(await cookies()).get("foon_language")?.value;
  const storedActivity=await tenantWorkspaceActivity(tenantId);
  if(!storedActivity)redirect("/business?tenant="+encodeURIComponent(tenantId));
- if(storedActivity!==(expectedActivity??"restaurant"))redirect(activityWorkspaceUrl(storedActivity));
+ if(storedActivity!==((await params)?.activity??"restaurant"))redirect(activityWorkspaceUrl(storedActivity,tenantId));
  const t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
  const [[branches],[profiles]]=await Promise.all([
   database().execute<RowDataPacket[]>("SELECT id,name FROM branches WHERE tenant_id=? AND enabled=TRUE ORDER BY name",[tenantId]),
