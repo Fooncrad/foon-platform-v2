@@ -47,7 +47,7 @@ impl Drop for Hash {
         if !self.0.is_null() { unsafe { let _ = BCryptDestroyHash(self.0); } }
     }
 }
-fn sha256(bytes: &[u8]) -> Result<[u8; HASH_BYTES], &'static str> {
+pub(crate) fn sha256(bytes: &[u8]) -> Result<[u8; HASH_BYTES], &'static str> {
     if bytes.is_empty() || bytes.len() > u32::MAX as usize {
         return Err("NATIVE_DIGEST_INVALID_BYTES");
     }
