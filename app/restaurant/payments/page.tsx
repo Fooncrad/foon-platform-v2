@@ -1,5 +1,5 @@
 import CanonicalTenantUrl from "../canonical-tenant-url";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {activityWorkspaceUrl,activityPaymentsUrl} from "@/lib/tenant/workspace-routes";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import PaymentEditor from "./payment-editor";
@@ -13,7 +13,7 @@ import {database} from "@/lib/db/mysql";
 export default async function MerchantPaymentsPage({searchParams,params}:{searchParams:Promise<{tenant?:string}>;params?:Promise<{activity?:string}>}){
  const user=await currentUserId();if(!user)redirect("/login");
  const {tenant}=await searchParams;
- let workspace;try{workspace=await resolveWorkspace(user,tenant);if(!["owner","manager","accountant"].includes(String(workspace.role)))throw Error();}catch{redirect("/account");}
+ let workspace;try{workspace=await resolveWorkspaceForActivity(user,(await params)?.activity??"restaurant",tenant);if(!["owner","manager","accountant"].includes(String(workspace.role)))throw Error();}catch{redirect("/account");}
  const tenantId=String(workspace.tenant_id),lang=(await cookies()).get("foon_language")?.value;
  const storedActivity=await tenantWorkspaceActivity(tenantId);
  if(!storedActivity)redirect("/business?tenant="+encodeURIComponent(tenantId));
