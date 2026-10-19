@@ -11,7 +11,8 @@ const groups:{title:string;entries:{key:keyof PublicControls;ar:string;en:string
 export default function PublicControlsEditor({tenantId,activity}:{tenantId:string;activity:string}){
  const [controls,setControls]=useState<PublicControls>(defaultPublicControls);
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[ready,setReady]=useState(false);
- useEffect(()=>{let active=true;fetch("/api/restaurant/public-controls",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(data=>{if(active){setControls(data.controls);setReady(true)}}).catch(()=>{if(active)setMessage("تعذر تحميل إعدادات الواجهة. أعد المحاولة.")});return()=>{active=false}},[tenantId]);
+ const [deliveryCity,setDeliveryCity]=useState(""),[savedDeliveryCity,setSavedDeliveryCity]=useState("");
+ useEffect(()=>{let active=true;fetch("/api/restaurant/public-controls",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(data=>{if(active){setControls(data.controls);const city=String(data.deliveryCity??"");setDeliveryCity(city);setSavedDeliveryCity(city);setReady(true)}}).catch(()=>{if(active)setMessage("تعذر تحميل إعدادات الواجهة. أعد المحاولة.")});return()=>{active=false}},[tenantId]);
  async function change(key:keyof PublicControls,enabled:boolean){
   if(busy)return;
   setBusy(true);setMessage("");
@@ -19,6 +20,16 @@ export default function PublicControlsEditor({tenantId,activity}:{tenantId:strin
   const result=await response.json();if(!response.ok)throw Error();setControls(result.controls);setMessage("تم الحفظ تلقائيًا.");}
   catch{setMessage("تعذر حفظ التعديل، لم تتغير إعدادات الواجهة.");}
   finally{setBusy(false);}
+ }
+ async function saveDeliveryCity(){
+  const city=deliveryCity.trim();
+  if(!ready||busy||city===savedDeliveryCity)return;
+  setBusy(true);setMessage("");
+  try{
+   const response=await fetch("/api/restaurant/public-controls",{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({deliveryCity:city})});
+   if(!response.ok)throw Error();
+   setSavedDeliveryCity(city);setDeliveryCity(city);setMessage("تم حفظ مدينة المتجر.");
+  }catch{setMessage("تعذر حفظ المدينة. حاول مرة أخرى.");}finally{setBusy(false);}
  }
  return <section className="restaurantPanel" dir="rtl" aria-label="تشغيل خصائص واجهة العملاء" style={{marginBlock:18}}>
   <header><div><h3>التحكم في خصائص واجهة العملاء</h3><p>كل خاصية مستقلة لنشاطك. إيقافها يمنع تنفيذها من واجهة العميل والخادم، ولا يحذف أي طلب سابق.</p></div></header>
@@ -30,6 +41,12 @@ export default function PublicControlsEditor({tenantId,activity}:{tenantId:strin
     </label>)}
    </div>
   </div>)}
+  <div style={{display:"flex",flexWrap:"wrap",alignItems:"end",gap:12,marginBlock:14}}>
+   <label style={{display:"grid",gap:6,flex:"1 1 240px",maxWidth:400}}>مدينة المتجر (اختياري)
+    <input aria-label="مدينة المتجر" type="text" maxLength={120} disabled={!ready||busy} value={deliveryCity} onChange={e=>setDeliveryCity(e.target.value)} onBlur={()=>void saveDeliveryCity()} placeholder="مثال: الرياض"/>
+   </label>
+   <button type="button" disabled={!ready||busy||deliveryCity.trim()===savedDeliveryCity} onClick={()=>void saveDeliveryCity()}>حفظ المدينة</button>
+  </div>
   <p style={{fontSize:12,opacity:.75}}>إيقاف البيع أو الكتالوج يمنع طلبات العملاء من الخادم. تفعيل الخاصية هنا لا يتجاوز صلاحيات الباقة أو الوظائف غير المدعومة لنشاطك.</p>
  <InternationalShippingEditor tenantId={tenantId} activity={activity}/>
  </section>
