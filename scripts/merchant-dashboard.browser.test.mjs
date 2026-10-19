@@ -286,7 +286,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   expect(registered.status()).toBe(201);
   const customerPage=await unlinkedContext.newPage();
   await customerPage.goto(origin+"/"+visualSlug);
-  await customerPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
+  await customerPage.locator('.publicMenuInfoBar .publicMenuServices').getByRole('button',{name:'حجز طاولة',exact:true}).click();
   const joinDialog=customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
   await expect(joinDialog).toBeVisible();
   await expect(joinDialog.getByLabel('القسم المطلوب',{exact:true})).toHaveCount(0);
