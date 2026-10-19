@@ -1,6 +1,6 @@
 import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
 import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
-import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity} from "@/lib/tenant/workspace";
 import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
