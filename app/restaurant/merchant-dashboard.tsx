@@ -151,7 +151,8 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const pathnameSection=window.location.pathname.split("/").filter(Boolean)[1];
-  const requested=pathnameSection&&visibleKeys.split("|").includes(pathnameSection)?pathnameSection:params.get("section");
+  const sectionAlias=pathnameSection==="services"?"menu":pathnameSection;
+  const requested=sectionAlias&&visibleKeys.split("|").includes(sectionAlias)?sectionAlias:params.get("section");
   setActive(requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview");
  },[pathname,data.tenantId,visibleKeys]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
