@@ -19,7 +19,7 @@ export default async function ActivitySetupPage({searchParams}:{searchParams:Pro
  const {tenant,activity:requestedActivity}=await searchParams;
  let workspace:Awaited<ReturnType<typeof resolveWorkspace>>;
  try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
- if(!["owner","manager"].includes(workspace.role))redirect("/restaurant");
+ if(!["owner","manager"].includes(workspace.role))redirect("/account");
  const [profiles]=await database().execute<RowDataPacket[]>(
   "SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",
   [workspace.tenant_id]
