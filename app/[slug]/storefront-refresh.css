@@ -289,3 +289,142 @@
 @media (prefers-reduced-motion: reduce) {
   .foonStorefrontThemeToggle, .publicMenu *, .foonActivityStorefront * { transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Match the requested storefront proportions across the real rendered classes. */
+.publicMenu .publicMenuHero,
+.foonActivityStorefront .foonActivityHero {
+  position: relative !important;
+  width: 100% !important;
+  margin: 0 0 20px !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 15px rgb(0 0 0 / 8%) !important;
+}
+.publicMenu .publicMenuHero { height: 160px !important; max-height: none !important; }
+.publicMenu .publicMenuHero[data-cover-shape="empty"] { height: 160px !important; }
+.publicMenu .publicMenuHero .publicMenuHeroImage,
+.foonActivityStorefront .foonActivityHeroImage {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+.foonActivityStorefront .foonActivityHero { height: 160px !important; min-height: 0 !important; padding-block: 16px !important; }
+.foonActivityStorefront .foonActivityHero h1 { margin-block: 6px !important; }
+.foonActivityStorefront .foonActivityHero > p:last-child { margin-block: 0 !important; }
+
+.publicMenu .publicMenuLayout .publicMenuItems,
+.foonActivityStorefront .foonActivityProducts {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+.publicMenu .publicMenuItem,
+.foonActivityStorefront .foonActivityProduct {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  border: 1px solid var(--public-line, var(--activity-border)) !important;
+  border-radius: 16px !important;
+  background: var(--public-surface, var(--activity-panel)) !important;
+  box-shadow: 0 4px 15px rgb(17 24 39 / 7%) !important;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage,
+.foonActivityStorefront .foonActivityProductMedia {
+  position: relative !important;
+  display: grid !important;
+  flex: 0 0 120px !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 120px !important;
+  min-height: 120px !important;
+  max-height: 120px !important;
+  aspect-ratio: auto !important;
+  overflow: hidden !important;
+  background: color-mix(in srgb, var(--public-brand, var(--activity-accent)) 8%, var(--public-bg, var(--activity-page))) !important;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage img,
+.foonActivityStorefront .foonActivityProductMedia img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+.publicMenu .publicMenuItem .publicMenuItemBody,
+.foonActivityStorefront .foonActivityProductInfo {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  padding: 12px !important;
+  gap: 6px !important;
+}
+.publicMenu .publicMenuItemBody h2,
+.foonActivityStorefront .foonActivityProductInfo h3 {
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  line-height: 1.5 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.publicMenu .publicMenuItemBody .publicMenuItemSummary,
+.foonActivityStorefront .foonActivityProductInfo > p {
+  display: -webkit-box !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: var(--public-muted, var(--activity-muted)) !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 1 !important;
+}
+.publicMenu .publicMenuItem footer.publicMenuItemFooter { margin-top: auto !important; padding: 8px 12px 12px !important; }
+.foonActivityStorefront .foonActivityProductInfo > strong { margin-top: auto !important; }
+
+@media (min-width: 577px) {
+  .publicMenu .publicMenuLayout .publicMenuItems,
+  .foonActivityStorefront .foonActivityProducts { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .publicMenu .publicMenuHero,
+  .publicMenu .publicMenuHero[data-cover-shape="empty"],
+  .foonActivityStorefront .foonActivityHero { height: 220px !important; }
+}
+@media (min-width: 993px) {
+  .publicMenu .publicMenuLayout .publicMenuItems,
+  .foonActivityStorefront .foonActivityProducts { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+  .publicMenu .publicMenuHero,
+  .publicMenu .publicMenuHero[data-cover-shape="empty"],
+  .foonActivityStorefront .foonActivityHero { height: 320px !important; }
+}
+@media (min-width: 1401px) {
+  .publicMenu .publicMenuLayout .publicMenuItems,
+  .foonActivityStorefront .foonActivityProducts { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 576px) {
+  .publicMenu .publicMenuHero,
+  .publicMenu .publicMenuHero[data-cover-shape="empty"],
+  .foonActivityStorefront .foonActivityHero { height: 160px !important; }
+  .publicMenu .publicMenuCatalog { grid-template-columns: minmax(0, 1fr) !important; }
+  .publicMenu .publicMenuItem .publicMenuCardCart { min-width: 40px !important; min-height: 40px !important; padding: 8px !important; }
+  .foonActivityStorefront .foonActivityStoreMeta { margin: -8px 10px 0 !important; }
+  .foonActivityStorefront .foonActivityContent { padding: 28px 12px 54px !important; }
+  .foonActivityStorefront .foonActivityProducts { gap: 10px !important; }
+  .foonActivityStorefront .foonActivityProductInfo { padding: 10px !important; }
+}
+@media (max-width: 340px) {
+  .publicMenu .publicMenuLayout .publicMenuItems,
+  .foonActivityStorefront .foonActivityProducts { gap: 8px !important; }
+  .publicMenu .publicMenuItem .publicMenuItemBody,
+  .foonActivityStorefront .foonActivityProductInfo { padding: 8px !important; }
+}
+.publicMenu[data-layout="list"] .publicMenuLayout .publicMenuItems { grid-template-columns: minmax(0, 1fr) !important; }
+.publicMenu[data-layout="list"] .publicMenuItem { display: grid !important; grid-template-columns: minmax(100px, 180px) minmax(0, 1fr) !important; }
+.publicMenu[data-layout="list"] .publicMenuItem .publicMenuItemImage { height: auto !important; min-height: 100px !important; max-height: 180px !important; aspect-ratio: 1 / 1 !important; }
