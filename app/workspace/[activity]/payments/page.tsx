@@ -18,5 +18,5 @@ export default async function ActivityPaymentsPage({
  const actual=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!actual)notFound();
  if(activity!==actual)redirect(activityPaymentsUrl(actual));
- return <MerchantPaymentsPage searchParams={Promise.resolve({tenant:workspace.tenant_id})} expectedActivity={activity}/>;
+ return <MerchantPaymentsPage searchParams={Promise.resolve({tenant:workspace.tenant_id})} params={Promise.resolve({activity})}/>;
 }
