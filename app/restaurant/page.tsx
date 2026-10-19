@@ -1,6 +1,6 @@
 import {defaultActivityModules,isActivityType} from "@/lib/platform/activity-presets";
 import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
@@ -14,7 +14,7 @@ import "./merchant-operations.css";
 export default async function RestaurantPage({searchParams,params}:{searchParams:Promise<{tenant?:string}>;params?:Promise<{activity?:string}>}){
  const userId=await currentUserId();if(!userId)redirect("/login");
  const {tenant}=await searchParams;
- let workspace;try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
+ let workspace;try{workspace=await resolveWorkspaceForActivity(userId,(await params)?.activity??"restaurant",tenant);}catch{redirect("/account");}
  const tenantId=workspace.tenant_id,canManage=workspace.adminAccess?!workspace.supportReadOnly:["owner","manager"].includes(workspace.role);
  const db=database();
  const [activityRows]=await db.execute<RowDataPacket[]>("SELECT t.kind,bp.activity_code,bp.currency FROM tenants t LEFT JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE t.id=? LIMIT 1",[tenantId]);
