@@ -52,3 +52,13 @@
 .restaurantApp .foonBulkImportSteps{display:grid;gap:8px;margin:0;padding-inline-start:24px;max-width:80ch;font-size:13px;line-height:1.65;}
 .restaurantApp .foonBulkImportSteps li{padding-inline-start:6px;color:var(--rc-text,#182230);}
 .restaurantApp .foonBulkImportSteps li::marker{font-weight:800;color:var(--rc-accent,#e76f3c);}
+
+/* Printer setup: primary actions first; detail-heavy mapping stays collapsible. */
+.restaurantApp .restaurantPrinterGuide{padding:16px 18px;margin-bottom:14px;border:1px solid var(--rc-border,#d7dfe9);border-radius:14px;background:var(--rc-surface,#fff);color:var(--rc-text,#182230);}
+.restaurantApp .restaurantPrinterGuide h3{margin:0 0 10px;font-size:16px;font-weight:800;}
+.restaurantApp .restaurantPrinterGuide ol{display:grid;gap:7px;margin:0;padding-inline-start:24px;line-height:1.75;font-size:13px;}
+.restaurantApp .restaurantPrinterGuide li{padding-inline-start:6px;}
+.restaurantApp .restaurantPrinterGuide li::marker{font-weight:800;color:var(--rc-accent,#e76f3c);}
+.restaurantApp .restaurantPrinterGuide p{margin:12px 0 0;color:var(--rc-muted,#4b5563);font-size:13px;line-height:1.7;}
+.restaurantApp .restaurantPrinterAdvanced{padding-block:16px;}
+.restaurantApp .restaurantPrinterAdvanced>summary{min-height:44px;cursor:pointer;font-weight:750;line-height:1.5;}
