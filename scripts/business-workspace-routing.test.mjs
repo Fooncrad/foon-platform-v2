@@ -13,7 +13,7 @@ test("each of 15 activities has its exact canonical identifier, not one store al
   assert.ok(activities.includes(id),id);
  const routes=read("lib/tenant/workspace-routes.ts");
  assert.match(routes,/isActivityType\(activity\)/);
- assert.match(routes,/return "\/workspace\/"\+activity/);
+ assert.match(routes,/return "\/"\+ACTIVITY_ROUTE_SLUGS\[activity\]/);
  assert.match(routes,/function activityPaymentsUrl/);
  assert.doesNotMatch(routes,/mysql2|@\/lib\/db\//,"client-shared helpers cannot import DB");
 });
@@ -31,12 +31,12 @@ test("activity URL mismatch redirects after checking the user's tenant membershi
 test("account, new business signup and dashboard use activity_code, never store-kind bucket",()=>{
  const account=read("app/account/page.tsx");
  assert.match(account,/tenantWorkspaceActivity\(tenantId\)/);
- assert.match(account,/activityWorkspaceUrl\(activity,tenantId\)/);
+ assert.match(account,/activityWorkspaceUrl\(activity\)/);
  assert.doesNotMatch(account,/memberships\[0\]\.kind==="store"/);
  assert.match(read("app/restaurant/register/page.tsx"),/activityWorkspaceUrl\(activity,result.tenant.id\)/);
  const dash=read("app/restaurant/merchant-dashboard.tsx");
- assert.match(dash,/activityWorkspaceUrl\(data.activityCode,data.tenantId\)/);
- assert.match(dash,/activityPaymentsUrl\(data.activityCode,data.tenantId\)/);
+ assert.match(dash,/activityWorkspaceUrl\(data.activityCode\)/);
+ assert.match(dash,/activityPaymentsUrl\(data.activityCode\)/);
 });
 
 test("legacy /business and restaurant links remain compatible without reassigning roles",()=>{
@@ -54,7 +54,7 @@ test("payment pages restrict activity route and use stored code for return link"
  const payments=read("app/workspace/[activity]/payments/page.tsx");
  assert.match(payments,/resolveWorkspace\(userId,requested.tenant\)/);
  assert.match(payments,/if\(activity!==actual\)redirect\(activityPaymentsUrl\(actual,workspace.tenant_id\)\)/);
- assert.match(read("app/restaurant/payments/page.tsx"),/activityWorkspaceUrl\(storedActivity,tenantId\)/);
+ assert.match(read("app/restaurant/payments/page.tsx"),/activityWorkspaceUrl\(storedActivity\)/);
 });
 
 test("database registration retains store-vs-restaurant bucket, not merchant-role equivalence",()=>{
