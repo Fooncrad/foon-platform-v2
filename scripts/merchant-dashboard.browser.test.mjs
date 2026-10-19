@@ -166,7 +166,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
    await publicPage.setViewportSize({width,height:900});
    const layout=await publicPage.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,direction:getComputedStyle(document.querySelector('.publicMenu')).direction,titleDirection:getComputedStyle(document.querySelector('.publicMenuSectionTitle')).direction,columns:getComputedStyle(document.querySelector('.publicMenu .publicMenuLayout .publicMenuItems')).gridTemplateColumns.split(' ').length}));
    expect(layout.scrollWidth,`${language} ${width}px overflow`).toBeLessThanOrEqual(layout.width);expect(layout.direction).toBe(language==='ar'?'rtl':'ltr');expect(layout.titleDirection).toBe(layout.direction);
-   const expectedColumns=width<=576?2:width<=1150?4:width<1920?6:8;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
+   const expectedColumns=width<=576?2:width<=1400?4:width<1920?6:8;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
    if(language==='ar'&&width===320||language==='en'&&width===768||language==='fr'&&width===1440)await captureScreenshot(publicPage,{path:`work/menu-responsive-${language}-${width}.png`,fullPage:true});
   }
  }
@@ -691,6 +691,15 @@ test('all activity storefront templates retain distinct direction and responsive
      await expect(storefront).toHaveAttribute('dir',language==='ar'?'rtl':'ltr');
      await expect(page.getByRole('heading',{name:'Responsive visual product',exact:true})).toBeVisible();
      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),activity+'/'+template+'/'+width).toBe(true);
+     const dock=page.locator('.foonActivityMobileDock');
+     if(width===320){
+      await expect(dock).toBeVisible();
+      await expect(dock.locator('a[href="#activity-products"]')).toHaveCount(1);
+      await expect(dock.locator('a[href="#activity-categories"]')).toHaveCount(1);
+      const dockBounds=await dock.boundingBox();expect(dockBounds).not.toBeNull();expect(dockBounds.x).toBeGreaterThanOrEqual(-1);expect(dockBounds.x+dockBounds.width).toBeLessThanOrEqual(width+1);expect(dockBounds.y+dockBounds.height).toBeLessThanOrEqual(851);
+      const actions=await page.locator('.foonActivityHeaderActions').evaluate(el=>Array.from(el.querySelectorAll(':scope > button, :scope > label')).map(child=>{const r=child.getBoundingClientRect();return {y:r.y}}));expect(actions.length).toBe(3);expect(Math.max(...actions.map(r=>r.y))-Math.min(...actions.map(r=>r.y))).toBeLessThanOrEqual(2);
+     }else await expect(dock).toBeHidden();
+     const imageSize=await page.locator('.foonActivityProductMedia').first().evaluate(n=>{const r=n.getBoundingClientRect();return {width:r.width,height:r.height}});expect(Math.abs(imageSize.width-imageSize.height)).toBeLessThanOrEqual(1);
      if(activity==='cafe'&&i===0&&width===320){
       const toggle=page.locator('.foonActivityStorefront .foonStorefrontThemeToggle');
       await toggle.click();await expect(storefront).toHaveAttribute('data-color-mode','dark');
