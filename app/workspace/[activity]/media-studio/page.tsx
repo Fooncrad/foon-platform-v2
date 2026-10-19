@@ -18,5 +18,5 @@ export default async function ActivityMediaStudioPage({
  const actual=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!actual)notFound();
  if(activity!==actual)redirect(activityMediaStudioUrl(actual));
- return <MediaStudioPage searchParams={Promise.resolve({tenant:workspace.tenant_id})} expectedActivity={activity}/>;
+ return <MediaStudioPage searchParams={Promise.resolve({tenant:workspace.tenant_id})} params={Promise.resolve({activity})}/>;
 }
