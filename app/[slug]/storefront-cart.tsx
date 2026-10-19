@@ -30,7 +30,7 @@ export function StorefrontAddButton({slug,id,language,service=false}:{slug:strin
  const translateUi=useUiText();
 
  const text=language==="ar"?(service?"إضافة الخدمة":translateUi("إضافة إلى السلة")):language==="fr"?(service?"Ajouter le service":"Ajouter au panier"):(service?"Add service":"Add to cart");
- return <button type="button" className="foonCartAdd" onClick={()=>window.dispatchEvent(new CustomEvent("foon:storefront-cart-add",{detail:{slug,id}}))}>{text}</button>;
+ return <button type="button" className="foonCartAdd" aria-label={text} onClick={()=>window.dispatchEvent(new CustomEvent("foon:storefront-cart-add",{detail:{slug,id}}))}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4h2l3 11h10l3-8H6M10 20h.01M18 20h.01"/></svg><span className="foonCartAddLabel">{text}</span></button>;
 }
 export default function StorefrontCart({checkoutPolicy,slug,language,signedIn=false,linked=false,service=false,customerPhone="",deliveryAddress=""}:{checkoutPolicy?:CheckoutPolicy;slug:string;language:Language;signedIn?:boolean;linked?:boolean;service?:boolean;customerPhone?:string;deliveryAddress?:string}){
  const tr=(ar:string,en:string,fr:string)=>language==="ar"?ar:language==="fr"?fr:en;
