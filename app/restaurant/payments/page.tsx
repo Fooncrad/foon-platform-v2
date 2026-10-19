@@ -1,5 +1,5 @@
 import CanonicalTenantUrl from "../canonical-tenant-url";
-import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity} from "@/lib/tenant/workspace";
 import {activityWorkspaceUrl,activityPaymentsUrl} from "@/lib/tenant/workspace-routes";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import PaymentEditor from "./payment-editor";
