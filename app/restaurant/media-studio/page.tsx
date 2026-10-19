@@ -11,7 +11,7 @@ import {MEDIA_STUDIO_SECTIONS,MEDIA_STUDIO_LABELS,MEDIA_STUDIO_PROVIDERS,type Me
 import MediaStudioTheme from "./media-studio-theme";
 
 /** Tenant-scoped Media Studio preview. No OAuth, publishing or messaging is enabled. */
-export default async function MediaStudioPage({searchParams,expectedActivity}:{searchParams:Promise<{tenant?:string}>;expectedActivity?:string}){
+export default async function MediaStudioPage({searchParams,params}:{searchParams:Promise<{tenant?:string}>;params?:Promise<{activity?:string}>}){
  const userId=await currentUserId();
  if(!userId)redirect("/login");
  const {tenant}=await searchParams;
@@ -19,8 +19,8 @@ export default async function MediaStudioPage({searchParams,expectedActivity}:{s
  try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
  const activity=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!activity)redirect("/business?tenant="+encodeURIComponent(workspace.tenant_id));
- if(activity!==(expectedActivity??"restaurant"))redirect(activityWorkspaceUrl(activity));
- if(!["owner","manager"].includes(workspace.role))redirect(activityWorkspaceUrl(activity));
+ if(activity!==((await params)?.activity??"restaurant"))redirect(activityWorkspaceUrl(activity,workspace.tenant_id));
+ if(!["owner","manager"].includes(workspace.role))redirect(activityWorkspaceUrl(activity,workspace.tenant_id));
  const [accounts]=await database().execute<RowDataPacket[]>("SELECT provider,display_name,status FROM tenant_media_social_accounts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[workspace.tenant_id]);
  const language=(await cookies()).get("foon_language")?.value;
  const locale:MediaStudioLocale=language==="en"||language==="fr"?language:"ar";
