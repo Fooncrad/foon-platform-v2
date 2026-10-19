@@ -10,7 +10,7 @@ const groups:{title:string;entries:{key:keyof PublicControls;ar:string;en:string
 export default function PublicControlsEditor({tenantId,activity}:{tenantId:string;activity:string}){
  const [controls,setControls]=useState<PublicControls>(defaultPublicControls);
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[ready,setReady]=useState(false);
- useEffect(()=>{let active=true;setReady(false);fetch("/api/restaurant/public-controls",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(data=>{if(active){setControls(data.controls);setReady(true)}}).catch(()=>{if(active)setMessage("تعذر تحميل إعدادات الواجهة. أعد المحاولة.")});return()=>{active=false}},[tenantId]);
+ useEffect(()=>{let active=true;fetch("/api/restaurant/public-controls",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(data=>{if(active){setControls(data.controls);setReady(true)}}).catch(()=>{if(active)setMessage("تعذر تحميل إعدادات الواجهة. أعد المحاولة.")});return()=>{active=false}},[tenantId]);
  async function change(key:keyof PublicControls,enabled:boolean){
   if(busy)return;
   setBusy(true);setMessage("");
