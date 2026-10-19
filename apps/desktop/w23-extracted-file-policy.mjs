@@ -32,3 +32,22 @@ export function classifyExtractedFileNames(fileNames) {
   }
   return {ok:blockers.length===0,blockers:[...new Set(blockers)]};
 }
+
+import {readFile} from "node:fs/promises";
+import {resolve} from "node:path";
+import {fileURLToPath} from "node:url";
+// CLI accepts only a JSON inventory produced by the separate extraction
+// script; it never opens the original NSIS, user SQLite or any service.
+if (process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
+  try {
+    if (process.argv.length!==3) throw Error("W23_EXTRACTED_MANIFEST_REQUIRED");
+    const raw=(await readFile(process.argv[2],"utf8")).replace(/^\uFEFF/,"");
+    const verdict=classifyExtractedFileNames(JSON.parse(raw));
+    for (const reason of verdict.blockers) console.error("BLOCKED: "+reason);
+    if (!verdict.ok) process.exitCode=2;
+    else console.log("W23 EXTRACTED FILE INVENTORY HAS NO NAMED LEGACY NODE RESOURCES");
+  } catch {
+    console.error("BLOCKED: W23_EXTRACTED_MANIFEST_INVALID");
+    process.exitCode=2;
+  }
+}
