@@ -24,7 +24,7 @@ import type {MenuGroup} from "@/lib/restaurant/menu";
 import {isMenuTemplate,menuTemplates} from "@/lib/restaurant/menu-templates";
 import {cartKey,choicePrice,choicesValid,type CartLine} from "../restaurant/menu-choices";
 import {supportedCountries} from "@/lib/tenant/country-catalog";
-import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls";
+import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls-core";
 type MenuItem=ProductItem;
 export type PublicMenuProps={name:string;slug:string;branding:Record<string,string|number|null>;controls?:PublicControls;customerEmail?:string;items:MenuItem[];categories:{id:string;name:string;nameEn?:string;nameFr?:string;imageUrl?:string|null}[];branches:{id:string;name:string}[];signedIn:boolean;linked:boolean;options:Record<string,MenuGroup[]>;services?:MenuServices;tables?:DiningTable[];serviceTables?:DiningTable[];sections?:DiningSection[];preview?:boolean};
 type CustomerReservation={id:string;branchId:string;name:string;status:string;scheduledAt:string;partySize:number};
