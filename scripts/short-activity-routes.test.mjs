@@ -43,3 +43,19 @@ test("tenant identifiers stay server-authorized and absent from canonical naviga
  assert.ok(resolver.includes("requireTenantMembership"));
  assert.ok(selection.includes("httpOnly:true"));
 });
+
+test("client entrypoints keep use client directive as first statement",()=>{
+ for(const path of ["app/restaurant/merchant-dashboard.tsx","app/admin/tenants/tenant-manager.tsx","app/restaurant/canonical-tenant-url.tsx"]){
+  assert.match(read(path),/^"use client";/,path);
+ }
+});
+test("old storefront slug collisions have a dedicated public route",()=>{
+ const validator=read("scripts/store-slug.mjs");
+ const publicPage=read("app/[slug]/page.tsx");
+ const fallback=read("app/s/[slug]/page.tsx");
+ const market=read("app/market/page.tsx");
+ assert.match(validator,/allowReserved/);
+ assert.match(publicPage,/validStoreSlug\(slug,true\)/);
+ assert.match(fallback,/from "..\/..\/\[slug\]\/page"/);
+ assert.match(market,/publicStorefrontUrl\(String\(store.slug\)\)/);
+});
