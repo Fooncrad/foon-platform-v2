@@ -153,7 +153,11 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   const pathnameSection=window.location.pathname.split("/").filter(Boolean)[1];
   const sectionAlias=pathnameSection==="services"?"menu":pathnameSection;
   const requested=sectionAlias&&visibleKeys.split("|").includes(sectionAlias)?sectionAlias:params.get("section");
-  setActive(requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview");
+  // Schedule state synchronization outside the effect body to avoid render cascades.
+  let cancelled=false;
+  const target=requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview";
+  queueMicrotask(()=>{if(!cancelled)setActive(target);});
+  return ()=>{cancelled=true;};
  },[pathname,data.tenantId,visibleKeys]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
  // and save the requested tenant before removing identifiers from the address.
