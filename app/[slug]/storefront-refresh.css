@@ -432,3 +432,59 @@
 .publicMenu[data-layout="list"] .publicMenuLayout .publicMenuItems { grid-template-columns: minmax(0, 1fr) !important; }
 .publicMenu[data-layout="list"] .publicMenuItem { display: grid !important; grid-template-columns: minmax(100px, 180px) minmax(0, 1fr) !important; }
 .publicMenu[data-layout="list"] .publicMenuItem .publicMenuItemImage { height: auto !important; min-height: 100px !important; max-height: 180px !important; aspect-ratio: 1 / 1 !important; }
+
+
+/* Keep mobile navigation focused: each action has one home. */
+@media (max-width: 700px) {
+  .publicMenuHeader {
+    position: relative;
+    top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-height: 0;
+    padding-block: 8px;
+  }
+  .publicMenuHeaderBrand {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+  .publicMenuStoreName { flex: 1 1 auto; max-width: none; min-width: 0; font-size: 15px; }
+  .publicMenuHeaderActions { flex: 0 0 auto; margin-inline-start: auto; gap: 5px; }
+  .publicMenuHeader nav { flex: 0 0 auto; width: 100%; min-height: 38px; }
+  .publicMenuHeader nav label { margin-inline-start: auto; }
+  .publicMenuHeader nav select { min-height: 38px; }
+  .publicMenu .publicMenuHeaderBrand > .publicMenuCategoryTrigger,
+  .publicMenu .publicMenuHeaderBrand > .publicMenuWordmark,
+  .publicMenu .publicMenuHeader nav .publicMenuAccountLink,
+  .publicMenu .publicMenuHeader nav .publicMenuCartHeaderLink { display: none !important; }
+  .publicMenu .foonStorefrontThemeToggle { min-width: 44px; padding: 8px; }
+}
+@media (min-width: 701px) and (max-width: 950px) {
+  .publicMenu .publicMenuHeaderBrand > .publicMenuCategoryTrigger,
+  .publicMenu .publicMenuHeaderBrand > .publicMenuWordmark,
+  .publicMenu .publicMenuHeader nav .publicMenuAccountLink,
+  .publicMenu .publicMenuHeader nav .publicMenuCartHeaderLink { display: none !important; }
+}
+.publicMenuOfflineSaved {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 32px;
+  margin: 0 auto 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--public-line);
+  border-radius: 999px;
+  background: var(--public-surface);
+  color: var(--public-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+.publicMenuOfflineSaved > span { color: #27835b; font-weight: 800; }
