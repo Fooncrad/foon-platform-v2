@@ -1,6 +1,6 @@
 import {notFound,redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import {activityMediaStudioUrl} from "@/lib/tenant/workspace-routes";
 import {isActivityType} from "@/lib/platform/activity-presets";
@@ -14,7 +14,7 @@ export default async function ActivityMediaStudioPage({
  const userId=await currentUserId();if(!userId)redirect("/login");
  const requested=await searchParams;
  let workspace;
- try{workspace=await resolveWorkspace(userId,requested.tenant);}catch{redirect("/account");}
+ try{workspace=await resolveWorkspaceForActivity(userId,activity,requested.tenant);}catch{redirect("/account");}
  const actual=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!actual)notFound();
  if(activity!==actual)redirect(activityMediaStudioUrl(actual,workspace.tenant_id));
