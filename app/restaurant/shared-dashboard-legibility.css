@@ -23,3 +23,28 @@
  .restaurantApp .restaurantPanel>header {flex-wrap:wrap;gap:8px;}
  .restaurantApp .restaurantPanel :is(input,select,textarea){min-width:0;}
 }
+
+/* A single clear sequence for catalog CSV template instructions and import controls. */
+.restaurantApp .foonBulkImport {margin-block:16px;border:1px solid var(--rc-border,#d8dee8);border-radius:14px;min-width:0;overflow:hidden;background:var(--rc-surface,#fff);color:var(--rc-text,#182230);}
+.restaurantApp .foonBulkImport>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:12px 16px;cursor:pointer;font-size:14px;line-height:1.4;list-style-position:inside;}
+.restaurantApp .foonBulkImport>summary strong{font-size:14px;}
+.restaurantApp .foonBulkImportBadge{padding:3px 10px;border-radius:999px;background:#e9edf4;color:#213349;letter-spacing:.04em;font-size:11px;font-weight:750;}
+.restaurantApp .foonBulkImportBody{display:grid;align-items:start;justify-items:start;gap:12px;padding:16px;border-top:1px solid var(--rc-border,#d8dee8);}
+.restaurantApp .foonBulkImportBody p{max-width:78ch;margin:0;font-size:13px;line-height:1.75;color:var(--rc-text,#182230);overflow-wrap:anywhere;}
+.restaurantApp .foonBulkImportBody .foonBulkImportTemplate{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:10px;border:1px solid #b45309;background:#fff7ed;color:#85300c;font-weight:700;cursor:pointer;text-align:start;}
+.restaurantApp .foonBulkImportFile{display:grid;gap:9px;max-width:100%;font-size:13px;font-weight:650;}
+.restaurantApp .foonBulkImportFile input{max-width:100%;min-width:0;color:inherit;}
+.restaurantApp .foonBulkImportBody>button:not(.foonBulkImportTemplate){min-height:44px;padding:9px 14px;border:1px solid var(--rc-border,#ccd3df);border-radius:10px;color:inherit;background:transparent;cursor:pointer;}
+.restaurantApp .foonBulkImportBody progress{width:min(420px,100%)!important;max-width:100%;}
+/* Contrast repair: native forms remain readable in customer night mode, even
+   when legacy components paint an explicit light surface. */
+.customerDashboard .customerUploadLabel{background:#20262e;color:#f8f4ea;border-color:#64748b;}
+.customerDashboard .customerUploadLabel:focus-within{outline:2px solid #e2a93b;outline-offset:2px;}
+.customerDashboard .customerProfileForm :is(input,select,textarea),
+.customerDashboard .customerAddressForm :is(input,select,textarea){color:inherit;background:#20262e;border-color:#64748b;}
+.customerDashboard :is(.customerProfileForm,.customerAddressForm) :is(input,select,textarea)::placeholder{color:#c9cfd7;opacity:1;}
+.customerDashboard .customerProfileForm button,.customerDashboard .customerLogout{min-height:44px;}
+.customerDashboard .customerProfileMedia>div{min-width:0;overflow-wrap:anywhere;}
+@media(prefers-contrast:more){
+ .customerDashboard :is(input,button,select,textarea):focus-visible{outline-width:3px;}
+}
