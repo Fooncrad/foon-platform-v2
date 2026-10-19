@@ -62,3 +62,13 @@
 .restaurantApp .restaurantPrinterGuide p{margin:12px 0 0;color:var(--rc-muted,#4b5563);font-size:13px;line-height:1.7;}
 .restaurantApp .restaurantPrinterAdvanced{padding-block:16px;}
 .restaurantApp .restaurantPrinterAdvanced>summary{min-height:44px;cursor:pointer;font-weight:750;line-height:1.5;}
+
+/* Admin media limits: clear grouping instead of narrow stacked inputs. */
+.adminPanel .foonAdminMediaGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px;align-items:start;}
+.adminPanel .foonAdminMediaCard{display:grid;min-width:0;gap:12px;padding:18px;border:1px solid var(--admin-border,#d8dee7);border-radius:16px;background:var(--admin-panel,#fff);}
+.adminPanel .foonAdminMediaCard>h2{margin:0 0 2px;font-size:17px;line-height:1.4;}
+.adminPanel .foonAdminMediaCard>label:not(.foonAdminMediaEnabled){display:grid;gap:6px;font-size:13px;line-height:1.5;}
+.adminPanel .foonAdminMediaCard :is(input[type=number],input[type=text]){width:100%;min-width:0;min-height:44px;padding:8px 10px;border:1px solid #a6afbe;border-radius:10px;color:inherit;background:transparent;box-sizing:border-box;}
+.adminPanel .foonAdminMediaEnabled{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;font-weight:650;}
+.adminPanel .foonAdminMediaEnabled input{width:20px;height:20px;accent-color:#bf732b;}
+.adminPanel .foonAdminMediaCard button{min-height:44px;white-space:normal;}
