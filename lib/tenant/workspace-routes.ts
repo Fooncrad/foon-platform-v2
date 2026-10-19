@@ -32,3 +32,9 @@ export function activityMediaStudioUrl(activity:string,tenantId?:string):string{
  const path=activityWorkspacePath(activity)+"/media-studio";
  return tenantId?path+"?tenant="+encodeURIComponent(tenantId):path;
 }
+
+/** Existing public store slugs that overlap a dashboard alias use /s/{slug}. */
+export function publicStorefrontUrl(slug:string):string{
+ const safe=encodeURIComponent(slug);
+ return Object.values(ACTIVITY_ROUTE_SLUGS).includes(slug)?"/s/"+safe:"/"+safe;
+}
