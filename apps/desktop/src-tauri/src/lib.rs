@@ -12,6 +12,8 @@ mod protected_receipt_path;
 mod native_event_digest;
 #[cfg(windows)]
 mod native_outbox_readonly;
+#[cfg(windows)]
+mod native_order_outbox;
 #[cfg(all(test, windows))]
 mod native_ack_sandbox;
 use tauri::Manager;
