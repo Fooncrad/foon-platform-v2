@@ -38,7 +38,7 @@ test("every activity capability maps to a real workspace route",()=>{
 });
 test("pickup point shortcut targets an enabled dashboard section",()=>{
  const grocery=activityToolLinks("grocery","tenant-123","ar");
- assert.ok(grocery.some(link=>link.href==="/workspace/grocery?tenant=tenant-123&section=pickupPoints"&&link.codes.includes("pickup")));
+ assert.ok(grocery.some(link=>link.href==="/grocery/pickupPoints"&&link.codes.includes("pickup")));
  const dashboard=readFileSync(new URL("../app/restaurant/merchant-dashboard.tsx",import.meta.url),"utf8");
  assert.match(dashboard,/key:"pickupPoints",label:"نقاط الاستلام",icon:"store",feature:"pickup"/);
  assert.match(dashboard,/pickupPoints:"pickup"/);
@@ -153,7 +153,7 @@ test("public works quotation capability reaches a real merchant resource workspa
  const schema=readFileSync(new URL("./restaurant-resource-schema.mjs",import.meta.url),"utf8");
  assert.ok(ACTIVITY_PRESETS.publicworks.includes("quotes"));
  assert.ok(!ACTIVITY_PRESETS.restaurant.includes("quotes"));
- assert.ok(activityToolLinks("publicworks","tenant-123","ar").some(link=>link.href==="/workspace/publicworks?tenant=tenant-123&section=quotes"&&link.codes.includes("quotes")));
+ assert.ok(activityToolLinks("publicworks","tenant-123","ar").some(link=>link.href==="/contracting/quotes"&&link.codes.includes("quotes")));
  assert.match(dashboard,/quotes:"quotes"/);
  assert.match(dashboard,/key:"quotes",label:"عروض الأسعار"/);
  assert.match(workspace,/quotes:\[\{key:"quotations",label:"عروض أسعار الخدمات"\}\]/);
