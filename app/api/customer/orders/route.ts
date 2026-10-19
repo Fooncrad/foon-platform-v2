@@ -9,7 +9,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {createOrder} from "@/lib/restaurant/operations";
 import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
-import {customerCartAvailable} from "@/lib/platform/customer-checkout";
+import {customerCartAvailable,deliveryCountryMatches} from "@/lib/platform/customer-checkout";
 export const runtime="nodejs";
 async function queueDeliveryDriverAlerts(db:PoolConnection,tenantId:string){
  await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[tenantId]);
@@ -36,7 +36,7 @@ export async function POST(request:Request){
   // joined shared reads; concurrent retries must not deadlock on lock upgrade.
   const [actors]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   if(!actors.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");
-  const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id,t.kind,b.activity_code,u.display_name FROM tenants t LEFT JOIN tenant_business_profiles b ON b.tenant_id=t.id JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
+  const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id,t.kind,b.activity_code,b.country_code,u.display_name FROM tenants t LEFT JOIN tenant_business_profiles b ON b.tenant_id=t.id JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
   if(!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");const tenantId=String(stores[0].id);tenantIdForAlert=tenantId;
   if(!customerCartAvailable(String(stores[0].activity_code??""),String(stores[0].kind)))throw new ResourceError("CART_NOT_AVAILABLE");
   if(!(await tenantEntitlement(tenantId,"orders",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
@@ -47,6 +47,7 @@ export async function POST(request:Request){
   const customerPhone=typeof body.customerPhone==="string"&&body.customerPhone.trim()?body.customerPhone.trim():String(profiles[0]?.phone||"");
   const catalogDelivery=body.channel==="delivery"&&String(stores[0].activity_code??"")!=="restaurant"&&Boolean(stores[0].activity_code);
   if(catalogDelivery&&(typeof body.deliveryAddress!=="string"||body.deliveryAddress.trim().length<5||body.deliveryAddress.length>900||!/^\+?[\d ()-]{7,40}$/.test(customerPhone)||customerPhone.replace(/\D/g,"").length<7))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
+  if(body.channel==="delivery"&&!deliveryCountryMatches(body.deliveryCountryCode,stores[0].country_code))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);

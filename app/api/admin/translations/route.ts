@@ -7,8 +7,11 @@ import {assertSameOrigin} from "@/lib/security/origin";
 async function authorize(write:boolean){const user=await currentActiveAdminUserId();if(!user)return 401;try{await requirePlatformRole(user,write?["super_admin","admin"]:["super_admin","admin","support"]);return 200;}catch{return 403;}}
 export async function GET(request:Request){
  const status=await authorize(false);if(status!==200)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status});
+ const canEdit=await authorize(true)===200;
  const url=new URL(request.url),q=(url.searchParams.get("q")??"").trim().slice(0,100),page=Math.max(1,Math.min(100000,Number(url.searchParams.get("page"))||1));
- try{const [rows]=await database().execute<RowDataPacket[]>("SELECT translation_key,text_ar,text_en,text_fr FROM ui_translations WHERE translation_key LIKE ? OR text_ar LIKE ? OR text_en LIKE ? OR text_fr LIKE ? ORDER BY translation_key LIMIT 50 OFFSET ?",[...Array(4).fill("%"+q+"%"),(page-1)*50]);return NextResponse.json({ok:true,rows,page});}catch{return NextResponse.json({ok:false,code:"TRANSLATIONS_UNAVAILABLE"},{status:503});}
+ try{const [rows]=url.searchParams.get("leaks")==="1"
+  ?await database().execute<RowDataPacket[]>("SELECT translation_key,text_ar,text_en,text_fr FROM ui_translations WHERE translation_key LIKE 'ui.leak.%' ORDER BY translation_key LIMIT 50 OFFSET ?",[(page-1)*50])
+  :await database().execute<RowDataPacket[]>("SELECT translation_key,text_ar,text_en,text_fr FROM ui_translations WHERE translation_key LIKE ? OR text_ar LIKE ? OR text_en LIKE ? OR text_fr LIKE ? ORDER BY translation_key LIMIT 50 OFFSET ?",[...Array(4).fill("%"+q+"%"),(page-1)*50]);return NextResponse.json({ok:true,rows,page,canEdit});}catch{return NextResponse.json({ok:false,code:"TRANSLATIONS_UNAVAILABLE"},{status:503});}
 }
 export async function PUT(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}

@@ -29,6 +29,15 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     assert.ok(Number(tables.n)>=56,"Expected at least the baseline 56 tables");
     const [[history]]=await db.query("SELECT COUNT(*) AS n FROM schema_migrations");
     assert.ok(Number(history.n)>=32,"Expected at least the baseline 32 migrations");
+    const visibilityColumns=["market_enabled","market_visible_from","market_visible_until","market_sort_order"];
+    const [initialVisibilityColumns]=await db.query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='tenants' AND COLUMN_NAME IN ('market_enabled','market_visible_from','market_visible_until','market_sort_order')");
+    assert.deepEqual(initialVisibilityColumns.map(row=>row.COLUMN_NAME).sort(),visibilityColumns.sort());
+    // MySQL DDL is not transactional. Replaying after an interrupted/uncatalogued
+    // migration must safely recognize columns that were already added.
+    await db.execute("DELETE FROM schema_migrations WHERE id='0100_marketplace_visibility.sql'");
+    successfulRun();
+    const [replayedVisibilityColumns]=await db.query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='tenants' AND COLUMN_NAME IN ('market_enabled','market_visible_from','market_visible_until','market_sort_order')");
+    assert.deepEqual(replayedVisibilityColumns.map(row=>row.COLUMN_NAME).sort(),visibilityColumns.sort());
     // Migration 0094 is additive: formal quotes exist only as paid plan grants.
     const [initialQuoteGrants]=await db.execute("SELECT p.code,pf.enabled FROM package_plans p JOIN package_plan_features pf ON pf.plan_id=p.id WHERE pf.feature_key='quotes' AND p.code IN ('free','starter','professional','enterprise') ORDER BY p.code");
     assert.deepEqual(Object.fromEntries(initialQuoteGrants.map(r=>[r.code,Number(r.enabled)])),{free:0});

@@ -4,7 +4,7 @@ import Link from "next/link";
 import {cookies,headers} from "next/headers";
 import {supportedCountries} from "@/lib/tenant/country-catalog";
 import {registrationActivities} from "@/lib/tenant/registration-activities";
-import {MARKET_PAGE_SIZE,buildMarketWhere,marketPageCount,marketPageUrl,parseMarketFilters} from "@/lib/market/search";
+import {MARKET_PAGE_SIZE,buildMarketWhere,marketListingOrderSql,marketPageCount,marketPageUrl,parseMarketFilters} from "@/lib/market/search";
 import CountryPicker from "./country-picker";
 import "./country-picker.css";
 import type {RowDataPacket} from "mysql2/promise";
@@ -31,7 +31,7 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
    page=Math.min(filters.page,marketPageCount(total));
    const [rows]=await db.execute<Store[]>(
     "SELECT t.id,t.slug,t.name,t.kind,bp.activity_code FROM tenants t JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE "+
-    where+" ORDER BY t.created_at DESC,t.id DESC LIMIT ? OFFSET ?",
+    where+" ORDER BY "+marketListingOrderSql()+" LIMIT ? OFFSET ?",
     [...args,MARKET_PAGE_SIZE,(page-1)*MARKET_PAGE_SIZE]
    );
    stores=rows;

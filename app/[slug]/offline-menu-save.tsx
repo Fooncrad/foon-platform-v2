@@ -1,9 +1,7 @@
 "use client";
-import {useUiText} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
 import {offlineMenuDocument,type OfflineMenu} from "@/lib/restaurant/offline-menu";
-export default function OfflineMenuSave({menu,preview}:{menu:OfflineMenu;preview:boolean}){
- const translateUi=useUiText();
+export default function OfflineMenuSave({menu,preview,language}:{menu:OfflineMenu;preview:boolean;language:"ar"|"en"|"fr"}){
 
  const {name,slug,items,categories,branches}=menu;
  const [saved,setSaved]=useState(false);
@@ -24,5 +22,6 @@ export default function OfflineMenuSave({menu,preview}:{menu:OfflineMenu;preview
   })().catch(()=>{});
   return()=>{cancelled=true};
  },[name,slug,items,categories,branches,preview]);
- return saved?<p aria-live="polite" style={{padding:"8px 16px",margin:0,fontSize:12}}>{translateUi("المنيو محفوظ للتصفح دون اتصال · Offline menu saved · Menu enregistré hors connexion")}</p>:null;
+ const savedMessage=language==="ar"?"المنيو محفوظ للتصفح دون اتصال":language==="fr"?"Menu enregistré pour une consultation hors connexion":"Menu saved for offline browsing";
+ return saved?<p className="publicMenuOfflineSaved" role="status" aria-live="polite"><span aria-hidden="true">✓</span>{savedMessage}</p>:null;
 }

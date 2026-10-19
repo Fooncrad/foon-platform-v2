@@ -136,6 +136,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await publicPage.setViewportSize({width:390,height:844});
   const mobileDock=publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true});
   await expect(mobileDock).toBeVisible();
+  await expect(publicPage.locator('.publicMenuHeader .publicMenuAccountLink')).toBeHidden();
+  await expect(publicPage.locator('.publicMenuHeader .publicMenuCategoryTrigger')).toBeHidden();
+  await expect(mobileDock.locator('.publicMenuServices')).toHaveCount(0);
+  await expect(mobileDock.locator('a[href$="/login"]')).toHaveCount(1);
   await mobileDock.getByRole('button',{name:'السلة',exact:false}).click();
   const emptyCart=publicPage.getByRole('dialog',{name:'السلة',exact:true});await expect(emptyCart).toContainText('سلتك فارغة');await emptyCart.press('Escape');
   await mobileDock.getByRole('button',{name:'الأقسام',exact:true}).click();await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();await publicPage.getByRole('dialog').press('Escape');
@@ -178,7 +182,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await details.getByRole('button',{name:'الصورة 4',exact:true}).click();await expect(details.getByRole('button',{name:'الصورة 4',exact:true})).toHaveAttribute('aria-pressed','true');await expect(details.locator('.publicMenuProductPhoto img')).not.toHaveAttribute('src',imageUrls[0]);await captureScreenshot(details,{path:'work/menu-product-details-mobile.png'});
  await details.press('Escape');await expect(details).toHaveCount(0);await expect(publicPage.getByRole('button',{name:'تفاصيل قهوة المعاينة',exact:true})).toBeFocused();
  await publicPage.getByRole('button',{name:'إضافة لاتيه الشوفان إلى السلة',exact:true}).click();const latteDetails=publicPage.getByRole('dialog',{name:'لاتيه الشوفان',exact:true});await expect(latteDetails.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toBeDisabled();await latteDetails.getByLabel('خيارات الحجم',{exact:true}).selectOption(largeOption);await expect(latteDetails.locator('.publicMenuProductPrice strong')).toContainText('20.00');await latteDetails.getByRole('button',{name:'إضافة إلى السلة',exact:true}).click();await expect(latteDetails).toHaveCount(0);await expect(publicPage.getByLabel('كمية لاتيه الشوفان',{exact:true})).toHaveValue('1');
- await publicPage.locator('.publicMenuCategoryTrigger').click();
+ await publicPage.locator('.publicMenuMobileDock').getByRole('button',{name:'الأقسام',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();
  await publicPage.getByRole('dialog').getByRole('button',{name:'مشروبات المعاينة',exact:false}).click();
  await expect(publicPage.getByRole('dialog')).toHaveCount(0);
@@ -195,7 +199,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const occupiedDining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة مشغولة 8',branchId:visualTenant.branch,status:'occupied',data:{sectionId:familySection,number:8,capacity:4}}});expect(occupiedDining.status()).toBe(201);
  const occupiedTableId=(await occupiedDining.json()).id;
  await publicPage.reload();
- await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'نداء النادل',exact:true}).click();
+ await publicPage.locator('.publicMenuHeaderActions').getByRole('button',{name:'نداء النادل',exact:true}).click();
  await publicPage.getByRole('dialog').getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
  await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
  await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill(visualSlug+"-guest@test.example");
@@ -207,7 +211,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
- await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
+ await publicPage.locator('.publicMenuInfoBar .publicMenuServices').getByRole('button',{name:'حجز طاولة',exact:true}).click();
  const bookingDialog=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
  await expect(bookingDialog).toBeVisible();
  await expect(bookingDialog.getByRole('button',{name:'متابعة كعميل لهذا المطعم',exact:true})).toHaveCount(0);
@@ -234,7 +238,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.locator('#menu-cart').getByLabel('رقم الطاولة',{exact:true}).selectOption(tableId);
  await publicPage.locator('#menu-cart').getByRole('spinbutton',{name:/^عدد الأشخاص/}).fill('3');
  await publicPage.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
- await expect(publicPage.getByRole('status')).toContainText('تم تسجيل طلبك');
+ await expect(publicPage.locator('.publicMenuMessage')).toContainText('تم تسجيل طلبك');
  await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
  await expect(page.getByRole('heading',{name:'تقويم الحجوزات',exact:true})).toBeVisible();
@@ -282,7 +286,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   expect(registered.status()).toBe(201);
   const customerPage=await unlinkedContext.newPage();
   await customerPage.goto(origin+"/"+visualSlug);
-  await customerPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
+  await customerPage.locator('.publicMenuInfoBar .publicMenuServices').getByRole('button',{name:'حجز طاولة',exact:true}).click();
   const joinDialog=customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
   await expect(joinDialog).toBeVisible();
   await expect(joinDialog.getByLabel('القسم المطلوب',{exact:true})).toHaveCount(0);
@@ -564,7 +568,7 @@ test('storefront carts support retail variants and laundry collection without le
   const [[payment]]=await db.execute('SELECT payment_status FROM restaurant_orders WHERE id=?',[order.id]);expect(payment.payment_status).toBe('unpaid');
   const laundry=await create('laundry');await page.goto(origin+'/'+laundry.slug);await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await expect(cart.getByRole('heading',{name:/سلة الخدمات/})).toBeVisible();
   await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByRole('button',{name:'متابعة بهذا الحساب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeDisabled();
-  await cart.getByLabel('رقم التواصل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await cart.getByLabel(/^عنوان الاستلام والتوصيل/).fill('Test street, building 12');
+  await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByLabel('رقم التواصل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');await expect(cart.getByLabel('رقم التواصل',{exact:true})).toHaveValue('0500004321');await cart.locator('select[name="deliveryCountryCode"]').selectOption('SA');await cart.getByLabel(/^عنوان الاستلام والتوصيل/).fill('Test street, building 12');
   const laundryResult=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();const delivery=await laundryResult;expect(delivery.status(),await delivery.text()).toBe(409);expect((await delivery.json()).code).toBe('DELIVERY_DRIVER_UNAVAILABLE');
   // Delivery is rejected until an active branch driver has been assigned.
   await page.reload();await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');
