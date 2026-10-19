@@ -1,0 +1,25 @@
+/* Shared legibility pass for merchant, platform-admin and customer surfaces. */
+.restaurantApp :is(.restaurantPanel,.restaurantResourceForm,.restaurantEmpty),
+.adminPanel, .customerDashboard :is(.customerProfileEditor,.customerAddresses,.customerAddressForm) {
+ min-width:0;
+ overflow-wrap:anywhere;
+}
+.restaurantApp :is(.restaurantPanel,.restaurantResourceForm) :is(p,small,label,legend),
+.customerDashboard :is(.customerProfileEditor,.customerAddressForm) :is(p,small,label),
+.adminPanel :is(p,small,label) {
+ line-height:1.65;
+}
+.restaurantApp :is(input,select,textarea,button),
+.customerDashboard :is(input,select,textarea,button),
+.adminPanel :is(input,select,textarea,button) {font:inherit;max-width:100%;}
+.restaurantApp :is(input,select,textarea):focus-visible,
+.customerDashboard :is(input,select,textarea,button):focus-visible,
+.adminPanel :is(input,select,textarea,button):focus-visible {outline:2px solid #c76a24;outline-offset:2px;}
+.restaurantApp :is(.restaurantPanel,.restaurantResourceForm) :is(h2,h3,h4),
+.customerDashboard :is(h2,h3,h4),
+.adminPanel :is(h2,h3,h4) {overflow-wrap:anywhere;line-height:1.4;}
+@media(max-width:640px){
+ .restaurantApp .restaurantPanel{padding:clamp(12px,3vw,18px);}
+ .restaurantApp .restaurantPanel>header {flex-wrap:wrap;gap:8px;}
+ .restaurantApp .restaurantPanel :is(input,select,textarea){min-width:0;}
+}
