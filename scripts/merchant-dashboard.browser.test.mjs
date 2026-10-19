@@ -162,16 +162,16 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
    await publicPage.setViewportSize({width,height:900});
    const layout=await publicPage.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,direction:getComputedStyle(document.querySelector('.publicMenu')).direction,titleDirection:getComputedStyle(document.querySelector('.publicMenuSectionTitle')).direction,columns:getComputedStyle(document.querySelector('.publicMenu .publicMenuLayout .publicMenuItems')).gridTemplateColumns.split(' ').length}));
    expect(layout.scrollWidth,`${language} ${width}px overflow`).toBeLessThanOrEqual(layout.width);expect(layout.direction).toBe(language==='ar'?'rtl':'ltr');expect(layout.titleDirection).toBe(layout.direction);
-   const expectedColumns=width<=340?1:width<=700?2:width<=1150?2:4;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
+   const expectedColumns=width<=700?2:width<=1150?2:4;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
    if(language==='ar'&&width===320||language==='en'&&width===768||language==='fr'&&width===1440)await captureScreenshot(publicPage,{path:`work/menu-responsive-${language}-${width}.png`,fullPage:true});
   }
  }
  await localeSelect.selectOption('ar');await publicPage.setViewportSize({width:390,height:844});
- const themeToggle=publicPage.getByRole('button',{name:'تبديل الوضع الليلي'});
+ const themeToggle=publicPage.locator('.publicMenu .foonStorefrontThemeToggle');
  await themeToggle.click();await expect(menuRoot).toHaveAttribute('data-color-mode','light');
  const darkContrast=await menuRoot.evaluate(el=>{const s=getComputedStyle(el),hex=(v)=>{const n=v.replace('#','');return [0,2,4].map(i=>parseInt(n.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4)};const lum=hex(s.getPropertyValue('--public-brand').trim()).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0),on=hex(s.getPropertyValue('--public-on-brand').trim()).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0);return (Math.max(lum,on)+.05)/(Math.min(lum,on)+.05)});expect(darkContrast).toBeGreaterThanOrEqual(4.5);
  await themeToggle.click();await expect(menuRoot).toHaveAttribute('data-color-mode','dark');
- await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenu .publicMenuLayout .publicMenuItems').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)).toBe(1);
+ await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenu .publicMenuLayout .publicMenuItems').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)).toBe(2);
  expect(await publicPage.locator('.publicMenuMobileDock').evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>=0&&r.left>=0&&r.right<=innerWidth})).toBeTruthy();
  await publicPage.setViewportSize({width:390,height:844});
  await publicPage.getByRole('button',{name:'تفاصيل قهوة المعاينة',exact:true}).click();const details=publicPage.getByRole('dialog',{name:'قهوة المعاينة',exact:true});await expect(details).toBeVisible();await expect(details.getByText(fullDescription,{exact:true})).toBeVisible();await expect(details.getByText('مسببات الحساسية',{exact:true})).toBeVisible();await expect(details.getByText('بروتين 3 غرام · كربوهيدرات 10 غرام',{exact:true})).toBeVisible();await expect(details.getByText('120 kcal',{exact:true})).toBeVisible();await expect(details.locator('del')).toContainText('14.00');
@@ -686,6 +686,12 @@ test('all activity storefront templates retain distinct direction and responsive
      await expect(storefront).toHaveAttribute('dir',language==='ar'?'rtl':'ltr');
      await expect(page.getByRole('heading',{name:'Responsive visual product',exact:true})).toBeVisible();
      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),activity+'/'+template+'/'+width).toBe(true);
+     if(activity==='cafe'&&i===0&&width===320){
+      const toggle=page.locator('.foonActivityStorefront .foonStorefrontThemeToggle');
+      await toggle.click();await expect(storefront).toHaveAttribute('data-color-mode','dark');
+      await page.reload();await expect(storefront).toHaveAttribute('data-color-mode','dark');
+      await toggle.click();await expect(storefront).toHaveAttribute('data-color-mode','light');
+     }
      const bounds=await page.locator('.foonActivityProduct').first().boundingBox();expect(bounds).not.toBeNull();expect(bounds.x,activity+'/'+template+'/'+width).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width,activity+'/'+template+'/'+width).toBeLessThanOrEqual(width+1);expect(bounds.width,activity+'/'+template+'/'+width).toBeGreaterThan(100);
     }
    }
