@@ -16,8 +16,8 @@ export async function createSession(userId:string, connection?:PoolConnection){
     [randomUUID(),userId,digest(token),expires]
   );
   const jar=await cookies();
-  jar.delete("foon_active_tenant"); // Drop a previous account\'s preferred business.
   jar.set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:SESSION_SECONDS});
+  jar.delete("foon_active_tenant"); // Drop a previous account\'s preferred business.
 }
 export async function currentUserId(){
   const token=(await cookies()).get(COOKIE)?.value;
