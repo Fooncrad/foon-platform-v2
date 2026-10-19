@@ -178,8 +178,8 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
    params.delete("tenant");params.delete("section");
    const base=legacySection&&visibleKeys.split("|").includes(legacySection)?activitySectionUrl(data.activityCode,legacySection):window.location.pathname;
    const rest=params.toString();
-   router.replace(base+(rest?"?"+rest:""));
-   router.refresh();
+   // Already authorized and rendered: clean the address without a new server navigation.
+   window.history.replaceState(null,"",base+(rest?"?"+rest:"")+window.location.hash);
   };
   void normalize();
   return()=>{cancelled=true;};
