@@ -10,7 +10,7 @@ function pairsBetween(source,begin,end,pattern){
 }
 const aliases=pairsBetween(read("lib/tenant/workspace-routes.ts"),
  "export const ACTIVITY_ROUTE_SLUGS", "};", /([a-z]+):"([a-z-]+)"/g);
-const rewrites=pairsBetween(read("next.config.ts"),"const activityRoutes = {","};",/([a-z]+):"([a-z]+)"/g);
+const rewrites=pairsBetween(read("next.config.mjs"),"const activityRoutes = {","};",/([a-z]+):"([a-z]+)"/g);
 const db=pairsBetween(read("migrations/0101_activity_route_slugs.sql"),
  "INSERT INTO activity_route_slugs","ON DUPLICATE KEY UPDATE",/\('([a-z]+)','([a-z-]+)'\)/g);
 
@@ -18,10 +18,12 @@ test("activity aliases equal SQL migration rows",()=>{
  assert.equal(Object.keys(aliases).length,15);
  assert.deepEqual(db,aliases);
  assert.equal(new Set(Object.values(aliases)).size,Object.keys(aliases).length);
+ const reserved=read("scripts/store-slug.mjs");
+ for(const slug of Object.values(aliases))assert.match(reserved,new RegExp('"'+slug+'"'),"unreserved dashboard route "+slug);
 });
 test("Next redirects and rewrites use the same activity aliases",()=>{
  assert.deepEqual(Object.fromEntries(Object.entries(rewrites).map(([slug,code])=>[code,slug])),aliases);
- const config=read("next.config.ts");
+ const config=read("next.config.mjs");
  assert.match(config,/async redirects\(/);
  assert.match(config,/async rewrites\(/);
  assert.match(config,/\/workspace\/\$\{activity\}/);
