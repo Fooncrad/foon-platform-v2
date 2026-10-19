@@ -1,1 +1,1 @@
-export function validStoreSlug(value:unknown):boolean;
+export function validStoreSlug(value:unknown,allowReserved?:boolean):boolean;
