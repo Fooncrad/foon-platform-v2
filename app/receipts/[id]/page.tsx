@@ -6,6 +6,8 @@ import {database} from '@/lib/db/mysql';
 import {currentUserId} from '@/lib/auth/session';
 import {timingSafeEqual} from 'node:crypto';
 import {canReadStaffReceipt} from '@/lib/restaurant/receipt-authorization';
+import {tenantWorkspaceActivity} from '@/lib/tenant/workspace-activity';
+import {activitySectionUrl} from '@/lib/tenant/workspace-routes';
 export const dynamic='force-dynamic';
 export const metadata={robots:{index:false,follow:false},referrer:'no-referrer' as const};
 export default async function ReceiptPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{key?:string;view?:string;store?:string}>}){
@@ -18,7 +20,10 @@ export default async function ReceiptPage({params,searchParams}:{params:Promise<
  if(view==='pos'){
   if(!user)redirect('/login?next='+encodeURIComponent(returnPath));
   if(!await canReadStaffReceipt(user,String(order.tenant_id),String(order.branch_id)))notFound();
-  redirect('/restaurant?tenant='+encodeURIComponent(String(order.tenant_id))+'&section=pos');
+  // The receipt's verified tenant determines its own POS activity route.
+  const activity=await tenantWorkspaceActivity(String(order.tenant_id));
+  if(!activity)notFound();
+  redirect(activitySectionUrl(activity,"pos")+"?tenant="+encodeURIComponent(String(order.tenant_id)));
  }
  const snapshot=order.checkout_snapshot?(typeof order.checkout_snapshot==='string'?JSON.parse(order.checkout_snapshot):order.checkout_snapshot):null;
  const guestAccess=order.customer_user_id===null&&typeof key==='string'&&/^[a-f0-9]{64}$/.test(key)&&typeof snapshot?.receiptKey==='string'&&/^[a-f0-9]{64}$/.test(snapshot.receiptKey)&&timingSafeEqual(Buffer.from(key,'hex'),Buffer.from(snapshot.receiptKey,'hex'));

@@ -1,3 +1,4 @@
+import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {cookies as uiCookies} from "next/headers";
 import {uiText} from "@/lib/i18n/ui-copy";
 import Link from "next/link";
@@ -70,7 +71,7 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
    <h2>{translateUi("الأنشطة المتاحة")} {chosenName?language==="en"?"in "+chosenName:language==="fr"?"en "+chosenName:"في "+chosenName:""}</h2>
    {error?<p role="alert">{translateUi("تعذر تحميل السوق الآن. حاول مرة أخرى لاحقًا.")}</p>:!filters.country?<p>{translateUi("اختر دولتك لعرض المتاجر المحلية فقط.")}</p>:stores.length===0?<p>{translateUi("لا توجد أنشطة مطابقة للبحث حاليًا.")}</p>:
    <><p role="status">{language==="ar"?"النتائج":language==="en"?"Results":"Résultats"}: {total.toLocaleString("en")} · {language==="ar"?"صفحة":language==="en"?"Page":"Page"} {page.toLocaleString("en")} / {pages.toLocaleString("en")}</p>
-   <div className="foonMarketGrid">{stores.map(store=><Link key={store.id} href={`/${encodeURIComponent(store.slug)}`} className="foonMarketCard">
+   <div className="foonMarketGrid">{stores.map(store=><Link key={store.id} href={publicStorefrontUrl(String(store.slug))} className="foonMarketCard">
     <span className="foonMarketCardIcon" aria-hidden="true">{store.kind==="restaurant"?"♨":"▣"}</span>
     <div><span className="foonMarketType">{label(store.activity_code)}</span><h3>{store.name}</h3><span className="foonMarketVisit">{translateUi("زيارة النشاط ←")}</span></div>
    </Link>)}</div>

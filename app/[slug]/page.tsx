@@ -19,7 +19,7 @@ import {validStoreSlug} from "@/scripts/store-slug.mjs";
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}){
  const {slug:raw}=await params;
  const slug=raw.toLowerCase();
- if(!validStoreSlug(slug))return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
+ if(!validStoreSlug(slug,true))return {title:"النشاط غير موجود | FOON",robots:{index:false,follow:false}};
  try{
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,kind,status FROM tenants WHERE slug=? LIMIT 1",[slug]);
   const tenant=rows[0];
@@ -35,7 +35,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
 async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:string}>;searchParams:Promise<{previewTemplate?:string;category?:string;page?:string;q?:string}>}){
  const {slug:raw}=await params;
  const slug=raw.toLowerCase();
- if(!validStoreSlug(slug))notFound();
+ if(!validStoreSlug(slug,true))notFound();
  const [rows]=await database().execute<RowDataPacket[]>(
   "SELECT id,name,slug,kind,status FROM tenants WHERE slug=? LIMIT 1",[slug]
  );

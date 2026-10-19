@@ -35,6 +35,10 @@ try {
     try {
       if(file==="0065_dining_order_context.sql")await ensureDiningContext(db);
       else if(file==="0100_marketplace_visibility.sql")await ensureMarketplaceVisibility(db);
+      else if(file==="0101_activity_route_slugs.sql"){
+        // Route slugs are aliases: never modify tenant UUIDs or memberships.
+        for(const statement of statements)await db.query(statement);
+      }
       else for(const statement of statements) await db.query(statement);
       await db.execute("INSERT INTO schema_migrations(id) VALUES (?)",[file]);
       await db.commit();

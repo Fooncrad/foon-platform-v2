@@ -1,31 +1,33 @@
+import CanonicalTenantUrl from "../canonical-tenant-url";
 import Link from "next/link";
 import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
-import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
+import {activityWorkspaceUrl,activityMediaStudioUrl} from "@/lib/tenant/workspace-routes";
 import {database} from "@/lib/db/mysql";
 import type {RowDataPacket} from "mysql2/promise";
 import {MEDIA_STUDIO_SECTIONS,MEDIA_STUDIO_LABELS,MEDIA_STUDIO_PROVIDERS,type MediaStudioLocale} from "@/lib/platform/media-studio";
 import MediaStudioTheme from "./media-studio-theme";
 
 /** Tenant-scoped Media Studio preview. No OAuth, publishing or messaging is enabled. */
-export default async function MediaStudioPage({searchParams}:{searchParams:Promise<{tenant?:string}>}){
+export default async function MediaStudioPage({searchParams,params}:{searchParams:Promise<{tenant?:string}>;params?:Promise<{activity?:string}>}){
  const userId=await currentUserId();
  if(!userId)redirect("/login");
  const {tenant}=await searchParams;
- let workspace:Awaited<ReturnType<typeof resolveWorkspace>>;
- try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
+ let workspace:Workspace;
+ try{workspace=await resolveWorkspaceForActivity(userId,(await params)?.activity??"restaurant",tenant)}catch{redirect("/account")}
  const activity=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!activity)redirect("/business?tenant="+encodeURIComponent(workspace.tenant_id));
+ if(activity!==((await params)?.activity??"restaurant"))redirect(activityMediaStudioUrl(activity,workspace.tenant_id));
  if(!["owner","manager"].includes(workspace.role))redirect(activityWorkspaceUrl(activity,workspace.tenant_id));
  const [accounts]=await database().execute<RowDataPacket[]>("SELECT provider,display_name,status FROM tenant_media_social_accounts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[workspace.tenant_id]);
  const language=(await cookies()).get("foon_language")?.value;
  const locale:MediaStudioLocale=language==="en"||language==="fr"?language:"ar";
  const t=(ar:string,en:string,fr:string)=>locale==="en"?en:locale==="fr"?fr:ar;
- return <MediaStudioTheme><main dir={locale==="ar"?"rtl":"ltr"}>
-  <nav><Link href={activityWorkspaceUrl(activity,workspace.tenant_id)}>{t("العودة إلى لوحة النشاط","Back to workspace","Retour au tableau de bord")}</Link></nav>
+ return <MediaStudioTheme><main dir={locale==="ar"?"rtl":"ltr"}><CanonicalTenantUrl tenantId={workspace.tenant_id}/>
+  <nav><Link href={activityWorkspaceUrl(activity)}>{t("العودة إلى لوحة النشاط","Back to workspace","Retour au tableau de bord")}</Link></nav>
   <h1>{t("إدارة الميديا","Media Studio","Studio média")}</h1>
   <p>{workspace.name} · {t("التسويق والحملات","Marketing and campaigns","Marketing et campagnes")}</p>
   <p role="status">

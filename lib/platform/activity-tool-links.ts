@@ -1,4 +1,5 @@
 import {isActivityType,localizedActivityModules,type ActivityLanguage} from "./activity-presets.ts";
+import {activitySectionUrl,activityPaymentsUrl,activityMediaStudioUrl} from "../tenant/workspace-routes.ts";
 
 const destinations:Record<string,string>={
  serviceOrders:"serviceOrders",orders:"orders",pos:"pos",tables:"tables",reservations:"reservations",waitlist:"reservations",
@@ -32,13 +33,14 @@ export function activityToolLinks(activity:string,tenantId:string,language:Activ
   const label=sharedLabels[code]?.[language];
   if(label)modules.push({code,label});
  }
- const base="/workspace/"+encodeURIComponent(activity)+"?tenant="+encodeURIComponent(tenantId);
+ // Keep the parameter for existing callers; tenant selection is session-bound.
+ void tenantId;
  const resolved=modules.flatMap(module=>{
-  const href=module.code==="payments"?"/workspace/"+encodeURIComponent(activity)+"/payments?tenant="+encodeURIComponent(tenantId)
-   :module.code==="mediaStudio"?"/workspace/"+encodeURIComponent(activity)+"/media-studio?tenant="+encodeURIComponent(tenantId)
+  const section=module.code==="catalog"||module.code==="services"?"menu":destinations[module.code];
+  const href=module.code==="payments"?activityPaymentsUrl(activity)
+   :module.code==="mediaStudio"?activityMediaStudioUrl(activity)
    :module.code==="mediaLibrary"?"/account/library"
-   :module.code==="catalog"||module.code==="services"?base+"&section=menu"
-   :destinations[module.code]?base+"&section="+destinations[module.code]:null;
+   :section?activitySectionUrl(activity,section):null;
   return href?[{href,label:module.label,code:module.code}]:[];
  });
  const grouped=new Map<string,ActivityToolLink>();

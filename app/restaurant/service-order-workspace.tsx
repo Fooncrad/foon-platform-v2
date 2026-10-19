@@ -1,5 +1,7 @@
 "use client";
 import {useEffect,useState,type FormEvent} from "react";
+import {usePathname} from "next/navigation";
+import {activityFromRouteSlug,activitySectionUrl} from "@/lib/tenant/workspace-routes";
 import type {StoredResource} from "@/lib/restaurant/operations";
 import {serviceOrderArchiveAllowed,serviceOrderTransitionAllowed} from "@/lib/restaurant/service-order-policy";
 import {operationApi} from "./resource-manager";
@@ -23,6 +25,8 @@ function localDate(value:unknown){
  return Number.isFinite(date.getTime())?new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16):"";
 }
 export default function ServiceOrderWorkspace({tenantId,branch,branches,onChanged,grants,fullAccess=true,language="ar",currency="SAR"}:{tenantId:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void;grants?:string[];fullAccess?:boolean;language?:Language;currency?:string}){
+ const merchantPath=usePathname();
+ const merchantActivity=activityFromRouteSlug(merchantPath.split("/")[1]??"");
  const index=language==="ar"?0:language==="en"?1:2,t=(key:string)=>labels[key]?.[index]??key;
  const can=(action:string)=>fullAccess||Boolean(grants?.includes("serviceOrders."+action)||grants?.includes("serviceOrders.manage"));
  const [rows,setRows]=useState<StoredResource[]>([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[search,setSearch]=useState(""),[status,setStatus]=useState("");
@@ -66,7 +70,7 @@ export default function ServiceOrderWorkspace({tenantId,branch,branches,onChange
  const statusesForForm=statuses.filter(next=>serviceOrderTransitionAllowed(editing?.status??null,next));
  return <section className="restaurantPanel foonServiceOrders" dir={language==="ar"?"rtl":"ltr"} aria-label={t("title")}>
   <header><div><h3>{t("title")}</h3><p>{t("help")}</p></div>{can("create")&&<button type="button" className="restaurantPrimary" disabled={busy} onClick={()=>{setEditing(null);setFormOpen(true);setMessage("");}}>{t("add")}</button>}</header>
-  {message&&<p role="status" className="restaurantNotice">{message}</p>}{message&&<a href={"/restaurant?tenant="+encodeURIComponent(tenantId)+"&section=printers"}>{t("invoiceLink")}</a>}
+  {message&&<p role="status" className="restaurantNotice">{message}</p>}{message&&<a href={merchantActivity?activitySectionUrl(merchantActivity,"printers"):"/account"}>{t("invoiceLink")}</a>}
   {formOpen&&<form key={editing?.id??"new"} className="foonServiceOrderForm" onSubmit={save} aria-label={editing?t(readOnly?"details":"edit"):t("add")}>
    <h4>{editing?t(readOnly?"details":"edit"):t("add")}</h4>{final&&<p>{t("final")}</p>}{sourceLocked&&<p>{t("quote")}</p>}
    <fieldset disabled={busy||readOnly}>
