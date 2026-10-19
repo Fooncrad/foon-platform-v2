@@ -94,11 +94,11 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
   }
  }
  const publicControls=await tenantPublicControls(String(tenant.id));
- const checkoutEnabled=publicControls.sales&&publicControls.cart&&customerCartAvailable(activity)&&(await tenantEntitlement(String(tenant.id),"orders")).enabled;
+ const checkoutEnabled=publicControls.sales&&publicControls.cart&&publicControls.catalog&&customerCartAvailable(activity)&&(await tenantEntitlement(String(tenant.id),"orders")).enabled;
  const serviceActivities=["carwash","laundry","automotive","salon","publicworks"];
  const serviceCatalogEnabled=serviceActivities.includes(activity)&&(await tenantEntitlement(String(tenant.id),"catalog")).enabled;
  const appointmentEnabled=serviceCatalogEnabled&&["carwash","automotive","salon"].includes(activity)&&(await tenantEntitlement(String(tenant.id),"appointments")).enabled;
- const requestMode=serviceCatalogEnabled&&publicControls.serviceRequests?(activity==="publicworks"?"quote":appointmentEnabled?"appointment":"inquiry"):null;
+ const requestMode=serviceCatalogEnabled&&publicControls.serviceRequests&&publicControls.catalog?(activity==="publicworks"?"quote":appointmentEnabled?"appointment":"inquiry"):null;
  const cartUser=(checkoutEnabled||serviceCatalogEnabled)?await currentUserId():null;
  const [cartLinks]=cartUser?await database().execute<RowDataPacket[]>("SELECT 1 FROM tenant_customers WHERE tenant_id=? AND user_id=? LIMIT 1",[String(tenant.id),cartUser]):[[]];
  const [contactRows]=cartUser?await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[cartUser]):[[]];
