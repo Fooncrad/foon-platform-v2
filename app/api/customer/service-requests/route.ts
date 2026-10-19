@@ -5,7 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
-import {tenantPublicControls} from "@/lib/tenant/public-controls";
+import {tenantPublicControls,publicControlAllowed} from "@/lib/tenant/public-controls";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import {notifyCustomer} from "@/lib/notifications/customer";
@@ -58,7 +58,7 @@ export async function POST(request:Request){
   const [users]=await db.execute<RowDataPacket[]>("SELECT display_name FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   const ctx=await customerScope(db,user,slug);
   if(!users.length||!ctx) {await db.rollback();return fail("STORE_CUSTOMER_REQUIRED",403)}
-   if(!(await tenantPublicControls(ctx.tenantId,db)).serviceRequests){await db.rollback();return fail("PUBLIC_FEATURE_DISABLED",403)}
+   if(!publicControlAllowed(await tenantPublicControls(ctx.tenantId,db),"serviceRequests")){await db.rollback();return fail("PUBLIC_FEATURE_DISABLED",403)}
   if(!serviceRequestTypeAllowed(ctx.activity,type,true)) {await db.rollback();return fail("UNSUPPORTED_REQUEST_TYPE")}
   if(!(await tenantEntitlement(ctx.tenantId,"catalog",db)).enabled) {await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
   if(type==="appointment"&&!(await tenantEntitlement(ctx.tenantId,"appointments",db)).enabled){await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
