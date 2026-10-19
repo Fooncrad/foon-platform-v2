@@ -16,6 +16,7 @@ export async function createSession(userId:string, connection?:PoolConnection){
     [randomUUID(),userId,digest(token),expires]
   );
   const jar=await cookies();
+  jar.delete("foon_active_tenant"); // Drop a previous account\'s preferred business.
   jar.set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:SESSION_SECONDS});
 }
 export async function currentUserId(){
@@ -35,6 +36,7 @@ export async function destroySession(){
   const jar=await cookies(); const token=jar.get(COOKIE)?.value;
   if(token) await database().execute("DELETE FROM auth_sessions WHERE token_hash=?",[digest(token)]);
   jar.delete(COOKIE);
+  jar.delete("foon_active_tenant");
 }
 
 /** Admin-only inactivity timeout; ordinary customer sessions remain unchanged. */
