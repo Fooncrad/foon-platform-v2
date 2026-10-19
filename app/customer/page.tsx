@@ -18,7 +18,7 @@ export default async function CustomerPage(){
  const verifyEmailLabel=translationLanguage==="en"?"Verify email":translationLanguage==="fr"?"Vérifier l’adresse e-mail":"تأكيد البريد الإلكتروني";
 
  const id=await currentUserId();if(!id)redirect("/login");
- if(await isEmployeeAccount(id))redirect("/restaurant");
+ if(await isEmployeeAccount(id))redirect("/account");
  const [rows]=await database().execute<RowDataPacket[]>("SELECT display_name,email,email_verified_at,status FROM users WHERE id=? AND status='active' LIMIT 1",[id]);
  const user=rows[0];if(!user)redirect("/login");
  const [profiles]=await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[id]);
