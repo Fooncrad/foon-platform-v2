@@ -166,7 +166,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
    await publicPage.setViewportSize({width,height:900});
    const layout=await publicPage.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,direction:getComputedStyle(document.querySelector('.publicMenu')).direction,titleDirection:getComputedStyle(document.querySelector('.publicMenuSectionTitle')).direction,columns:getComputedStyle(document.querySelector('.publicMenu .publicMenuLayout .publicMenuItems')).gridTemplateColumns.split(' ').length}));
    expect(layout.scrollWidth,`${language} ${width}px overflow`).toBeLessThanOrEqual(layout.width);expect(layout.direction).toBe(language==='ar'?'rtl':'ltr');expect(layout.titleDirection).toBe(layout.direction);
-   const expectedColumns=width<=576?2:width<=1400?4:width<1920?6:8;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
+   const expectedColumns=width<=576?2:width<=950?4:width<=1199?2:width<=1499?3:width<=1899?4:width<=2299?5:6;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
    if(language==='ar'&&width===320||language==='en'&&width===768||language==='fr'&&width===1440)await captureScreenshot(publicPage,{path:`work/menu-responsive-${language}-${width}.png`,fullPage:true});
   }
  }
