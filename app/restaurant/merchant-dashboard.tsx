@@ -1,5 +1,5 @@
-import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 "use client";
+import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {activityWorkspaceUrl,activityPaymentsUrl,activityMediaStudioUrl,activitySectionUrl} from "@/lib/tenant/workspace-routes";
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
 import {useEffect,useRef,useState,type FormEvent,type KeyboardEvent as ReactKeyboardEvent} from "react";
