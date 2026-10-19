@@ -1,3 +1,4 @@
+import CanonicalTenantUrl from "../canonical-tenant-url";
 import Link from "next/link";
 import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
@@ -25,7 +26,7 @@ export default async function MediaStudioPage({searchParams,params}:{searchParam
  const language=(await cookies()).get("foon_language")?.value;
  const locale:MediaStudioLocale=language==="en"||language==="fr"?language:"ar";
  const t=(ar:string,en:string,fr:string)=>locale==="en"?en:locale==="fr"?fr:ar;
- return <MediaStudioTheme><main dir={locale==="ar"?"rtl":"ltr"}>
+ return <MediaStudioTheme><main dir={locale==="ar"?"rtl":"ltr"}><CanonicalTenantUrl tenantId={workspace.tenant_id}/>
   <nav><Link href={activityWorkspaceUrl(activity)}>{t("العودة إلى لوحة النشاط","Back to workspace","Retour au tableau de bord")}</Link></nav>
   <h1>{t("إدارة الميديا","Media Studio","Studio média")}</h1>
   <p>{workspace.name} · {t("التسويق والحملات","Marketing and campaigns","Marketing et campagnes")}</p>
