@@ -11,7 +11,7 @@ import {MEDIA_STUDIO_SECTIONS,MEDIA_STUDIO_LABELS,MEDIA_STUDIO_PROVIDERS,type Me
 import MediaStudioTheme from "./media-studio-theme";
 
 /** Tenant-scoped Media Studio preview. No OAuth, publishing or messaging is enabled. */
-export default async function MediaStudioPage({searchParams}:{searchParams:Promise<{tenant?:string}>}){
+export default async function MediaStudioPage({searchParams,expectedActivity}:{searchParams:Promise<{tenant?:string}>;expectedActivity?:string}){
  const userId=await currentUserId();
  if(!userId)redirect("/login");
  const {tenant}=await searchParams;
@@ -19,13 +19,14 @@ export default async function MediaStudioPage({searchParams}:{searchParams:Promi
  try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
  const activity=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!activity)redirect("/business?tenant="+encodeURIComponent(workspace.tenant_id));
- if(!["owner","manager"].includes(workspace.role))redirect(activityWorkspaceUrl(activity,workspace.tenant_id));
+ if(activity!==(expectedActivity??"restaurant"))redirect(activityWorkspaceUrl(activity));
+ if(!["owner","manager"].includes(workspace.role))redirect(activityWorkspaceUrl(activity));
  const [accounts]=await database().execute<RowDataPacket[]>("SELECT provider,display_name,status FROM tenant_media_social_accounts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[workspace.tenant_id]);
  const language=(await cookies()).get("foon_language")?.value;
  const locale:MediaStudioLocale=language==="en"||language==="fr"?language:"ar";
  const t=(ar:string,en:string,fr:string)=>locale==="en"?en:locale==="fr"?fr:ar;
  return <MediaStudioTheme><main dir={locale==="ar"?"rtl":"ltr"}>
-  <nav><Link href={activityWorkspaceUrl(activity,workspace.tenant_id)}>{t("العودة إلى لوحة النشاط","Back to workspace","Retour au tableau de bord")}</Link></nav>
+  <nav><Link href={activityWorkspaceUrl(activity)}>{t("العودة إلى لوحة النشاط","Back to workspace","Retour au tableau de bord")}</Link></nav>
   <h1>{t("إدارة الميديا","Media Studio","Studio média")}</h1>
   <p>{workspace.name} · {t("التسويق والحملات","Marketing and campaigns","Marketing et campagnes")}</p>
   <p role="status">
