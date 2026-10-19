@@ -160,6 +160,9 @@ pub(crate) fn create_synthetic_order_atomic(
     let open=unsafe{sqlite3_open_v2(file.as_ptr(),&mut db.0,
         SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX,null())};
     if open!=OK||db.0.is_null(){return Err("W24_SQLITE_OPEN_FAILED");}
+    // Every connection enforces foreign keys and durable WAL commits.
+    // A configuration in the creating Node connection is NOT inherited.
+    exec_sql(db.0,b"PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;\0")?;
     exec_sql(db.0,b"BEGIN IMMEDIATE\0")?;
     let mut tx=Transaction(db.0,false);
     {
