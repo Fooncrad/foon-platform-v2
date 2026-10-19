@@ -22,7 +22,7 @@ export async function runCustomerCartChecks({db,call,fixtures}){
   assert.equal(context.status,200,JSON.stringify(context.body));assert.equal(context.body.item.currency,'USD');assert.equal(context.body.item.price,7.25);assert.ok(context.body.item.branches.some(b=>b.id===owner.branch));
   const foreign=fixtures.find(f=>f.owner.tenant!==owner.tenant);
   assert.equal((await call('/api/customer/cart?store='+slug+'&product='+foreign.product,'GET')).status,404);
-  const delivery={...payload,channel:'delivery',deliveryCountryCode:business.country_code,requestKey:randomUUID()};
+  const delivery={...payload,channel:'delivery',deliveryCountryCode:business.country_code,deliveryCity:'Riyadh',requestKey:randomUUID()};
   assert.equal((await call('/api/customer/orders','POST',delivery,customer.cookie)).body.code,'DELIVERY_DETAILS_REQUIRED');
   const foreignCountry=business.country_code==='SA'?'AE':'SA';
   const countryMismatch=await call('/api/customer/orders','POST',{...delivery,deliveryCountryCode:foreignCountry,deliveryAddress:'A valid test delivery address',customerPhone:'+966500000000',requestKey:randomUUID()},customer.cookie);
