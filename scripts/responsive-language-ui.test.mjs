@@ -8,6 +8,8 @@ const dashboardCss=readFileSync(new URL("../app/restaurant/merchant-dashboard.cs
 const storefrontCss=readFileSync(new URL("../app/[slug]/storefront-refresh.css",import.meta.url),"utf8");
 const menuCss=readFileSync(new URL("../app/[slug]/public-menu.css",import.meta.url),"utf8");
 const storefrontTheme=readFileSync(new URL("../app/[slug]/storefront-theme-toggle.tsx",import.meta.url),"utf8");
+const offlineMenuSave=readFileSync(new URL("../app/[slug]/offline-menu-save.tsx",import.meta.url),"utf8");
+const publicMenu=readFileSync(new URL("../app/[slug]/public-menu.tsx",import.meta.url),"utf8");
 
 test("language label is screen-reader-only across public, storefront and dashboard surfaces",()=>{
  assert.match(selector,/className="sr-only"/);
@@ -41,4 +43,14 @@ test("public menus and activity stores have persistent light/dark themes and res
  assert.match(storefrontCss,/height: 160px !important/);
  assert.match(storefrontCss,/height: 220px !important/);
  assert.match(storefrontCss,/height: 320px !important/);
+});
+
+
+test("public menu mobile actions are not duplicated and offline status follows the selected language",()=>{
+ assert.match(offlineMenuSave,/language==="ar"\?"المنيو محفوظ للتصفح دون اتصال":language==="fr"\?"Menu enregistré pour une consultation hors connexion":"Menu saved for offline browsing"/);
+ assert.doesNotMatch(offlineMenuSave,/المنيو محفوظ للتصفح دون اتصال\s*·\s*Offline menu saved/);
+ assert.match(publicMenu,/OfflineMenuSave[^\\n]*language=\\{language\\}/);
+ assert.doesNotMatch(publicMenu,/publicMenuMobileDock[^\\n]*MenuServiceActions/);
+ assert.match(publicMenu,/publicMenuInfoBar[^\\n]*mode="reservation"/);
+ assert.match(publicMenu,/publicMenuHeader[^\\n]*mode="waiter"/);
 });
