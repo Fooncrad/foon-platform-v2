@@ -1,10 +1,8 @@
 "use client";
 import {useEffect} from "react";
-import {useRouter} from "next/navigation";
 
 /** Remove legacy tenant IDs from a verified merchant subpage URL. */
 export default function CanonicalTenantUrl({tenantId}:{tenantId:string}){
- const router=useRouter();
  useEffect(()=>{
   const url=new URL(window.location.href);
   const legacyTenant=url.searchParams.get("tenant");
@@ -18,12 +16,12 @@ export default function CanonicalTenantUrl({tenantId}:{tenantId:string}){
     });
     if(!response.ok||cancelled)return;
     url.searchParams.delete("tenant");
-    router.replace(url.pathname+url.search+url.hash);
-    router.refresh();
+    // The tenant is already validated on this server-rendered page.
+    window.history.replaceState(null,"",url.pathname+url.search+url.hash);
    }catch{/* Keep a usable legacy link if session persistence fails. */}
   };
   void normalize();
   return()=>{cancelled=true;};
- },[tenantId,router]);
+ },[tenantId]);
  return null;
 }
