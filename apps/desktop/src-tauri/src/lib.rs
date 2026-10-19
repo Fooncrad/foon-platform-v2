@@ -8,6 +8,8 @@ mod native_cloud_receipt;
 mod protected_receipt_path;
 #[cfg(windows)]
 mod native_event_digest;
+#[cfg(windows)]
+mod native_outbox_readonly;
 use tauri::Manager;
 use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
