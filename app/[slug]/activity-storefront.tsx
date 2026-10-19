@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {checkoutPolicy} from "@/lib/restaurant/checkout-pricing";
 import StorefrontInfo from "./storefront-info";
 import StorefrontQr from "./storefront-qr";
@@ -7,7 +8,9 @@ import ServiceRequestHistory from "./service-request-history";
 import StorefrontCart,{StorefrontAddButton} from "./storefront-cart";
 import {customerCartAvailable,customerCheckout} from "@/lib/platform/customer-checkout";
 import StorefrontLanguageSwitcher from "./storefront-language-switcher";
+import StorefrontThemeToggle from "./storefront-theme-toggle";
 import "./activity-storefront.css";
+import "./storefront-refresh.css";
 import {defaultTemplateForActivity,isTemplateForActivity} from "@/lib/platform/activity-templates";
 import {isActivityType,type ActivityLanguage} from "@/lib/platform/activity-presets";
 
@@ -49,18 +52,27 @@ export default function ActivityStorefront({name,slug,activity,template,branding
  const pages=Math.ceil(total/pageSize);
  const visiblePage=Math.min(page,Math.max(1,pages));
  const chosen=template&&isTemplateForActivity(activity,template)?template:defaultTemplateForActivity(activity);
+ const colorMode=branding.colorMode==="dark"||branding.colorMode==="system"?String(branding.colorMode):"light";
+ const coverUrl=typeof branding.coverUrl==="string"?branding.coverUrl:"";
+ const openStatus=typeof branding.openStatus==="string"?branding.openStatus.toLowerCase():"";
  const title=activityNames[activity]?.[language]??t.shop;
  const layout=chosen?.endsWith("grid")?"grid":chosen?.includes("gallery")?"gallery":service?"services":"featured";
  const accent=activity==="grocery"?"#23744b":activity==="perfume"?"#8052a2":activity==="clothing"?"#a64d62":activity==="salon"?"#ad4c83":service?"#147e80":"#3458a4";
- return <main className={"foonActivityStorefront foonActivityStorefront-"+layout} data-activity={isActivityType(activity)?activity:"unknown"} data-template={chosen??"unassigned"} data-layout={layout} dir={language==="ar"?"rtl":"ltr"} lang={language} style={{["--activity-accent" as string]:accent}}>
-  <header className="foonActivityHeader" style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",padding:"18px clamp(16px,4vw,64px)",background:"#fff",borderBottom:"1px solid #e2e8f0"}}>
+ return <main className={"foonActivityStorefront foonActivityStorefront-"+layout} data-activity={isActivityType(activity)?activity:"unknown"} data-template={chosen??"unassigned"} data-layout={layout} data-color-mode={colorMode} dir={language==="ar"?"rtl":"ltr"} lang={language} style={{["--activity-accent" as string]:accent}}>
+  <header className="foonActivityHeader">
    <Link href={"/"+encodeURIComponent(slug)} style={{fontWeight:800,color:"inherit",textDecoration:"none"}}>{name}</Link>
-   <nav className="foonActivityHeaderNav" aria-label={t.shop} style={{display:"flex",gap:18,alignItems:"center",flexWrap:"wrap"}}><StorefrontQr slug={slug} name={name} language={language}/><StorefrontLanguageSwitcher language={language}/><Link href={"/"+encodeURIComponent(slug)+"/login"}>{t.account}</Link><Link href={"/"+encodeURIComponent(slug)+"/register"}>{t.register}</Link></nav>
+   <nav className="foonActivityHeaderNav" aria-label={t.shop}><StorefrontQr slug={slug} name={name} language={language}/><StorefrontLanguageSwitcher language={language}/><StorefrontThemeToggle storageKey={"foon-storefront-theme:"+slug} language={language} defaultTheme={colorMode==="dark"?"dark":"light"}/><Link href={"/"+encodeURIComponent(slug)+"/login"}>{t.account}</Link><Link href={"/"+encodeURIComponent(slug)+"/register"}>{t.register}</Link></nav>
   </header>
   <section className="foonActivityHero">
+   {coverUrl&&<Image className="foonActivityHeroImage" src={coverUrl} alt="" fill unoptimized sizes="100vw" priority/>}
    <p style={{fontSize:14,letterSpacing:1,margin:0}}>{title}</p>
    <h1 style={{fontSize:"clamp(30px,5vw,56px)",lineHeight:1.2,margin:"12px 0"}}>{name}</h1>
    <p style={{fontSize:18}}>{service?t.services:t.browse}</p>
+  </section>
+  <section className="foonActivityStoreMeta" aria-label={language==="ar"?"معلومات المتجر":language==="fr"?"Informations sur la boutique":"Store information"}>
+   {openStatus&&<span className={"foonActivityOpenStatus"+(openStatus==="open"?" is-open":"")}>{openStatus==="open"?(language==="ar"?"مفتوح الآن":language==="fr"?"Ouvert":"Open now"):(language==="ar"?"مغلق الآن":language==="fr"?"Fermé":"Closed")}</span>}
+   {typeof branding.address==="string"&&branding.address&&<span><b aria-hidden="true">⌖</b>{branding.address}</span>}
+   {phone&&<a href={"tel:"+phone} dir="ltr"><b aria-hidden="true">☎</b>{phone}</a>}
   </section>
   <section className="foonActivityContent" aria-label={service?t.services:t.browse}>
    <h2 style={{fontSize:24}}>{service?t.services:t.browse}</h2>
