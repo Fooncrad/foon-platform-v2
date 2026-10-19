@@ -22,6 +22,27 @@ test("W23 isolates native-only probe from W05 saved POS and legacy JS backend",(
   assert.equal(override.identifier,"com.foon.desktop.nativeprobe");
   assert.notEqual(override.identifier,base.identifier);
 });
+test("W23 security audit accepts only equivalent Windows CRLF or Unix LF source lines",()=>{
+  const checkedOutLikeWindows={
+    ...input,
+    cargo:cargo.replace(/\n/g,"\r\n"),
+    rust:rust.replace(/\n/g,"\r\n")
+  };
+  const result=inspectNativeProbe(checkedOutLikeWindows);
+  assert.deepEqual(result,{ok:true,blockers:[]});
+
+  // Line-ending normalization must not weaken the native source exclusion gate.
+  const changed={
+    ...checkedOutLikeWindows,
+    rust:checkedOutLikeWindows.rust.replace(
+      '#[cfg(not(feature = "native-probe"))]\r\nmod edge_runtime;',
+      'mod edge_runtime;'
+    )
+  };
+  const blocked=inspectNativeProbe(changed);
+  assert.equal(blocked.ok,false);
+  assert(blocked.blockers.includes("W23_LEGACY_BACKEND_MUST_NOT_COMPILE_IN_PROBE"));
+});
 test("W23 never loads scripts, Tauri global bridge, or browser/network resources",()=>{
   assert.equal(override.app.withGlobalTauri,false);
   assert.match(override.app.security.csp,/script-src 'none'/);
