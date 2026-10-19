@@ -30,5 +30,14 @@ test("public menus and activity stores have persistent light/dark themes and res
  assert.match(storefrontCss,/\.publicMenu \.publicMenuHero\[data-cover-shape="filled"\]/);
  assert.match(storefrontCss,/\.foonActivityHeroImage/);
  assert.match(storefrontCss,/@media \(max-width: 340px\)[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
- assert.match(storefrontCss,/\.foonActivityProducts \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{[\s\S]{0,100}grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/\.foonActivityStorefront \.foonActivityProducts \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
+ assert.match(storefrontCss,/\.publicMenu \.publicMenuItem \.publicMenuItemImage/);
+ assert.match(storefrontCss,/\.publicMenu \.publicMenuItemBody h2/);
+ assert.match(storefrontCss,/\.publicMenu \.publicMenuItem footer\.publicMenuItemFooter/);
+ assert.match(storefrontCss,/height: 160px !important/);
+ assert.match(storefrontCss,/height: 220px !important/);
+ assert.match(storefrontCss,/height: 320px !important/);
 });
