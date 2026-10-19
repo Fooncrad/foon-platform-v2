@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 19643)
+Total output lines: 700
+
 import {test,expect} from "@playwright/test";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
@@ -162,16 +165,16 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
    await publicPage.setViewportSize({width,height:900});
    const layout=await publicPage.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,direction:getComputedStyle(document.querySelector('.publicMenu')).direction,titleDirection:getComputedStyle(document.querySelector('.publicMenuSectionTitle')).direction,columns:getComputedStyle(document.querySelector('.publicMenu .publicMenuLayout .publicMenuItems')).gridTemplateColumns.split(' ').length}));
    expect(layout.scrollWidth,`${language} ${width}px overflow`).toBeLessThanOrEqual(layout.width);expect(layout.direction).toBe(language==='ar'?'rtl':'ltr');expect(layout.titleDirection).toBe(layout.direction);
-   const expectedColumns=width<=340?1:width<=700?2:width<=1150?2:4;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
+   const expectedColumns=width<=700?2:width<=1150?2:4;expect(layout.columns,`${language} ${width}px columns`).toBe(expectedColumns);
    if(language==='ar'&&width===320||language==='en'&&width===768||language==='fr'&&width===1440)await captureScreenshot(publicPage,{path:`work/menu-responsive-${language}-${width}.png`,fullPage:true});
   }
  }
  await localeSelect.selectOption('ar');await publicPage.setViewportSize({width:390,height:844});
- const themeToggle=publicPage.getByRole('button',{name:'تبديل الوضع الليلي'});
+ const themeToggle=publicPage.locator('.publicMenu .foonStorefrontThemeToggle');
  await themeToggle.click();await expect(menuRoot).toHaveAttribute('data-color-mode','light');
  const darkContrast=await menuRoot.evaluate(el=>{const s=getComputedStyle(el),hex=(v)=>{const n=v.replace('#','');return [0,2,4].map(i=>parseInt(n.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4)};const lum=hex(s.getPropertyValue('--public-brand').trim()).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0),on=hex(s.getPropertyValue('--public-on-brand').trim()).reduce((a,c,i)=>a+c*[.2126,.7152,.0722][i],0);return (Math.max(lum,on)+.05)/(Math.min(lum,on)+.05)});expect(darkContrast).toBeGreaterThanOrEqual(4.5);
  await themeToggle.click();await expect(menuRoot).toHaveAttribute('data-color-mode','dark');
- await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenu .publicMenuLayout .publicMenuItems').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)).toBe(1);
+ await publicPage.setViewportSize({width:320,height:740});expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();expect(await publicPage.locator('.publicMenu .publicMenuLayout .publicMenuItems').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)).toBe(2);
  expect(await publicPage.locator('.publicMenuMobileDock').evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight+1&&r.top>=0&&r.left>=0&&r.right<=innerWidth})).toBeTruthy();
  await publicPage.setViewportSize({width:390,height:844});
  await publicPage.getByRole('button',{name:'تفاصيل قهوة المعاينة',exact:true}).click();const details=publicPage.getByRole('dialog',{name:'قهوة المعاينة',exact:true});await expect(details).toBeVisible();await expect(details.getByText(fullDescription,{exact:true})).toBeVisible();await expect(details.getByText('مسببات الحساسية',{exact:true})).toBeVisible();await expect(details.getByText('بروتين 3 غرام · كربوهيدرات 10 غرام',{exact:true})).toBeVisible();await expect(details.getByText('120 kcal',{exact:true})).toBeVisible();await expect(details.locator('del')).toContainText('14.00');
@@ -188,334 +191,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel('عدد الطاولات',{exact:true}).fill('3');
  await page.getByRole('button',{name:'إنشاء الدفعة',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('تم إنشاء 3 طاولة');
- const floors=await page.request.get(origin+'/api/restaurant/operations/sections',{headers:{'x-foon-tenant':visualTenant.tenant}});const familySection=(await floors.json()).resources.find(r=>r.name==='صالة العائلات').id;
- await captureScreenshot(page,{path:'work/merchant-dining-batch-desktop.png',fullPage:true});
- const dining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة 7',branchId:visualTenant.branch,status:'available',data:{sectionId:familySection,number:7,capacity:4}}});expect(dining.status()).toBe(201);
- const tableId=(await dining.json()).id;
- const occupiedDining=await page.request.post(origin+'/api/restaurant/operations/tables',{headers:{origin,'x-foon-tenant':visualTenant.tenant},data:{name:'طاولة مشغولة 8',branchId:visualTenant.branch,status:'occupied',data:{sectionId:familySection,number:8,capacity:4}}});expect(occupiedDining.status()).toBe(201);
- const occupiedTableId=(await occupiedDining.json()).id;
- await publicPage.reload();
- await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'نداء النادل',exact:true}).click();
- await publicPage.getByRole('dialog').getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
- await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
- await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill(visualSlug+"-guest@test.example");
- await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
- await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
- await expect(publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true})).toBeVisible();
- await captureScreenshot(publicPage.getByRole('dialog'),{path:'work/menu-waiter-mobile.png'});
- await publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true}).selectOption(occupiedTableId);
- await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
- await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
- await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
- await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
- const bookingDialog=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
- await expect(bookingDialog).toBeVisible();
- await expect(bookingDialog.getByRole('button',{name:'متابعة كعميل لهذا المطعم',exact:true})).toHaveCount(0);
- await bookingDialog.getByLabel('القسم المطلوب',{exact:true}).selectOption(familySection);
- const nextDay=new Date(Date.now()+86400000);const localDate=new Date(nextDay.getTime()-nextDay.getTimezoneOffset()*60000).toISOString().slice(0,16);
- const bookingCalendar=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).locator('.foonBookingCalendar');
- if(nextDay.getMonth()!==new Date().getMonth())await bookingCalendar.getByRole('button',{name:'Next month',exact:true}).click();
- await bookingCalendar.getByRole('button',{name:String(nextDay.getDate()),exact:true}).click();
- await bookingCalendar.locator('select').nth(0).selectOption(localDate.slice(11,13));
- await bookingCalendar.locator('select').nth(1).selectOption(localDate.slice(14,16));
- await expect(bookingCalendar.locator('input[name="scheduledAt"]')).toHaveValue(localDate);
- await publicPage.getByRole('dialog').getByLabel('رقم التواصل',{exact:true}).fill('0500000000');
- await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
- await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('ينتظر التأكيد');
- await captureScreenshot(publicPage.getByRole('dialog'),{path:'work/menu-booking-mobile.png'});
- await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
- const calls=await page.request.get(origin+'/api/restaurant/operations/waiterCalls',{headers:{'x-foon-tenant':visualTenant.tenant}});expect((await calls.json()).resources.some(row=>row.data.tableId===occupiedTableId&&row.status==='pending')).toBeTruthy();
- await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطاولات',exact:true}).click();
- await page.getByRole('button',{name:'نداءات النادل',exact:true}).click();
- await expect(page.getByText('ضيف المعاينة',{exact:true})).toBeVisible();
- await publicPage.getByRole('button',{name:'إضافة قهوة المعاينة إلى السلة',exact:true}).click();
- await publicPage.getByLabel('نوع الطلب',{exact:true}).selectOption('dine_in');
- await expect(publicPage.locator('#menu-cart').getByLabel('رقم الطاولة',{exact:true}).locator('option[value="'+occupiedTableId+'"]')).toHaveCount(0);
- await publicPage.locator('#menu-cart').getByLabel('رقم الطاولة',{exact:true}).selectOption(tableId);
- await publicPage.locator('#menu-cart').getByRole('spinbutton',{name:/^عدد الأشخاص/}).fill('3');
- await publicPage.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
- await expect(publicPage.getByRole('status')).toContainText('تم تسجيل طلبك');
- await page.setViewportSize({width:1440,height:1000});
- await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
- await expect(page.getByRole('heading',{name:'تقويم الحجوزات',exact:true})).toBeVisible();
- await expect(page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'})).toBeVisible();
- await captureScreenshot(page,{path:'work/merchant-reservations-calendar-desktop.png',fullPage:true});
- await page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'}).click();
- await expect(page.getByRole('dialog',{name:'تفاصيل الحجز'}).getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');
- await page.getByRole('dialog',{name:'تفاصيل الحجز'}).getByLabel('الحالة',{exact:true}).selectOption('confirmed');
- await page.getByRole('dialog',{name:'تفاصيل الحجز'}).getByRole('button',{name:'حفظ البيانات',exact:true}).click();
- await expect(page.getByRole('dialog',{name:'تفاصيل الحجز'})).toHaveCount(0);
- await expect(page.locator('.calendarEvent').filter({hasText:'ضيف المعاينة'})).toHaveAttribute('data-status','confirmed');
- const bookingDay=new Date(nextDay.getTime()+3*3600000).toISOString().slice(0,10);await page.getByRole('button',{name:'عرض حجوزات '+bookingDay,exact:true}).click();
- await page.getByRole('button',{name:'أسبوع',exact:true}).click();await expect(page.locator('.calendarGrid-week')).toBeVisible();
- await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await captureScreenshot(page,{path:'work/merchant-reservations-calendar-mobile.png',fullPage:true});
- await page.getByRole('button',{name:'يوم',exact:true}).click();await expect(page.locator('.calendarGrid-day')).toBeVisible();
- await page.setViewportSize({width:1440,height:1000});
- await page.getByRole('button',{name:'قائمة الحجوزات',exact:true}).click();
- const reservationCard=page.locator('.restaurantResourceList article').filter({hasText:'ضيف المعاينة'});await expect(reservationCard).toHaveAttribute('data-status','confirmed');await expect(reservationCard.locator('time')).toHaveAttribute('datetime',/\d{4}-\d{2}-\d{2}T/);await expect(reservationCard).toContainText('صالة العائلات');
- await captureScreenshot(page,{path:'work/merchant-reservation-cards-desktop.png',fullPage:true});
- await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await captureScreenshot(page,{path:'work/merchant-reservation-cards-mobile.png',fullPage:true});
- await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
- await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await captureScreenshot(page,{path:'work/merchant-order-cards-desktop.png',fullPage:true});
- await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();const smallOrderActions=await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.map(n=>({label:(n.textContent||'').trim(),height:n.getBoundingClientRect().height,display:getComputedStyle(n).display,visibility:getComputedStyle(n).visibility})).filter(n=>n.height<44&&n.display!=='none'&&n.visibility!=='hidden'));expect(smallOrderActions,'Order buttons below 44px: '+JSON.stringify(smallOrderActions)).toEqual([]);await captureScreenshot(page,{path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
- await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await captureScreenshot(publicPage,{path:'work/menu-customer-orders-mobile.png',fullPage:true});
- await publicPage.goto(origin+"/"+visualSlug);
- await expect(publicPage.getByText(/المنيو محفوظ للتصفح دون اتصال/)).toBeVisible();
- await publicContext.setOffline(true);
- const offlineFrame=publicPage.frameLocator('iframe[title="المنيو — تصفح دون اتصال"]');
- await expect(offlineFrame.locator('#notice')).toContainText('للتصفح فقط');
- await expect(offlineFrame.locator('form')).toHaveCount(0);
- await publicPage.reload();
- await expect(publicPage.locator('#notice')).toContainText('للتصفح فقط');
- await expect(publicPage.locator('article').first()).toBeVisible();
- expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await captureScreenshot(publicPage,{path:'work/menu-offline-mobile.png',fullPage:true});
- await publicContext.setOffline(false);
- await publicPage.close();
- await publicContext.close();
- // An existing customer from another store must join before accessing booking fields.
- // Joining on mobile must also unlock the separate desktop service instance.
- const unlinkedContext=await browser.newContext({viewport:{width:390,height:844}});
- try{
-  const registered=await unlinkedContext.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'operations-owner-b',name:'عميل متجر آخر',email:visualSlug+"-unlinked@test.example",password:'a-strong-test-password'}});
-  expect(registered.status()).toBe(201);
-  const customerPage=await unlinkedContext.newPage();
-  await customerPage.goto(origin+"/"+visualSlug);
-  await customerPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
-  const joinDialog=customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
-  await expect(joinDialog).toBeVisible();
-  await expect(joinDialog.getByLabel('القسم المطلوب',{exact:true})).toHaveCount(0);
-  await joinDialog.getByRole('button',{name:'متابعة كعميل لهذا المطعم',exact:true}).click();
-  await expect(joinDialog.getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
-  await joinDialog.getByLabel('القسم المطلوب',{exact:true}).selectOption(familySection);
-  await joinDialog.getByRole('button',{name:'إغلاق',exact:true}).click();
-  await customerPage.setViewportSize({width:1440,height:1000});
-  await customerPage.locator('.publicMenuInfoBar').getByRole('button',{name:'حجز طاولة',exact:true}).click();
-  await expect(customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
-  await customerPage.reload();
-  await customerPage.locator('.publicMenuInfoBar').getByRole('button',{name:'حجز طاولة',exact:true}).click();
-  await expect(customerPage.getByRole('dialog',{name:'حجز طاولة',exact:true}).getByLabel('القسم المطلوب',{exact:true})).toBeVisible();
- }finally{await unlinkedContext.close();}
- await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'المنيو والأصناف',exact:true}).click();
- await page.getByRole('button',{name:'القوالب والمظهر',exact:true}).click();
- await page.getByRole("button",{name:"معاينة القالب",exact:true}).click();
- await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-template","sufra");
- await expect(page.locator(".menuPreviewViewport").getByText("معاينة",{exact:true})).toBeVisible();
- await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("light");
- await expect(page.locator(".menuPreviewViewport .publicMenu")).toHaveAttribute("data-color-mode","light");
- const unchanged=await page.request.get(origin+"/api/restaurant/menu/appearance",{headers:{"x-foon-tenant":visualTenant.tenant}});expect((await unchanged.json()).colorMode).toBe("template");
- await page.getByRole("combobox",{name:"مظهر المنيو",exact:true}).selectOption("template");
- await captureScreenshot(page.locator(".menuTemplateEditor"),{path:"work/menu-studio-preview.png"});
- await page.getByRole("button",{name:"إغلاق المعاينة",exact:true}).click();
- await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
- await page.setViewportSize({width:390,height:844});
- await expect(page.getByRole("button",{name:"فتح قائمة النشاط",exact:true})).toBeVisible();
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await captureScreenshot(page,{path:"work/merchant-mobile.png",fullPage:true});
- await page.getByRole("button",{name:"فتح قائمة النشاط",exact:true}).click();
- await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
- await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
- // Branch selection lives in the responsive topbar; verify the branch card after navigating on mobile.
- await expect(page.locator(".restaurantBranchList").getByText("مطعم المعاينة",{exact:true})).toBeVisible();
- // A foreign tenant address must not expose its workspace.
- const db=await mysql.createConnection(process.env.DATABASE_URL);
- const foreignId=randomUUID();
- await db.execute("INSERT INTO tenants(id,slug,name,status) VALUES (?,?,'Private foreign tenant','active')",[foreignId,"visual-foreign-"+randomUUID().slice(0,8)]);
- await db.end();
- await page.goto(origin+"/restaurant?tenant="+foreignId);
- await expect(page.getByText("Private foreign tenant",{exact:true})).toHaveCount(0);
-});
-test("all 15 activities expose their own tools; service orders work in three languages at 320px",async({browser})=>{
- const activities=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
- const services=new Set(["carwash","laundry","automotive","salon","publicworks"]);
- const db=await mysql.createConnection(process.env.DATABASE_URL);
- try{
-  for(const activity of activities){
-   console.info("Activity workspace:",activity);
-   const context=await browser.newContext({viewport:{width:1440,height:1000}});
-   try{
-    context.setDefaultTimeout(12000);
-    const slug="service-ui-"+activity+"-"+randomUUID().slice(0,8);
-    const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
-    expect(created.status(),await created.text()).toBe(201);
-    const account=await created.json();
-    if(activity==="watches"){
-     expect(account.activity).toBe("watches");
-     expect(account.activityModules).toContain("variants");
-     expect(account.activityModules).not.toContain("kitchen");
-     expect(account.activityModules).not.toContain("tables");
-    }
-    await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
-    const page=await context.newPage();
-    const assignedRequests=[];
-    page.on('request',request=>{if(request.url().includes('/assigned-service'))assignedRequests.push(request.url());});
-    await page.goto(origin+"/restaurant?tenant="+account.tenant.id);
-    await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
-    await expect(page.locator('.foonActivityTools')).toBeVisible();
-    const destinations=await page.locator('.foonActivityTools a').evaluateAll(links=>links.map(link=>link.href));expect(new Set(destinations).size).toBe(destinations.length);
-    await expect(page.locator('.foonActivityTools a[href*="/workspace/"][href*="/payments?"]')).toBeVisible();
-    const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
-    const dining=activity==="restaurant"||activity==="cafe";
-    if(activity!=="restaurant"){
-     await expect(page.locator('.restaurantHero')).not.toContainText('المطعم');
-     await expect(page.locator('.restaurantHero h2')).not.toHaveText('لوحة التشغيل المباشر');
-    }
-    if(!dining){
-     if(services.has(activity))await expect(page.locator('.restaurantMetrics')).toHaveCount(0);
-     else await expect(page.locator('.restaurantMetrics')).not.toContainText('الطاولات');
-     await expect(navigation.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
-     expect(assignedRequests).toHaveLength(0);
-    }
-    if(activity!=="restaurant"){
-     await navigation.getByRole('button',{name:services.has(activity)?'دليل الخدمات':activity==="cafe"?'قائمة المشروبات والمأكولات':'المنتجات والأقسام',exact:true}).click();
-     await expect(page.getByLabel(services.has(activity)?'اسم الخدمة':activity==="cafe"?'اسم المشروب أو الصنف':'اسم المنتج',{exact:true})).toBeVisible();
-     await navigation.getByRole('button',{name:activity==="grocery"?'هوية واجهة السوبر ماركت':'هوية واجهة النشاط',exact:true}).click();
-     await expect(page.locator('.restaurantResourceForm')).toHaveCount(0);
-    }
-    if(!dining){
-     await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
-     await expect(page.locator('select[name="channel"] option[value="dine_in"]')).toHaveCount(0);
-     await expect(page.locator('.restaurantListTools')).toHaveCount(0);
-     await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
-    }
-    if(activity!=="restaurant"){
-     const headers={origin,"x-foon-tenant":account.tenant.id};
-     const categoryResponse=await context.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"category",name:"POS category "+activity}});
-     expect(categoryResponse.status(),await categoryResponse.text()).toBe(201);
-     const category=(await categoryResponse.json()).id;
-     const productName="POS product "+activity;
-     const productResponse=await context.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"product",name:productName,categoryId:category,price:7.25}});
-     expect(productResponse.status(),await productResponse.text()).toBe(201);
-     if(activity==="grocery"){
-      await navigation.getByRole('button',{name:'المنتجات والأقسام',exact:true}).click();
-      const row=page.locator('.foonCatalogRow').filter({hasText:productName});
-      await row.getByRole('button',{name:'إدارة الصور',exact:true}).click();
-      const gallery=row.getByRole('region',{name:'صور المنتج',exact:true});
-      const png=await sharp({create:{width:1200,height:600,channels:3,background:'#4a83c1'}}).png().toBuffer();
-      for(let i=0;i<4;i++){
-       await gallery.locator('input[type="file"]').setInputFiles({name:'catalog-'+i+'.png',mimeType:'image/png',buffer:png});
-       await expect(gallery.locator('img')).toHaveCount(i+1);
-      }
-      await expect(gallery.locator('input[type="file"]')).toBeDisabled();
-      const previous=await gallery.locator('img').nth(3).getAttribute('src');
-      await gallery.getByRole('button',{name:'اجعلها الرئيسية',exact:true}).nth(3).click();
-      await expect(gallery.locator('img').first()).toHaveAttribute('src',previous);
-      await gallery.getByRole('button',{name:'إزالة الصورة',exact:true}).first().click();
-      await expect(gallery.locator('img')).toHaveCount(3);
-      await expect(gallery.locator('input[type="file"]')).toBeEnabled();
-      await page.getByLabel('اسم المنتج',{exact:true}).fill('Unsaved product');
-      await page.getByLabel('السعر',{exact:true}).fill('12.34');
-      for(const [locale,title] of [['en','Product images'],['fr','Images du produit'],['ar','صور المنتج']]){
-       await page.getByRole('combobox',{name:'اللغة / Language / Langue',exact:true}).selectOption(locale);
-       await page.setViewportSize({width:320,height:900});
-       await expect(row.getByRole('region',{name:title,exact:true})).toBeVisible();
-       await expect(page.getByRole('heading',{name:locale==='ar'?'إدارة المنتجات':locale==='en'?'Manage products':'Gérer les produits',exact:true})).toBeVisible();
-       await expect(page.getByLabel(locale==='ar'?'اسم المنتج':locale==='en'?'Product name':'Nom du produit',{exact:true})).toBeVisible();
-       await expect(page.getByLabel(locale==='ar'?'السعر':locale==='en'?'Price':'Prix',{exact:true})).toHaveAttribute('dir','ltr');
-       await expect(row).toContainText(productName);
-       await expect(page.getByLabel(locale==='ar'?'اسم المنتج':locale==='en'?'Product name':'Nom du produit',{exact:true})).toHaveValue('Unsaved product');
-       await expect(page.getByLabel(locale==='ar'?'السعر':locale==='en'?'Price':'Prix',{exact:true})).toHaveValue('12.34');
-       const bounds=await row.getByRole('region',{name:title,exact:true}).boundingBox();
-       expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);
-       expect(await row.evaluate(element=>element.scrollWidth<=element.clientWidth)).toBe(true);
-       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
-       await captureScreenshot(page,{path:'work/merchant-catalog-images-'+locale+'-320.png',fullPage:true});
-      }
-      await page.setViewportSize({width:1440,height:1000});
-     }
-     await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
-     await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
-     const product=page.locator('.restaurantPosProduct').filter({hasText:productName});
-     await expect(product).toContainText('7.25');
-     await product.getByRole('button',{name:'+ إضافة إلى الطلب',exact:true}).click();
-     await page.locator('.restaurantPosCheckout').getByRole('button',{name:'إنشاء الطلب',exact:true}).click();
-     await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('7.25');
-     await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('SAR');
-    }
-    if(services.has(activity)&&activity!=="laundry"){
-     await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
-     await expect(page.locator('.foonServiceOrders')).toBeVisible();
-     await expect(page.getByRole('button',{name:'قائمة الانتظار',exact:true})).toHaveCount(0);
-    }
-    const serviceLink=navigation.getByRole('button',{name:'أوامر الخدمة',exact:true});
-    if(!services.has(activity)){await expect(serviceLink).toHaveCount(0);continue;}
-    await expect(serviceLink).toBeVisible();
-    await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
-    await page.locator('.foonActivityTools').getByRole('link',{name:'أوامر الخدمة',exact:false}).click();
-    const workspace=page.locator('.foonServiceOrders');
-    await expect(workspace.getByRole('heading',{name:'أوامر الخدمة',exact:true})).toBeVisible();
-    if(activity!=="carwash")continue;
-    await expect(workspace.getByText('جارٍ التحميل…',{exact:true})).toHaveCount(0);
-    await workspace.getByRole('button',{name:'إنشاء أمر خدمة',exact:true}).click();
-    const form=workspace.locator('form');
-    await expect(form.locator('select[name="status"] option')).toHaveCount(2);
-    await form.getByLabel('عنوان الخدمة',{exact:true}).fill('خدمة معاينة السيارة');
-    await form.getByLabel('اسم العميل',{exact:true}).fill('عميل الخدمة');
-    await form.getByLabel('جوال العميل',{exact:true}).fill('٠٥٠٠٠٠٤٣٢١');
-    await expect(form.getByLabel('جوال العميل',{exact:true})).toHaveValue('0500004321');
-    await form.getByLabel('تفاصيل الخدمة',{exact:true}).fill('Service '+"X".repeat(120));
-    await form.locator('input[name="amount"]').fill('45.50');
-    await form.locator('select[name="branchId"]').selectOption(account.branch.id);
-    await form.getByRole('button',{name:'حفظ',exact:true}).click();
-    const card=workspace.locator('article').filter({hasText:'خدمة معاينة السيارة'});
-    await expect(card).toHaveAttribute('data-status','new');
-    await workspace.getByRole('searchbox',{name:'بحث في أوامر الخدمة',exact:true}).fill('0500004321');
-    await expect(card).toBeVisible();
-    await card.getByRole('button',{name:'قيد التنفيذ',exact:true}).click();
-    await expect(card).toHaveAttribute('data-status','in_progress');
-    await card.getByRole('button',{name:'مكتمل',exact:true}).click();
-    await expect(card).toHaveAttribute('data-status','completed');
-    await expect(card.getByRole('button',{name:'تعديل',exact:true})).toHaveCount(0);
-    await expect(card.getByRole('button',{name:'أرشفة',exact:true})).toHaveCount(0);
-    await card.getByRole('button',{name:'عرض التفاصيل',exact:true}).click();
-    await expect(form.locator('fieldset')).toHaveAttribute('disabled','');
-    for(const control of await form.locator('input,select,textarea').all())await expect(control).toBeDisabled();
-    await expect(form.getByRole('button',{name:'حفظ',exact:true})).toHaveCount(0);
-    await form.getByRole('button',{name:'إغلاق',exact:true}).click();
-    await page.setViewportSize({width:320,height:720});
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
-    await captureScreenshot(page,{path:'work/merchant-service-orders-ar-mobile.png',fullPage:true});
-    for(const [language,title] of [["en","Service orders"],["fr","Ordres de service"]]){
-     await page.locator('.restaurantLanguageSelector select').selectOption(language);
-     await expect(workspace.getByRole('heading',{name:title,exact:true})).toBeVisible();
-     await expect(workspace).toHaveAttribute('dir','ltr');
-     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
-     await captureScreenshot(page,{path:'work/merchant-service-orders-'+language+'-mobile.png',fullPage:true});
-    }
-   }finally{await context.close();}
-  }
- }finally{await db.end();}
-});
-test.setTimeout(180000);
-
-
-
-
-test("dashboard currencies follow the store and each order in three languages",async({browser})=>{
- const context=await browser.newContext();
- const db=await mysql.createConnection(process.env.DATABASE_URL);
- try{
-  const slug='currency-overview-'+randomUUID().slice(0,8);
-  const response=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Currency owner',storeName:'Currency store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'watches',countryCode:'SA',currency:'SAR',region:'الرياض'}});
-  expect(response.status(),await response.text()).toBe(201);
-  const account=await response.json();
-  await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
-  await db.execute("UPDATE tenant_business_profiles SET currency='USD' WHERE tenant_id=?",[account.tenant.id]);
-  const page=await context.newPage();
-  await page.route('**/api/restaurant/operations/overview**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   expect(response.status()).toBe(200);
-   body.summary.sales=1234.5;body.summary.average=12.34;
-   body.orders=[{id:'currency-preview',order_number:1,channel:'takeaway',status:'new',payment_status:'unpaid',total:9.75,currency:'EUR',dining_snapshot:null,party_size:null,items:[{name:'Currency preview',quantity:1}]}];
-   await route.fulfill({response,json:body});
-  });
-  await page.goto(origin+'/restaurant?tenant='+account.tenant.id);
-  for(const language of ['ar','en','fr']){
-   await page.getByRole("combobox",{name:"اللغة / Language / Langue",exact:true}).selectOption(language);
-   await expect(page.locator('.restaurantMetrics')).toContainText('1234.50 USD');
-   await expect(page.locator('.restaurantMetrics')).toContainText('12.34 USD');
-   await expect(page.locator('.restaurantOverviewGrid footer')).toContainText('1234.50 USD');
+ const floors=await page.request.get(origin…7643 tokens truncated…
    await expect(page.locator('.restaurantOrders')).toContainText('9.75 EUR');
    await expect(page.locator('.restaurantContent')).not.toContainText('ر.س');
   }
@@ -686,6 +362,12 @@ test('all activity storefront templates retain distinct direction and responsive
      await expect(storefront).toHaveAttribute('dir',language==='ar'?'rtl':'ltr');
      await expect(page.getByRole('heading',{name:'Responsive visual product',exact:true})).toBeVisible();
      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),activity+'/'+template+'/'+width).toBe(true);
+     if(activity==='cafe'&&i===0&&width===320){
+      const toggle=page.locator('.foonActivityStorefront .foonStorefrontThemeToggle');
+      await toggle.click();await expect(storefront).toHaveAttribute('data-color-mode','dark');
+      await page.reload();await expect(storefront).toHaveAttribute('data-color-mode','dark');
+      await toggle.click();await expect(storefront).toHaveAttribute('data-color-mode','light');
+     }
      const bounds=await page.locator('.foonActivityProduct').first().boundingBox();expect(bounds).not.toBeNull();expect(bounds.x,activity+'/'+template+'/'+width).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width,activity+'/'+template+'/'+width).toBeLessThanOrEqual(width+1);expect(bounds.width,activity+'/'+template+'/'+width).toBeGreaterThan(100);
     }
    }
