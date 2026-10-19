@@ -10,7 +10,7 @@ function pairsBetween(source,begin,end,pattern){
 }
 const aliases=pairsBetween(read("lib/tenant/workspace-routes.ts"),
  "export const ACTIVITY_ROUTE_SLUGS", "};", /([a-z]+):"([a-z-]+)"/g);
-const rewrites=pairsBetween(read("next.config.mjs"),"const activityRoutes = {","};",/([a-z]+):"([a-z]+)"/g);
+const rewrites=pairsBetween(read("next.config.mjs"),"const activityRoutes={","};",/([a-z]+):"([a-z]+)"/g);
 const db=pairsBetween(read("migrations/0101_activity_route_slugs.sql"),
  "INSERT INTO activity_route_slugs","ON DUPLICATE KEY UPDATE",/\('([a-z]+)','([a-z-]+)'\)/g);
 
@@ -26,6 +26,8 @@ test("Next redirects and rewrites use the same activity aliases",()=>{
  const config=read("next.config.mjs");
  assert.match(config,/async redirects\(/);
  assert.match(config,/async rewrites\(/);
+ assert.match(config,/beforeFiles/);
+ assert.match(config,/Content-Security-Policy/);
  assert.match(config,/\/workspace\/\$\{activity\}/);
  assert.match(config,/\/\$\{slug\}\/payments/);
 });
