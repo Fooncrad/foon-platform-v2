@@ -38,3 +38,11 @@ test("W23 correctly handles Windows path separators and case-insensitive extensi
   assert.equal(classifyExtractedFileNames(["app\\Edge-Runtime\\Main.MJS"]).ok,false);
   assert.equal(classifyExtractedFileNames(["app\\Node_Modules\\foo.bin"]).ok,false);
 });
+test("W23 refuses hidden private keys, PowerShell scripts and SQLite WAL data in NSIS", () => {
+  const verdict=classifyExtractedFileNames([
+    "app/bridge.ps1", "app/master.pem", "app/device.pfx",
+    "app/local.sqlite-wal", "app/config/credentials.json"
+  ]);
+  assert.equal(verdict.ok,false);
+  assert(verdict.blockers.includes("W23_BUNDLED_SOURCE_OR_DATA"));
+});
