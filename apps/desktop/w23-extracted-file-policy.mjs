@@ -22,7 +22,9 @@ export function classifyExtractedFileNames(fileNames) {
       blockers.push("W23_BUNDLED_NODE_RUNTIME");
     }
     const last = parts[parts.length - 1];
-    if (/\.(?:mjs|cjs|js|jsx|ts|tsx|map|env|sql|sqlite|sqlite3|db|asar)$/.test(last) ||
+    if (/\.(?:mjs|cjs|js|jsx|ts|tsx|map|env|sql|sqlite|sqlite3|db|asar|ps1|psm1|py|rb|sh|key|pem|p12|pfx|bak)$/.test(last) ||
+      /\.(?:sqlite|sqlite3|db)-(?:wal|shm|journal)$/.test(last) ||
+      ["package.json","credentials.json","id_rsa"].includes(last) ||
       last === ".env" || last.startsWith(".env.")) {
       blockers.push("W23_BUNDLED_SOURCE_OR_DATA");
     }
