@@ -11,6 +11,7 @@
 use std::ffi::{c_char, c_int, c_void, CString};
 use std::fs;
 use std::collections::HashSet;
+use std::time::{SystemTime,UNIX_EPOCH};
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
 use serde_json::Value;
@@ -145,6 +146,39 @@ fn hex(bytes:&[u8])->String{bytes.iter().map(|b|format!("{b:02x}")).collect()}
 // W25 has a separate opt-in path using ONLY a synthetic scoped local catalog.
 // SQL inside the SAME BEGIN IMMEDIATE as the order and Outbox commits.
 // This is not a substitute for a central signed catalog or real permissions.
+// W26 is opt-in, synthetic-only lease metadata. This is NOT
+// cryptographically signed and must NOT be treated as production authority.
+// A real offline terminal needs server-authenticated revocable snapshots and
+// durable trusted-clock/rollback controls before acceptance.
+const MAX_CATALOG_LEASE_SECONDS:i64=86_400;
+const CHECK_LEASE:&[u8]=b"SELECT 1 FROM synthetic_catalog_lease WHERE tenant_id=? AND branch_id=? AND device_id=? AND revision=? AND enabled=1 AND issued_at_unix<=? AND expires_at_unix>? AND expires_at_unix>issued_at_unix AND expires_at_unix-issued_at_unix<=86400 LIMIT 1\0";
+fn validate_synthetic_catalog_lease(
+    db:*mut c_void,
+    order:&TrustedOrder<'_>,
+    expected_revision:&str
+)->Result<(),&'static str>{
+    if !valid_id(expected_revision,64) {
+        return Err("W26_CATALOG_REVISION_INVALID");
+    }
+    let now=SystemTime::now().duration_since(UNIX_EPOCH)
+        .map_err(|_|"W26_OS_CLOCK_INVALID")?;
+    let seconds=i64::try_from(now.as_secs()).map_err(|_|"W26_OS_CLOCK_INVALID")?;
+    if seconds<=0||seconds>MAX_JS_SAFE {return Err("W26_OS_CLOCK_INVALID");}
+    let lease=prepared(db,CHECK_LEASE)
+        .map_err(|_|"W26_LEASE_SCHEMA_MISSING")?;
+    bind_text(lease.0,1,order.tenant_id)?;
+    bind_text(lease.0,2,order.branch_id)?;
+    bind_text(lease.0,3,order.device_id)?;
+    bind_text(lease.0,4,expected_revision)?;
+    bind_i64(lease.0,5,seconds)?;
+    bind_i64(lease.0,6,seconds)?;
+    match unsafe{sqlite3_step(lease.0)} {
+        ROW=>Ok(()),
+        DONE=>Err("W26_CATALOG_LEASE_MISSING_EXPIRED_OR_WRONG_SCOPE"),
+        _=>Err("W26_LEASE_QUERY_FAILED")
+    }
+}
+
 const RESERVE_CATALOG:&[u8]=b"UPDATE synthetic_catalog SET stock_qty=stock_qty-? WHERE tenant_id=? AND branch_id=? AND item_id=? AND stock_qty>=? AND unit_cents=? AND currency=? AND enabled=1\0";
 fn reserve_synthetic_catalog(
     db:*mut c_void,
@@ -201,20 +235,32 @@ pub(crate) fn create_synthetic_order_atomic(
     order:TrustedOrder<'_>,
     injected_failure:FaultPoint
 )->Result<CreatedOrder,&'static str>{
-    create_order_inner(db_file,order,injected_failure,false)
+    create_order_inner(db_file,order,injected_failure,false,None)
 }
 pub(crate) fn create_synthetic_order_with_catalog_atomic(
     db_file:&Path,
     order:TrustedOrder<'_>,
     injected_failure:FaultPoint
 )->Result<CreatedOrder,&'static str>{
-    create_order_inner(db_file,order,injected_failure,true)
+    create_order_inner(db_file,order,injected_failure,true,None)
+}
+pub(crate) fn create_synthetic_order_with_catalog_lease_atomic(
+    db_file:&Path,
+    order:TrustedOrder<'_>,
+    catalog_revision:&str,
+    injected_failure:FaultPoint
+)->Result<CreatedOrder,&'static str>{
+    if !valid_id(catalog_revision,64) {
+        return Err("W26_CATALOG_REVISION_INVALID");
+    }
+    create_order_inner(db_file,order,injected_failure,true,Some(catalog_revision))
 }
 fn create_order_inner(
     db_file:&Path,
     order:TrustedOrder<'_>,
     injected_failure:FaultPoint,
-    enforce_catalog:bool
+    enforce_catalog:bool,
+    expected_revision:Option<&str>
 )->Result<CreatedOrder,&'static str>{
     validate(&order)?;
     let path=path_for_synthetic_only(db_file)?;
@@ -248,6 +294,9 @@ fn create_order_inner(
     // Both catalog stock and order/event/outbox mutation share the SAME
     // transaction, so validation and stock reservation cannot race.
     if enforce_catalog {
+        if let Some(revision)=expected_revision {
+            validate_synthetic_catalog_lease(db.0,&order,revision)?;
+        }
         reserve_synthetic_catalog(db.0,&order)?;
         if matches!(injected_failure,FaultPoint::AfterCatalog) {
             return Err("W24_SYNTHETIC_INJECTED_ROLLBACK");
@@ -388,6 +437,51 @@ mod tests {
             "wrong-tenant"|"wrong-device"=>
                 assert!(matches!(result,Err("W24_SCOPE_FORBIDDEN"))),
             _=>panic!("W25_UNKNOWN_SYNTHETIC_CASE")
+        }
+    }
+
+    #[test]
+    fn w26_rejects_bad_catalog_revision_before_touching_database(){
+        assert!(matches!(create_synthetic_order_with_catalog_lease_atomic(
+            Path::new("orders.sqlite"),fixture(),"",FaultPoint::None
+        ),Err("W26_CATALOG_REVISION_INVALID")));
+        assert!(matches!(create_synthetic_order_with_catalog_lease_atomic(
+            Path::new("orders.sqlite"),fixture(),&"a".repeat(65),FaultPoint::None
+        ),Err("W26_CATALOG_REVISION_INVALID")));
+    }
+    #[test]
+    #[ignore="W26 only runs with its self-created scoped temporary SQLite fixture"]
+    fn w26_native_catalog_lease_case(){
+        let path=std::env::var_os("FOON_W26_TEST_DB_PATH")
+            .expect("W26_ISOLATED_TEMP_DB_REQUIRED");
+        let case=std::env::var("FOON_W26_CASE")
+            .expect("W26_TEST_SCENARIO_REQUIRED");
+        let mut order=fixture();
+        let revision=if case=="wrong-revision" {"rev-wrong"} else {"rev-fixture-26"};
+        if case=="wrong-tenant"{order.tenant_id="other-tenant";}
+        if case=="wrong-device"{order.device_id="other-device";}
+        if case=="wrong-branch"{
+            order.branch_id="other-branch";
+            order.payload_json=r#"{"id":"order-fixture-w24","branchId":"other-branch","items":[{"id":"item-A","quantity":2,"expectedUnitCents":950,"expectedCurrency":"SAR"}],"status":"new","createdAt":"2026-10-19T00:00:00.000Z"}"#;
+        }
+        let point=if case=="after-catalog"{FaultPoint::AfterCatalog}else{FaultPoint::None};
+        let result=create_synthetic_order_with_catalog_lease_atomic(
+            Path::new(&path),order,revision,point
+        );
+        match case.as_str(){
+            "success"=>{
+                let made=result.expect("W26_TRUSTED_LOCAL_LEASE_MUST_ACCEPT");
+                assert_eq!(made.event_seq,1);
+                assert_eq!(made.outbox_seq,1);
+                assert_eq!(made.digest_hex.len(),64);
+            },
+            "after-catalog"=>
+                assert!(matches!(result,Err("W24_SYNTHETIC_INJECTED_ROLLBACK"))),
+            "expired"|"future"|"wrong-revision"|"disabled-lease"|
+            "missing-lease"|"overlong-lease"|"wrong-tenant"|
+            "wrong-branch"|"wrong-device"=>
+                assert!(matches!(result,Err("W26_CATALOG_LEASE_MISSING_EXPIRED_OR_WRONG_SCOPE"))),
+            _=>panic!("W26_UNKNOWN_SCENARIO")
         }
     }
 
