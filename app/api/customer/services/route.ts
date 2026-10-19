@@ -9,6 +9,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
+import {tenantPublicControls} from "@/lib/tenant/public-controls";
 import {saveResource} from "@/lib/restaurant/operations";
 import {ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 export const runtime="nodejs";
@@ -40,6 +41,8 @@ export async function POST(request:Request){
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
   if(!users.length||!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");
   const tenant=String(stores[0].id),waiter=body.action==='waiter',serviceModule=waiter?'waiterCalls':'reservations',kind=waiter?'waiter_call':'reservation';
+   const publicControls=await tenantPublicControls(tenant,db);
+   if(!(waiter?publicControls.waiter:publicControls.reservations))throw new ResourceError("PUBLIC_FEATURE_DISABLED");
   if(!(await tenantEntitlement(tenant,waiter?'tables':'reservations')).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   const notes=typeof body.notes==='string'?body.notes.trim():'';
   if(notes.length>500)throw new ResourceError("INVALID_INPUT");
@@ -68,5 +71,5 @@ export async function POST(request:Request){
   await db.execute("UPDATE restaurant_resources SET lookup_key=?,data=JSON_SET(data,'$.requestFingerprint',?,'$.customerUserId',?) WHERE id=? AND tenant_id=?",[lookup,fingerprint,user,result.id,tenant]);
   if(!waiter)await notifyCustomer(db,{userId:user,tenantId:tenant,event:"reservation_created",resourceId:result.id,reference:String(users[0].display_name??""),status:"pending"});
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,id:result.id},{status:201});
- }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:'SERVICE_UNAVAILABLE';return NextResponse.json({ok:false,code},{status:code==='RATE_LIMITED'?429:code==='REFERENCE_NOT_FOUND'||code==='BRANCH_NOT_FOUND'?404:code==='STORE_CUSTOMER_REQUIRED'||code==='PLAN_FEATURE_REQUIRED'?403:code==='SERVICE_UNAVAILABLE'?503:400});}finally{db.release();}
+ }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:'SERVICE_UNAVAILABLE';return NextResponse.json({ok:false,code},{status:code==='RATE_LIMITED'?429:code==='REFERENCE_NOT_FOUND'||code==='BRANCH_NOT_FOUND'?404:code==='STORE_CUSTOMER_REQUIRED'||code==='PLAN_FEATURE_REQUIRED'||code==='PUBLIC_FEATURE_DISABLED'?403:code==='SERVICE_UNAVAILABLE'?503:400});}finally{db.release();}
 }
