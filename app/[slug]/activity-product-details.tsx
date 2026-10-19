@@ -2,7 +2,7 @@
 import {useRef} from "react";
 import {StorefrontAddButton} from "./storefront-cart";
 type Language="ar"|"en"|"fr";
-export default function ActivityProductDetails({name,description,imageUrl,price,currency,unit,language,slug,id,canAdd=false,service=false}:{name:string;description:string;imageUrl:string|null;price:number;currency:string;unit?:string;language:Language;slug:string;id:string;canAdd?:boolean;service?:boolean}){
+export default function ActivityProductDetails({name,description="",imageUrl,price,currency,unit,language,slug,id,canAdd=false,service=false}:{name:string;description?:string;imageUrl:string|null;price:number;currency:string;unit?:string;language:Language;slug:string;id:string;canAdd?:boolean;service?:boolean}){
  const dialog=useRef<HTMLDialogElement>(null);
  const label=language==="ar"?"تفاصيل":language==="fr"?"Détails":"Details";
  const close=language==="ar"?"إغلاق":language==="fr"?"Fermer":"Close";
