@@ -81,7 +81,7 @@ test("ESC/POS tickets honor paper width and retain long product descriptions",()
   const output=renderEscPos({payload,printer:{address:"192.168.1.50",paperWidth:width,copies:1}}).toString("utf8");
   const columns=width===58?32:48;
   assert.match(output,new RegExp("-{"+columns+"}\\n"),"separator should match thermal paper width");
-  const lines=output.split("\\n").filter(line=>!line.includes("\\x1b")&&!line.includes("\\x1d"));
+  const lines=output.split("\n").filter(line=>!line.includes("\x1b")&&!line.includes("\x1d"));
   assert(lines.every(line=>Array.from(line).length<=columns),"printed text should stay inside paper columns");
   const start=lines.findIndex(line=>line.startsWith("1 x "));
   assert(start>=0,"first product line should exist");
