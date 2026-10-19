@@ -1,4 +1,4 @@
-import {isActivityType, type ActivityType} from "@/lib/platform/activity-presets";
+import {isActivityType, type ActivityType} from "../platform/activity-presets.ts";
 
 /** Canonical URL aliases. Database activity_code and tenant UUIDs stay stable. */
 export const ACTIVITY_ROUTE_SLUGS:Record<ActivityType,string>={
