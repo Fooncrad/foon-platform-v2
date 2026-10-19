@@ -12,6 +12,9 @@ test("each of 15 activities has its exact canonical identifier, not one store al
  for(const id of ["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"])
   assert.ok(activities.includes(id),id);
  const routes=read("lib/tenant/workspace-routes.ts");
+ const config=read("next.config.mjs");
+ assert.match(config,/beforeFiles/);
+ assert.match(config,/source:`\/\$\{slug\}`/);
  assert.match(routes,/isActivityType\(activity\)/);
  assert.match(routes,/return "\/"\+ACTIVITY_ROUTE_SLUGS\[activity\]/);
  assert.match(routes,/function activityPaymentsUrl/);
@@ -33,7 +36,7 @@ test("account, new business signup and dashboard use activity_code, never store-
  assert.match(account,/tenantWorkspaceActivity\(tenantId\)/);
  assert.match(account,/activityWorkspaceUrl\(activity\)/);
  assert.doesNotMatch(account,/memberships\[0\]\.kind==="store"/);
- assert.match(read("app/restaurant/register/page.tsx"),/activityWorkspaceUrl\(activity,result.tenant.id\)/);
+ assert.match(read("app/restaurant/register/page.tsx"),/activityWorkspaceUrl\(activity\)/);
  const dash=read("app/restaurant/merchant-dashboard.tsx");
  assert.match(dash,/activityWorkspaceUrl\(data.activityCode\)/);
  assert.match(dash,/activityPaymentsUrl\(data.activityCode\)/);
