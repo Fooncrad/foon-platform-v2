@@ -4,6 +4,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { splitSqlStatements } from "./sql-statements.mjs";
 import {ensureDiningContext} from "./dining-context-migration.mjs";
+import {ensureMarketplaceVisibility} from "./marketplace-visibility-migration.mjs";
 
 const url=process.env.DATABASE_URL;
 if(!url) throw new Error("DATABASE_URL_MISSING");
@@ -33,6 +34,7 @@ try {
     await db.beginTransaction();
     try {
       if(file==="0065_dining_order_context.sql")await ensureDiningContext(db);
+      else if(file==="0100_marketplace_visibility.sql")await ensureMarketplaceVisibility(db);
       else for(const statement of statements) await db.query(statement);
       await db.execute("INSERT INTO schema_migrations(id) VALUES (?)",[file]);
       await db.commit();

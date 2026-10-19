@@ -46,10 +46,8 @@ export async function POST(request:Request){
   const [profiles]=await db.execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[user]);
   const customerPhone=typeof body.customerPhone==="string"&&body.customerPhone.trim()?body.customerPhone.trim():String(profiles[0]?.phone||"");
   const catalogDelivery=body.channel==="delivery"&&String(stores[0].activity_code??"")!=="restaurant"&&Boolean(stores[0].activity_code);
-  if(body.channel==="delivery"){
-   if(!deliveryCountryMatches(body.deliveryCountryCode,stores[0].country_code))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");
-  }
   if(catalogDelivery&&(typeof body.deliveryAddress!=="string"||body.deliveryAddress.trim().length<5||body.deliveryAddress.length>900||!/^\+?[\d ()-]{7,40}$/.test(customerPhone)||customerPhone.replace(/\D/g,"").length<7))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
+  if(body.channel==="delivery"&&!deliveryCountryMatches(body.deliveryCountryCode,stores[0].country_code))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
