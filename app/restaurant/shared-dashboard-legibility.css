@@ -72,3 +72,16 @@
 .adminPanel .foonAdminMediaEnabled{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;font-weight:650;}
 .adminPanel .foonAdminMediaEnabled input{width:20px;height:20px;accent-color:#bf732b;}
 .adminPanel .foonAdminMediaCard button{min-height:44px;white-space:normal;}
+
+/* Correct inherited light account editor surfaces in customer dark workspace. */
+.customerDashboard .customerProfileEditor{background:#24221e;color:#f8f3e9;border-color:#514938;}
+.customerDashboard .customerProfileEditor>p{color:#dbd3c6;}
+.customerDashboard .customerProfileMedia>div{background:#302c26;color:#f8f3e9;border-color:#5d5344;}
+.customerDashboard .customerPhotoFrame{background:#3a342a;}
+.customerDashboard .customerProfileEditor .customerLogout{color:#ffc2b8;border-color:#c68176;background:transparent;}
+.customerDashboard .customerProfileEditor .customerLogout:hover{background:#4b2b2a;}
+.customerDashboard .customerProfileForm label{color:#f8f3e9;}
+.customerDashboard .customerProfileForm input{background:#1c1d20;color:#f8f3e9;border-color:#68655c;}
+.customerDashboard .customerProfileForm input:focus-visible{outline-color:#e2a93b;}
+.customerDashboard .customerAddressForm input,.customerDashboard .customerAddressForm textarea{background:#1c1d20;color:#f8f3e9;border-color:#68655c;}
+.customerDashboard .customerAddresses>header p{color:#ddd4c5;}
