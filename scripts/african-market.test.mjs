@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {supportedCountries,currencyForCountry} from "../lib/tenant/country-catalog.ts";
 import {registrationActivities} from "../lib/tenant/registration-activities.ts";
-import {MARKET_PAGE_SIZE,buildMarketWhere,escapeMarketLike,marketPageCount,marketPageUrl,parseMarketFilters} from "../lib/market/search.ts";
+import {MARKET_PAGE_SIZE,buildMarketWhere,escapeMarketLike,marketListingOrderSql,marketPageCount,marketPageUrl,parseMarketFilters} from "../lib/market/search.ts";
 
 const africanCodes="DZ AO BJ BW BF BI CV CM CF TD KM CD CG CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG ZM ZW".split(" ");
 
@@ -48,6 +48,10 @@ test("market queries isolate countries, permit activity+kind, and treat search t
  assert.match(result.where,/bp.country_code=\?/);
  assert.match(result.where,/bp.activity_code=\?/);
  assert.match(result.where,/t.status='active'/);
+ assert.match(result.where,/t.market_enabled=TRUE/);
+ assert.match(result.where,/market_visible_from IS NULL/);
+ assert.match(result.where,/market_visible_until IS NULL/);
+ assert.equal(marketListingOrderSql(),"t.market_sort_order ASC,bp.activity_code ASC,t.name ASC,t.id ASC");
  assert.deepEqual(result.args,["ML","store","automotive","%100!%!_!! Café%","%100!%!_!! Café%"]);
  assert.equal(escapeMarketLike("a%b_c!"),"a!%b!_c!!");
 });

@@ -103,6 +103,7 @@
 .adminStage .provision-form input,.adminStage .provision-form select{background:#fff;color:#172033;border-color:#dce0e5}
 .adminStage .tenant-list article{background:#fff;color:#172033;border-color:#e0e3e7}
 .adminStage .tenant-list span{color:#737b86}.adminStage .tenant-list select{background:#fff;color:#172033;border-color:#dce0e5}
+.adminStage .tenant-list article>div:last-child{flex-wrap:wrap}.tenantListingSettings{flex-basis:100%;padding-top:10px;border-top:1px solid #e5e7eb}.tenantListingSettings summary{cursor:pointer;font-weight:700;color:#344054}.tenantListingSettings form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;padding-top:12px}.tenantListingSettings label{display:grid;gap:5px;color:#4b5563;font-size:13px}.tenantListingSettings label:first-child{display:flex;align-items:center;gap:8px}.tenantListingSettings input{min-width:0;min-height:38px;border:1px solid #d0d5dd;border-radius:8px;padding:6px 8px;background:#fff;color:#172033}.tenantListingSettings input[type=checkbox]{min-height:auto}.tenantListingSettings button{min-height:38px;border:0;border-radius:8px;padding:0 14px;background:#173b69;color:#fff;font-weight:700;cursor:pointer}
 .adminStage .form-note{background:#fff;border-color:#e0e3e7;color:#172033}
 @media(max-width:560px){.tenant-summary{grid-template-columns:repeat(3,1fr)}.tenant-summary article{padding:12px}.tenant-summary strong{font-size:1.25rem}.tenant-summary span{font-size:.75rem}}
 

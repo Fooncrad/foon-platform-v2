@@ -20,7 +20,7 @@ export default async function TenantsPage({searchParams}:{searchParams:Promise<{
  const id=await currentActiveAdminUserId();if(!id)redirect("/login");
  let role:"super_admin"|"admin"|"support";
  try{({role}=await requirePlatformRole(id,["super_admin","admin","support"]))}catch{redirect("/account")}
- const [rows]=await database().execute<RowDataPacket[]>("SELECT t.id,t.name,t.slug,t.kind,t.status,t.created_at,p.name_ar AS plan_name,s.status AS subscription_status FROM tenants t LEFT JOIN tenant_subscriptions s ON s.tenant_id=t.id LEFT JOIN package_plans p ON p.id=s.plan_id"+filter+" ORDER BY t.created_at DESC LIMIT 200",values);
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT t.id,t.name,t.slug,t.kind,t.status,t.market_enabled,t.market_visible_from,t.market_visible_until,t.market_sort_order,t.created_at,p.name_ar AS plan_name,s.status AS subscription_status FROM tenants t LEFT JOIN tenant_subscriptions s ON s.tenant_id=t.id LEFT JOIN package_plans p ON p.id=s.plan_id"+filter+" ORDER BY t.created_at DESC LIMIT 200",values);
  const data=JSON.parse(JSON.stringify(rows));
  const active=data.filter((x:{status:string})=>x.status==="active").length;
  const pending=data.filter((x:{status:string})=>x.status==="pending").length;

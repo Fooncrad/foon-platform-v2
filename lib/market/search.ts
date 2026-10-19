@@ -14,12 +14,15 @@ export function parseMarketFilters(input:{country?:unknown;activity?:unknown;kin
 }
 export function escapeMarketLike(q:string){return q.replace(/[!%_]/g,char=>"!"+char);}
 export function buildMarketWhere(filters:MarketFilters){
- const clauses=["bp.country_code=?","t.status='active'"];
+ const clauses=["bp.country_code=?","t.status='active'","t.market_enabled=TRUE","(t.market_visible_from IS NULL OR t.market_visible_from<=UTC_TIMESTAMP())","(t.market_visible_until IS NULL OR t.market_visible_until>UTC_TIMESTAMP())"];
  const args:string[]=[filters.country];
  if(filters.kind){clauses.push("t.kind=?");args.push(filters.kind);}
  if(filters.activity){clauses.push("bp.activity_code=?");args.push(filters.activity);}
  if(filters.q){const search="%"+escapeMarketLike(filters.q)+"%";clauses.push("(t.name LIKE ? ESCAPE '!' OR t.slug LIKE ? ESCAPE '!')");args.push(search,search);}
  return {where:clauses.join(" AND "),args};
+}
+export function marketListingOrderSql(){
+ return "t.market_sort_order ASC,bp.activity_code ASC,t.name ASC,t.id ASC";
 }
 export function marketPageCount(total:number):number{
  return Math.max(1,Math.ceil(Math.max(0,total)/MARKET_PAGE_SIZE));

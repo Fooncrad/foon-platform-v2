@@ -42,6 +42,9 @@ test("preparation printers require a routable department while receipt-only prin
  assert.equal(validateResource("printers",{...base,id:"33333333-3333-4333-8333-333333333333",data:{...base.data,purpose:"both",departmentId:department}}).data.purpose,"both","existing combined printers remain editable during migration");
 });
 test("printer routing links whole menu categories to operating departments",()=>{
+ const departmentFields=resourceModules.departments.fields.map(field=>field.key);
+ assert.equal(resourceModules.departments.label,"أقسام التشغيل");
+ assert.equal(departmentFields.some(key=>key.startsWith("printer")),false,"printers are configured once in the printer record, not duplicated on department records");
  const fields=resourceModules.departmentAssignments.fields;
  assert.equal(resourceModules.departmentAssignments.label,"ربط أقسام المنيو بالطابعات");
  assert.equal(fields.find(field=>field.key==="categoryId")?.ref,"categories");
