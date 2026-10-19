@@ -8,6 +8,7 @@
 use std::ffi::{c_char, c_int, c_uchar, c_void, CString};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::collections::BTreeSet;
 use std::ptr::{null, null_mut};
 use crate::native_event_digest::{digest_trusted_event, TrustedRawEvent};
 
@@ -27,7 +28,7 @@ const TEST_DATABASE_FILENAME: &str = "events.sqlite";
 // ONLY on the disposable W20 fixture file admitted by verify_fixture_path.
 const PENDING_EVENTS_SQL: &[u8] =
     b"SELECT o.seq,o.event_seq,e.order_id,e.kind,e.payload \
-       FROM outbox AS o JOIN events AS e ON e.seq=o.event_seq \
+       FROM outbox AS o LEFT JOIN events AS e ON e.seq=o.event_seq \
        WHERE o.synced_at IS NULL ORDER BY o.seq ASC LIMIT 33\0";
 
 #[link(name = "winsqlite3")]
@@ -170,6 +171,7 @@ pub(crate) fn read_fixture_pending_fingerprints(
     }
 
     let mut rows=Vec::new();
+    let mut seen_event_seqs=BTreeSet::new();
     loop {
         match unsafe{sqlite3_step(query.0)} {
             SQLITE_DONE=>break,
@@ -186,6 +188,9 @@ pub(crate) fn read_fixture_pending_fingerprints(
                         sqlite_text(query.0,4,MAX_JSON_LENGTH)?
                     )
                 };
+                if !seen_event_seqs.insert(event_seq) {
+                    return Err("W21_DUPLICATED_EVENT_REFERENCE");
+                }
                 if !order_id.is_ascii() || !matches!(kind.as_str(),"created"|"status") {
                     return Err("W20_EVENT_INVALID_KIND_OR_SCOPE");
                 }
@@ -220,6 +225,32 @@ mod tests {
         assert!(verify_fixture_path(Path::new("events.sqlite")).is_err());
         assert!(verify_fixture_path(Path::new("..\\events.sqlite")).is_err());
     }
+    #[test]
+    #[ignore = "W21 adversarial synthetic-only fixture runner with explicit temp path"]
+    fn w21_fixture_boundary() {
+        let case=std::env::var("FOON_W21_CASE")
+            .expect("W21_SYNTHETIC_CASE_REQUIRED");
+        let db_path=std::env::var_os("FOON_W21_TEST_DB_PATH")
+            .expect("W21_FRESH_TEST_DB_PATH_REQUIRED");
+        let outcome=read_fixture_pending_fingerprints(Path::new(&db_path));
+        match case.as_str() {
+            "wal" => {
+                let rows=outcome.expect("W21_WAL_PENDING_EVENTS_MUST_READ");
+                assert_eq!(rows.len(),4);
+                assert_eq!(rows[3].event_seq,15);
+                assert_eq!(rows[3].outbox_seq,5);
+                let expected=std::env::var("FOON_W21_EXPECTED_DIGEST")
+                    .expect("W21_WAL_DIGEST_REQUIRED");
+                assert_eq!(rows[3].digest_hex,expected);
+            },
+            "corrupt" => assert!(matches!(outcome,Err("W20_EVENT_DIGEST_REJECTED"))),
+            "orphan" => assert!(matches!(outcome,Err("W20_EVENT_INVALID_TEXT"))),
+            "duplicate" => assert!(matches!(outcome,Err("W21_DUPLICATED_EVENT_REFERENCE"))),
+            "limit" => assert!(matches!(outcome,Err("W20_TOO_MANY_PENDING_EVENTS"))),
+            _ => panic!("W21_UNKNOWN_FIXTURE_CASE")
+        }
+    }
+
     #[test]
     fn native_reader_reports_only_pending_rows_with_node_compatible_digests() {
         let path=std::env::var_os("FOON_W20_TEST_DB_PATH")
