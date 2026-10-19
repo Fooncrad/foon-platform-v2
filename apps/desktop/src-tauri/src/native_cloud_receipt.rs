@@ -238,15 +238,14 @@ mod tests {
     }
     fn make_signed() -> serde_json::Value {
         let mut raw=fixture();
-        let receipt: SignedCloudReceipt=serde_json::from_value(raw.clone()).unwrap_err()
-            .to_string().is_empty().then(|| unreachable!()).unwrap_or_else(|| {
-                // SignedCloudReceipt requires signature: synthesize one before parsing.
-                raw["signature"]=serde_json::json!("0".repeat(64));
-                serde_json::from_value(raw.clone()).unwrap()
-            });
+        // Fill only a synthetic placeholder; the native CNG HMAC produces
+        // the real test signature from the identical canonical JSON bytes.
+        raw["signature"]=serde_json::json!("0".repeat(64));
+        let receipt: SignedCloudReceipt=serde_json::from_value(raw.clone()).unwrap();
         let bytes=canonical_receipt(&receipt).unwrap();
         let actual=hmac_sha256(TEST_KEY,&bytes).unwrap();
         let hex=actual.iter().map(|b|format!("{b:02x}")).collect::<String>();
+        assert_eq!(hex,"e1710acbf388b694869530f7625fba261a49f6130ed678420049e74beca594db");
         raw["signature"]=serde_json::json!(hex);
         raw
     }
@@ -256,10 +255,8 @@ mod tests {
             b"key-with-at-least-32-bytes-for-test!!!!",
             b"native edge receipt sample"
         ).unwrap();
-        // This separate vector is provided by OpenSSL's standard HMAC-SHA256;
-        // assert lengths, then cross-check full JS signature in parity test.
-        assert_eq!(hash.len(), 32);
-        assert_ne!(hash,[0u8;32]);
+        let actual=hash.iter().map(|b|format!("{b:02x}")).collect::<String>();
+        assert_eq!(actual,"56601e63a1f04f313134a63e096b7b8823307aa30bbb2e773c6ede56aa92afff");
     }
     #[test]
     fn valid_native_receipt_accepts_only_exact_device_order_event_and_digest() {
