@@ -11,6 +11,7 @@ import StorefrontLanguageSwitcher from "./storefront-language-switcher";
 import StorefrontThemeToggle from "./storefront-theme-toggle";
 import "./activity-storefront.css";
 import "./storefront-refresh.css";
+import "./unified-storefront-ux.css";
 import {defaultTemplateForActivity,isTemplateForActivity} from "@/lib/platform/activity-templates";
 import {isActivityType,type ActivityLanguage} from "@/lib/platform/activity-presets";
 
