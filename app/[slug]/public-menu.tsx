@@ -45,8 +45,8 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
  const [orderChannel,setOrderChannel]=useState("takeaway");
  const [reservations,setReservations]=useState<CustomerReservation[]>([]),[reservationId,setReservationId]=useState(""),[roomNumber,setRoomNumber]=useState("");
  const isLinked=linked||checkoutAuthenticated;
- const allowCart=controls.sales&&controls.cart&&controls.catalog;
- const enabledChannels=[controls.takeaway&&"takeaway",controls.dineIn&&"dine_in",controls.delivery&&"delivery",controls.roomService&&services.roomService&&"room_service"].filter(Boolean) as string[];
+ const allowCart=controls.sales&&controls.cart&&controls.catalog&&(controls.takeaway||controls.delivery||controls.dineIn||(controls.roomService&&services.roomService));
+ const enabledChannels=[controls.takeaway&&"takeaway",controls.dineIn&&"dine_in",controls.delivery&&"delivery",controls.roomService&&services.roomService&&"room_service",controls.reservations&&controls.dineIn&&services.reservations&&"reservation"].filter(Boolean) as string[];
  const selectedChannel=enabledChannels.includes(orderChannel)?orderChannel:enabledChannels[0]??"";
  useEffect(()=>{if(!isLinked||!services.reservations)return;let active=true;const load=()=>void fetch("/api/customer/services?storeSlug="+encodeURIComponent(slug),{cache:"no-store"}).then(async r=>{const body=await r.json();if(!r.ok||!body.ok)throw Error();if(active)setReservations(Array.isArray(body.reservations)?body.reservations:[]);}).catch(()=>{if(active)setReservations([])});load();window.addEventListener("foon:reservation-created",load);return()=>{active=false;window.removeEventListener("foon:reservation-created",load)}},[isLinked,services.reservations,slug]);
  const categoryDialog=useRef<HTMLDialogElement>(null);
