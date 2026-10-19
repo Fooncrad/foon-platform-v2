@@ -16,7 +16,9 @@ const [base,override,html,css,cargo,rust]=await Promise.all([
 ]);
 const input={base,override,html,css,cargo,rust};
 test("W23 isolates native-only probe from W05 saved POS and legacy JS backend",()=>{
-  assert.equal(inspectNativeProbe(input).ok,true);
+  const result=inspectNativeProbe(input);
+  assert.deepEqual(result.blockers,[], "W23 blocked strict source conditions");
+  assert.equal(result.ok,true);
   assert.equal(base.bundle.resources[0],"resources/edge-runtime/**/*");
   assert.deepEqual(override.bundle.resources,[]);
   assert.equal(override.identifier,"com.foon.desktop.nativeprobe");
