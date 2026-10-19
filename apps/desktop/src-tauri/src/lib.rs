@@ -4,6 +4,8 @@ mod edge_runtime;
 mod windows_secret_store;
 #[cfg(windows)]
 mod native_cloud_receipt;
+#[cfg(windows)]
+mod protected_receipt_path;
 use tauri::Manager;
 use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
