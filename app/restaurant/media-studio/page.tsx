@@ -3,7 +3,7 @@ import Link from "next/link";
 import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import {activityWorkspaceUrl,activityMediaStudioUrl} from "@/lib/tenant/workspace-routes";
 import {database} from "@/lib/db/mysql";
@@ -16,8 +16,8 @@ export default async function MediaStudioPage({searchParams,params}:{searchParam
  const userId=await currentUserId();
  if(!userId)redirect("/login");
  const {tenant}=await searchParams;
- let workspace:Awaited<ReturnType<typeof resolveWorkspace>>;
- try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
+ let workspace:Workspace;
+ try{workspace=await resolveWorkspaceForActivity(userId,(await params)?.activity??"restaurant",tenant)}catch{redirect("/account")}
  const activity=await tenantWorkspaceActivity(workspace.tenant_id);
  if(!activity)redirect("/business?tenant="+encodeURIComponent(workspace.tenant_id));
  if(activity!==((await params)?.activity??"restaurant"))redirect(activityMediaStudioUrl(activity,workspace.tenant_id));
