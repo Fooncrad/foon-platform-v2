@@ -404,9 +404,13 @@
   .publicMenu .publicMenuHero[data-cover-shape="empty"],
   .foonActivityStorefront .foonActivityHero { height: 320px !important; }
 }
-@media (min-width: 1401px) {
+@media (min-width: 1920px) {
   .publicMenu .publicMenuLayout .publicMenuItems,
   .foonActivityStorefront .foonActivityProducts { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; }
+}
+/* The restaurant menu shares horizontal space with its cart on laptop widths. */
+@media (min-width: 993px) and (max-width: 1150px) {
+  .publicMenu .publicMenuLayout .publicMenuItems { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 }
 @media (max-width: 576px) {
   .publicMenu .publicMenuHero,
