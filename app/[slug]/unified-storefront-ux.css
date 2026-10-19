@@ -655,3 +655,36 @@
  .foonActivityStorefront .foonActivityHeaderNav {display:none !important;}
  .foonActivityStorefront .foonActivityHeaderActions {flex-wrap:nowrap !important;}
 }
+
+
+/* Shared business-details QR and quick-access polish. */
+.foonActivityStorefront .foonActivityBusinessDetails > summary,
+.publicMenu .publicMenuBusinessDetails > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.foonActivityStorefront .foonStorefrontQrAction,
+.publicMenu .foonStorefrontQrAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--activity-border, var(--public-line));
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.foonActivityStorefront .foonStorefrontQrAction:focus-visible,
+.publicMenu .foonStorefrontQrAction:focus-visible {
+  outline: 3px solid var(--activity-accent, #c59a43);
+  outline-offset: 2px;
+}
