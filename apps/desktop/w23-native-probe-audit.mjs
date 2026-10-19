@@ -10,6 +10,11 @@ const load=path=>readFile(path,"utf8");
 const file=path=>join(here,path);
 const fail=code=>{throw Error(code);};
 export function inspectNativeProbe({base,override,html,css,cargo,rust}){
+  // Git for Windows may check out .rs as CRLF while GitHub stores LF.
+  // Normalize only line endings for the SAME strict source-layout assertions.
+  // This does not change, strip or loosen any security-sensitive checks.
+  const normalizedCargo=String(cargo??"").replace(/\r\n?/g,"\n");
+  const normalizedRust=String(rust??"").replace(/\r\n?/g,"\n");
   const blockers=[];
   const demand=(value,reason)=>{if(!value)blockers.push(reason);};
   demand(base?.bundle?.resources?.includes("resources/edge-runtime/**/*"),"W23_LEGACY_BASELINE_CHANGED");
@@ -27,15 +32,15 @@ export function inspectNativeProbe({base,override,html,css,cargo,rust}){
   demand(!/<script\b|on(?:click|error|load)\s*=|javascript:|__TAURI__|https?:\/\//i.test(html),
     "W23_PROBE_HTML_MUST_BE_STATIC_AND_OFFLINE");
   demand(!/@import|url\(|expression\(|https?:\/\//i.test(css),"W23_PROBE_CSS_EXTERNAL_LOAD_FORBIDDEN");
-  demand(/^\[features\]$/m.test(cargo)&&/^native-probe\s*=\s*\[\]/m.test(cargo),
+  demand(/^\[features\]$/m.test(normalizedCargo)&&/^native-probe\s*=\s*\[\]/m.test(normalizedCargo),
     "W23_MISSING_EXPLICIT_RUST_FEATURE");
-  demand(rust.includes('#[cfg(not(feature = "native-probe"))]\nmod demo_orders;')&&
-    rust.includes('#[cfg(not(feature = "native-probe"))]\nmod edge_runtime;'),
+  demand(normalizedRust.includes('#[cfg(not(feature = "native-probe"))]\nmod demo_orders;')&&
+    normalizedRust.includes('#[cfg(not(feature = "native-probe"))]\nmod edge_runtime;'),
     "W23_LEGACY_BACKEND_MUST_NOT_COMPILE_IN_PROBE");
-  demand(rust.includes('#[cfg(feature = "native-probe")]\npub fn run()')&&
-    rust.includes('tauri::Builder::default()'),
+  demand(normalizedRust.includes('#[cfg(feature = "native-probe")]\npub fn run()')&&
+    normalizedRust.includes('tauri::Builder::default()'),
     "W23_STATIC_NATIVE_PROBE_ENTRY_REQUIRED");
-  demand(rust.includes('#[cfg(not(feature = "native-probe"))]\npub fn run()'),
+  demand(normalizedRust.includes('#[cfg(not(feature = "native-probe"))]\npub fn run()'),
     "W23_LEGACY_BUILD_MUST_STAY_UNCHANGED");
   return {ok:blockers.length===0,blockers};
 }
