@@ -61,3 +61,21 @@ test("old storefront slug collisions have a dedicated public route",()=>{
  assert.match(fallback,/from "..\/..\/\[slug\]\/page"/);
  assert.match(market,/publicStorefrontUrl\(String\(store.slug\)\)/);
 });
+
+test("migration CLI retains valid JavaScript syntax and logs applied SQL files",async()=>{
+ const {spawnSync}=await import("node:child_process");
+ const result=spawnSync(process.execPath,["--check","scripts/migrate.mjs"],{encoding:"utf8"});
+ assert.equal(result.status,0,result.stderr);
+ const migrator=read("scripts/migrate.mjs");
+ assert.match(migrator,/0101_activity_route_slugs\.sql/);
+ assert.match(migrator,/INSERT INTO schema_migrations/);
+});
+test("activity route pages resolve their own activity, even when preferred tenant differs",()=>{
+ const workspace=read("lib/tenant/workspace.ts");
+ const view=read("app/workspace/[activity]/page.tsx");
+ const rest=read("app/restaurant/page.tsx");
+ assert.match(workspace,/resolveWorkspaceForActivity/);
+ assert.match(workspace,/tenantWorkspaceActivity\(account.tenant_id\)===activity/);
+ assert.match(view,/resolveWorkspaceForActivity\(userId,activity,requested.tenant\)/);
+ assert.match(rest,/resolveWorkspaceForActivity\(userId,\(await params\)\?\.activity\?\?"restaurant",tenant\)/);
+});
