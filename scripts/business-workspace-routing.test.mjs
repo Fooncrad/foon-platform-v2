@@ -47,7 +47,7 @@ test("legacy /business and restaurant links remain compatible without reassignin
  assert.match(legacy,/tenantWorkspaceActivity\(workspace.tenant_id\)/);
  assert.match(legacy,/redirect\(activityWorkspaceUrl\(activity,workspace.tenant_id\)\)/);
  const restaurant=read("app/restaurant/page.tsx");
- assert.match(restaurant,/resolveWorkspace\(userId,tenant\)/);
+ assert.match(restaurant,/resolveWorkspaceForActivity\(userId/);
  assert.match(restaurant,/employee_permission_grants/);
  assert.match(restaurant,/employee_branch_assignments/);
  assert.match(restaurant,/kind==="restaurant"\?"restaurant":null/);
@@ -55,7 +55,7 @@ test("legacy /business and restaurant links remain compatible without reassignin
 
 test("payment pages restrict activity route and use stored code for return link",()=>{
  const payments=read("app/workspace/[activity]/payments/page.tsx");
- assert.match(payments,/resolveWorkspace\(userId,requested.tenant\)/);
+ assert.match(payments,/resolveWorkspaceForActivity\(userId,activity,requested.tenant\)/);
  assert.match(payments,/if\(activity!==actual\)redirect\(activityPaymentsUrl\(actual,workspace.tenant_id\)\)/);
  assert.match(read("app/restaurant/payments/page.tsx"),/activityWorkspaceUrl\(storedActivity\)/);
 });
