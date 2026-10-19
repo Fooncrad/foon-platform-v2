@@ -3,7 +3,7 @@ import {cookies} from "next/headers";
 import AccountLanguageSwitcher from "../account-language-switcher";
 import {redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
 import {database} from "@/lib/db/mysql";
 import {isActivityType} from "@/lib/platform/activity-presets";
 import {activityWorkspaceUrl,activityWorkspacePath} from "@/lib/tenant/workspace-routes";
@@ -17,8 +17,8 @@ export default async function ActivitySetupPage({searchParams}:{searchParams:Pro
  const userId=await currentUserId();
  if(!userId)redirect("/login");
  const {tenant,activity:requestedActivity}=await searchParams;
- let workspace:Awaited<ReturnType<typeof resolveWorkspace>>;
- try{workspace=await resolveWorkspace(userId,tenant)}catch{redirect("/account")}
+ let workspace:Workspace;
+ try{workspace=await resolveWorkspaceForActivity(userId,requestedActivity??"restaurant",tenant)}catch{redirect("/account")}
  if(!["owner","manager"].includes(workspace.role))redirect("/account");
  const [profiles]=await database().execute<RowDataPacket[]>(
   "SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",
