@@ -136,6 +136,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await publicPage.setViewportSize({width:390,height:844});
   const mobileDock=publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true});
   await expect(mobileDock).toBeVisible();
+  await expect(publicPage.locator('.publicMenuHeader .publicMenuAccountLink')).toBeHidden();
+  await expect(publicPage.locator('.publicMenuHeader .publicMenuCategoryTrigger')).toBeHidden();
+  await expect(mobileDock.locator('.publicMenuServices')).toHaveCount(0);
+  await expect(mobileDock.locator('a[href$="/login"]')).toHaveCount(1);
   await mobileDock.getByRole('button',{name:'السلة',exact:false}).click();
   const emptyCart=publicPage.getByRole('dialog',{name:'السلة',exact:true});await expect(emptyCart).toContainText('سلتك فارغة');await emptyCart.press('Escape');
   await mobileDock.getByRole('button',{name:'الأقسام',exact:true}).click();await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();await publicPage.getByRole('dialog').press('Escape');
