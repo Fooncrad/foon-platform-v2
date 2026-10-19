@@ -211,7 +211,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
- await publicPage.getByRole('navigation',{name:'التنقل في المنيو',exact:true}).getByRole('button',{name:'حجز طاولة',exact:true}).click();
+ await publicPage.locator('.publicMenuInfoBar .publicMenuServices').getByRole('button',{name:'حجز طاولة',exact:true}).click();
  const bookingDialog=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
  await expect(bookingDialog).toBeVisible();
  await expect(bookingDialog.getByRole('button',{name:'متابعة كعميل لهذا المطعم',exact:true})).toHaveCount(0);
