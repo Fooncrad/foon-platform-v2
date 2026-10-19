@@ -22,7 +22,7 @@ foreach ($test in $tests) {
         throw "W16_TEST_MISSING: $test"
     }
 }
-Write-Host "W11-W16 PURE AND DISPOSABLE SQLITE TESTS — NO STORED W05/W06 OR MARIADB" -ForegroundColor Cyan
+Write-Host "W11-W16 PURE AND DISPOSABLE SQLITE TESTS - NO STORED W05/W06 OR MARIADB" -ForegroundColor Cyan
 & node --test @tests
 if ($LASTEXITCODE -ne 0) { throw "W16_OFFLINE_REGRESSION_FAILED" }
 Write-Host "W12 WINDOWS-ONLY RUST DPAPI UNIT TESTS" -ForegroundColor Cyan
