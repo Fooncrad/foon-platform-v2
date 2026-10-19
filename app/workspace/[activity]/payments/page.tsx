@@ -1,6 +1,6 @@
 import {notFound,redirect} from "next/navigation";
 import {currentUserId} from "@/lib/auth/session";
-import {resolveWorkspaceForActivity,type Workspace} from "@/lib/tenant/workspace";
+import {resolveWorkspaceForActivity} from "@/lib/tenant/workspace";
 import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
 import {activityPaymentsUrl} from "@/lib/tenant/workspace-routes";
 import {isActivityType} from "@/lib/platform/activity-presets";
