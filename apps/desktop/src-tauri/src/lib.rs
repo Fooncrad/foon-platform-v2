@@ -10,6 +10,8 @@ mod protected_receipt_path;
 mod native_event_digest;
 #[cfg(windows)]
 mod native_outbox_readonly;
+#[cfg(all(test, windows))]
+mod native_ack_sandbox;
 use tauri::Manager;
 use serde::Serialize;
 use std::net::{SocketAddr, TcpStream};
