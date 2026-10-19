@@ -5,6 +5,7 @@ import {uiText} from "@/lib/i18n/ui-copy";
 import AccountLanguageSwitcher from "../restaurant/account-language-switcher";
 import Link from "next/link";
 import "./customer-experience.css";
+import "../restaurant/shared-dashboard-legibility.css";
 import CustomerProfileEditor from "./profile-editor";
 import OrderLiveRefresh from "./order-live-refresh";
 import PaymentButton from "./payment-button";
