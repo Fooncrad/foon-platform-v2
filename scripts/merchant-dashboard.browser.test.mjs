@@ -58,6 +58,7 @@ test("public login and registration retain form behavior under one site header/f
   const page=await context.newPage();
   await page.goto(origin+"/login");
   await expect(page.locator(".foonPublicJourney .foonPublicHeader")).toHaveCount(1);
+  await expect(page.locator(".foonPublicHeader .foonLogin")).toHaveAttribute("aria-current","page");
   await expect(page.locator(".foonPublicJourney .foonPublicFooter")).toHaveCount(1);
   await expect(page.getByRole("heading",{name:"مرحبًا بعودتك"})).toBeVisible();
   await page.getByLabel("البريد الإلكتروني").fill("someone@example.com");
@@ -67,6 +68,7 @@ test("public login and registration retain form behavior under one site header/f
   await expect(page.getByRole("heading",{name:"إنشاء حساب ومتجر"})).toBeVisible();
   await expect(page.locator(".foonPublicHeader")).toHaveCount(1);
   await expect(page.locator(".foonPublicFooter")).toHaveCount(1);
+  await expect(page.locator(".foonPublicHeader .foonHeaderCta")).toHaveAttribute("aria-current","page");
   await page.getByLabel("الاسم",{exact:true}).fill("Tester");
   await page.getByLabel("اسم النشاط").fill("FOON test store");
   await page.locator('select[name="activity"]').selectOption("grocery");
@@ -103,6 +105,8 @@ test("published CMS pages share public chrome and follow explicit language/appea
   await expect(page.locator(".foonPublicContent .foonPublicFooter")).toHaveCount(1);
   await expect(page.locator(".publicContentPage")).toHaveAttribute("dir","ltr");
   await expect(page.getByRole("heading",{name:"Politique de test"})).toBeVisible();
+  await expect(page.locator(".foonPublicFooter").getByRole("link",{name:"سياسة الاختبار"})).toBeVisible();
+  await expect(page.locator(".foonPublicFooter").getByRole("link",{name:"مسودة"})).toHaveCount(0);
   await page.locator(".foonPublicHeader").getByRole("combobox",{name:"اللغة / Language / Langue"}).selectOption("en");
   await expect(page).toHaveURL(new RegExp("/p/"+slug+"\\?lang=en$"));
   await expect(page.getByRole("heading",{name:"Test policy"})).toBeVisible();
