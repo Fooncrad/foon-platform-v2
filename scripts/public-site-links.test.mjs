@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {uniquePublicFooterPages,localizedPublicFooterPages} from "../lib/ux/public-site-links.ts";
+import {uniquePublicFooterPages,localizedPublicFooterPages,publicContentPageHref} from "../lib/ux/public-site-links.ts";
 test("public footer hides duplicate title/slug entries and reserved account routes",()=>{
  const pages=[{slug:"terms",title:"الشروط"},{slug:"TERMS",title:"Terms duplicated"},{slug:"privacy",title:"الخصوصية"},{slug:"copy",title:"الخصوصية"},{slug:"account",title:"حساب"},{slug:"billing",title:"الفوترة"},{slug:"market",title:"السوق"}];
  assert.deepEqual(uniquePublicFooterPages(pages).map(page=>page.slug),["terms","privacy"]);
@@ -27,4 +27,11 @@ test("localized footer deduplicates labels in the selected language and keeps fo
  const pages=[{slug:"first",title:"عنوان 1",titleEn:"About"},{slug:"second",title:"عنوان 2",titleEn:"About"},{slug:"login",title:"تسجيل",titleEn:"Login"},{slug:"third",title:"عنوان 3",titleEn:"Contact"}];
  assert.deepEqual(localizedPublicFooterPages(pages,"en").map(p=>p.slug),["first","third"]);
  assert.deepEqual(localizedPublicFooterPages(pages,"ar").map(p=>p.slug),["first","second","third"]);
+});
+
+test("explicit CMS locale stays in links between published pages",()=>{
+ assert.equal(publicContentPageHref("privacy","fr"),"/p/privacy?lang=fr");
+ assert.equal(publicContentPageHref("about","en"),"/p/about?lang=en");
+ assert.equal(publicContentPageHref("الشروط","ar"),"/p/%D8%A7%D9%84%D8%B4%D8%B1%D9%88%D8%B7?lang=ar");
+ assert.equal(publicContentPageHref("privacy"),"/p/privacy");
 });
