@@ -88,6 +88,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify public menu browsing without internet
         run: node --test scripts/public-menu-offline.test.mjs
+      - name: Verify signed-in workspace reload without internet
+        run: node --test scripts/workspace-offline-reload.test.mjs
       - name: Verify merchant dashboard desktop and mobile journeys
         run: npm run test:browser
       - name: Save merchant dashboard screenshots

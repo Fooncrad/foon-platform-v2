@@ -1,6 +1,14 @@
-const CACHE="foon-pos-shell-v2";
+const CACHE="foon-pos-shell-v3";
 const SHELL=["/offline"];
 const MENU_CACHE="foon-public-menu-v1",MAX_AGE=7*86400000;
+// Signed-in workspace pages (POS etc.) and their hashed Next.js assets, so an
+// already-opened POS survives a reload without Internet. Pages are cleared on
+// logout/login and never served after PAGE_MAX_AGE.
+const PAGE_CACHE="foon-workspace-pages-v1",STATIC_CACHE="foon-next-static-v1",PAGE_MAX_AGE=86400000,MAX_PAGES=30,MAX_STATIC=400;
+// Keep in sync with ACTIVITY_ROUTE_SLUGS in lib/tenant/workspace-routes.ts.
+const workspaceRoots=new Set(["restaurant","cafe","sweets","grocery","fashion","perfume","accessories","watches","gifts","ecommerce","carwash","car","laundry","salon","contracting","workspace"]);
+const workspacePage=path=>workspaceRoots.has(path.split("/")[1])&&!/\/(payments|media-studio)(\/|$)/.test(path);
+async function trim(name,limit){const cache=await caches.open(name),keys=await cache.keys();for(const key of keys.slice(0,Math.max(0,keys.length-limit)))await cache.delete(key);}
 const reserved=new Set(["admin","api","login","register","account","customer","dashboard","restaurant","menu","auth","settings","creator","creators","help","about","contact","terms","privacy","p"]);
 function menuSlug(path){const match=path.match(/^\/(?:menu\/)?([a-z0-9][a-z0-9-]{1,118}[a-z0-9])\/?$/);return match&&!reserved.has(match[1])?match[1]:null;}
 const publicImage=path=>/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(path);
@@ -28,12 +36,32 @@ self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("foon-pos-shell-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",event=>{
  const request=event.request;
- if(request.method!=="GET")return;
  const url=new URL(request.url);
+ if(request.method==="POST"&&url.origin===self.location.origin&&["/api/auth/logout","/api/auth/login"].includes(url.pathname)){event.waitUntil(caches.delete(PAGE_CACHE));return;}
+ if(request.method!=="GET")return;
+ if(url.origin===self.location.origin&&url.pathname.startsWith("/_next/static/")){
+  event.respondWith((async()=>{
+   const cache=await caches.open(STATIC_CACHE),saved=await cache.match(request);if(saved)return saved;
+   const response=await fetch(request);
+   if(response.ok&&response.type==="basic"){await cache.put(request,response.clone());event.waitUntil(trim(STATIC_CACHE,MAX_STATIC));}
+   return response;
+  })());return;
+ }
  if(url.origin===self.location.origin&&publicImage(url.pathname)&&request.destination==="image"){
   event.respondWith(fetch(request).catch(async()=>{const saved=await (await caches.open(MENU_CACHE)).match(url.pathname);return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:Response.error();}));return;
  }
  if(request.mode!=="navigate")return;
+ if(url.origin===self.location.origin&&workspacePage(url.pathname)){event.respondWith((async()=>{
+  const cache=await caches.open(PAGE_CACHE),key=url.pathname+url.search;
+  const fallback=async()=>{const saved=await cache.match(key);if(saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=PAGE_MAX_AGE)return saved;return await caches.match("/offline")??Response.error();};
+  let response;
+  try{response=await fetch(request);}catch{return await fallback();}
+  if(response.ok&&response.type==="basic"&&!response.redirected&&response.headers.get("content-type")?.includes("text/html")){
+   const headers=new Headers(response.headers);headers.set("x-foon-saved",String(Date.now()));headers.delete("set-cookie");
+   await cache.put(key,new Response(await response.clone().blob(),{status:200,headers}));event.waitUntil(trim(PAGE_CACHE,MAX_PAGES));
+  }else await cache.delete(key);
+  return response;
+ })());return;}
  const slug=url.origin===self.location.origin?menuSlug(url.pathname):null;
  if(slug){event.respondWith((async()=>{
   const cache=await caches.open(MENU_CACHE);
