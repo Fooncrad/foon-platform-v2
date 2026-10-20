@@ -52,6 +52,76 @@ test("public landing and marketplace share language, theme, footer and safe coun
  }finally{await context.close();}
 });
 
+test("public login and registration retain form behavior under one site header/footer at 320px",async({browser})=>{
+ const context=await browser.newContext({viewport:{width:320,height:700}});
+ try{
+  const page=await context.newPage();
+  await page.goto(origin+"/login");
+  await expect(page.locator(".foonPublicJourney .foonPublicHeader")).toHaveCount(1);
+  await expect(page.locator(".foonPublicJourney .foonPublicFooter")).toHaveCount(1);
+  await expect(page.getByRole("heading",{name:"مرحبًا بعودتك"})).toBeVisible();
+  await page.getByLabel("البريد الإلكتروني").fill("someone@example.com");
+  await page.getByLabel("كلمة المرور").fill("not-a-secret");
+  await page.locator(".auth-switch").getByRole("link",{name:"إنشاء حساب جديد"}).click();
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(page.getByRole("heading",{name:"إنشاء حساب ومتجر"})).toBeVisible();
+  await expect(page.locator(".foonPublicHeader")).toHaveCount(1);
+  await expect(page.locator(".foonPublicFooter")).toHaveCount(1);
+  await page.getByLabel("الاسم",{exact:true}).fill("Tester");
+  await page.getByLabel("اسم النشاط").fill("FOON test store");
+  await page.locator('select[name="activity"]').selectOption("grocery");
+  await page.getByRole("button",{name:"التالي: بيانات الحساب"}).click();
+  await expect(page.getByRole("status")).toContainText("الخطوة 2 من 2");
+  await page.getByRole("button",{name:"السابق"}).click();
+  await expect(page.getByLabel("اسم النشاط")).toHaveValue("FOON test store");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),"320px registration should not scroll horizontally").toBe(true);
+  await page.locator(".foonPublicHeader").getByRole("button",{name:"تبديل المظهر"}).click();
+  await expect(page.locator(".foonPublicJourney")).toHaveAttribute("data-theme","dark");
+  await expect(page.locator(".foonAuthPage")).toHaveAttribute("data-theme","dark");
+  await page.locator(".foonPublicHeader").getByRole("combobox",{name:"اللغة / Language / Langue"}).selectOption("en");
+  await expect(page.getByRole("heading",{name:"Create your account and store"})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{await context.close();}
+});
+test("published CMS pages share public chrome and follow explicit language/appearance; draft content stays hidden",async({browser})=>{
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ const slug="ux-public-"+randomUUID().slice(0,8),draftSlug="ux-draft-"+randomUUID().slice(0,8);
+ const id=randomUUID(),draftId=randomUUID();
+ const context=await browser.newContext({viewport:{width:320,height:700}});
+ try{
+  await db.execute(
+   "INSERT INTO platform_content_pages(id,slug,title_ar,title_en,title_fr,body_ar,body_en,body_fr,status) VALUES (?,?,?,?,?,?,?,?,?)",
+   [id,slug,"سياسة الاختبار","Test policy","Politique de test","هذا هو نص الاختبار","Test body","Texte de test","published"]
+  );
+  await db.execute(
+   "INSERT INTO platform_content_pages(id,slug,title_ar,title_en,title_fr,body_ar,body_en,body_fr,status) VALUES (?,?,?,?,?,?,?,?,?)",
+   [draftId,draftSlug,"مسودة","Draft","Brouillon","نص مسودة","Draft body","Corps brouillon","draft"]
+  );
+  const page=await context.newPage();
+  await page.goto(origin+"/p/"+slug+"?lang=fr");
+  await expect(page.locator(".foonPublicContent .foonPublicHeader")).toHaveCount(1);
+  await expect(page.locator(".foonPublicContent .foonPublicFooter")).toHaveCount(1);
+  await expect(page.locator(".publicContentPage")).toHaveAttribute("dir","ltr");
+  await expect(page.getByRole("heading",{name:"Politique de test"})).toBeVisible();
+  await page.locator(".foonPublicHeader").getByRole("combobox",{name:"اللغة / Language / Langue"}).selectOption("en");
+  await expect(page).toHaveURL(new RegExp("/p/"+slug+"\\?lang=en$"));
+  await expect(page.getByRole("heading",{name:"Test policy"})).toBeVisible();
+  await page.locator(".foonPublicHeader").getByRole("button",{name:"Toggle appearance"}).click();
+  await expect(page.locator(".foonPublicContent")).toHaveAttribute("data-theme","dark");
+  await page.goto(origin+"/p/"+slug+"?lang=ar");
+  await expect(page.locator(".publicContentPage")).toHaveAttribute("dir","rtl");
+  await expect(page.getByRole("heading",{name:"سياسة الاختبار"})).toBeVisible();
+  await expect(page.locator(".foonPublicContent")).toHaveAttribute("data-theme","dark");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  const missing=await page.goto(origin+"/p/"+draftSlug);
+  expect(missing?.status()).toBe(404);
+ }finally{
+  await context.close();
+  await db.execute("DELETE FROM platform_content_pages WHERE id IN (?,?)",[id,draftId]).catch(()=>{});
+  await db.end();
+ }
+});
+
 test("reference dashboard: authenticated tenant data, responsive layout and working navigation",async({page,browser})=>{
  const visualSlug="visual-dashboard-"+randomUUID().slice(0,8);
  await page.setViewportSize({width:1440,height:1000});
