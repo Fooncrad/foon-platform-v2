@@ -66,7 +66,7 @@ test("reviewed offline orders cannot be retried from another branch",async()=>{
 });
 
 test("offline dine-in pre-check blocks unknown, unavailable, over-capacity and already-queued tables",()=>{
- const tables=[{id:"t1",status:"available",data:{capacity:4}},{id:"t2",status:"occupied",data:{capacity:4}},{id:"t3",status:"available"}];
+ const tables=[{id:"t1",branch_id:"branch",status:"available",data:{capacity:4}},{id:"t2",branch_id:"branch",status:"occupied",data:{capacity:4}},{id:"t3",status:"available",data:{capacity:4}},{id:"foreign",branch_id:"another-branch",status:"available",data:{capacity:4}},{id:"bad-capacity",status:"available"}];
  const queued=[{...order(id1),payload:{branchId:"branch",channel:"dine_in",tableId:"t3",partySize:2,items:[]}}];
  assert.equal(offlineTableBlock(tables,queued,"branch","t1",2),null);
  assert.equal(offlineTableBlock(tables,queued,"branch","",2),"TABLE_REQUIRED");
@@ -76,4 +76,7 @@ test("offline dine-in pre-check blocks unknown, unavailable, over-capacity and a
  assert.equal(offlineTableBlock(tables,queued,"branch","t1",0),"PARTY_SIZE");
  assert.equal(offlineTableBlock(tables,queued,"branch","t3",2),"TABLE_QUEUED");
  assert.equal(offlineTableBlock(tables,queued,"other-branch","t3",2),null);
+ assert.equal(offlineTableBlock(tables,queued,"branch","foreign",2),"TABLE_UNKNOWN");
+ assert.equal(offlineTableBlock(tables,queued,"branch","bad-capacity",2),"TABLE_UNKNOWN");
+ assert.equal(offlineTableBlock(tables,queued,"branch","t1",1.5),"PARTY_SIZE");
 });
