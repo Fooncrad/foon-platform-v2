@@ -110,3 +110,12 @@ test("invalid checkout settings block edge creation without an incorrectly taxed
   await assert.rejects(()=>insertPricedEdgeOrder(connection,event,context),/EDGE_INVALID_CHECKOUT_SETTINGS/);assert.equal(writes.length,0);
  }
 });
+
+test("malformed merchant checkout settings reject as a permanent policy conflict without writes",async()=>{
+ for(const raw of ["{broken","null","[]","17","\"just a string\""]){
+  const {connection,writes}=fake(),original=connection.execute.bind(connection);
+  connection.execute=async(sql,params)=>sql.startsWith("SELECT t.name,r.data FROM tenants")?[[{name:"Demo Cafe",data:raw}]]:original(sql,params);
+  await assert.rejects(()=>insertPricedEdgeOrder(connection,event,context),/EDGE_INVALID_CHECKOUT_SETTINGS/);
+  assert.equal(writes.length,0);
+ }
+});
