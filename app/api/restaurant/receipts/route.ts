@@ -5,6 +5,7 @@ import {currentUserId} from '@/lib/auth/session';
 import {database} from '@/lib/db/mysql';
 import {assertSameOrigin} from '@/lib/security/origin';
 import {canReadStaffReceipt} from '@/lib/restaurant/receipt-authorization';
+import {finalReceiptEligible} from '@/lib/restaurant/final-receipt-policy';
 export const runtime='nodejs';
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false},{status:403});}
@@ -13,8 +14,9 @@ export async function POST(request:Request){
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
-  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,customer_user_id,checkout_snapshot FROM restaurant_orders WHERE tenant_id=? AND id=? AND payment_status IN ('paid','refunded') FOR UPDATE",[tenant,body.id]);
+  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,customer_user_id,checkout_snapshot,status,payment_status FROM restaurant_orders WHERE tenant_id=? AND id=? FOR UPDATE",[tenant,body.id]);
   const order=rows[0];if(!order||!await canReadStaffReceipt(user,tenant,String(order.branch_id))){await db.rollback();return NextResponse.json({ok:false},{status:404});}
+  if(!finalReceiptEligible(order.status,order.payment_status)){await db.rollback();return NextResponse.json({ok:false,code:"RECEIPT_NOT_FINAL"},{status:409,headers:{"Cache-Control":"no-store"}});}
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.slug,r.data FROM tenants t LEFT JOIN restaurant_resources r ON r.tenant_id=t.id AND r.kind='storefront_config' AND r.status='active' AND r.archived=FALSE WHERE t.id=? ORDER BY r.created_at DESC LIMIT 1",[tenant]);
   if(!stores.length){await db.rollback();return NextResponse.json({ok:false},{status:404});}
   const settings=stores[0].data?(typeof stores[0].data==='string'?JSON.parse(stores[0].data):stores[0].data):{};
