@@ -65,7 +65,7 @@ export async function saveCanonicalMenu(db:PoolConnection,tenantId:string,actor:
  await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id) VALUES (?,?,?,?)",[tenantId,actor,module+(archive?".archive":".save"),id]);
  return{id};
 }
-export type MenuChoice={id:string;name:string;nameEn?:string;nameFr?:string;imageUrl?:string|null;price:number};
+export type MenuChoice={id:string;name:string;nameEn?:string;nameFr?:string;imageUrl?:string|null;price:number;stock?:number|null};
 export type MenuGroup={id:string;name:string;nameEn?:string;nameFr?:string;type:string;required:boolean;min:number;max:number;values:MenuChoice[]};
 export async function menuOptions(db:PoolConnection,tenantId:string,itemIds:string[]){
  const result:Record<string,MenuGroup[]>={};
