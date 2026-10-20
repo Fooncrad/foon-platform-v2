@@ -6,7 +6,7 @@ import {findSelectedVariant,selectedCatalogStockLimit,type CartVariant} from "@/
 import {StorefrontAddButton} from "./storefront-cart";
 type Language="ar"|"en"|"fr";
 type VariantPreview={id:string;sku:string|null;images:string[]};
-type ChoicesResponse={item:{price:number;currency:string;stock:number|null;variants:CartVariant[]};groups:MenuGroup[]};
+type ChoicesResponse={item:{price:number;currency:string;measured?:boolean;stock:number|null;variants:CartVariant[]};groups:MenuGroup[]};
 export default function ActivityProductDetails({name,description="",imageUrl,images=[],variantGalleries=[],price,currency,unit,language,slug,id,canAdd=false,service=false}:{name:string;description?:string;imageUrl:string|null;images?:string[];variantGalleries?:VariantPreview[];price:number;currency:string;unit?:string;language:Language;slug:string;id:string;canAdd?:boolean;service?:boolean}){
  const dialog=useRef<HTMLDialogElement>(null),request=useRef<AbortController|null>(null);
  const [group,setGroup]=useState("product"),[selected,setSelected]=useState(0);
@@ -25,7 +25,7 @@ export default function ActivityProductDetails({name,description="",imageUrl,ima
  const cover=basePhotos[0]??variants[0]?.images[0]??null;
  const choicesOkay=Boolean(choiceData&&choicesValid(choiceData.groups,chosen));
  const stockLimit=choiceData?selectedCatalogStockLimit(choiceData.groups,choiceData.item.variants,chosen,choiceData.item.stock):0;
- const available=Boolean(choiceData&&(stockLimit===null||stockLimit>=1));
+ const available=Boolean(choiceData&&(stockLimit===null||stockLimit>=(choiceData.item.measured?0.001:1)));
  const canConfirm=Boolean(canAdd&&!loading&&!error&&choicesOkay&&available);
  const displayPrice=choiceData&&choicesOkay?choiceData.item.price+choicePrice(choiceData.groups,chosen):price;
  const displayCurrency=choiceData?.item.currency??currency;
