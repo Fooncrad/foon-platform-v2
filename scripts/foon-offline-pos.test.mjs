@@ -4,7 +4,7 @@ import {readFile} from "node:fs/promises";
 import {stripTypeScriptTypes} from "node:module";
 import "fake-indexeddb/auto";
 const source=stripTypeScriptTypes(await readFile(new URL("../lib/restaurant/offline-pos.ts",import.meta.url),"utf8"),{mode:"strip"})+"\n//# sourceURL=offline-pos-runtime.mjs";
-const {queuePosOrder,pendingPosOrders,scopedPosOrders,exportPendingPosOrders,importPendingPosOrders,retryReviewedPosOrder}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
+const {queuePosOrder,pendingPosOrders,scopedPosOrders,exportPendingPosOrders,importPendingPosOrders,retryReviewedPosOrder,offlineTableBlock}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
 const id1="11111111-1111-4111-8111-111111111111",id2="22222222-2222-4222-8222-222222222222";
 const order=(id,quantity=1,branchId="branch")=>({id,tenantId:"tenant",branchId,createdAt:"2026-10-11T12:00:00Z",payload:{branchId,requestKey:id,items:[{id:"item",quantity}]},status:"pending"});
 const backup=orders=>JSON.stringify({format:"foon-pos-recovery-v1",tenantId:"tenant",orders});
@@ -63,4 +63,17 @@ test("reviewed offline orders cannot be retried from another branch",async()=>{
  assert.equal((await pendingPosOrders()).find(row=>row.id===id).status,"needs_review");
  await retryReviewedPosOrder(id,"tenant","other-branch");
  assert.equal((await pendingPosOrders()).find(row=>row.id===id).status,"pending");
+});
+
+test("offline dine-in pre-check blocks unknown, unavailable, over-capacity and already-queued tables",()=>{
+ const tables=[{id:"t1",status:"available",data:{capacity:4}},{id:"t2",status:"occupied",data:{capacity:4}},{id:"t3",status:"available"}];
+ const queued=[{...order(id1),payload:{branchId:"branch",channel:"dine_in",tableId:"t3",partySize:2,items:[]}}];
+ assert.equal(offlineTableBlock(tables,queued,"branch","t1",2),null);
+ assert.equal(offlineTableBlock(tables,queued,"branch","",2),"TABLE_REQUIRED");
+ assert.equal(offlineTableBlock(tables,queued,"branch","missing",2),"TABLE_UNKNOWN");
+ assert.equal(offlineTableBlock(tables,queued,"branch","t2",2),"TABLE_NOT_AVAILABLE");
+ assert.equal(offlineTableBlock(tables,queued,"branch","t1",5),"PARTY_SIZE");
+ assert.equal(offlineTableBlock(tables,queued,"branch","t1",0),"PARTY_SIZE");
+ assert.equal(offlineTableBlock(tables,queued,"branch","t3",2),"TABLE_QUEUED");
+ assert.equal(offlineTableBlock(tables,queued,"other-branch","t3",2),null);
 });
