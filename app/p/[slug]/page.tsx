@@ -29,7 +29,7 @@ export default async function PublicContentPage({params,searchParams}:Props){
  const [{slug},query]=await Promise.all([params,searchParams]);
  const [page,language]=await Promise.all([readPage(slug),contentLanguage(query.lang)]);
  if(!page)notFound();
- const title=String(page["title_"+language]||page.title_ar);
+ const title=publicContentText(page,"title",language);
  const body=publicContentText(page,"body",language);
  return <PublicMarketShell languageOverride={language} className="foonPublicContent">
   <PublicSiteHeader languageOverride={language}/>
