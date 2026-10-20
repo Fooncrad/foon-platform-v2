@@ -67,7 +67,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  async function create(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy)return;if(branchUnavailable){setMessage(translateUi("لا يمكن إنشاء طلب قبل تعيين فرع لحسابك."));return;}
   const f=new FormData(event.currentTarget);
-  const payload={currency,branchId:f.get("branchId"),channel:f.get("channel"),tableId:channel==="dine_in"?f.get("tableId")||null:null,partySize:channel==="dine_in"?Number(f.get("partySize")):null,customerName:f.get("customerName"),customerPhone:f.get("customerPhone"),couponCode:f.get("couponCode")||null,kitchenNotes:f.get("kitchenNotes")||null,orderNotes:f.get("orderNotes")||null,items:Object.values(cart).filter(line=>line.quantity>0).map(line=>({id:line.itemId,quantity:line.quantity,options:line.options}))};
+  const payload={currency,branchId:f.get("branchId"),channel:f.get("channel"),tableId:channel==="dine_in"?f.get("tableId")||null:null,partySize:channel==="dine_in"?Number(f.get("partySize")):null,customerName:f.get("customerName"),customerPhone:f.get("customerPhone"),couponCode:f.get("couponCode")||null,kitchenNotes:f.get("kitchenNotes")||null,orderNotes:f.get("orderNotes")||null,...(module==="pos"&&f.get("paymentStatus")==="paid"?{paymentStatus:"paid",paymentMethod:f.get("paymentMethod")}:{}),items:Object.values(cart).filter(line=>line.quantity>0).map(line=>({id:line.itemId,quantity:line.quantity,options:line.options}))};
   if(payload.items.length===0){setMessage(translateUi("أضف منتجاً واحداً على الأقل قبل إنشاء الطلب."));return;}
   if(!payload.branchId){setMessage(translateUi("حدد الفرع قبل إنشاء الطلب."));return;}
   const encoded=JSON.stringify(payload);
