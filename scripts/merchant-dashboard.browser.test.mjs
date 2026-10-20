@@ -741,3 +741,67 @@ test('all activity storefront templates retain distinct direction and responsive
   }
  }finally{await db.end();await Promise.all([merchant.close(),customer.close()]);}
 });
+
+test("guest service request drafts remain on storefront through registration and login across businesses",async({browser})=>{
+ const db=await mysql.createConnection(process.env.DATABASE_URL);
+ const merchant=await browser.newContext(),guestOne=await browser.newContext(),guestTwo=await browser.newContext();
+ try{
+  const email="journey-"+randomUUID()+"@test.example",password="a-strong-test-password";
+  let registeredCustomer="";
+  for(const [index,activity,action,requestType] of [[0,"publicworks","Request a quotation","quote"],[1,"carwash","Request appointment","appointment"]]){
+   const slug="journey-"+activity+"-"+randomUUID().slice(0,8);
+   const response=await merchant.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Journey merchant",storeName:"Journey "+activity,slug,email:slug+"@test.example",password,activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
+   expect(response.status(),await response.text()).toBe(201);
+   const owner=await response.json();
+   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
+   const headers={origin,"x-foon-tenant":owner.tenant.id};
+   const cat=await merchant.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"category",name:"Journey category"}});expect(cat.status(),await cat.text()).toBe(201);
+   const product=await merchant.request.post(origin+"/api/restaurant/activity-catalog",{headers,data:{kind:"product",categoryId:(await cat.json()).id,name:"Journey service "+activity,price:15}});expect(product.status(),await product.text()).toBe(201);
+   const serviceId=(await product.json()).id;
+   const guest=index===0?guestOne:guestTwo,page=await guest.newPage();
+   await guest.addCookies([{name:"foon_language",value:"en",url:origin}]);
+   const unauthorized=await guest.request.post(origin+"/api/customer/service-requests",{headers:{origin},data:{storeSlug:slug,serviceId,requestType,phone:"+966501234567",notes:"Draft kept",requestKey:randomUUID(),...(requestType==="appointment"?{scheduledAt:new Date(Date.now()+48*3600000).toISOString()}:{})}});
+   expect(unauthorized.status()).toBe(401);
+   await page.goto(origin+"/"+slug);
+   const appointmentAvailable=activity==="carwash"&&await page.getByRole("button",{name:"Request appointment",exact:true}).count()>0;
+   const displayedAction=activity==="carwash"&&!appointmentAvailable?"Ask about this service":action;
+   const displayedType=activity==="carwash"&&!appointmentAvailable?"inquiry":requestType;
+   await page.getByRole("button",{name:displayedAction,exact:true}).click();
+   const panel=page.locator(".foonServiceRequestForm").first();
+   const form=panel.locator(".foonServiceRequestJourney > form");
+   await form.getByLabel("Contact phone").fill("+966501234567");
+   await form.getByLabel("Request details").fill("Customer journey draft "+activity);
+   if(displayedType==="appointment")await form.getByLabel("Preferred appointment").fill(new Date(Date.now()+48*3600000).toISOString().slice(0,16));
+   await expect(form.getByRole("button",{name:"Send request"})).toBeDisabled();
+   const inline=panel.locator(".publicMenuInlineAuth");
+   await expect(inline).toContainText("Continue your service request without leaving this page");
+   if(index===0){
+    await inline.getByRole("button",{name:"Quick sign up",exact:true}).click();
+    await inline.getByLabel("Name",{exact:true}).fill("Journey customer");
+    await inline.getByLabel("Email",{exact:true}).fill(email);
+    await inline.getByLabel("Password",{exact:true}).fill(password);
+   }else{
+    await inline.getByLabel("Email",{exact:true}).fill(email);
+    await inline.getByLabel("Password",{exact:true}).fill(password);
+   }
+   await inline.getByRole("button",{name:"Continue request",exact:true}).click();
+   await expect(inline).toHaveCount(0);
+   await expect(form.getByLabel("Contact phone")).toHaveValue("+966501234567");
+   await expect(form.getByLabel("Request details")).toHaveValue("Customer journey draft "+activity);
+   await expect(form.getByRole("button",{name:"Send request"})).toBeEnabled();
+   expect(new URL(page.url()).pathname).toBe("/"+slug);
+   const created=page.waitForResponse(r=>r.url().endsWith("/api/customer/service-requests")&&r.request().method()==="POST");
+   await form.getByRole("button",{name:"Send request"}).click();
+   const sent=await created;expect(sent.status(),await sent.text()).toBe(201);
+   const result=await sent.json();
+   const [[stored]]=await db.execute("SELECT tenant_id,status,JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId')) AS customerId,JSON_UNQUOTE(JSON_EXTRACT(data,'$.notes')) AS notes FROM restaurant_resources WHERE id=? AND kind='service_customer_request'",[result.id]);
+   expect(stored.tenant_id).toBe(owner.tenant.id);expect(stored.status).toBe("pending");expect(stored.notes).toBe("Customer journey draft "+activity);
+   if(index===0)registeredCustomer=String(stored.customerId);
+   else expect(String(stored.customerId)).toBe(registeredCustomer);
+   const [[link]]=await db.execute("SELECT user_id FROM tenant_customers WHERE tenant_id=? AND user_id=?",[owner.tenant.id,registeredCustomer]);expect(link.user_id).toBe(registeredCustomer);
+   await expect(page.getByRole("heading",{name:"Track service requests"})).toBeVisible();
+   await expect(page.locator(".foonServiceRequestHistory")).toContainText("Journey service "+activity);
+   await page.close();
+  }
+ }finally{await Promise.all([merchant.close(),guestOne.close(),guestTwo.close()]);await db.end();}
+});
