@@ -1,7 +1,8 @@
 import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
-import {canRoleTransitionOrder,WAITER_ORDER_CHANNELS} from "./order-role-channel-policy";
+import {canRoleTransitionOrder} from "./order-role-channel-policy";
+import {assignedWaiterTableIds} from "./waiter-assignments";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
@@ -360,7 +361,12 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  const financial=["owner","manager","cashier","accountant"].includes(role);
  const values:string[]=[tenantId];let filter="";
  if(branchId){filter+=" AND branch_id=?";values.push(branchId);}
- if(role==="waiter"){filter+=" AND channel IN ("+WAITER_ORDER_CHANNELS.map(()=>"?").join(",")+")";values.push(...WAITER_ORDER_CHANNELS);}
+ if(role==="waiter"){
+  if(!actorUserId||!branchId)return [];
+  const tableIds=await assignedWaiterTableIds(db,tenantId,branchId,actorUserId);
+  filter+=" AND (channel='room_service'"+(tableIds.length?" OR (channel='dine_in' AND table_id IN ("+tableIds.map(()=>"?").join(",")+"))":"")+")";
+  values.push(...tableIds);
+ }
  if(role==="driver"){
   if(!actorUserId||!branchId)return [];
   const [employees]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 2",[tenantId,branchId,actorUserId]);
@@ -505,6 +511,10 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,payment_status,version,channel,table_id,branch_id,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,tenantId]);const order=rows[0];
  if(!order)throw new ResourceError("ORDER_NOT_FOUND");
  if(!Number.isInteger(body.version)||Number(body.version)!==Number(order.version))throw new ResourceError("CONFLICT");
+ if(role==="waiter"&&order.channel==="dine_in"){
+  const tableIds=await assignedWaiterTableIds(db,tenantId,String(order.branch_id),actor);
+  if(!order.table_id||!tableIds.includes(String(order.table_id)))throw new ResourceError("FORBIDDEN");
+ }
  if(role==="driver"){
   const snapshot=order.checkout_snapshot?parseData(order.checkout_snapshot):{};
   const [assigned]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' AND e.id=? LIMIT 1 FOR UPDATE",[tenantId,String(order.branch_id),actor,String(snapshot.assignedDriverId??"")]);
