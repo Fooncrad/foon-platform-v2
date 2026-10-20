@@ -236,8 +236,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"orders",{id:diningOrder.body.id,version:1,status:"preparing"},"PATCH")).status,200);
   assert.equal((await resource(a,"orders",{id:diningOrder.body.id,version:2,status:"ready"},"PATCH")).status,200);
   const assignedIds=await assignedWaiterTableIds(db,a.tenant,a.branch,waiterAccount.user);
-  const [assignmentDiagnostics]=await db.execute("SELECT id,branch_id,kind,status,data FROM restaurant_resources WHERE id IN (?,?,?)",[family,diningTable,waiterEmployee]);
-  assert.ok(assignedIds.includes(diningTable),"waiter section-to-table lookup failed: "+JSON.stringify({assignedIds,assignmentDiagnostics:assignmentDiagnostics.map(r=>({id:r.id,branchId:r.branch_id,kind:r.kind,status:r.status,data:r.data}))}));
+  assert.ok(assignedIds.includes(diningTable),"the section waiter must inherit an unassigned table");
   const waiterAssignedView=await call("/api/restaurant/operations/orders?branch="+a.branch,"GET",undefined,waiterAccount.cookie,a.tenant);
   assert.equal(waiterAssignedView.status,200);
   assert.ok(waiterAssignedView.body.orders.some(row=>row.id===diningOrder.body.id),"waiter sees orders from the assigned dining section");
