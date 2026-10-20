@@ -11,6 +11,7 @@ import OfflineWorker from "./offline-worker";
 import {printLocales,resolvePrintLocale} from "@/lib/restaurant/print-locales";
 import {normalizeReceiptPaperWidth,receiptPaperCss} from "@/lib/restaurant/browser-receipt-width";
 import {kitchenTicketNotes} from "@/lib/restaurant/print-notes";
+import {finalReceiptEligible} from "@/lib/restaurant/final-receipt-policy";
 import {canRoleTransitionOrder} from "@/lib/restaurant/order-role-channel-policy";
 import {queuePosOrder,retryReviewedPosOrder,scopedPosOrders,pendingPosOrders,removePosOrder,markPosOrder,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
@@ -85,6 +86,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   }finally{setBusy(false);}
  }
  async function printOrder(order:Order,finalInvoice=false){
+  if(finalInvoice&&!finalReceiptEligible(order.status,order.payment_status)){setMessage(translateUi("لا يمكن طباعة الإيصال النهائي إلا بعد اكتمال الطلب وتسجيل الدفع."));return;}
   const popup=window.open("","_blank","width=440,height=720");
   if(!popup){setMessage(ui.popup);return;}
   const doc=popup.document;
@@ -186,7 +188,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  function actions(order:Order){
   const next:Record<string,string>={new:"preparing",preparing:"ready",ready:"completed"};
   const canAdvance=canRoleTransitionOrder(role,order.channel,order.status,next[order.status]);
-  return <div className="restaurantOrderActions">{canAdvance&&next[order.status]&&<button className="restaurantOrderAdvance" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:next[order.status]})}>{ui.advance} {labels[next[order.status] as keyof typeof labels]??next[order.status]}</button>}{["owner","manager","cashier"].includes(role)&&order.status!=="cancelled"&&<>{order.payment_status==="unpaid"?<button disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"paid"})}>{ui.manualPay}</button>:order.payment_status==="paid"?<button className="restaurantOrderRefund" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"refunded"})}>{ui.refund}</button>:null}{["new","preparing","ready"].includes(order.status)&&order.payment_status!=="paid"&&<button className="restaurantOrderCancel" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:"cancelled"})}>{ui.cancel}</button>}</>}<button type="button" onClick={()=>printOrder(order)}>{labels.print} · {labels.ticket}</button>{order.payment_status==="paid"&&<button type="button" onClick={()=>printOrder(order,true)}>{labels.print} · {labels.receipt}</button>}</div>;
+  return <div className="restaurantOrderActions">{canAdvance&&next[order.status]&&<button className="restaurantOrderAdvance" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:next[order.status]})}>{ui.advance} {labels[next[order.status] as keyof typeof labels]??next[order.status]}</button>}{["owner","manager","cashier"].includes(role)&&order.status!=="cancelled"&&<>{order.payment_status==="unpaid"?<button disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"paid"})}>{ui.manualPay}</button>:order.payment_status==="paid"?<button className="restaurantOrderRefund" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{paymentStatus:"refunded"})}>{ui.refund}</button>:null}{["new","preparing","ready"].includes(order.status)&&order.payment_status!=="paid"&&<button className="restaurantOrderCancel" disabled={updatingIds.has(order.id)} onClick={()=>void update(order,{status:"cancelled"})}>{ui.cancel}</button>}</>}<button type="button" onClick={()=>printOrder(order)}>{labels.print} · {labels.ticket}</button>{finalReceiptEligible(order.status,order.payment_status)&&<button type="button" onClick={()=>printOrder(order,true)}>{labels.print} · {labels.receipt}</button>}</div>;
  }
  const [posTopbarSlot,setPosTopbarSlot]=useState<HTMLElement|null>(null);
  useEffect(()=>{if(module==="pos")queueMicrotask(()=>setPosTopbarSlot(document.getElementById("foon-pos-topbar-slot")));},[module]);
