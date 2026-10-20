@@ -186,6 +186,15 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();
  await publicPage.getByRole('dialog').getByRole('button',{name:'مشروبات المعاينة',exact:false}).click();
  await expect(publicPage.getByRole('dialog')).toHaveCount(0);
+ const groupedNav=page.getByRole('navigation',{name:'أقسام النشاط'});
+ const dailyToggle=groupedNav.getByRole('button',{name:/العمل اليومي/});
+ await expect(dailyToggle).toHaveAttribute('aria-expanded','true');
+ await dailyToggle.click();
+ await expect(dailyToggle).toHaveAttribute('aria-expanded','false');
+ await expect(groupedNav.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
+ await dailyToggle.click();
+ await expect(dailyToggle).toHaveAttribute('aria-expanded','true');
+ await expect(groupedNav.getByRole('button',{name:'الطاولات',exact:true})).toBeVisible();
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطاولات',exact:true}).click();
  await page.getByRole('button',{name:'الإضافة الجماعية',exact:true}).click();
  await page.getByLabel('اسم القسم',{exact:true}).fill('صالة العائلات');
@@ -328,6 +337,9 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await captureScreenshot(page,{path:"work/merchant-mobile.png",fullPage:true});
  await page.getByRole("button",{name:"فتح قائمة النشاط",exact:true}).click();
+ const mobileNavigation=page.locator(".restaurantDrawer").getByRole("navigation",{name:"أقسام النشاط"});
+ await expect(mobileNavigation.locator(".restaurantNavTaskGroup")).toHaveCount(6);
+ await expect(mobileNavigation.getByRole("button",{name:/الفروع والفريق/})).toHaveAttribute("aria-expanded","true");
  await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
  // Branch selection lives in the responsive topbar; verify the branch card after navigating on mobile.

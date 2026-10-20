@@ -141,3 +141,18 @@
  .restaurantSearchButton{min-height:38px;padding:8px}
 }
 @media(max-width:360px){.restaurantLanguageSelector select{min-width:88px;max-width:96px;font-size:11px}.restaurantTenantSelector,.restaurantBranchSelector{flex-basis:120px}}
+
+
+/* Shared merchant/employee navigation: group only the permission-filtered modules. */
+.restaurantSidebar nav .restaurantNavTaskGroup,.restaurantDrawer nav .restaurantNavTaskGroup{display:grid;gap:3px;min-width:0;border-top:1px solid #ffffff15;padding-block:5px}
+.restaurantSidebar nav .restaurantNavTaskGroup:first-child,.restaurantDrawer nav .restaurantNavTaskGroup:first-child{border-top:0}
+.restaurantSidebar nav .restaurantNavGroupToggle,.restaurantDrawer nav .restaurantNavGroupToggle{display:flex;align-items:center;gap:8px;min-height:44px;padding:10px 12px;width:100%;border:0;background:#ffffff08;color:#e4ebf6;border-radius:9px;font-size:12px;font-weight:800;text-align:start;cursor:pointer}
+.restaurantSidebar nav .restaurantNavGroupToggle:hover,.restaurantDrawer nav .restaurantNavGroupToggle:hover{background:#ffffff15;color:white}
+.restaurantSidebar nav .restaurantNavGroupToggle:focus-visible,.restaurantDrawer nav .restaurantNavGroupToggle:focus-visible{outline:2px solid #e2a93b;outline-offset:2px}
+.restaurantNavGroupCount{margin-inline-start:auto;padding:2px 7px;border-radius:8px;background:#ffffff19;font-size:11px;font-variant-numeric:tabular-nums}
+.restaurantNavChevron{font-size:16px;line-height:1}
+.restaurantNavGroupItems{display:grid;gap:2px;min-width:0;padding-inline-start:8px}
+.restaurantSidebar nav .restaurantNavGroupItems>button,.restaurantDrawer nav .restaurantNavGroupItems>button{min-height:44px;padding-inline:9px;font-size:12px;overflow-wrap:anywhere}
+.restaurantSidebar nav .restaurantNavGroupItems>button span,.restaurantDrawer nav .restaurantNavGroupItems>button span{min-width:0;overflow-wrap:anywhere}
+.restaurantNavContext{margin:4px 22px 12px;color:#e0e6ef;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:reduce){.restaurantNavChevron{transition:none}}
