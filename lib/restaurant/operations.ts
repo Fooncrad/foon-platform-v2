@@ -506,6 +506,18 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  await notifyOrder(db,tenantId,id,"new");
  return {id,total:totals.total,currency:profile.currency};
 }
+// POS "paid (manually verified)" at creation, including offline-queued replays.
+// Reuses updateOrder so role, transition, receipt-print and audit rules stay identical.
+export async function recordManualPaymentAtCreate(db:PoolConnection,tenantId:string,actor:string,role:string,orderId:string,body:Record<string,unknown>){
+ if(body.paymentStatus===undefined||body.paymentStatus===null||body.paymentStatus==="unpaid")return;
+ if(body.paymentStatus!=="paid"||!["cash","card","other"].includes(String(body.paymentMethod)))throw new ResourceError("INVALID_INPUT");
+ if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
+ const [rows]=await db.execute<RowDataPacket[]>("SELECT payment_status,version FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[orderId,tenantId]);
+ if(!rows[0])throw new ResourceError("ORDER_NOT_FOUND");
+ if(String(rows[0].payment_status)!=="unpaid")return;
+ await updateOrder(db,tenantId,actor,role,{id:orderId,version:Number(rows[0].version),paymentStatus:"paid"});
+ await db.execute("UPDATE restaurant_orders SET checkout_snapshot=JSON_SET(COALESCE(checkout_snapshot,'{}'),'$.manualPayment',JSON_OBJECT('method',?,'recordedBy',?)) WHERE id=? AND tenant_id=?",[String(body.paymentMethod),actor,orderId,tenantId]);
+}
 export async function updateOrder(db:PoolConnection,tenantId:string,actor:string,role:string,body:Record<string,unknown>){
  if(typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,payment_status,version,channel,table_id,branch_id,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,tenantId]);const order=rows[0];

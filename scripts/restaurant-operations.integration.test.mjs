@@ -623,6 +623,19 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,admin.tenant)).status,200,"an explicit own-tenant support session works");
   await db.execute("UPDATE auth_sessions SET last_seen_at=DATE_SUB(NOW(),INTERVAL 61 MINUTE) WHERE user_id=?",[admin.user]);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,admin.cookie,b.tenant)).status,403);
+  // POS "paid (manually verified)" is applied at creation and stays idempotent on offline replay.
+  const paidItem=await save(a,"menu","Paid Tea",{price:7,categoryId:categoryA});
+  const paidKey=randomUUID(),paidBody={branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}],paymentStatus:"paid",paymentMethod:"cash",requestKey:paidKey};
+  const paid=await call("/api/restaurant/operations/pos","POST",paidBody,a.cookie,a.tenant);assert.equal(paid.status,201,JSON.stringify(paid.body));
+  const paidReplay=await call("/api/restaurant/operations/pos","POST",paidBody,a.cookie,a.tenant);assert.equal(paidReplay.status,201);assert.equal(paidReplay.body.id,paid.body.id);
+  const [[paidRow]]=await db.execute("SELECT payment_status,version,JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.manualPayment.method')) AS method FROM restaurant_orders WHERE id=?",[paid.body.id]);
+  assert.equal(paidRow.payment_status,"paid");assert.equal(paidRow.method,"cash");assert.equal(Number(paidRow.version),2);
+  const unpaidDefault=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}]},a.cookie,a.tenant);assert.equal(unpaidDefault.status,201,JSON.stringify(unpaidDefault.body));
+  const [[unpaidRow]]=await db.execute("SELECT payment_status FROM restaurant_orders WHERE id=?",[unpaidDefault.body.id]);assert.equal(unpaidRow.payment_status,"unpaid");
+  const [[before]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=?",[a.tenant]);
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{...paidBody,requestKey:randomUUID(),paymentMethod:"gateway"},a.cookie,a.tenant)).status,400);
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{...paidBody,requestKey:randomUUID(),paymentStatus:"refunded"},a.cookie,a.tenant)).status,400);
+  const [[after]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=?",[a.tenant]);assert.equal(Number(after.n),Number(before.n));
  }catch(error){console.error("[Operations test server stderr tail]",serverErrors);throw error;}finally{server.kill();await workerPool.end();await db.end();}
 });
 
