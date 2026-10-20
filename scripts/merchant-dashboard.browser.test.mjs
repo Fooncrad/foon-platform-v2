@@ -2,7 +2,7 @@ import {test,expect} from "@playwright/test";
 import {spawn} from "node:child_process";
 import mysql from "mysql2/promise";
 import sharp from "sharp";
-import {randomUUID} from "node:crypto";
+import {randomUUID,createHash} from "node:crypto";
 // Screenshot artifacts are optional; all functional and layout assertions still run.
 // Default behavior retains visual captures. Set FOON_BROWSER_SCREENSHOTS=0 only
 // when the local browser cannot capture images; report visual QA separately.
@@ -547,10 +547,26 @@ test('storefront carts support retail variants and laundry collection without le
   const grocery=await create('grocery'),group=randomUUID(),option=randomUUID();
   await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,required,min_select,max_select) VALUES (?,?,?,'Size',TRUE,1,1)",[group,grocery.owner.tenant.id,grocery.id]);
   await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,price_delta,stock_quantity) VALUES (?,?,?,'Large',2.5,5)",[option,grocery.owner.tenant.id,group]);
+  const variant=randomUUID(),productImage='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="blue"/></svg>'),variantImage='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="red"/></svg>');
+  await db.execute("INSERT INTO catalog_variants(id,tenant_id,product_id,combination_key,option_ids,sku,stock_quantity) VALUES (?,?,?,?,?,'SIZE-L',5)",[variant,grocery.owner.tenant.id,grocery.id,createHash('sha256').update(option).digest('hex'),JSON.stringify([option])]);
+  await db.execute("INSERT INTO catalog_images(id,tenant_id,product_id,image_url,sort_order) VALUES (?,?,?,?,0)",[randomUUID(),grocery.owner.tenant.id,grocery.id,productImage]);
+  await db.execute("INSERT INTO catalog_variant_images(id,tenant_id,product_id,variant_id,image_url,sort_order) VALUES (?,?,?,?,?,0)",[randomUUID(),grocery.owner.tenant.id,grocery.id,variant,variantImage]);
   const page=await customer.newPage();await page.goto(origin+'/'+grocery.slug);
   await page.getByRole('button',{name:'إضافة إلى السلة',exact:true}).click();
   const cart=page.locator('.foonStorefrontCart');await expect(cart.getByRole('button',{name:'تأكيد الإضافة',exact:true})).toBeDisabled();
-  await cart.getByRole('radio',{name:/Large/}).check();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();
+  await cart.getByRole('button',{name:'إلغاء',exact:true}).click();
+  await page.getByRole('button',{name:'تفاصيل Cart item grocery'}).click();
+  const detail=page.getByRole('dialog',{name:'Cart item grocery'});
+  await expect(detail.locator('.foonActivityDialogImage')).toHaveAttribute('src',productImage);
+  await expect(detail.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toBeDisabled();
+  await detail.getByRole('radio',{name:/Large/}).check();
+  await expect(detail.locator('.foonActivityDialogImage')).toHaveAttribute('src',variantImage);
+  await expect(detail.locator('.foonActivityDialogPurchase')).toContainText('9.75 USD');
+  await detail.getByRole('button',{name:'إضافة إلى السلة',exact:true}).click();
+  await expect(detail).toBeHidden();
+  await expect(cart.getByRole('radio',{name:/Large/})).toBeChecked();
+  await expect(cart.getByRole('button',{name:'تأكيد الإضافة',exact:true})).toBeEnabled();
+  await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();
   await cart.getByLabel('الكمية',{exact:true}).fill('2');await expect(cart).toContainText('19.50 USD');await expect(cart).toContainText('Large');
   for(const [language,title] of [['en','Shopping cart'],['fr','Panier'],['ar','سلة المشتريات']]){
    await customer.addCookies([{name:'foon_language',value:language,url:origin}]);await page.goto(origin+'/'+grocery.slug+'?q=Cart');
@@ -565,6 +581,7 @@ test('storefront carts support retail variants and laundry collection without le
   const response=await result;expect(response.status(),await response.text()).toBe(201);const order=await response.json();expect(order.total).toBe(19.5);expect(order.currency).toBe('USD');await expect(cart.getByRole('status')).toContainText('19.50 USD');
   const [[stock]]=await db.execute('SELECT stock_quantity FROM catalog_products WHERE id=?',[grocery.id]);expect(Number(stock.stock_quantity)).toBe(3);
   const [[optionStock]]=await db.execute('SELECT stock_quantity FROM catalog_option_values WHERE id=?',[option]);expect(Number(optionStock.stock_quantity)).toBe(3);
+  const [[variantStock]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE id=?',[variant]);expect(Number(variantStock.stock_quantity)).toBe(3);
   const [[payment]]=await db.execute('SELECT payment_status FROM restaurant_orders WHERE id=?',[order.id]);expect(payment.payment_status).toBe('unpaid');
   const laundry=await create('laundry');await page.goto(origin+'/'+laundry.slug);await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await expect(cart.getByRole('heading',{name:/سلة الخدمات/})).toBeVisible();
   await cart.getByLabel(/^طريقة الاستلام/).selectOption('delivery');await cart.getByRole('button',{name:'متابعة بهذا الحساب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeDisabled();

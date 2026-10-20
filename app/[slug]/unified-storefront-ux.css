@@ -704,3 +704,16 @@
 .foonActivityProductDialog .foonActivityVariantPhotoTabs button[aria-pressed=true]{background:var(--activity-accent,#e2a93b);color:#171613;border-color:transparent;font-weight:750;}
 .foonActivityProductDialog .foonActivityGalleryThumbs button:focus-visible,
 .foonActivityProductDialog .foonActivityVariantPhotoTabs button:focus-visible{outline:3px solid var(--activity-accent,#e2a93b);outline-offset:2px;}
+
+
+/* Live variant selector shares the same gallery modal and never changes cart price alone. */
+.foonActivityProductDialog .foonActivityVariantChoiceForm{display:grid;gap:12px;min-width:0;max-width:100%;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm fieldset{display:grid;gap:8px;min-width:0;max-width:100%;margin:0;padding:10px;border:1px solid var(--activity-border,#8887);border-radius:12px;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm legend{font-weight:700;overflow-wrap:anywhere;padding-inline:4px;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label{display:flex;align-items:center;gap:10px;min-height:44px;min-width:0;max-width:100%;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label input{flex:0 0 auto;width:20px;height:20px;accent-color:var(--activity-accent,#e2a93b);}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label span{min-width:0;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label small{margin-inline-start:auto;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm [role=alert]{font-weight:600;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityDialogPurchase .foonCartAdd:disabled{opacity:.45;cursor:not-allowed;}
+@media(max-width:360px){.foonActivityProductDialog .foonActivityVariantChoiceForm fieldset{padding:8px}.foonActivityProductDialog .foonActivityVariantChoiceForm label{flex-wrap:wrap;gap:6px}.foonActivityProductDialog .foonActivityVariantChoiceForm label small{margin-inline-start:0}}
