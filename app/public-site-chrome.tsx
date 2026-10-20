@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import "./public-site-chrome.css";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
 import LanguageSelector from "@/app/components/language-selector";
