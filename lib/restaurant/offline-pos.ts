@@ -56,14 +56,15 @@ export function scopedPosOrders(rows:PendingPosOrder[],tenantId:string,branchId:
 }
 // Local pre-check for a dine-in order taken without Internet. The server still re-validates
 // table occupancy at sync; this only stops obvious double-seating from this device's view.
-export type OfflineTable={id:string;status:string;data?:{capacity?:number}};
+export type OfflineTable={id:string;branch_id?:string|null;status:string;data?:{capacity?:number}};
 export function offlineTableBlock(tables:OfflineTable[],queued:PendingPosOrder[],branchId:string,tableId:string,partySize:number):"TABLE_REQUIRED"|"TABLE_UNKNOWN"|"TABLE_NOT_AVAILABLE"|"PARTY_SIZE"|"TABLE_QUEUED"|null{
  if(!tableId)return "TABLE_REQUIRED";
- const table=tables.find(row=>row.id===tableId);
+ const table=tables.find(row=>row.id===tableId&&(!row.branch_id||row.branch_id===branchId));
  if(!table)return "TABLE_UNKNOWN";
  if(table.status!=="available")return "TABLE_NOT_AVAILABLE";
  const capacity=Number(table.data?.capacity);
- if(!Number.isInteger(partySize)||partySize<1||capacity>0&&partySize>capacity)return "PARTY_SIZE";
+ if(!Number.isInteger(capacity)||capacity<1)return "TABLE_UNKNOWN";
+ if(!Number.isInteger(partySize)||partySize<1||partySize>capacity)return "PARTY_SIZE";
  if(queued.some(order=>order.branchId===branchId&&order.payload.channel==="dine_in"&&order.payload.tableId===tableId))return "TABLE_QUEUED";
  return null;
 }
