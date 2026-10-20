@@ -1,7 +1,7 @@
 import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
-import {canRoleTransitionOrder} from "./order-role-channel-policy";
+import {canRoleTransitionOrder,WAITER_ORDER_CHANNELS} from "./order-role-channel-policy";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
@@ -360,7 +360,7 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  const financial=["owner","manager","cashier","accountant"].includes(role);
  const values:string[]=[tenantId];let filter="";
  if(branchId){filter+=" AND branch_id=?";values.push(branchId);}
- if(role==="waiter"){filter+=" AND channel IN ('dine_in','room_service')";}
+ if(role==="waiter"){filter+=" AND channel IN ("+WAITER_ORDER_CHANNELS.map(()=>"?").join(",")+")";values.push(...WAITER_ORDER_CHANNELS);}
  if(role==="driver"){
   if(!actorUserId||!branchId)return [];
   const [employees]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 2",[tenantId,branchId,actorUserId]);
