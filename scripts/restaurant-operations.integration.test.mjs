@@ -208,6 +208,21 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const ranged=await call("/api/restaurant/operations/reservations?from="+encodeURIComponent(bookingTime)+"&to="+encodeURIComponent(new Date(Date.parse(bookingTime)+86400000).toISOString()),"GET",undefined,a.cookie,a.tenant);assert.equal(ranged.status,200);assert.equal(ranged.body.resources.length,2);
   const waiterAccount=await register("operations-floor-waiter"),supervisorAccount=await register("operations-floor-supervisor");
   const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterAccount.email,role:"waiter"}),supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorAccount.email,role:"manager"});
+  // A linked waiter may manage only authorized branch order types, never
+  // claim the assigned delivery driver's fulfillment transition.
+  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'waiter',TRUE)",[randomUUID(),a.tenant,waiterAccount.user,a.branch]);
+  for(const permission of ["orders.view","orders.edit"]){
+   await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),a.tenant,waiterAccount.user,a.branch,permission]);
+  }
+  assert.equal((await resource(a,"orders",{id:deliveryOne.body.id,version:1,status:"preparing"},"PATCH")).status,200);
+  assert.equal((await resource(a,"orders",{id:deliveryOne.body.id,version:2,status:"ready"},"PATCH")).status,200);
+  const waiterOrders=await call("/api/restaurant/operations/orders?branch="+a.branch,"GET",undefined,waiterAccount.cookie,a.tenant);
+  assert.equal(waiterOrders.status,200,JSON.stringify(waiterOrders.body));
+  assert.ok(!waiterOrders.body.orders.some(row=>row.channel==="delivery"),"waiter read access excludes delivery orders and private addresses");
+  const waiterDeliveryAttempt=await call("/api/restaurant/operations/orders","PATCH",{id:deliveryOne.body.id,version:3,status:"completed"},waiterAccount.cookie,a.tenant);
+  assert.equal(waiterDeliveryAttempt.status,403,"waiter cannot complete a delivery assigned to a driver");
+  const [[deliveryStillReady]]=await db.execute("SELECT status,version FROM restaurant_orders WHERE tenant_id=? AND id=?",[a.tenant,deliveryOne.body.id]);
+  assert.equal(deliveryStillReady.status,"ready");assert.equal(Number(deliveryStillReady.version),3);
   const assignment=await resource(a,"sections",{id:family,version:1,name:"Families",status:"active",branchId:a.branch,data:{waiterId:waiterEmployee,supervisorId:supervisorEmployee}},"PATCH");assert.equal(assignment.status,200,JSON.stringify(assignment.body));
   assert.equal((await resource(a,"sections",{name:"Wrong role",status:"active",branchId:a.branch,data:{waiterId:supervisorEmployee}})).body.code,"INVALID_SECTION_STAFF");
   assert.equal((await call("/api/restaurant/operations/sections","POST",{branchId:a.branch,sections:[{name:"Unauthorised",start:1,count:1,capacity:4}]},waiterAccount.cookie,a.tenant)).status,403);
@@ -217,6 +232,10 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await call("/api/customer/orders","POST",{...dinePayload,tableId:randomUUID(),partySize:2},customer.cookie)).body.code,"TABLE_NOT_FOUND");
   const diningOrder=await call("/api/customer/orders","POST",{...dinePayload,tableId:diningTable,partySize:3},customer.cookie);assert.equal(diningOrder.status,201,JSON.stringify(diningOrder.body));
   const [[diningContext]]=await db.execute("SELECT dining_section_id,party_size,dining_snapshot FROM restaurant_orders WHERE id=?",[diningOrder.body.id]);assert.equal(diningContext.dining_section_id,family);assert.equal(diningContext.party_size,3);assert.match(JSON.stringify(diningContext.dining_snapshot),/Families/);
+  assert.equal((await resource(a,"orders",{id:diningOrder.body.id,version:1,status:"preparing"},"PATCH")).status,200);
+  assert.equal((await resource(a,"orders",{id:diningOrder.body.id,version:2,status:"ready"},"PATCH")).status,200);
+  const waiterDiningComplete=await call("/api/restaurant/operations/orders","PATCH",{id:diningOrder.body.id,version:3,status:"completed"},waiterAccount.cookie,a.tenant);
+  assert.equal(waiterDiningComplete.status,200,"waiter retains ability to complete ready dine-in orders");
   const privateOverview=await call("/api/restaurant/operations/overview","GET",undefined,staff.cookie,a.tenant);assert.equal(privateOverview.status,403);
   const [[noStaff]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=? AND tenant_id=?",[customer.body.user.id,a.tenant]);assert.equal(noStaff.n,0);
   assert.equal((await call("/api/customer/orders","POST",{storeSlug:"operations-owner-b",branchId:b.branch,channel:"takeaway",items:[{id:item,quantity:1}]},customer.cookie)).status,403);
