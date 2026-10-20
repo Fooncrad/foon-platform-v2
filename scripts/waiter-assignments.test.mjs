@@ -15,6 +15,7 @@ test("assigned waiter query is scoped to tenant, branch and linked user",async()
  const ids=await assignedWaiterTableIds(db,"tenant-1","branch-2","waiter-3");
  assert.deepEqual(ids,["table-1","table-2"]);
  assert.deepEqual(params,["waiter-3","tenant-1","branch-2"]);
+ assert(query.includes("'null'"),"a JSON null at table level must fall back to the section waiter");
  for(const phrase of ["e.tenant_id=t.tenant_id","e.branch_id=t.branch_id","t.tenant_id=?","t.branch_id=?","e.status='active'","t.kind='dining_table'","s.kind='dining_section'","'$.waiterId'"]){
   assert(query.includes(phrase),phrase);
  }
