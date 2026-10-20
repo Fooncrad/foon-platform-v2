@@ -20,7 +20,7 @@
     "test:mail": "node --experimental-strip-types --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/email-verification.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
-    "test:resources": "node --experimental-strip-types --test scripts/restaurant-resource-schema.test.mjs scripts/service-order-policy.test.mjs scripts/reservation-no-show.test.mjs scripts/edge-print-agent.test.mjs scripts/foon-offline-pos.test.mjs",
+    "test:resources": "node --experimental-strip-types --test scripts/restaurant-resource-schema.test.mjs scripts/service-order-policy.test.mjs scripts/reservation-no-show.test.mjs scripts/edge-print-agent.test.mjs scripts/foon-offline-pos.test.mjs scripts/order-role-channel-policy.test.mjs",
     "test:print-agent": "node --test scripts/edge-print-agent.test.mjs scripts/receipt-paper.test.mjs",
     "test:operations": "node --experimental-strip-types --test scripts/restaurant-operations.integration.test.mjs",
     "test:browser": "playwright test scripts/merchant-dashboard.browser.test.mjs --workers=1 --reporter=line",
@@ -34,7 +34,8 @@
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
     "test:checkout:integration": "node --test scripts/checkout-orders.integration.mjs",
-    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs"
+    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs",
+    "test:order-roles": "node --experimental-strip-types --test scripts/order-role-channel-policy.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
