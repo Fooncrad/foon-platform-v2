@@ -242,7 +242,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.ok(waiterAssignedView.body.orders.some(row=>row.id===diningOrder.body.id),"waiter sees orders from the assigned dining section");
   assert.ok(!waiterAssignedView.body.orders.some(row=>row.id===order.body.id),"waiter cannot see an order at a table without an assigned waiter");
   const unassignedTable=await save(a,"tables","Terrace table without waiter",{capacity:4,sectionId:terrace,number:31},"available");
-  const unassignedOrder=await resource(a,"pos",{branchId:a.branch,channel:"dine_in",tableId:unassignedTable,partySize:1,items:[{id:item,quantity:1}]});
+  const unassignedOrder=await resource(a,"pos",{branchId:a.branch,channel:"dine_in",tableId:unassignedTable,partySize:1,items:[{id:item,quantity:1,options:[option]}]});
   assert.equal(unassignedOrder.status,201,JSON.stringify(unassignedOrder.body));
   assert.equal((await resource(a,"orders",{id:unassignedOrder.body.id,version:1,status:"preparing"},"PATCH")).status,200);
   assert.equal((await resource(a,"orders",{id:unassignedOrder.body.id,version:2,status:"ready"},"PATCH")).status,200);
