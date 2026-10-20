@@ -36,3 +36,7 @@
  .foonPublicContent .publicContentPage article{padding:20px 15px}
 }
 @media(prefers-reduced-motion:reduce){.foonPublicJourney,.foonPublicContent{scroll-behavior:auto}}
+
+
+.foonPublic .foonPublicHeader a[aria-current="page"]{text-decoration:underline;text-decoration-color:var(--fp-gold);text-underline-offset:5px}
+.foonPublic .foonPublicHeader .foonHeaderCta[aria-current="page"]{box-shadow:0 0 0 2px var(--fp-ink)}
