@@ -1,0 +1,17 @@
+/* Shared public shell for landing and country-scoped market, not tenant storefronts. */
+.foonPublicMarket{--fp-bg:#f8f7f3;--fp-surface:#fff;--fp-ink:#24221e;--fp-muted:#706c62;--fp-line:#e9e4da;--fp-gold:#c99432;--fp-gold-ink:#211b0f;--fp-panel:#24221e}
+.foonPublicMarket .foonMarket{background:var(--fp-bg);color:var(--fp-ink);min-height:0}
+.foonPublicMarket .foonMarketCard{background:var(--fp-surface);color:var(--fp-ink);border-color:var(--fp-line)}
+.foonPublicMarket .foonMarketType{color:var(--fp-muted)}
+.foonPublicMarket .foonMarketVisit{color:#916517}
+.foonPublicMarket .foonMarketCardIcon{background:#f8eedc;color:#785311}
+.foonPublicMarket .foonCountryPicker{color:inherit}
+.foonPublicMarket[data-theme="dark"] .foonMarketCard{background:var(--fp-surface);border-color:var(--fp-line);color:var(--fp-ink)}
+.foonPublicMarket[data-theme="dark"] .foonMarketCardIcon{background:#3b3428;color:#e2a93b}
+.foonPublicMarket[data-theme="dark"] .foonMarketType{color:#c7bdab}
+.foonPublicMarket[data-theme="dark"] .foonMarketVisit{color:#e2a93b}
+.foonPublicMarket[data-theme="dark"] .foonMarketResults{background:var(--fp-bg);color:var(--fp-ink)}
+.foonPublicMarket .foonPublicHeader{max-width:1320px}
+.foonPublic .foonPublicHeader nav a:focus-visible,.foonPublic .foonPublicFooter a:focus-visible{outline:3px solid var(--fp-gold);outline-offset:4px;border-radius:4px}
+.foonPublic .foonPublicFooter nav{gap:10px 20px}
+@media(max-width:640px){.foonPublicMarket .foonPublicHeader{padding-block:10px}.foonPublicMarket .foonMarketResults{padding-bottom:40px}}
