@@ -100,7 +100,7 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
   }catch(error){console.error("[FOON_STOREFRONT_GALLERY]",{slug,stage:"products",error});}
   try{
    const [photos]=await database().execute<RowDataPacket[]>(
-    "SELECT v.product_id,v.id AS variant_id,v.sku,i.image_url FROM (SELECT tenant_id,product_id,id,sku,created_at,ROW_NUMBER() OVER (PARTITION BY product_id ORDER BY created_at,id) AS variant_rank FROM catalog_variants WHERE tenant_id=? AND product_id IN ("+slots+") AND enabled=TRUE) v JOIN catalog_variant_images i ON i.tenant_id=v.tenant_id AND i.product_id=v.product_id AND i.variant_id=v.id WHERE v.variant_rank<=4 ORDER BY v.product_id,v.created_at,v.id,i.sort_order,i.id",
+    "SELECT v.product_id,v.id AS variant_id,v.sku,i.image_url FROM (SELECT cv.tenant_id,cv.product_id,cv.id,cv.sku,cv.created_at,ROW_NUMBER() OVER (PARTITION BY cv.product_id ORDER BY cv.created_at,cv.id) AS variant_rank FROM catalog_variants cv WHERE cv.tenant_id=? AND cv.product_id IN ("+slots+") AND cv.enabled=TRUE AND EXISTS (SELECT 1 FROM catalog_variant_images existing WHERE existing.tenant_id=cv.tenant_id AND existing.product_id=cv.product_id AND existing.variant_id=cv.id)) v JOIN catalog_variant_images i ON i.tenant_id=v.tenant_id AND i.product_id=v.product_id AND i.variant_id=v.id WHERE v.variant_rank<=4 ORDER BY v.product_id,v.created_at,v.id,i.sort_order,i.id",
     [String(tenant.id),...ids]);
    variantGalleryRows=photos;
   }catch(error){console.error("[FOON_STOREFRONT_GALLERY]",{slug,stage:"variants",error});}
