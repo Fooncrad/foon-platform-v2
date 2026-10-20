@@ -8,12 +8,13 @@ import {useEffect,useRef,useState,useSyncExternalStore} from "react";
 import {useRouter} from "next/navigation";
 import InlineCustomerAuth from "./inline-customer-auth";
 import {cartKey,choicePrice,choicesValid} from "../restaurant/menu-choices";
+import {validPreselectedOptions} from "@/lib/catalog/variant-selection";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import {supportedCountries} from "@/lib/tenant/country-catalog";
 import "./storefront-cart.css";
 type Language="ar"|"en"|"fr";
 type PickupPoint={id:string;name:string;nameEn:string;nameFr:string;address:string;addressEn:string;addressFr:string;instructions:string;mapUrl:string};
-type Item={measured?:boolean;unit?:string;variants?:{options:string[];stock:number|null}[];id:string;name:string;nameEn:string;nameFr:string;price:number;currency:string;branches:{id:string;name:string}[]};
+type Item={measured?:boolean;unit?:string;variants?:{id:string;sku:string|null;options:string[];stock:number|null}[];id:string;name:string;nameEn:string;nameFr:string;price:number;currency:string;branches:{id:string;name:string}[]};
 type Line={key:string;item:Item;options:string[];optionNames:string[];quantity:number;unitPrice:number};
 const uuid=/^[a-f0-9-]{36}$/i;
 function validLine(value:unknown):value is Line{
@@ -27,11 +28,11 @@ function storedLines(storage:string):Line[]{
  try{const saved=JSON.parse(sessionStorage.getItem(storage)??"[]");if(Array.isArray(saved)&&saved.length<=40&&saved.every(validLine))return saved;}catch{}
  return [];
 }
-export function StorefrontAddButton({slug,id,language,service=false}:{slug:string;id:string;language:Language;service?:boolean}){
+export function StorefrontAddButton({slug,id,language,service=false,options,disabled=false,onClick}:{slug:string;id:string;language:Language;service?:boolean;options?:string[];disabled?:boolean;onClick?:()=>void}){
  const translateUi=useUiText();
 
  const text=language==="ar"?(service?"إضافة الخدمة":translateUi("إضافة إلى السلة")):language==="fr"?(service?"Ajouter le service":"Ajouter au panier"):(service?"Add service":"Add to cart");
- return <button type="button" className="foonCartAdd" aria-label={text} onClick={()=>window.dispatchEvent(new CustomEvent("foon:storefront-cart-add",{detail:{slug,id}}))}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4h2l3 11h10l3-8H6M10 20h.01M18 20h.01"/></svg><span className="foonCartAddLabel">{text}</span></button>;
+ return <button type="button" className="foonCartAdd" aria-label={text} disabled={disabled} onClick={()=>{if(disabled)return;onClick?.();window.dispatchEvent(new CustomEvent("foon:storefront-cart-add",{detail:{slug,id,options}}));}}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4h2l3 11h10l3-8H6M10 20h.01M18 20h.01"/></svg><span className="foonCartAddLabel">{text}</span></button>;
 }
 export default function StorefrontCart({checkoutPolicy,slug,language,controls=defaultPublicControls,signedIn=false,linked=false,service=false,customerPhone="",deliveryAddress="",deliveryCity="",customerCountry="",merchantCountry="SA",deliveryCountries=["SA"]}:{checkoutPolicy?:CheckoutPolicy;slug:string;language:Language;controls?:PublicControls;signedIn?:boolean;linked?:boolean;service?:boolean;customerPhone?:string;deliveryAddress?:string;deliveryCity?:string;customerCountry?:string;merchantCountry?:string;deliveryCountries?:string[]}){
  const tr=(ar:string,en:string,fr:string)=>language==="ar"?ar:language==="fr"?fr:en;
@@ -85,14 +86,14 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  useEffect(()=>{
   let active=true;
   const handler=async(event:Event)=>{
-   const detail=(event as CustomEvent<{slug?:string;id?:string}>).detail;
+   const detail=(event as CustomEvent<{slug?:string;id?:string;options?:unknown}>).detail;
    if(detail?.slug!==slug||typeof detail.id!=="string"||!uuid.test(detail.id))return;
    if(busyRef.current)return;
    setWorking(true);setMessage("");
    try{
     const r=await fetch("/api/customer/cart?store="+encodeURIComponent(slug)+"&product="+encodeURIComponent(detail.id),{cache:"no-store"}),body=await r.json();
     if(!r.ok||!body.ok)throw Error(body.code??"CART_UNAVAILABLE");
-    if(active){setPending({item:body.item,groups:body.groups});setSelected([]);panel.current?.scrollIntoView({block:"nearest"});}
+    if(active){setPending({item:body.item,groups:body.groups});setSelected(validPreselectedOptions(detail.options,body.groups,body.item.variants??[]));panel.current?.scrollIntoView({block:"nearest"});}
    }catch(e){if(active)setMessage(error(e instanceof Error?e.message:""));}finally{if(active)setWorking(false);}
   };
   window.addEventListener("foon:storefront-cart-add",handler);return()=>{active=false;window.removeEventListener("foon:storefront-cart-add",handler);};
