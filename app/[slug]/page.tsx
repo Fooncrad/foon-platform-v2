@@ -16,6 +16,7 @@ import {publicMenuData} from "@/lib/restaurant/public-menu";
 import {tenantPublicControls} from "@/lib/tenant/public-controls";
 import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
 import {addressFromStoredFields} from "@/lib/tenant/delivery-address-sync";
+import {buildStorefrontGalleries} from "@/lib/catalog/storefront-media";
 
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 
@@ -84,6 +85,32 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
   }catch(fallbackError){catalogError=true;console.error("[FOON_STOREFRONT_CATALOG]",{slug,tenantId:String(tenant.id),stage:"products",error:fallbackError});}
  }
 
+ // Batch-load media only for products on the current page; fall back safely
+ // if an optional media table is unavailable on an older installation.
+ let productGalleryRows:RowDataPacket[]=[];
+ let variantGalleryRows:RowDataPacket[]=[];
+ if(products.length&&!catalogError){
+  const ids=products.map(product=>String(product.id));
+  const slots=ids.map(()=>"?").join(",");
+  try{
+   const [photos]=await database().execute<RowDataPacket[]>(
+    "SELECT product_id,image_url FROM catalog_images WHERE tenant_id=? AND product_id IN ("+slots+") ORDER BY product_id,sort_order,id",
+    [String(tenant.id),...ids]);
+   productGalleryRows=photos;
+  }catch(error){console.error("[FOON_STOREFRONT_GALLERY]",{slug,stage:"products",error});}
+  try{
+   const [photos]=await database().execute<RowDataPacket[]>(
+    "SELECT v.product_id,v.id AS variant_id,v.sku,i.image_url FROM (SELECT cv.tenant_id,cv.product_id,cv.id,cv.sku,cv.created_at,ROW_NUMBER() OVER (PARTITION BY cv.product_id ORDER BY cv.created_at,cv.id) AS variant_rank FROM catalog_variants cv WHERE cv.tenant_id=? AND cv.product_id IN ("+slots+") AND cv.enabled=TRUE AND EXISTS (SELECT 1 FROM catalog_variant_images existing WHERE existing.tenant_id=cv.tenant_id AND existing.product_id=cv.product_id AND existing.variant_id=cv.id)) v JOIN catalog_variant_images i ON i.tenant_id=v.tenant_id AND i.product_id=v.product_id AND i.variant_id=v.id WHERE v.variant_rank<=4 ORDER BY v.product_id,v.created_at,v.id,i.sort_order,i.id",
+    [String(tenant.id),...ids]);
+   variantGalleryRows=photos;
+  }catch(error){console.error("[FOON_STOREFRONT_GALLERY]",{slug,stage:"variants",error});}
+ }
+ const galleries=buildStorefrontGalleries(
+  products.map(product=>({id:String(product.id),image_url:product.image_url?String(product.image_url):null})),
+  productGalleryRows.map(photo=>({product_id:String(photo.product_id),image_url:String(photo.image_url)})),
+  variantGalleryRows.map(photo=>({product_id:String(photo.product_id),variant_id:String(photo.variant_id),sku:photo.sku?String(photo.sku):null,image_url:String(photo.image_url)}))
+ );
+
  const {previewTemplate}=query;
  const locale=(await cookies()).get("foon_language")?.value;
  const language:ActivityLanguage=locale==="en"||locale==="fr"?locale:"ar";
@@ -111,7 +138,7 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
  const [lastDelivery]=cartUser?await database().execute<RowDataPacket[]>("SELECT order_notes FROM restaurant_orders WHERE customer_user_id=? AND channel='delivery' AND order_notes LIKE 'Delivery address: %' ORDER BY created_at DESC LIMIT 1",[cartUser]):[[]];
  const savedAddress=String(lastDelivery[0]?.order_notes??"").replace(/^Delivery address: /,"");
  const [brandingRows]=await database().execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND status='active' AND archived=FALSE LIMIT 1",[String(tenant.id)]);
- return <ActivityStorefront merchantCountry={merchantCountry} deliveryCountries={deliveryCountries} controls={publicControls} branding={brandingRows.length?parseData(brandingRows[0].data):{}} checkoutEnabled={checkoutEnabled} requestMode={requestMode as "appointment"|"quote"|"inquiry"|null} customerPhone={String(contactRows[0]?.phone??customerAddress?.phone??"")} deliveryAddress={customerAddress?String([customerAddress.district,addressFromStoredFields(customerAddress.street_address,customerAddress.delivery_notes)].filter(Boolean).join("، ")):savedAddress} deliveryCity={String(customerAddress?.city??"")} customerCountry={String(customerAddress?.country_code??"")} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??""),description:language==="en"?String(c.description_en??""):language==="fr"?String(c.description_fr??""):String(c.description_ar??""),imageUrl:c.image_url?String(c.image_url):null}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),description:language==="en"?String(p.description_en??""):language==="fr"?String(p.description_fr??""):String(p.description_ar??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),productType:String(p.product_type),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null}))}/>;
+ return <ActivityStorefront merchantCountry={merchantCountry} deliveryCountries={deliveryCountries} controls={publicControls} branding={brandingRows.length?parseData(brandingRows[0].data):{}} checkoutEnabled={checkoutEnabled} requestMode={requestMode as "appointment"|"quote"|"inquiry"|null} customerPhone={String(contactRows[0]?.phone??customerAddress?.phone??"")} deliveryAddress={customerAddress?String([customerAddress.district,addressFromStoredFields(customerAddress.street_address,customerAddress.delivery_notes)].filter(Boolean).join("، ")):savedAddress} deliveryCity={String(customerAddress?.city??"")} customerCountry={String(customerAddress?.country_code??"")} signedIn={Boolean(cartUser)} linked={cartLinks.length>0} name={String(tenant.name)} slug={slug} activity={activity} template={selected} language={language} categories={categories.map(c=>({id:String(c.id),name:String(c.name_ar),nameEn:String(c.name_en??""),nameFr:String(c.name_fr??""),description:language==="en"?String(c.description_en??""):language==="fr"?String(c.description_fr??""):String(c.description_ar??""),imageUrl:c.image_url?String(c.image_url):null}))} selectedCategory={category} search={search} page={safePage} total={total} pageSize={limit} catalogError={catalogError} products={products.map(p=>({id:String(p.id),name:String(p.name_ar),nameEn:String(p.name_en??""),nameFr:String(p.name_fr??""),description:language==="en"?String(p.description_en??""):language==="fr"?String(p.description_fr??""):String(p.description_ar??""),category:language==="en"?String(p.category_name_en??p.category_name):language==="fr"?String(p.category_name_fr??p.category_name):String(p.category_name),productType:String(p.product_type),...catalogQuantityPolicy(p.attributes),price:Number(p.price),currency:String(p.currency),imageUrl:p.image_url?String(p.image_url):null,images:galleries[String(p.id)]?.images??[],variantGalleries:galleries[String(p.id)]?.variants??[]}))}/>;
 
 }
 
