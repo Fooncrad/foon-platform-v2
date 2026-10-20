@@ -1,10 +1,10 @@
-const CACHE="foon-pos-shell-v3";
+const CACHE="foon-pos-shell-v4";
 const SHELL=["/offline"];
 const MENU_CACHE="foon-public-menu-v1",MAX_AGE=7*86400000;
-// Signed-in workspace pages (POS etc.) and their hashed Next.js assets, so an
-// already-opened POS survives a reload without Internet. Pages are cleared on
-// logout/login and never served after PAGE_MAX_AGE.
-const PAGE_CACHE="foon-workspace-pages-v1",STATIC_CACHE="foon-next-static-v1",PAGE_MAX_AGE=86400000,MAX_PAGES=30,MAX_STATIC=400;
+// Cache only non-personal public offline shell and versioned static assets.
+// Never cache protected workspace HTML: server-rendered app data may expose
+// user, staff, customer, and tenant details after session expiry or account change.
+const STATIC_CACHE="foon-next-static-v1",MAX_STATIC=400;
 // Keep in sync with ACTIVITY_ROUTE_SLUGS in lib/tenant/workspace-routes.ts.
 const workspaceRoots=new Set(["restaurant","cafe","sweets","grocery","fashion","perfume","accessories","watches","gifts","ecommerce","carwash","car","laundry","salon","contracting","workspace"]);
 const workspacePage=path=>workspaceRoots.has(path.split("/")[1])&&!/\/(payments|media-studio)(\/|$)/.test(path);
@@ -33,11 +33,11 @@ self.addEventListener("message",event=>{
  })());
 });
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));});
-self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("foon-pos-shell-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
+self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>(key.startsWith("foon-pos-shell-")&&key!==CACHE)||key.startsWith("foon-workspace-pages-")).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",event=>{
  const request=event.request;
  const url=new URL(request.url);
- if(request.method==="POST"&&url.origin===self.location.origin&&["/api/auth/logout","/api/auth/login"].includes(url.pathname)){event.waitUntil(caches.delete(PAGE_CACHE));return;}
+ if(request.method==="POST"&&url.origin===self.location.origin&&["/api/auth/logout","/api/auth/login"].includes(url.pathname)){event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("foon-workspace-pages-")).map(key=>caches.delete(key)))));return;}
  if(request.method!=="GET")return;
  if(url.origin===self.location.origin&&url.pathname.startsWith("/_next/static/")){
   event.respondWith((async()=>{
@@ -52,15 +52,11 @@ self.addEventListener("fetch",event=>{
  }
  if(request.mode!=="navigate")return;
  if(url.origin===self.location.origin&&workspacePage(url.pathname)){event.respondWith((async()=>{
-  const cache=await caches.open(PAGE_CACHE),key=url.pathname+url.search;
-  const fallback=async()=>{const saved=await cache.match(key);if(saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=PAGE_MAX_AGE)return saved;return await caches.match("/offline")??Response.error();};
-  let response;
-  try{response=await fetch(request);}catch{return await fallback();}
-  if(response.ok&&response.type==="basic"&&!response.redirected&&response.headers.get("content-type")?.includes("text/html")){
-   const headers=new Headers(response.headers);headers.set("x-foon-saved",String(Date.now()));headers.delete("set-cookie");
-   await cache.put(key,new Response(await response.clone().blob(),{status:200,headers}));event.waitUntil(trim(PAGE_CACHE,MAX_PAGES));
-  }else await cache.delete(key);
-  return response;
+  // Remove any legacy private HTML caches from earlier worker versions.
+  const legacy=(await caches.keys()).filter(key=>key.startsWith("foon-workspace-pages-"));
+  await Promise.all(legacy.map(key=>caches.delete(key)));
+  // An offline account cannot be verified; fail closed to the public offline shell.
+  try{return await fetch(request);}catch{return await caches.match("/offline")??Response.error();}
  })());return;}
  const slug=url.origin===self.location.origin?menuSlug(url.pathname):null;
  if(slug){event.respondWith((async()=>{
