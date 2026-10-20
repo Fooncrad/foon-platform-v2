@@ -688,3 +688,19 @@
   outline: 3px solid var(--activity-accent, #c59a43);
   outline-offset: 2px;
 }
+
+
+/* Customer product galleries: touch-friendly, bounded to the modal and 320px viewports. */
+.foonActivityProductDialog .foonActivityGallery{display:grid;gap:8px;min-width:0;max-width:100%;}
+.foonActivityProductDialog .foonActivityGalleryThumbs{display:flex;gap:8px;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;padding-block:4px;}
+.foonActivityProductDialog .foonActivityGalleryThumbs button{flex:0 0 64px;width:64px;height:64px;border:2px solid var(--activity-border,#9b9690);border-radius:10px;padding:3px;background:transparent;cursor:pointer;}
+.foonActivityProductDialog .foonActivityGalleryThumbs button[aria-pressed=true]{border-color:var(--activity-accent,#e2a93b);outline:2px solid var(--activity-accent,#e2a93b);outline-offset:1px;}
+.foonActivityProductDialog .foonActivityGalleryThumbs img{width:100%;height:100%;object-fit:cover;border-radius:6px;}
+.foonActivityProductDialog .foonActivityGalleryCount{justify-self:end;font-variant-numeric:tabular-nums;}
+.foonActivityProductDialog .foonActivityVariantPreview{display:grid;gap:8px;min-width:0;max-width:100%;}
+.foonActivityProductDialog .foonActivityVariantPreview>p{font-size:12px;line-height:1.6;color:var(--activity-ink,#333);}
+.foonActivityProductDialog .foonActivityVariantPhotoTabs{display:flex;flex-wrap:wrap;gap:8px;min-width:0;}
+.foonActivityProductDialog .foonActivityVariantPhotoTabs button{min-height:44px;max-width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--activity-border,#bbb);background:transparent;color:inherit;cursor:pointer;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityVariantPhotoTabs button[aria-pressed=true]{background:var(--activity-accent,#e2a93b);color:#171613;border-color:transparent;font-weight:750;}
+.foonActivityProductDialog .foonActivityGalleryThumbs button:focus-visible,
+.foonActivityProductDialog .foonActivityVariantPhotoTabs button:focus-visible{outline:3px solid var(--activity-accent,#e2a93b);outline-offset:2px;}
