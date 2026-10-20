@@ -49,7 +49,7 @@ export default function ServiceRequestAction({slug,serviceId,serviceName,mode,la
     {!authenticated&&<p role="status">{t.login}</p>}
     <div className="foonServiceRequestButtons"><button type="submit" disabled={busy||!authenticated}>{busy?t.working:t.send}</button><button type="button" disabled={busy} onClick={()=>setOpen(false)}>{t.close}</button></div>
    </form>
-   {!authenticated&&(customerLoginEnabled?<InlineCustomerAuth slug={slug} language={language} onSuccess={()=>{setAuthenticated(true);setJoined(true);setError("");window.dispatchEvent(new CustomEvent("foon:customer-authenticated",{detail:{slug}}));}}/>:<p role="status">{t.disabled}</p>)}
+   {!authenticated&&(customerLoginEnabled?<InlineCustomerAuth slug={slug} language={language} purpose="service" onSuccess={()=>{setAuthenticated(true);setJoined(true);setError("");window.dispatchEvent(new CustomEvent("foon:customer-authenticated",{detail:{slug}}));}}/>:<p role="status">{t.disabled}</p>)}
    </div>}
   </div>}
  </div>;
