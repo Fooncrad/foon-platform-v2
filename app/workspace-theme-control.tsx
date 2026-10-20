@@ -1,4 +1,5 @@
 "use client";
+import "./workspace-theme-control.css";
 import {useWorkspaceTheme} from "@/lib/ux/use-workspace-theme";
 import {WORKSPACE_THEME_LABELS,type WorkspaceThemeLanguage,type WorkspaceThemeMode} from "@/lib/ux/workspace-theme";
 export default function WorkspaceThemeControl({language,className=""}:{language:WorkspaceThemeLanguage;className?:string}){
