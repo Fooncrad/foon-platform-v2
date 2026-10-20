@@ -20,6 +20,38 @@ test.beforeAll(async()=>{
  throw Error("Test server did not start");
 });
 test.afterAll(()=>server?.kill());
+test("public landing and marketplace share language, theme, footer and safe country selection on 320px",async({browser})=>{
+ const context=await browser.newContext({viewport:{width:320,height:720}});
+ try{
+  const page=await context.newPage();
+  await page.goto(origin+"/");
+  const landing=page.locator(".foonPublic"),header=page.locator(".foonPublicHeader");
+  await expect(header).toHaveCount(1);
+  await expect(page.locator(".foonPublicFooter")).toHaveCount(1);
+  await expect(header.getByRole("link",{name:"حسابي / دخول"})).toBeVisible();
+  await header.getByRole("button",{name:"تبديل المظهر"}).click();
+  await expect(landing).toHaveAttribute("data-theme","dark");
+  await page.locator(".foonHeroActions").getByRole("link",{name:"استكشف السوق"}).click();
+  const market=page.locator(".foonPublicMarket"),marketHeader=market.locator(".foonPublicHeader"),marketFooter=market.locator(".foonPublicFooter");
+  await expect(market).toHaveAttribute("data-theme","dark");
+  await expect(marketHeader).toHaveCount(1);
+  await expect(marketFooter).toHaveCount(1);
+  await expect(marketFooter.getByRole("link",{name:"حساب العميل"})).toHaveAttribute("href","/customer");
+  await expect(market.getByLabel("الدولة المعروضة في السوق")).toBeVisible();
+  await market.getByLabel("الدولة المعروضة في السوق").selectOption("SA");
+  await expect(page).toHaveURL(/\/market\?country=SA/);
+  await marketHeader.getByRole("combobox",{name:"اللغة / Language / Langue"}).selectOption("en");
+  await expect(marketHeader.getByRole("link",{name:"My account / Sign in"})).toBeVisible();
+  await expect(page.locator(".foonMarket")).toHaveAttribute("dir","ltr");
+  await expect(marketHeader.getByRole("button",{name:"Toggle appearance"})).toHaveAttribute("aria-pressed","true");
+  await marketHeader.getByRole("button",{name:"Toggle appearance"}).click();
+  await expect(market).toHaveAttribute("data-theme","light");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),"public market must not scroll horizontally at 320px").toBe(true);
+  const footerLinks=await marketFooter.locator("nav a").evaluateAll(nodes=>nodes.map(node=>node.getAttribute("href")));
+  expect(new Set(footerLinks).size).toBe(footerLinks.length);
+ }finally{await context.close();}
+});
+
 test("reference dashboard: authenticated tenant data, responsive layout and working navigation",async({page,browser})=>{
  const visualSlug="visual-dashboard-"+randomUUID().slice(0,8);
  await page.setViewportSize({width:1440,height:1000});
