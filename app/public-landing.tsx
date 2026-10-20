@@ -1,6 +1,6 @@
 "use client";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
-import LanguageSelector from "./components/language-selector";
+import {PublicSiteHeader,PublicSiteFooter} from "./public-site-chrome";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
 import Link from "next/link";
 type Language="ar"|"en"|"fr";
@@ -14,16 +14,15 @@ const copy={
 } as const;
 export default function PublicLanding({pages,plans=[]}:{pages:PageLink[];plans?:Plan[]}){
  const lang=useUiLanguage();
- const [theme,setTheme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
+ const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=copy[lang];
- const footerPages=pages.filter((page,index)=>!(["customer","market","account","billing","subscription"].includes(page.slug.toLowerCase())||pages.findIndex(other=>other.slug.toLowerCase()===page.slug.toLowerCase())!==index||pages.findIndex(other=>other.title.trim().toLocaleLowerCase()===page.title.trim().toLocaleLowerCase())!==index));
- const toggleTheme=()=>{const next=theme==="light"?"dark":"light";setTheme(next);localStorage.setItem("foon-public-theme",next)};
+
  return <main className="foonPublic" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"}>
-  <header className="foonPublicHeader"><Link className="foonPublicBrand" href="/" aria-label="FOON home"><span className="foonBrandMark">F</span><span>FOON<small>PLATFORM</small></span></Link><nav aria-label="Main navigation"><Link href="/market">{t.market}</Link><a href="#features">{t.nav}</a>{plans.length>0&&<a href="#plans">{lang==="ar"?"الباقات":lang==="en"?"Plans":"Offres"}</a>}<a href="#how">{t.how}</a></nav><div className="foonPublicControls"><LanguageSelector className="foonLanguageControl"/><button className="foonThemeControl" type="button" onClick={toggleTheme} aria-label={t.theme} aria-pressed={theme==="dark"}>{theme==="light"?"☾":"☀"}</button><Link className="foonLogin" href="/login">{t.login}</Link><Link className="foonHeaderCta" href="/register">{t.start}</Link></div></header>
+  <PublicSiteHeader home plans={plans.length>0}/>
   <section className="foonPublicHero"><div className="foonHeroCopy"><span className="foonEyebrow"><span aria-hidden="true">✦</span> {t.badge}</span><h1>{t.title}</h1><p>{t.lead}</p><div className="foonHeroActions"><Link href="/register" className="foonButtonPrimary">{t.start} <span aria-hidden="true">↗</span></Link><Link href="/market" className="foonButtonOutline">{t.market}</Link></div><div className="foonHeroTags"><span>01 / FOON</span><span>✦</span><span>02 / PLATFORM</span></div></div><div className="foonHeroArt" aria-hidden="true"><div className="foonArtOrbit foonArtOrbitOne"/><div className="foonArtOrbit foonArtOrbitTwo"/><div className="foonArtCenter"><span>F</span><small>FOON</small></div><div className="foonArtChip foonArtChipTop">✦</div><div className="foonArtChip foonArtChipBottom">◈</div></div></section>
   <section id="features" className="foonPublicSection"><div className="foonSectionIntro"><span className="foonSectionKicker">01 / PLATFORM</span><h2>{t.features}</h2><p>{t.featuresText}</p></div><div className="foonFeatureGrid">{t.cards.map(([title,body],i)=><article className="foonFeatureCard" key={title}><span className="foonFeatureNumber">0{i+1}</span><span className="foonFeatureIcon" aria-hidden="true">{["◈","✧","◎"][i]}</span><h3>{title}</h3><p>{body}</p></article>)}</div></section>
   {plans.length>0&&<section id="plans" className="foonPublicSection"><div className="foonSectionIntro"><span className="foonSectionKicker">PLANS / FOON</span><h2>{lang==="ar"?"الباقات والأسعار":lang==="en"?"Plans and pricing":"Offres et tarifs"}</h2><p>{lang==="ar"?"الباقات المتاحة حاليًا، والأسعار حسب إعدادات المنصة.":lang==="en"?"Currently enabled plans and their configured prices.":"Offres actives et tarifs configurés."}</p></div><div className="foonFeatureGrid">{plans.map(plan=><article className="foonFeatureCard" key={plan.code}><h3>{lang==="ar"?plan.nameAr:plan.nameEn}</h3>{plan.prices.length?plan.prices.map((price,i)=><p key={i}><strong dir="ltr">{price.price.toFixed(2)} {price.currency}</strong> · {price.cycle==="monthly"?(lang==="ar"?"شهريًا":lang==="en"?"Monthly":"Mensuel"):price.cycle==="yearly"?(lang==="ar"?"سنويًا":lang==="en"?"Yearly":"Annuel"):price.cycle}</p>):<p>{lang==="ar"?"تواصل لمعرفة السعر":lang==="en"?"Contact for pricing":"Prix sur demande"}</p>}<Link className="foonButtonOutline" href="/register">{t.start}</Link></article>)}</div></section>}
   <section id="how" className="foonPublicSection foonHowSection"><div className="foonSectionIntro"><span className="foonSectionKicker">02 / WORKFLOW</span><h2>{t.stepsTitle}</h2></div><div className="foonSteps">{t.steps.map(([title,body],i)=><article key={title}><strong>0{i+1}</strong><h3>{title}</h3><p>{body}</p></article>)}</div></section>
-  <footer className="foonPublicFooter"><div><strong>FOON</strong><p>{t.footer}</p></div><nav aria-label="Footer"><Link href="/market">{t.market}</Link><Link href="/customer">{t.customer}</Link>{footerPages.map(p=><Link href={`/p/${encodeURIComponent(p.slug)}`} key={p.slug}>{p.title}</Link>)}</nav><small>© FOON</small></footer>
+  <PublicSiteFooter pages={pages}/>
  </main>
 }

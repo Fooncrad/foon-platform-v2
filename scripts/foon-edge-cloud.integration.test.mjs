@@ -83,6 +83,14 @@ test("real MySQL cloud sync is atomic, scoped, revocable and idempotent under co
   await pool.execute("UPDATE restaurant_menu_items SET price=11.00 WHERE id=?",[itemId]);
   const stale=await receiveEdgeRequest(request(second),options);assert.equal(stale.status,409);assert.equal((await stale.json()).error,"EDGE_CATALOG_PRICE_CHANGED");
   await pool.execute("UPDATE restaurant_menu_items SET price=9.95 WHERE id=?",[itemId]);
+  const configId=randomUUID(),taxedId=randomUUID(),taxed=digest({...event,eventSeq:2,orderId:taxedId,payload:{...event.payload,id:taxedId}});
+  await pool.execute("INSERT INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'storefront_config','Storefront','active',?)",[configId,tenantId,JSON.stringify({vatEnabled:"yes",vatRate:15,checkoutServiceFee:5,legalName:"Edge LLC",taxNumber:"300000000000003"})]);
+  const taxedResponse=await receiveEdgeRequest(request(taxed),options);assert.equal(taxedResponse.status,201,JSON.stringify(await taxedResponse.clone().json()));
+  const [[taxedOrder]]=await pool.execute("SELECT subtotal,discount,total,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[taxedId,tenantId]);
+  assert.deepEqual([taxedOrder.subtotal,taxedOrder.discount,taxedOrder.total],["19.90","0.00","27.89"]);
+  const taxedSnapshot=typeof taxedOrder.checkout_snapshot==="string"?JSON.parse(taxedOrder.checkout_snapshot):taxedOrder.checkout_snapshot;
+  assert.equal(taxedSnapshot.version,1);assert.equal(taxedSnapshot.tax,2.99);assert.equal(taxedSnapshot.serviceFee,5);assert.equal(taxedSnapshot.total,27.89);assert.equal(taxedSnapshot.seller.taxNumber,"300000000000003");
+  await pool.execute("DELETE FROM restaurant_resources WHERE id=? AND tenant_id=?",[configId,tenantId]);
   const kitchenActor=randomUUID(),kitchenDevice=randomUUID(),kitchenToken=randomBytes(48).toString("hex");
   await pool.execute("INSERT INTO users(id,email,status) VALUES (?,?,'active')",[kitchenActor,kitchenActor+"@test.example"]);
   await pool.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'kitchen','active')",[randomUUID(),tenantId,kitchenActor]);

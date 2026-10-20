@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {receiveEdgeRequest} from "../lib/platform/edge-sync-http.mjs";
+import {receiveEdgeRequest,EDGE_PERMANENT_CONFLICTS} from "../lib/platform/edge-sync-http.mjs";
 import {authenticateEdgeDevice,deviceTokenHash,deviceReceiptKey,requireEdgePermission} from "../lib/platform/edge-device-auth.mjs";
 import {eventDigest} from "./foon-edge-sync-contract.mjs";
 const token="a".repeat(96),masterKey="m".repeat(64);
@@ -36,4 +36,13 @@ test("edge permission honors branch assignment and explicit denial over broad ma
  assert.ok(queries.every(q=>q.sql.endsWith("FOR UPDATE")&&q.args.includes(identity.branchId)));
  grants.push({permission_key:"pos.create",allowed:0});await assert.rejects(()=>requireEdgePermission(connection,identity,"pos","create",true),/EDGE_FORBIDDEN/);
  grants=[{permission_key:"pos.create",allowed:1}];assigned=false;await assert.rejects(()=>requireEdgePermission(connection,identity,"pos","create"),/EDGE_FORBIDDEN/);
+});
+
+test("malformed carts and permanently invalid sync payloads require review, not retry",()=>{
+ for(const code of ["EDGE_INVALID_ORDER_CREATE","EDGE_INVALID_CART","EDGE_INVALID_CART_ITEM","EDGE_INVALID_CATALOG_PRICE","EDGE_ORDER_TOTAL_OVERFLOW","EDGE_ORDER_CHANNEL_NOT_READY","EDGE_INVALID_CHECKOUT_SETTINGS","EDGE_CATALOG_PRICE_CHANGED"]){
+  assert.equal(EDGE_PERMANENT_CONFLICTS.has(code),true,code+" should result in HTTP 409");
+ }
+ for(const code of ["EDGE_NOT_CONFIGURED","EDGE_SYNC_UNAVAILABLE","ER_LOCK_DEADLOCK","EDGE_ORDER_POLICY_UNRESOLVED"]){
+  assert.equal(EDGE_PERMANENT_CONFLICTS.has(code),false,code+" should not be marked as a permanent cart conflict");
+ }
 });

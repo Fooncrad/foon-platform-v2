@@ -13,11 +13,12 @@ import {normalizeReceiptPaperWidth,receiptPaperCss} from "@/lib/restaurant/brows
 import {kitchenTicketNotes} from "@/lib/restaurant/print-notes";
 import {finalReceiptEligible} from "@/lib/restaurant/final-receipt-policy";
 import {canRoleTransitionOrder} from "@/lib/restaurant/order-role-channel-policy";
-import {queuePosOrder,retryReviewedPosOrder,scopedPosOrders,pendingPosOrders,removePosOrder,markPosOrder,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
+import {queuePosOrder,retryReviewedPosOrder,scopedPosOrders,pendingPosOrders,removePosOrder,markPosOrder,offlineTableBlock,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import MenuChoices,{cartKey,choicePrice,choicesValid,type CartLine} from "./menu-choices";
 type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;subtotal:number|null;discount:number|null;checkout_snapshot:(CheckoutTotals&{version?:number;seller:{name:string;taxNumber:string;address:string;phone:string}})|null;pickup_point:{name:string;address:string;instructions:string|null;mapUrl:string|null}|null;hotel_room:{roomNumber:string}|null;version:number;channel:string;table_id?:string|null;reservation_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;kitchen_notes?:string|null;order_notes?:string|null;created_at:string;items:{name:string;quantity:number;price:number|null;line_total:number|null}[]};
 const statuses:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي"};
+const offlineTableMessages={TABLE_REQUIRED:"اختر الطاولة قبل حفظ الطلب دون اتصال.",TABLE_UNKNOWN:"هذه الطاولة غير موجودة في النسخة المحفوظة على الجهاز. لم يُحفظ الطلب.",TABLE_NOT_AVAILABLE:"الطاولة ليست متاحة حسب آخر تحديث قبل انقطاع الاتصال. اختر طاولة أخرى.",PARTY_SIZE:"عدد الضيوف غير صالح أو أكبر من سعة الطاولة.",TABLE_QUEUED:"لهذه الطاولة طلب محفوظ على الجهاز بانتظار المزامنة. أضف الأصناف بعد عودة الاتصال أو اختر طاولة أخرى."} as const;
 const channels:Record<string,string>={dine_in:"داخل المطعم",takeaway:"سفري",delivery:"توصيل",pickup:"نقطة استلام",room_service:"خدمة الغرف",hotel_service:"خدمة الفندق",reservation:"حجز مع طلب",preorder:"طلب مسبق"};
 const payments:Record<string,string>={paid:"مدفوع",unpaid:"غير مدفوع",refunded:"تم رد المبلغ"};
 const orderUi={
@@ -67,7 +68,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  async function create(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy)return;if(branchUnavailable){setMessage(translateUi("لا يمكن إنشاء طلب قبل تعيين فرع لحسابك."));return;}
   const f=new FormData(event.currentTarget);
-  const payload={currency,branchId:f.get("branchId"),channel:f.get("channel"),tableId:channel==="dine_in"?f.get("tableId")||null:null,partySize:channel==="dine_in"?Number(f.get("partySize")):null,customerName:f.get("customerName"),customerPhone:f.get("customerPhone"),couponCode:f.get("couponCode")||null,kitchenNotes:f.get("kitchenNotes")||null,orderNotes:f.get("orderNotes")||null,items:Object.values(cart).filter(line=>line.quantity>0).map(line=>({id:line.itemId,quantity:line.quantity,options:line.options}))};
+  const payload={currency,branchId:f.get("branchId"),channel:f.get("channel"),tableId:channel==="dine_in"?f.get("tableId")||null:null,partySize:channel==="dine_in"?Number(f.get("partySize")):null,customerName:f.get("customerName"),customerPhone:f.get("customerPhone"),couponCode:f.get("couponCode")||null,kitchenNotes:f.get("kitchenNotes")||null,orderNotes:f.get("orderNotes")||null,...(module==="pos"&&f.get("paymentStatus")==="paid"?{paymentStatus:"paid",paymentMethod:f.get("paymentMethod")}:{}),items:Object.values(cart).filter(line=>line.quantity>0).map(line=>({id:line.itemId,quantity:line.quantity,options:line.options}))};
   if(payload.items.length===0){setMessage(translateUi("أضف منتجاً واحداً على الأقل قبل إنشاء الطلب."));return;}
   if(!payload.branchId){setMessage(translateUi("حدد الفرع قبل إنشاء الطلب."));return;}
   const encoded=JSON.stringify(payload);
@@ -75,11 +76,11 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   const id=requestRef.current.key,body={...payload,requestKey:id};
   setBusy(true);
   try{
-   if(!navigator.onLine){if(channel==="dine_in"){setMessage("طلبات الطاولات تتطلب اتصالاً للتحقق من إشغال الطاولة. لم يُحفظ الطلب أو يُرسل.");return;}await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});setQuantityDrafts({});await updateQueueCounts();setMessage("حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.");return;}
+   if(!navigator.onLine){if(channel==="dine_in"){const blocked=offlineTableBlock(tables,scopedPosOrders(await pendingPosOrders(),tenantId,String(payload.branchId??"")),String(payload.branchId??""),String(payload.tableId??""),Number(payload.partySize));if(blocked){setMessage(offlineTableMessages[blocked]);return;}}await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});setQuantityDrafts({});await updateQueueCounts();setMessage(channel==="dine_in"?"حُفظ طلب الطاولة على هذا الجهاز. سيتحقق الخادم من إشغال الطاولة عند عودة الإنترنت؛ إن كانت مشغولة سيظهر الطلب في قائمة المراجعة.":"حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.");return;}
    await operationApi(tenantId,"pos","POST",body);requestRef.current=null;setCart({});setQuantityDrafts({});setMessage(ui.created);void refresh().then(()=>onChanged()).catch(()=>setMessage("تم تأكيد الطلب من الخادم، لكن تعذر تحديث القائمة. أعد تحميل الطلبات عند عودة الاتصال."));
   }catch(error){
    if(isNetworkFailure(error)){
-    if(channel==="dine_in"){setMessage("تعذر التحقق من حالة الطاولة بعد انقطاع الاتصال. راجع سجل الطلبات قبل إعادة المحاولة.");return;}
+    if(channel==="dine_in"){const blocked=offlineTableBlock(tables,scopedPosOrders(await pendingPosOrders(),tenantId,String(payload.branchId??"")),String(payload.branchId??""),String(payload.tableId??""),Number(payload.partySize));if(blocked){setMessage(offlineTableMessages[blocked]);return;}}
     try{await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});setQuantityDrafts({});await updateQueueCounts();setMessage("الاتصال انقطع؛ حُفظ الطلب محلياً بانتظار التحقق والمزامنة.");}
     catch(storageError){setMessage("تعذر حفظ الطلب محلياً. لا تغلق الصفحة: "+String(storageError));}
    }else setMessage(error instanceof Error?error.message:"تعذر إنشاء الطلب.");
