@@ -547,8 +547,11 @@ test('storefront carts support retail variants and laundry collection without le
   const grocery=await create('grocery'),group=randomUUID(),option=randomUUID();
   await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,required,min_select,max_select) VALUES (?,?,?,'Size',TRUE,1,1)",[group,grocery.owner.tenant.id,grocery.id]);
   await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,price_delta,stock_quantity) VALUES (?,?,?,'Large',2.5,5)",[option,grocery.owner.tenant.id,group]);
+  const colorGroup=randomUUID(),red=randomUUID(),blue=randomUUID();
+  await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,required,min_select,max_select) VALUES (?,?,?,'Color',TRUE,1,1)",[colorGroup,grocery.owner.tenant.id,grocery.id]);
+  await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,price_delta,stock_quantity) VALUES (?,?,?,'Red',0,5),(?,?,?,'Blue',0,0)",[red,grocery.owner.tenant.id,colorGroup,blue,grocery.owner.tenant.id,colorGroup]);
   const variant=randomUUID(),productImage='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="blue"/></svg>'),variantImage='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="red"/></svg>');
-  await db.execute("INSERT INTO catalog_variants(id,tenant_id,product_id,combination_key,option_ids,sku,stock_quantity) VALUES (?,?,?,?,?,'SIZE-L',5)",[variant,grocery.owner.tenant.id,grocery.id,createHash('sha256').update(option).digest('hex'),JSON.stringify([option])]);
+  await db.execute("INSERT INTO catalog_variants(id,tenant_id,product_id,combination_key,option_ids,sku,stock_quantity) VALUES (?,?,?,?,?,'SIZE-L',5)",[variant,grocery.owner.tenant.id,grocery.id,createHash('sha256').update([option,red].sort().join(':')).digest('hex'),JSON.stringify([option,red])]);
   await db.execute("INSERT INTO catalog_images(id,tenant_id,product_id,image_url,sort_order) VALUES (?,?,?,?,0)",[randomUUID(),grocery.owner.tenant.id,grocery.id,productImage]);
   await db.execute("INSERT INTO catalog_variant_images(id,tenant_id,product_id,variant_id,image_url,sort_order) VALUES (?,?,?,?,?,0)",[randomUUID(),grocery.owner.tenant.id,grocery.id,variant,variantImage]);
   const page=await customer.newPage();await page.goto(origin+'/'+grocery.slug);
@@ -559,12 +562,17 @@ test('storefront carts support retail variants and laundry collection without le
   const detail=page.getByRole('dialog',{name:'Cart item grocery'});
   await expect(detail.locator('.foonActivityDialogImage')).toHaveAttribute('src',productImage);
   await expect(detail.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toBeDisabled();
+  await expect(detail.getByRole('radio',{name:/Blue/})).toBeDisabled();
   await detail.getByRole('radio',{name:/Large/}).check();
+  await expect(detail.getByRole('button',{name:'إضافة إلى السلة',exact:true})).toBeDisabled();
+  await detail.getByRole('radio',{name:/Red/}).check();
   await expect(detail.locator('.foonActivityDialogImage')).toHaveAttribute('src',variantImage);
   await expect(detail.locator('.foonActivityDialogPurchase')).toContainText('9.75 USD');
   await detail.getByRole('button',{name:'إضافة إلى السلة',exact:true}).click();
   await expect(detail).toBeHidden();
   await expect(cart.getByRole('radio',{name:/Large/})).toBeChecked();
+  await expect(cart.getByRole('radio',{name:/Red/})).toBeChecked();
+  await expect(cart.getByRole('radio',{name:/Blue/})).toBeDisabled();
   await expect(cart.getByRole('button',{name:'تأكيد الإضافة',exact:true})).toBeEnabled();
   await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();
   await cart.getByLabel('الكمية',{exact:true}).fill('2');await expect(cart).toContainText('19.50 USD');await expect(cart).toContainText('Large');
@@ -581,6 +589,7 @@ test('storefront carts support retail variants and laundry collection without le
   const response=await result;expect(response.status(),await response.text()).toBe(201);const order=await response.json();expect(order.total).toBe(19.5);expect(order.currency).toBe('USD');await expect(cart.getByRole('status')).toContainText('19.50 USD');
   const [[stock]]=await db.execute('SELECT stock_quantity FROM catalog_products WHERE id=?',[grocery.id]);expect(Number(stock.stock_quantity)).toBe(3);
   const [[optionStock]]=await db.execute('SELECT stock_quantity FROM catalog_option_values WHERE id=?',[option]);expect(Number(optionStock.stock_quantity)).toBe(3);
+  const [[redStock]]=await db.execute('SELECT stock_quantity FROM catalog_option_values WHERE id=?',[red]);expect(Number(redStock.stock_quantity)).toBe(3);
   const [[variantStock]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE id=?',[variant]);expect(Number(variantStock.stock_quantity)).toBe(3);
   const [[payment]]=await db.execute('SELECT payment_status FROM restaurant_orders WHERE id=?',[order.id]);expect(payment.payment_status).toBe('unpaid');
   const laundry=await create('laundry');await page.goto(origin+'/'+laundry.slug);await page.getByRole('button',{name:'إضافة الخدمة',exact:true}).click();await cart.getByRole('button',{name:'تأكيد الإضافة',exact:true}).click();await expect(cart.getByRole('heading',{name:/سلة الخدمات/})).toBeVisible();
