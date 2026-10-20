@@ -4,6 +4,7 @@ import {useSavedPreference} from "@/lib/ui/saved-preference";
 import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
+import {PublicMarketShell,PublicSiteHeader,PublicSiteFooter} from "@/app/public-site-chrome";
 import {getSystemMessage} from "@/lib/ui/system-messages";
 type Lang="ar"|"en"|"fr";
 type Theme="light"|"dark";
@@ -24,7 +25,7 @@ export default function LoginPage(){
    const next=new URLSearchParams(window.location.search).get("next");router.replace(next&&/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)?next:"/account");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
  }
- return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><Link href="/" className="auth-brand">FOON</Link><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
+ return <PublicMarketShell><PublicSiteHeader/><main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
  <form onSubmit={submit} className="auth-form"><label>{t.email}<input name="email" type="email" inputMode="email" autoComplete="email" required dir="ltr" placeholder="name@example.com"/></label><label>{t.password}<input name="password" type="password" autoComplete="current-password" required minLength={9} dir="ltr" placeholder="•••••••••"/></label><Link href="/forgot-password">{t.forgot}</Link>{error&&<div className="form-error" role="alert"><strong>{getSystemMessage(errorCode,lang).title}</strong><p>{error}</p><small dir="ltr">{errorCode}</small></div>}<button disabled={busy} aria-busy={busy}>{busy?t.busy:t.submit}</button></form>
- <p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
+ <p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main><PublicSiteFooter/></PublicMarketShell>
 }
