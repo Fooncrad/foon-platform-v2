@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {sameOptionSet,findSelectedVariant,validPreselectedOptions,selectedCatalogStockLimit,canAddCatalogUnit} from "../lib/catalog/variant-selection.ts";
+import {sameOptionSet,findSelectedVariant,validPreselectedOptions,selectedCatalogStockLimit,remainingCatalogStock,defaultCatalogAddQuantity,canAddCatalogUnit} from "../lib/catalog/variant-selection.ts";
 const red="11111111-1111-4111-8111-111111111111",large="22222222-2222-4222-8222-222222222222",blue="33333333-3333-4333-8333-333333333333";
 const groups=[{type:"single",required:true,min:1,max:1,values:[{id:red},{id:blue}]},{type:"single",required:true,min:1,max:1,values:[{id:large}]}];
 const variants=[{id:"variant-red",options:[red,large],stock:3},{id:"variant-blue",options:[blue,large],stock:0}];
@@ -58,4 +58,19 @@ test("measured inventory respects fractional stock and malformed selection",()=>
  assert.equal(canAddCatalogUnit(fractional,sku,[red],0.8,[{options:[red],quantity:0.3}],0.1),false);
  assert.equal(selectedCatalogStockLimit(fractional,sku,[red,red]),0);
  assert.equal(selectedCatalogStockLimit(fractional,sku,["unknown"]),0);
+});
+
+
+test("measured products can enter the basket at fractional available stock",()=>{
+ const partGroups=[{type:"single",required:true,min:1,max:1,values:[{id:red,stock:4}]}];
+ const sku=[{id:"fractional",options:[red],stock:0.375}];
+ const remaining=remainingCatalogStock(partGroups,sku,[red],2,[]);
+ assert.equal(remaining,0.375);
+ const initial=defaultCatalogAddQuantity(true,remaining);
+ assert.equal(initial,0.375);
+ assert.equal(canAddCatalogUnit(partGroups,sku,[red],2,[],initial),true);
+ assert.equal(defaultCatalogAddQuantity(false,remaining),1);
+ assert.equal(canAddCatalogUnit(partGroups,sku,[red],2,[],1),false);
+ assert.equal(remainingCatalogStock(partGroups,sku,[red],2,[{options:[red],quantity:0.25}]),0.125);
+ assert.equal(defaultCatalogAddQuantity(true,0.0009),0);
 });
