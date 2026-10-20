@@ -79,3 +79,24 @@
 .restaurantEmployeeGrantGroup .restaurantEmployeeGrants span{display:inline-flex;align-items:center;white-space:nowrap;font-weight:600}
 
 .restaurantCallNote{display:block;margin-top:6px;font-size:.85rem;line-height:1.65;color:#475569;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+
+
+/* The employee/owner workspace theme changes surfaces, not activity brand accents. */
+.restaurantApp[data-theme="light"]{color-scheme:light;--rc-surface:#fff}
+.restaurantApp[data-theme="dark"]{color-scheme:dark;--rc-page:#171a20;--rc-surface:#242832;--rc-text:#f8f3e9;--rc-muted:#c3ccd9;--rc-border:#424c5b;--rc-state-bg:#35302a;background:var(--rc-page);color:var(--rc-text)}
+.restaurantApp[data-theme="dark"] :is(.restaurantTopbar,.restaurantPanel,.restaurantMetrics article,.restaurantQuickActions>button,.restaurantQuickActions>a,.restaurantBranchSelector,.restaurantSearchButton,.restaurantIconButton,.restaurantPopover,.restaurantRoleBadge,.restaurantOutline,.restaurantEmpty,.restaurantBranchList>div,.restaurantOrderHead,.restaurantResourceList article,.restaurantOrderCards article,.restaurantResourceForm,.restaurantFeatureList>div,.restaurantSearchDialog,.restaurantStatusFilters,.restaurantOrderActions button,.foonBulkImport,.restaurantPrinterGuide){background:var(--rc-surface);color:var(--rc-text);border-color:var(--rc-border)}
+.restaurantApp[data-theme="dark"] :is(.restaurantTopbar,.restaurantPanel,.restaurantResourceForm) :is(h1,h2,h3,h4,strong,label,legend){color:var(--rc-text)}
+.restaurantApp[data-theme="dark"] :is(.restaurantBreadcrumb small,.restaurantPageHeading p,.restaurantPanel header p,.restaurantOrderHead,.restaurantResourceList small,.restaurantMetrics p,.restaurantMetrics article>small,.restaurantBranchList small,.restaurantOrderTime,.restaurantEmpty p,.restaurantFinePrint,.restaurantPopover p){color:var(--rc-muted)}
+.restaurantApp[data-theme="dark"] :is(input,select,textarea){background:var(--rc-surface);color:var(--rc-text);border-color:var(--rc-border)}
+.restaurantApp[data-theme="dark"] :is(.restaurantSearchDialog nav button,.restaurantSearchDialog input,.restaurantBranchSelector select,.restaurantPopover button,.restaurantPopover a,.restaurantBranchForm input,.restaurantStatusFilters button,.restaurantListTools select,.foonBulkImportBody>button){background:var(--rc-surface);color:var(--rc-text);border-color:var(--rc-border)}
+.restaurantApp[data-theme="dark"] :is(.restaurantStatusFilters button[aria-pressed=true],.restaurantOrderHead,.restaurantOrderDining,.restaurantReservationDate,.restaurantReservationChips span,.calendarSummary>span){background:#343b49;color:var(--rc-text)}
+.restaurantApp[data-theme="dark"] .restaurantOrderActions .restaurantOrderAdvance{background:var(--rc-accent);color:#fff;border-color:var(--rc-accent)}
+.restaurantApp[data-theme="dark"] .restaurantEmpty h3{color:var(--rc-text)}
+.restaurantApp[data-theme="dark"] .restaurantMetricIcon{filter:saturate(.9)}
+.restaurantApp[data-theme="dark"] .restaurantTopbar{background:#20242cea}
+.restaurantApp[data-theme="dark"] .restaurantSidebar,
+.restaurantApp[data-theme="dark"] .restaurantDrawer aside{color:#fff}
+.restaurantApp[data-theme="dark"] .restaurantAppWide{color:inherit}
+.restaurantApp[data-theme="dark"] .restaurantStateBadge,
+.restaurantApp[data-theme="dark"] .restaurantPaymentBadge{color:var(--rc-state,#f4c184);background:var(--rc-state-bg,#41372a)}
+.restaurantApp[data-theme="dark"] .restaurantServiceBadge{color:#fff}
