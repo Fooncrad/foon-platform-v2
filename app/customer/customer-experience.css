@@ -57,3 +57,38 @@
  .customerDashboard:has(input:focus,.customerAddressForm textarea:focus,.customerProfileForm input:focus) .customerMobileNavigation{display:none}
 }
 @media(prefers-reduced-motion:reduce){.customerDashboard{scroll-behavior:auto}}
+
+
+/* Account-only palette; never overrides the customer-facing store's brand theme. */
+.customerDashboard{--customer-surface:#24221e;--customer-ink:#f8f3e9;--customer-muted:#d5cfc4;--customer-line:#514b42;color-scheme:dark}
+.customerDashboard[data-theme="light"]{--customer-surface:#fff;--customer-ink:#24221e;--customer-muted:#625f57;--customer-line:#dcd5c7;--customer-accent:#966510;background:#f8f7f3;color:var(--customer-ink);color-scheme:light}
+.customerDashboard[data-theme="light"] .customerHeader{border-bottom-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerHeader nav a{color:#754e07;background:#fff;border-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerHeader nav a:hover{background:#f4e9d0}
+.customerDashboard[data-theme="light"] .customerWelcome>span,
+.customerDashboard[data-theme="light"] .customerOverview h2,
+.customerDashboard[data-theme="light"] .customerBrand{color:#815911}
+.customerDashboard[data-theme="light"] :is(.customerWelcome p,.customerOverview p,.customerAddresses>header p,.customerOrderCard>time,.customerOrderCard>header small,.customerOrderCard>footer>span,.customerProfileEditor>p){color:var(--customer-muted)}
+.customerDashboard[data-theme="light"] .customerOverview>article{background:#fff;color:#24221e;border-color:var(--customer-line);box-shadow:0 4px 18px #362b1910}
+.customerDashboard[data-theme="light"] .customerOrderCard{background:#fdfbf7;border-color:var(--customer-line);--customer-status:#966510;--customer-status-bg:#e2a93b20}
+.customerDashboard[data-theme="light"] .customerOrderCard[data-status="preparing"]{--customer-status:#244e90;--customer-status-bg:#eaf1fd}
+.customerDashboard[data-theme="light"] .customerOrderCard[data-status="ready"]{--customer-status:#176443;--customer-status-bg:#e7f4e9}
+.customerDashboard[data-theme="light"] .customerOrderCard[data-status="completed"]{--customer-status:#475467;--customer-status-bg:#edf0f4}
+.customerDashboard[data-theme="light"] .customerOrderCard[data-status="cancelled"]{--customer-status:#a12e2b;--customer-status-bg:#fff0ed}
+.customerDashboard[data-theme="light"] .customerOrderCard>footer{border-top-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerOrderEmpty{background:#fff;border-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerOrderEmpty>span{color:#865f19}
+.customerDashboard[data-theme="light"] :is(.customerProfileEditor,.customerAddresses,.customerAddressItem,.customerAddressForm){background:#fff;color:var(--customer-ink);border-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerAddressItem>header strong{color:#795516}
+.customerDashboard[data-theme="light"] .customerAddressItem :is(p,small){color:var(--customer-ink)}
+.customerDashboard[data-theme="light"] .customerAddressForm :is(input,textarea,select),
+.customerDashboard[data-theme="light"] .customerProfileForm :is(input,textarea,select){background:#fff;color:var(--customer-ink);border-color:#a8a299;color-scheme:light}
+.customerDashboard[data-theme="light"] .customerProfileForm :is(input,textarea,select)::placeholder,
+.customerDashboard[data-theme="light"] .customerAddressForm :is(input,textarea,select)::placeholder{color:#6a675e}
+.customerDashboard[data-theme="light"] .customerUploadLabel{background:#fff;color:var(--customer-ink);border-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerPortalFooter{border-color:var(--customer-line)}
+.customerDashboard[data-theme="light"] .customerPortalFooter a{color:#704f11}
+.customerDashboard[data-theme="light"] .customerMobileNavigation{background:#fffefa;border-color:var(--customer-line);box-shadow:0 -8px 28px #0002}
+.customerDashboard[data-theme="light"] .customerMobileNavigation a{color:#4d4940}
+.customerDashboard[data-theme="light"] .customerMobileNavigation a[aria-current="location"]{background:#b77f1b;color:#fff}
+.customerDashboard[data-theme="light"] :is(.customerOrderCount,.customerOrderStatus){color:var(--customer-status,#815911)}
