@@ -263,7 +263,17 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await reservationCard.getByRole('button',{name:'تعديل',exact:true}).click();await expect(page.getByLabel('اسم الضيف',{exact:true})).toHaveValue('ضيف المعاينة');await page.getByRole('button',{name:'إلغاء',exact:true}).click();
  await page.setViewportSize({width:1440,height:1000});await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطلبات',exact:false}).click();await expect(page.locator('.restaurantOrderCards article').first()).toBeVisible();await captureScreenshot(page,{path:'work/merchant-order-cards-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();const smallOrderActions=await page.locator('.restaurantOrderActions button').evaluateAll(nodes=>nodes.map(n=>({label:(n.textContent||'').trim(),height:n.getBoundingClientRect().height,display:getComputedStyle(n).display,visibility:getComputedStyle(n).visibility})).filter(n=>n.height<44&&n.display!=='none'&&n.visibility!=='hidden'));expect(smallOrderActions,'Order buttons below 44px: '+JSON.stringify(smallOrderActions)).toEqual([]);await captureScreenshot(page,{path:'work/merchant-order-cards-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
- await publicPage.goto(origin+'/customer');await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await captureScreenshot(publicPage,{path:'work/menu-customer-orders-mobile.png',fullPage:true});
+ await publicPage.setViewportSize({width:320,height:700});
+  await publicPage.goto(origin+'/customer');
+  await expect(publicPage.locator('.customerOrderCard').first()).toBeVisible();
+  const customerNav=publicPage.locator('.customerMobileNavigation');
+  await expect(customerNav.locator('a')).toHaveCount(5);
+  await expect(customerNav.locator('a[href="#customer-orders"]')).toBeVisible();
+  await expect(publicPage.locator('#customer-addresses')).toBeVisible();
+  await customerNav.locator('a[href="#customer-addresses"]').click();
+  await expect(customerNav.locator('a[href="#customer-addresses"]')).toHaveAttribute('aria-current','location');
+  expect(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  await captureScreenshot(publicPage,{path:'work/menu-customer-orders-mobile.png',fullPage:true});
  await publicPage.goto(origin+"/"+visualSlug);
  await expect(publicPage.getByText(/المنيو محفوظ للتصفح دون اتصال/)).toBeVisible();
  await publicContext.setOffline(true);
