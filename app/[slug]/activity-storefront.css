@@ -325,3 +325,11 @@
 .foonActivityStorefront[data-template="salon-services"] .foonActivityHero {
   background: linear-gradient(120deg, var(--activity-soft), var(--activity-panel) 72%) !important;
 }
+
+
+/* The same in-place customer account journey for appointments and quotations. */
+.foonServiceRequestJourney{display:grid;gap:12px;min-width:0;max-width:100%}
+.foonServiceRequestJourney>.publicMenuInlineAuth{width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+.foonServiceRequestJourney>.publicMenuInlineAuth form{display:grid;gap:10px;min-width:0}
+.foonServiceRequestJourney>.publicMenuInlineAuth input{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.foonServiceRequestJourney .foonServiceRequestButtons button:disabled{opacity:.6;cursor:not-allowed}
