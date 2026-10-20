@@ -21,7 +21,7 @@ export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
 const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const allRoles:TenantRole[]=[...orderRoles];
-async function authorize(request:Request,module:string,write:boolean){
+async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit"){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
@@ -34,7 +34,7 @@ async function authorize(request:Request,module:string,write:boolean){
  // Legacy memberships without grants continue to use the existing role policy.
  if(!["owner","manager"].includes(access.role)){
   const permissionModule=module==="kds"?"kitchen":module;
-  const action=write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view";
+  const action=requiredAction??(write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view");
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
@@ -182,6 +182,9 @@ async function mutate(request:Request,module:string,method:string){
  try{
   const ctx=await authorize(request,module,true),body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
+  // Recording payment during POS create is also a financial edit. A cashier
+  // who can create orders but lacks pos.edit must never mark them paid.
+  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit");
   
   db=await connection();await db.beginTransaction();
   if(!["owner","manager"].includes(ctx.role)&&method==="POST"){
