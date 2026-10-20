@@ -35,6 +35,7 @@
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
     "test:checkout:integration": "node --test scripts/checkout-orders.integration.mjs",
     "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs",
+    "test:offline-workspace-security": "node --test scripts/workspace-offline-reload.test.mjs",
     "test:browser-receipt": "node --experimental-strip-types --test scripts/browser-receipt-width.test.mjs",
     "test:order-roles": "node --experimental-strip-types --test scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs",
     "test:final-receipt": "node --experimental-strip-types --test scripts/final-receipt-policy.test.mjs",
