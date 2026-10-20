@@ -9,8 +9,8 @@ const adminLayout=read("app/admin/layout.tsx");
 const adminCss=read("app/admin/reference-admin-dashboard.css");
 
 test("unified overview is used by merchant and service activities without changing data sources",()=>{
- assert.match(merchant,/active==="overview"&&services?<div className="restaurantReferenceOverview restaurantReferenceServices">/);
- assert.match(merchant,/active==="overview"?<div className="restaurantReferenceOverview">/);
+ assert.match(merchant,/active==="overview"&&services\?<div className="restaurantReferenceOverview restaurantReferenceServices">/);
+ assert.match(merchant,/active==="overview"\?<div className="restaurantReferenceOverview">/);
  assert.match(merchant,/className="restaurantMetrics"/);
  assert.match(merchant,/className="restaurantOverviewGrid"/);
  assert.match(merchant,/className="restaurantPanel restaurantOrders"/);
