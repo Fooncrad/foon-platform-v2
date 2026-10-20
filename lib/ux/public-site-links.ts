@@ -16,3 +16,9 @@ export function localizedPublicFooterPages(pages:readonly PublicPageLink[],langu
  const localized=pages.map(page=>({...page,title:(language==="en"?page.titleEn:language==="fr"?page.titleFr:page.title)?.trim()||page.title}));
  return uniquePublicFooterPages(localized);
 }
+
+/** Keep explicit CMS permalink language when navigating between published pages. */
+export function publicContentPageHref(slug:string,language?:PublicFooterLanguage):string{
+ const path="/p/"+encodeURIComponent(slug);
+ return language?path+"?lang="+language:path;
+}
