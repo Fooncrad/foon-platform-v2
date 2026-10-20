@@ -63,9 +63,10 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     const expiryTables=["auth_sessions","password_reset_tokens","email_verification_tokens","employee_invites","tenant_media_oauth_states"];
     const autoUpdatingExpiry=async()=>{const [rows]=await db.query("SELECT TABLE_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND COLUMN_NAME='expires_at' AND EXTRA LIKE '%on update%' ORDER BY TABLE_NAME");return rows.map(row=>row.TABLE_NAME);};
     assert.deepEqual(await autoUpdatingExpiry(),[]);
-    const [[timestampDefaults]]=await db.query("SELECT @@GLOBAL.explicit_defaults_for_timestamp AS value");
+    // MariaDB >=10.6.9 and MySQL 5.7 support a session-scoped toggle.
+    // Never change @@GLOBAL here: it would affect unrelated applications.
+    const [[timestampDefaults]]=await db.query("SELECT @@SESSION.explicit_defaults_for_timestamp AS value");
     try{
-      await db.query("SET GLOBAL explicit_defaults_for_timestamp=OFF");
       await db.query("SET SESSION explicit_defaults_for_timestamp=OFF");
       for(const table of expiryTables)await db.query(`ALTER TABLE ${table} MODIFY expires_at TIMESTAMP NOT NULL`);
       assert.deepEqual(await autoUpdatingExpiry(),[...expiryTables].sort(),"legacy timestamp defaults were not reproduced");
@@ -73,7 +74,6 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
       successfulRun();
       assert.deepEqual(await autoUpdatingExpiry(),[]);
     }finally{
-      await db.query("SET GLOBAL explicit_defaults_for_timestamp=?",[Number(timestampDefaults.value)]);
       await db.query("SET SESSION explicit_defaults_for_timestamp=?",[Number(timestampDefaults.value)]);
     }
     await db.execute("UPDATE package_plan_features SET enabled=TRUE WHERE plan_id=? AND feature_key='quotes'",[professional.id]);
