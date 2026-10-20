@@ -628,7 +628,17 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const paidKey=randomUUID(),paidBody={branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}],paymentStatus:"paid",paymentMethod:"cash",requestKey:paidKey};
   const paid=await call("/api/restaurant/operations/pos","POST",paidBody,a.cookie,a.tenant);assert.equal(paid.status,201,JSON.stringify(paid.body));
   const paidReplay=await call("/api/restaurant/operations/pos","POST",paidBody,a.cookie,a.tenant);assert.equal(paidReplay.status,201);assert.equal(paidReplay.body.id,paid.body.id);
-  const [[paidRow]]=await db.execute("SELECT payment_status,version,JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.manualPayment.method')) AS method FROM restaurant_orders WHERE id=?",[paid.body.id]);
+  
+  // Same requestKey with a different payment claim must never modify an existing order.
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{...paidBody,paymentMethod:"card"},a.cookie,a.tenant)).status,409);
+  const unpaidKey=randomUUID(),unpaidBody={branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}],requestKey:unpaidKey};
+  const unpaidFirst=await call("/api/restaurant/operations/pos","POST",unpaidBody,a.cookie,a.tenant);
+  assert.equal(unpaidFirst.status,201,JSON.stringify(unpaidFirst.body));
+  const escalatedReplay=await call("/api/restaurant/operations/pos","POST",{...unpaidBody,paymentStatus:"paid",paymentMethod:"cash"},a.cookie,a.tenant);
+  assert.equal(escalatedReplay.status,409);
+  const [[stillUnpaid]]=await db.execute("SELECT payment_status FROM restaurant_orders WHERE id=?",[unpaidFirst.body.id]);
+  assert.equal(stillUnpaid.payment_status,"unpaid");
+const [[paidRow]]=await db.execute("SELECT payment_status,version,JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.manualPayment.method')) AS method FROM restaurant_orders WHERE id=?",[paid.body.id]);
   assert.equal(paidRow.payment_status,"paid");assert.equal(paidRow.method,"cash");assert.equal(Number(paidRow.version),2);
   const unpaidDefault=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}]},a.cookie,a.tenant);assert.equal(unpaidDefault.status,201,JSON.stringify(unpaidDefault.body));
   const [[unpaidRow]]=await db.execute("SELECT payment_status FROM restaurant_orders WHERE id=?",[unpaidDefault.body.id]);assert.equal(unpaidRow.payment_status,"unpaid");
