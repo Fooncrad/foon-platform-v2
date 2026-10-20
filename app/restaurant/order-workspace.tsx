@@ -9,6 +9,7 @@ import {operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
 import OfflineWorker from "./offline-worker";
 import {printLocales,resolvePrintLocale} from "@/lib/restaurant/print-locales";
+import {normalizeReceiptPaperWidth,receiptPaperCss} from "@/lib/restaurant/browser-receipt-width";
 import {kitchenTicketNotes} from "@/lib/restaurant/print-notes";
 import {queuePosOrder,retryReviewedPosOrder,scopedPosOrders,pendingPosOrders,removePosOrder,markPosOrder,isNetworkFailure,savePosSnapshot,loadPosSnapshot,getOfflineStorageStatus,exportPendingPosOrders,importPendingPosOrders} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
@@ -97,7 +98,13 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   };
   doc.title=(finalInvoice?t.receipt:t.ticket)+" #"+order.order_number;
   const style=doc.createElement("style");
-  style.textContent=`@page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{direction:inherit;color:#111;font:12px Arial,Tahoma,sans-serif;width:74mm;margin:0 auto}h1{text-align:center;font-size:21px;margin:8px 0 2px}h2{text-align:center;font-size:15px;margin:4px 0 12px}.hero{font-size:18px;font-weight:800;text-align:center;border:2px solid #111;padding:9px;margin:8px 0}.line{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #bbb}.line span:first-child{flex:1}.line strong{text-align:left;white-space:nowrap}.total{font-size:17px;font-weight:800;border-top:2px solid #111;margin-top:10px}.note{text-align:center;font-size:10px;margin:12px 0;line-height:1.6}.controls{margin:18px auto;text-align:center}@media print{.controls{display:none}}`;
+  const paperStorageKey="foon-browser-paper:"+tenantId+":"+(scope||"all");
+  let savedPaper:string|null=null;
+  try{savedPaper=window.localStorage.getItem(paperStorageKey);}catch{}
+  let paperWidth=normalizeReceiptPaperWidth(savedPaper);
+  const baseStyle=`*{box-sizing:border-box}body{direction:inherit;color:#111;font:12px Arial,Tahoma,sans-serif;margin:0 auto}h1{text-align:center;font-size:21px;margin:8px 0 2px}h2{text-align:center;font-size:15px;margin:4px 0 12px}.hero{font-size:18px;font-weight:800;text-align:center;border:2px solid #111;padding:9px;margin:8px 0}.line{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #bbb}.line span:first-child{flex:1}.line strong{text-align:left;white-space:nowrap}.total{font-size:17px;font-weight:800;border-top:2px solid #111;margin-top:10px}.note{text-align:center;font-size:10px;margin:12px 0;line-height:1.6}.controls{margin:18px auto;text-align:center}@media print{.controls{display:none}}`;
+  const updatePaperStyle=()=>{style.textContent=baseStyle+receiptPaperCss(paperWidth);};
+  updatePaperStyle();
   doc.head.appendChild(style);
   el("h1",order.checkout_snapshot?.seller?.name||"FOON");
   if(finalInvoice&&order.checkout_snapshot?.version===1){const seller=order.checkout_snapshot.seller;for(const value of [seller.address,seller.phone,seller.taxNumber])if(value)el("div",value,"note");}
@@ -154,9 +161,26 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
    }catch{el("p",locale==="ar"?"تعذر إنشاء رمز الإيصال. أعد فتح الطباعة.":locale==="en"?"Could not generate receipt QR. Reopen printing.":"Impossible de générer le QR. Rouvrez l’impression.","note");return;}
   }
   const controls=doc.createElement("div");controls.className="controls";
-  const button=doc.createElement("button");button.textContent=t.print;button.onclick=()=>popup.print();
-  controls.appendChild(button);doc.body.appendChild(controls);
-  popup.focus();popup.setTimeout(()=>popup.print(),300);
+  const paperLabel=doc.createElement("label");
+  paperLabel.textContent=locale==="ar"?"عرض ورق الطابعة: ":locale==="fr"?"Largeur du papier : ":"Paper width: ";
+  const paperSelect=doc.createElement("select");
+  for(const width of [58,80] as const){const option=doc.createElement("option");option.value=String(width);option.textContent=width+" mm";paperSelect.appendChild(option);}
+  paperSelect.value=String(paperWidth);
+  paperSelect.onchange=()=>{paperWidth=normalizeReceiptPaperWidth(paperSelect.value);updatePaperStyle();try{window.localStorage.setItem(paperStorageKey,String(paperWidth));}catch{}};
+  paperLabel.appendChild(paperSelect);controls.appendChild(paperLabel);
+  const button=doc.createElement("button");
+  button.textContent=t.print;
+  button.onclick=()=>{try{window.localStorage.setItem(paperStorageKey,String(paperWidth));}catch{}popup.print();};
+  controls.appendChild(button);
+  if(savedPaper!=="58"&&savedPaper!=="80"){
+   const hint=doc.createElement("small");
+   hint.textContent=locale==="ar"?"اختر مقاس الورق لأول مرة ثم اضغط طباعة. سيُحفظ الاختيار لهذا الفرع على هذا الجهاز.":locale==="fr"?"Choisissez d’abord le format, puis imprimez. Ce choix sera conservé sur cet appareil.":"Choose the roll size before the first print. The choice is saved on this device for this branch.";
+   hint.style.cssText="display:block;margin:8px auto;max-width:230px";
+   controls.appendChild(hint);
+  }
+  doc.body.appendChild(controls);
+  popup.focus();
+  if(savedPaper==="58"||savedPaper==="80")popup.setTimeout(()=>popup.print(),300);
  }
  function actions(order:Order){
   const next:Record<string,string>={new:"preparing",preparing:"ready",ready:"completed"};
