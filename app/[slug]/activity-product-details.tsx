@@ -2,11 +2,11 @@
 import {useRef,useState} from "react";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import {choicePrice,choicesValid} from "../restaurant/menu-choices";
-import {findSelectedVariant,type CartVariant} from "@/lib/catalog/variant-selection";
+import {findSelectedVariant,selectedCatalogStockLimit,type CartVariant} from "@/lib/catalog/variant-selection";
 import {StorefrontAddButton} from "./storefront-cart";
 type Language="ar"|"en"|"fr";
 type VariantPreview={id:string;sku:string|null;images:string[]};
-type ChoicesResponse={item:{price:number;currency:string;variants:CartVariant[]};groups:MenuGroup[]};
+type ChoicesResponse={item:{price:number;currency:string;stock:number|null;variants:CartVariant[]};groups:MenuGroup[]};
 export default function ActivityProductDetails({name,description="",imageUrl,images=[],variantGalleries=[],price,currency,unit,language,slug,id,canAdd=false,service=false}:{name:string;description?:string;imageUrl:string|null;images?:string[];variantGalleries?:VariantPreview[];price:number;currency:string;unit?:string;language:Language;slug:string;id:string;canAdd?:boolean;service?:boolean}){
  const dialog=useRef<HTMLDialogElement>(null),request=useRef<AbortController|null>(null);
  const [group,setGroup]=useState("product"),[selected,setSelected]=useState(0);
@@ -24,7 +24,8 @@ export default function ActivityProductDetails({name,description="",imageUrl,ima
  const label=t("تفاصيل","Details","Détails");
  const cover=basePhotos[0]??variants[0]?.images[0]??null;
  const choicesOkay=Boolean(choiceData&&choicesValid(choiceData.groups,chosen));
- const available=Boolean(choiceData&&(!choiceData.item.variants.length||matched&&(matched.stock===null||matched.stock>0)));
+ const stockLimit=choiceData?selectedCatalogStockLimit(choiceData.groups,choiceData.item.variants,chosen,choiceData.item.stock):0;
+ const available=Boolean(choiceData&&(stockLimit===null||stockLimit>=1));
  const canConfirm=Boolean(canAdd&&!loading&&!error&&choicesOkay&&available);
  const displayPrice=choiceData&&choicesOkay?choiceData.item.price+choicePrice(choiceData.groups,chosen):price;
  const displayCurrency=choiceData?.item.currency??currency;
@@ -84,10 +85,10 @@ export default function ActivityProductDetails({name,description="",imageUrl,ima
      {loading&&<p role="status">{t("جارٍ تحميل الخيارات والسعر والمخزون…","Loading options, price and availability…","Chargement des choix, prix et disponibilité…")}</p>}
      {error&&<><p role="alert">{t("تعذر تحميل خيارات المنتج. حاول مجددًا.","Could not load product options. Please retry.","Impossible de charger les options. Réessayez.")}</p><button type="button" onClick={()=>void loadChoices()}>{t("إعادة المحاولة","Retry","Réessayer")}</button></>}
      {choiceData?.groups.map(g=><fieldset key={g.id}><legend>{localized(g)} {g.required?"*":""}</legend>
-      {g.values.map(v=><label key={v.id}><input type={g.type==="single"?"radio":"checkbox"} name={"photo-choice-"+id+"-"+g.id} checked={chosen.includes(v.id)} onChange={e=>{
+      {g.values.map(v=><label key={v.id}><input type={g.type==="single"?"radio":"checkbox"} name={"photo-choice-"+id+"-"+g.id} disabled={v.stock!==undefined&&v.stock!==null&&v.stock<=0&&!chosen.includes(v.id)} checked={chosen.includes(v.id)} onChange={e=>{
        const next=g.type==="single"?[...chosen.filter(old=>!g.values.some(option=>option.id===old)),v.id]:e.target.checked?[...chosen,v.id]:chosen.filter(old=>old!==v.id);
        chooseOptions(next);
-      }}/><span>{localized(v)}</span>{v.price!==0&&<small dir="ltr">{v.price>0?"+":""}{v.price.toFixed(2)} {displayCurrency}</small>}</label>)}
+      }}/><span>{localized(v)}{v.stock!==undefined&&v.stock!==null&&v.stock<=0?" — "+t("نفد المخزون","Out of stock","Épuisé"):""}</span>{v.price!==0&&<small dir="ltr">{v.price>0?"+":""}{v.price.toFixed(2)} {displayCurrency}</small>}</label>)}
      </fieldset>)}
      {choiceData&&chosen.length>0&&!available&&<p role="alert">{t("هذه التركيبة غير متاحة أو نفد مخزونها. اختر تركيبة أخرى.","This combination is unavailable or out of stock. Choose another.","Cette combinaison est indisponible ou épuisée. Choisissez-en une autre.")}</p>}
      {choiceData&&choicesOkay&&available&&matched&&<p role="status">{t("تم تحديد التركيبة المطابقة. ستُراجع الأسعار والكميات عند تسجيل الطلب.","Matching variant selected. Price and stock are checked again at checkout.","Variante correspondante sélectionnée. Prix et stock vérifiés lors de la commande.")}</p>}
