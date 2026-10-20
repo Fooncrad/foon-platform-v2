@@ -15,12 +15,65 @@ export function validateImportRow(kind:ImportKind,row:unknown):asserts row is Im
  if((r.sku?.length??0)>100)throw Error('INVALID_SKU');
  for(const k of ['image_1','image_2','image_3','image_4'])if(r[k]){if(/^\/api\/account\/library\/[a-f0-9-]{36}$/i.test(r[k]))continue;const u=new URL(r[k]);if(u.protocol!=='https:'||u.username||u.password||u.port&&u.port!=='443')throw Error('HTTPS_IMAGE_REQUIRED');}
 }
+// Reject duplicate identities across the full CSV before the first five-row
+// transaction is submitted. This avoids partial imports with a later duplicate.
+function csvIdentity(kind:ImportKind,row:ImportRow):string{
+ const fields=kind==='categories'?['name']:
+  kind==='items'?['category','name']:
+  kind==='groups'?['category','product','name']:
+  kind==='values'?['category','product','group','name']:
+  ['category','product','options'];
+ return JSON.stringify(fields.map(key=>{
+  const value=String(row[key]??'').normalize('NFKC').trim();
+  if(key==='options')return value.split('|').map(pair=>{
+   const i=pair.indexOf('=');
+   return i>=0?pair.slice(0,i).trim()+'='+pair.slice(i+1).trim():pair.trim();
+  }).sort().join('|');
+  return value.toLocaleLowerCase('en');
+ }));
+}
+export function validateImportRows(kind:ImportKind,rows:ImportRow[]):void{
+ const firstByIdentity=new Map<string,number>();
+ for(let i=0;i<rows.length;i++){
+  try{validateImportRow(kind,rows[i]);}catch(error){throw Error('ROW_'+(i+2)+': '+(error instanceof Error?error.message:'INVALID_ROW'));}
+  const key=csvIdentity(kind,rows[i]);
+  const previous=firstByIdentity.get(key);
+  if(previous!==undefined)throw Error('ROW_'+(i+2)+': DUPLICATE_CSV_REFERENCE_ROW_'+(previous+2));
+  firstByIdentity.set(key,i);
+ }
+}
 export function parseImportCsv(input:string,kind:ImportKind):ImportRow[]{
  if(input.length>1000000)throw Error('CSV_TOO_LARGE');
- const lines:string[][]=[];let line:string[]=[],cell='',quoted=false;const text=input.replace(/^\uFEFF/,'');
- for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}else if(c===','&&!quoted){line.push(cell.trim());cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;line.push(cell.trim());if(line.some(Boolean))lines.push(line);line=[];cell='';}else cell+=c;}
- if(quoted)throw Error('CSV_UNCLOSED_QUOTE');line.push(cell.trim());if(line.some(Boolean))lines.push(line);
- const header=lines.shift()?.map(v=>v.toLowerCase())??[];if(!header.length||new Set(header).size!==header.length||header.some(h=>!importHeaders[kind].includes(h)))throw Error('CSV_INVALID_HEADERS');
+ const text=input.replace(/^\uFEFF/,'');
+ const lines:string[][]=[];
+ let line:string[]=[],cell='',quoted=false,closedQuote=false;
+ const endCell=()=>{line.push(cell.trim());cell='';closedQuote=false;};
+ const endLine=()=>{endCell();if(line.some(Boolean))lines.push(line);line=[];if(lines.length>501)throw Error('CSV_ROW_LIMIT_500');};
+ for(let i=0;i<text.length;i++){
+  const c=text[i];
+  if(quoted){
+   if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else{quoted=false;closedQuote=true;}}
+   else cell+=c;
+   continue;
+  }
+  if(c==='"'){
+   if(closedQuote||cell.trim()!=='')throw Error('CSV_INVALID_QUOTES');
+   cell='';quoted=true;continue;
+  }
+  if(c===',' ){endCell();continue;}
+  if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;endLine();continue;}
+  if(closedQuote&&c!==' '&&c!=='\t')throw Error('CSV_INVALID_QUOTES');
+  cell+=c;
+ }
+ if(quoted)throw Error('CSV_UNCLOSED_QUOTE');
+ endLine();
+ const header=lines.shift()?.map(v=>v.toLowerCase())??[];
+ if(!header.length||new Set(header).size!==header.length||header.some(h=>!importHeaders[kind].includes(h)))throw Error('CSV_INVALID_HEADERS');
  if(!lines.length||lines.length>500)throw Error('CSV_ROW_LIMIT_500');
- return lines.map((values,index)=>{try{if(values.length>header.length)throw Error('CSV_EXTRA_CELLS');const row=Object.fromEntries(header.map((h,i)=>[h,values[i]??'']));validateImportRow(kind,row);return row;}catch(e){throw Error('ROW_'+(index+2)+': '+(e instanceof Error?e.message:'INVALID_ROW'));}});
+ const rows=lines.map((values,index)=>{
+  if(values.length>header.length)throw Error('ROW_'+(index+2)+': CSV_EXTRA_CELLS');
+  return Object.fromEntries(header.map((h,i)=>[h,values[i]??'']));
+ });
+ validateImportRows(kind,rows);
+ return rows;
 }

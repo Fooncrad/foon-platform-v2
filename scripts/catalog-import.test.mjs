@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseImportCsv,validateImportRow} from '../lib/catalog/import-csv.ts';
+import {parseImportCsv,validateImportRow,validateImportRows} from '../lib/catalog/import-csv.ts';
 import {publicImageAddress} from '../lib/media/remote-image.ts';
 test('CSV preserves multilingual quoted content and rejects invalid rows before writing',()=>{
  const rows=parseImportCsv('\uFEFFname,name_en,description,image_1\r\n"قسم, واحد",Category,"سطر\nثان",https://example.com/image.jpg','categories');assert.equal(rows[0].name,'قسم, واحد');assert.equal(rows[0].description,'سطر\nثان');
@@ -10,4 +10,34 @@ test('CSV preserves multilingual quoted content and rejects invalid rows before 
 test('remote image downloads fail closed on private, metadata, reserved and IPv6 addresses',()=>{
  for(const ip of ['127.0.0.1','10.0.0.1','172.16.0.1','172.31.255.255','192.168.1.1','169.254.169.254','100.64.0.1','0.0.0.0','224.0.0.1','198.18.0.1','::1','::ffff:127.0.0.1'])assert.equal(publicImageAddress(ip),false,ip);
  assert.equal(publicImageAddress('8.8.8.8'),true);assert.equal(publicImageAddress('1.1.1.1'),true);
+});
+
+
+test('CSV parser rejects malformed quotes before any network import',()=>{
+ for(const csv of [
+  'name\\nاسم"غير صحيح',
+  'name\\n"اسم مغلق"غير صالح',
+  'name,description\\n"اسم","وصف"حرف',
+  'name\\n"اسم بدون نهاية'
+ ])assert.throws(()=>parseImportCsv(csv.replaceAll('\\n','\n'),'categories'),/CSV_(INVALID_QUOTES|UNCLOSED_QUOTE)/);
+ const csv='name,description\\n"القهوة ""المميزة""","وصف, مفصل"';
+ const rows=parseImportCsv(csv.replaceAll('\\n','\n'),'categories');
+ assert.equal(rows[0].name,'القهوة "المميزة"');
+ assert.equal(rows[0].description,'وصف, مفصل');
+});
+test('duplicate Arabic references anywhere in 500-row CSV are rejected before chunking',()=>{
+ assert.throws(()=>parseImportCsv('name\nقسم\nقسم','categories'),/ROW_3: DUPLICATE_CSV_REFERENCE_ROW_2/);
+ assert.throws(()=>parseImportCsv('category,name,price\nمشروبات,قهوة,9.00\nمشروبات,قهوة,10.00','items'),/ROW_3: DUPLICATE_CSV_REFERENCE_ROW_2/);
+ const valid=parseImportCsv('category,name,price\nمشروبات,قهوة,9.00\nحلويات,قهوة,10.00','items');
+ assert.equal(valid.length,2);
+});
+test('variant combinations detect reordered options even when their SKU differs',()=>{
+ const a={category:'ملابس',product:'قميص',options:'اللون=أحمر|المقاس=كبير',sku:'RED-L',stock:'1'};
+ const b={category:'ملابس',product:'قميص',options:'المقاس=كبير|اللون=أحمر',sku:'DUPLICATE',stock:'2'};
+ assert.throws(()=>validateImportRows('variants',[a,b]),/ROW_3: DUPLICATE_CSV_REFERENCE_ROW_2/);
+ assert.doesNotThrow(()=>validateImportRows('variants',[a,{...b,options:'المقاس=صغير|اللون=أحمر'}]));
+});
+test('server-side batch validation catches invalid columns and repeats',()=>{
+ assert.throws(()=>validateImportRows('categories',[{name:'قسم'}, {name:'قسم'}]),/DUPLICATE_CSV_REFERENCE/);
+ assert.throws(()=>validateImportRows('items',[{category:'قسم',name:'صنف',price:'10.001'}]),/ROW_2: INVALID_PRICE_PRECISION/);
 });
