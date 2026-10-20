@@ -763,12 +763,15 @@ test("guest service request drafts remain on storefront through registration and
    const unauthorized=await guest.request.post(origin+"/api/customer/service-requests",{headers:{origin},data:{storeSlug:slug,serviceId,requestType,phone:"+966501234567",notes:"Draft kept",requestKey:randomUUID(),...(requestType==="appointment"?{scheduledAt:new Date(Date.now()+48*3600000).toISOString()}:{})}});
    expect(unauthorized.status()).toBe(401);
    await page.goto(origin+"/"+slug);
-   await page.getByRole("button",{name:action,exact:true}).click();
+   const appointmentAvailable=activity==="carwash"&&await page.getByRole("button",{name:"Request appointment",exact:true}).count()>0;
+   const displayedAction=activity==="carwash"&&!appointmentAvailable?"Ask about this service":action;
+   const displayedType=activity==="carwash"&&!appointmentAvailable?"inquiry":requestType;
+   await page.getByRole("button",{name:displayedAction,exact:true}).click();
    const panel=page.locator(".foonServiceRequestForm").first();
    const form=panel.locator(".foonServiceRequestJourney > form");
    await form.getByLabel("Contact phone").fill("+966501234567");
    await form.getByLabel("Request details").fill("Customer journey draft "+activity);
-   if(requestType==="appointment")await form.getByLabel("Preferred appointment").fill(new Date(Date.now()+48*3600000).toISOString().slice(0,16));
+   if(displayedType==="appointment")await form.getByLabel("Preferred appointment").fill(new Date(Date.now()+48*3600000).toISOString().slice(0,16));
    await expect(form.getByRole("button",{name:"Send request"})).toBeDisabled();
    const inline=panel.locator(".publicMenuInlineAuth");
    await expect(inline).toContainText("Continue your service request without leaving this page");
