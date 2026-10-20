@@ -391,7 +391,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(reservationId&&!/^[a-f0-9-]{36}$/i.test(reservationId))throw new ResourceError("INVALID_INPUT");
  const roomNumber=body.channel==="room_service"&&typeof body.roomNumber==="string"?body.roomNumber.trim().toLocaleUpperCase("en-US"):"";
  if(body.channel==="room_service"&&(!customerId||!roomNumber||roomNumber.length>24||!/^[\p{L}\p{N}][\p{L}\p{N} -]{0,23}$/u.test(roomNumber))||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
- const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,...(roomNumber?{roomNumber}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
+ const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,...(roomNumber?{roomNumber}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,...(body.paymentStatus==="paid"?{manualPayment:{status:"paid",method:body.paymentMethod??null}}:{}),items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
  if(requestKey){
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,total,currency,request_fingerprint FROM restaurant_orders WHERE tenant_id=? AND created_by=? AND request_key=? FOR UPDATE",[tenantId,actor,requestKey]);
@@ -505,6 +505,18 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
  await notifyOrder(db,tenantId,id,"new");
  return {id,total:totals.total,currency:profile.currency};
+}
+// POS "paid (manually verified)" at creation, including offline-queued replays.
+// Reuses updateOrder so role, transition, receipt-print and audit rules stay identical.
+export async function recordManualPaymentAtCreate(db:PoolConnection,tenantId:string,actor:string,role:string,orderId:string,body:Record<string,unknown>){
+ if(body.paymentStatus===undefined||body.paymentStatus===null||body.paymentStatus==="unpaid")return;
+ if(body.paymentStatus!=="paid"||!["cash","card","other"].includes(String(body.paymentMethod)))throw new ResourceError("INVALID_INPUT");
+ if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
+ const [rows]=await db.execute<RowDataPacket[]>("SELECT payment_status,version FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[orderId,tenantId]);
+ if(!rows[0])throw new ResourceError("ORDER_NOT_FOUND");
+ if(String(rows[0].payment_status)!=="unpaid")return;
+ await updateOrder(db,tenantId,actor,role,{id:orderId,version:Number(rows[0].version),paymentStatus:"paid"});
+ await db.execute("UPDATE restaurant_orders SET checkout_snapshot=JSON_SET(COALESCE(checkout_snapshot,'{}'),'$.manualPayment',JSON_OBJECT('method',?,'recordedBy',?)) WHERE id=? AND tenant_id=?",[String(body.paymentMethod),actor,orderId,tenantId]);
 }
 export async function updateOrder(db:PoolConnection,tenantId:string,actor:string,role:string,body:Record<string,unknown>){
  if(typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");

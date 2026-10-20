@@ -11,7 +11,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {checkoutSettings} from "@/lib/restaurant/checkout-settings";
-import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoiceForCompletedService,confirmManualInvoiceReceipt,branchExists,ordersRows,createOrder,updateOrder} from "@/lib/restaurant/operations";
+import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoiceForCompletedService,confirmManualInvoiceReceipt,branchExists,ordersRows,createOrder,updateOrder,recordManualPaymentAtCreate} from "@/lib/restaurant/operations";
 import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
 import {reconcileLateIssuedInvoice} from "@/lib/payments/webhook-settlement";
 import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
@@ -21,7 +21,7 @@ export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
 const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const allRoles:TenantRole[]=[...orderRoles];
-async function authorize(request:Request,module:string,write:boolean){
+async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit"){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
@@ -34,7 +34,7 @@ async function authorize(request:Request,module:string,write:boolean){
  // Legacy memberships without grants continue to use the existing role policy.
  if(!["owner","manager"].includes(access.role)){
   const permissionModule=module==="kds"?"kitchen":module;
-  const action=write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view";
+  const action=requiredAction??(write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view");
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
@@ -182,6 +182,9 @@ async function mutate(request:Request,module:string,method:string){
  try{
   const ctx=await authorize(request,module,true),body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
+  // Recording payment during POS create is also a financial edit. A cashier
+  // who can create orders but lacks pos.edit must never mark them paid.
+  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit");
   
   db=await connection();await db.beginTransaction();
   if(!["owner","manager"].includes(ctx.role)&&method==="POST"){
@@ -237,7 +240,7 @@ async function mutate(request:Request,module:string,method:string){
     if(item&&userId&&reservationBefore!==String(body.status)&&["confirmed","cancelled","seated","completed","no_show"].includes(String(body.status)))await notifyCustomer(db,{userId,tenantId:ctx.tenantId,event:"reservation_"+String(body.status),resourceId:body.id,reference:String(item.name??""),status:String(body.status)});
    }
   }else if(["orders","pos","kds"].includes(module)){
-   if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.channel==="room_service"&&!(await tenantEntitlement(ctx.tenantId,"room_service")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);}
+   if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.channel==="room_service"&&!(await tenantEntitlement(ctx.tenantId,"room_service")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);if(module==="pos")await recordManualPaymentAtCreate(db,ctx.tenantId,ctx.user,ctx.role,String(result.id),body);}
    else if(method==="PATCH"){
     result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
    }
