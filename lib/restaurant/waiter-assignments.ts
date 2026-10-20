@@ -22,7 +22,7 @@ export async function assignedWaiterTableIds(
   WHERE t.tenant_id=? AND t.branch_id=? AND t.kind='dining_table'
    AND t.archived=FALSE
    AND COALESCE(
-    NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.data,'$.waiterId')),''),
+    NULLIF(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.data,'$.waiterId')),''),'null'),
     JSON_UNQUOTE(JSON_EXTRACT(s.data,'$.waiterId'))
    )=e.id
   ORDER BY t.id
