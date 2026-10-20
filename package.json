@@ -20,12 +20,12 @@
     "test:mail": "node --experimental-strip-types --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/email-verification.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
-    "test:resources": "node --experimental-strip-types --test scripts/restaurant-resource-schema.test.mjs scripts/service-order-policy.test.mjs scripts/reservation-no-show.test.mjs scripts/edge-print-agent.test.mjs scripts/foon-offline-pos.test.mjs",
+    "test:resources": "node --experimental-strip-types --test scripts/restaurant-resource-schema.test.mjs scripts/service-order-policy.test.mjs scripts/reservation-no-show.test.mjs scripts/edge-print-agent.test.mjs scripts/foon-offline-pos.test.mjs scripts/browser-receipt-width.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/final-receipt-policy.test.mjs",
     "test:print-agent": "node --test scripts/edge-print-agent.test.mjs scripts/receipt-paper.test.mjs",
     "test:operations": "node --experimental-strip-types --test scripts/restaurant-operations.integration.test.mjs",
     "test:browser": "playwright test scripts/merchant-dashboard.browser.test.mjs --workers=1 --reporter=line",
     "test:tax": "node --experimental-strip-types --test scripts/restaurant-tax.test.mjs scripts/restaurant-tax-boundaries.test.mjs",
-    "test:activities": "node --experimental-strip-types --test scripts/activity-presets.test.mjs scripts/activity-tools-coverage.test.mjs scripts/activity-plan-entitlements.test.mjs scripts/catalog-copy.test.mjs scripts/customer-checkout.test.mjs scripts/african-market.test.mjs scripts/business-workspace-routing.test.mjs scripts/short-activity-routes.test.mjs scripts/activity-route-slug-migration.test.mjs",
+    "test:activities": "node --experimental-strip-types --test scripts/activity-presets.test.mjs scripts/activity-tools-coverage.test.mjs scripts/activity-plan-entitlements.test.mjs scripts/catalog-copy.test.mjs scripts/customer-checkout.test.mjs scripts/african-market.test.mjs scripts/business-workspace-routing.test.mjs scripts/short-activity-routes.test.mjs scripts/activity-route-slug-migration.test.mjs scripts/customer-delivery-address-sync.test.mjs scripts/reverse-geocode.test.mjs",
     "test:payments": "node --experimental-strip-types --test scripts/payment-settings.test.mjs",
     "test:payment-webhooks": "node --experimental-strip-types --test scripts/payment-webhook.test.mjs",
     "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs scripts/media-oauth-state.test.mjs scripts/media-token-crypto.test.mjs scripts/media-account-access.test.mjs",
@@ -34,7 +34,10 @@
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
     "test:checkout:integration": "node --test scripts/checkout-orders.integration.mjs",
-    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs"
+    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs",
+    "test:browser-receipt": "node --experimental-strip-types --test scripts/browser-receipt-width.test.mjs",
+    "test:order-roles": "node --experimental-strip-types --test scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs",
+    "test:final-receipt": "node --experimental-strip-types --test scripts/final-receipt-policy.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
