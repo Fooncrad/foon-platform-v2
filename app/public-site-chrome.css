@@ -15,3 +15,24 @@
 .foonPublic .foonPublicHeader nav a:focus-visible,.foonPublic .foonPublicFooter a:focus-visible{outline:3px solid var(--fp-gold);outline-offset:4px;border-radius:4px}
 .foonPublic .foonPublicFooter nav{gap:10px 20px}
 @media(max-width:640px){.foonPublicMarket .foonPublicHeader{padding-block:10px}.foonPublicMarket .foonMarketResults{padding-bottom:40px}}
+
+
+/* P0 public account entry + published content: use the same global chrome,
+   but leave authentication and CMS data/business logic untouched. */
+.foonPublicJourney>.foonAuthPage{min-height:clamp(460px,calc(100svh - 250px),900px);max-width:100%;overflow-x:clip}
+.foonPublicJourney>.foonAuthPage .auth-card{width:min(100%,600px)}
+.foonPublicJourney>.foonAuthPage .auth-heading{justify-content:flex-start}
+.foonPublicJourney>.foonPublicFooter,.foonPublicContent>.foonPublicFooter{width:100%}
+.foonPublicContent .publicContentPage{min-height:clamp(380px,calc(100svh - 270px),900px);max-width:100%;background:var(--fp-bg);color:var(--fp-ink);padding:clamp(16px,4vw,50px)}
+.foonPublicContent .publicContentPage article{width:min(100%,850px);background:var(--fp-surface);border:1px solid var(--fp-line);color:var(--fp-ink);border-radius:18px;box-shadow:0 12px 30px #00000010}
+.foonPublicContent .publicContentPage h1{color:var(--fp-ink)}
+.foonPublicContent .publicContentBody{color:var(--fp-ink);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}
+.foonPublicContent .publicContentBody a{color:var(--fp-gold);text-decoration:underline}
+.foonPublicContent .publicContentBody :is(a,button,input,select,textarea):focus-visible{outline:3px solid var(--fp-gold);outline-offset:3px}
+.foonPublicJourney .foonPublicHeader,.foonPublicContent .foonPublicHeader{position:relative;z-index:2}
+@media(max-width:640px){
+ .foonPublicJourney>.foonAuthPage{padding:16px 10px;min-height:420px}
+ .foonPublicContent .publicContentPage{padding:14px 10px}
+ .foonPublicContent .publicContentPage article{padding:20px 15px}
+}
+@media(prefers-reduced-motion:reduce){.foonPublicJourney,.foonPublicContent{scroll-behavior:auto}}
