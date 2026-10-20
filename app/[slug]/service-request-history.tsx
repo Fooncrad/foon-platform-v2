@@ -8,13 +8,15 @@ const copy={
  fr:{title:"Suivi des demandes",pending:"En attente",in_review:"En cours",confirmed:"Rendez-vous confirmé",responded:"Suivi effectué",declined:"Refusé",completed:"Terminé",cancelled:"Annulé",empty:"Aucune demande pour le moment.",error:"Chargement impossible.",refresh:"Actualiser",appointment:"Rendez-vous",quote:"Demande de devis",inquiry:"Demande d’information"}
 };
 export default function ServiceRequestHistory({slug,language,visible}:{slug:string;language:Lang;visible:boolean}){
- const [rows,setRows]=useState<RecordItem[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
+ const [rows,setRows]=useState<RecordItem[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true),[authenticated,setAuthenticated]=useState(false);
+ const show=visible||authenticated;
  const t=copy[language];
+ useEffect(()=>{const onAuth=(event:Event)=>{const detail=(event as CustomEvent<{slug?:string}>).detail;if(detail?.slug===slug)setAuthenticated(true);};window.addEventListener("foon:customer-authenticated",onAuth);return()=>window.removeEventListener("foon:customer-authenticated",onAuth);},[slug]);
  const load=async()=>{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(r.status===403){setRows([]);setLoading(false);return;}if(!r.ok||!Array.isArray(j.requests))throw Error("LOAD_FAILED");setRows(j.requests);setError("");setLoading(false);};
- useEffect(()=>{if(!visible)return;let active=true;const read=async()=>{try{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(r.status===403){if(active)setRows([]);return;}if(!r.ok||!Array.isArray(j.requests))throw Error();if(active){setRows(j.requests);setError("");}}catch{if(active)setError(t.error)}finally{if(active)setLoading(false)}};
+ useEffect(()=>{if(!show)return;let active=true;const read=async()=>{try{const r=await fetch("/api/customer/service-requests?storeSlug="+encodeURIComponent(slug),{cache:"no-store"});const j=await r.json();if(r.status===403){if(active)setRows([]);return;}if(!r.ok||!Array.isArray(j.requests))throw Error();if(active){setRows(j.requests);setError("");}}catch{if(active)setError(t.error)}finally{if(active)setLoading(false)}};
  void read();const handler=()=>void read();window.addEventListener("foon:service-request-sent",handler);return()=>{active=false;window.removeEventListener("foon:service-request-sent",handler);};
- },[visible,slug,t.error]);
- if(!visible)return null;
+ },[show,slug,t.error]);
+ if(!show)return null;
  return <section className="foonServiceRequestHistory" aria-label={t.title}>
   <header><h2>{t.title}</h2><button type="button" onClick={()=>void load().catch(()=>setError(t.error))}>{t.refresh}</button></header>
   {error&&<p role="alert">{error}</p>}
