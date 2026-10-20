@@ -1,4 +1,5 @@
-export type PublicPageLink={slug:string;title:string};
+export type PublicPageLink={slug:string;title:string;titleEn?:string;titleFr?:string};
+export type PublicFooterLanguage="ar"|"en"|"fr";
 const reserved=new Set(["customer","market","account","billing","subscription","login","register","admin","checkout","pricing"]);
 export function uniquePublicFooterPages(pages:readonly PublicPageLink[]):PublicPageLink[]{
  const slugs=new Set<string>(),titles=new Set<string>();
@@ -8,4 +9,10 @@ export function uniquePublicFooterPages(pages:readonly PublicPageLink[]):PublicP
   if(!slug||!title||reserved.has(key)||slug.includes("/")||slug.includes("\\")||slug==="."||slug===".."||slugs.has(key)||titles.has(label))return false;
   slugs.add(key);titles.add(label);return true;
  });
+}
+
+/** Keep the published footer labels in the current UI language. Missing translations fall back to Arabic. */
+export function localizedPublicFooterPages(pages:readonly PublicPageLink[],language:PublicFooterLanguage):PublicPageLink[]{
+ const localized=pages.map(page=>({...page,title:(language==="en"?page.titleEn:language==="fr"?page.titleFr:page.title)?.trim()||page.title}));
+ return uniquePublicFooterPages(localized);
 }
