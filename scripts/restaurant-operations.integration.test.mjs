@@ -638,6 +638,21 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(escalatedReplay.status,409);
   const [[stillUnpaid]]=await db.execute("SELECT payment_status FROM restaurant_orders WHERE id=?",[unpaidFirst.body.id]);
   assert.equal(stillUnpaid.payment_status,"unpaid");
+
+  // A cashier allowed only pos.create cannot claim a payment during checkout.
+  const cashier=await register("operations-cashier");
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'cashier','active')",[randomUUID(),a.tenant,cashier.user]);
+  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'cashier',TRUE)",[randomUUID(),a.tenant,cashier.user,a.branch]);
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'pos.create',TRUE)",[randomUUID(),a.tenant,cashier.user,a.branch]);
+  const cashierUnpaid=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}]},cashier.cookie,a.tenant);
+  assert.equal(cashierUnpaid.status,201,JSON.stringify(cashierUnpaid.body));
+  const cashierPaidDenied=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}],paymentStatus:"paid",paymentMethod:"cash"},cashier.cookie,a.tenant);
+  assert.equal(cashierPaidDenied.status,403,"pos.create without pos.edit must not mark an order paid");
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'pos.edit',TRUE)",[randomUUID(),a.tenant,cashier.user,a.branch]);
+  const cashierPaidAllowed=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}],paymentStatus:"paid",paymentMethod:"cash"},cashier.cookie,a.tenant);
+  assert.equal(cashierPaidAllowed.status,201,JSON.stringify(cashierPaidAllowed.body));
+  const [[cashierPaidRow]]=await db.execute("SELECT payment_status FROM restaurant_orders WHERE id=?",[cashierPaidAllowed.body.id]);
+  assert.equal(cashierPaidRow.payment_status,"paid");
 const [[paidRow]]=await db.execute("SELECT payment_status,version,JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.manualPayment.method')) AS method FROM restaurant_orders WHERE id=?",[paid.body.id]);
   assert.equal(paidRow.payment_status,"paid");assert.equal(paidRow.method,"cash");assert.equal(Number(paidRow.version),2);
   const unpaidDefault=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}]},a.cookie,a.tenant);assert.equal(unpaidDefault.status,201,JSON.stringify(unpaidDefault.body));
