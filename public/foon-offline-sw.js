@@ -1,7 +1,15 @@
-const CACHE="foon-pos-shell-v2";
+const CACHE="foon-pos-shell-v3";
 const SHELL=["/offline"];
 const MENU_CACHE="foon-public-menu-v1",MAX_AGE=7*86400000;
-const reserved=new Set(["admin","api","login","register","account","customer","dashboard","restaurant","menu","auth","settings","creator","creators","help","about","contact","terms","privacy","p"]);
+// These roots belong to authenticated dashboards, never to public cached menus.
+// Keep activity aliases aligned with ACTIVITY_ROUTE_SLUGS in lib/tenant/workspace-routes.ts.
+const privateRoots=new Set(["restaurant","cafe","sweets","grocery","fashion","perfume","accessories","watches","gifts","ecommerce","carwash","car","laundry","salon","contracting","workspace","business","driver","account","customer","admin","login","register","employee-invite","forgot-password","reset-password","verify-email","receipts"]);
+const privatePage=path=>privateRoots.has(path.split("/")[1]);
+const reserved=new Set([...privateRoots,"dashboard","menu","auth","settings","creator","creators","help","about","contact","terms","privacy","p","s"]);
+async function clearPrivateHtmlCaches(){
+ const names=await caches.keys();
+ await Promise.all(names.filter(name=>name.startsWith("foon-workspace-pages-")).map(name=>caches.delete(name)));
+}
 function menuSlug(path){const match=path.match(/^\/(?:menu\/)?([a-z0-9][a-z0-9-]{1,118}[a-z0-9])\/?$/);return match&&!reserved.has(match[1])?match[1]:null;}
 const publicImage=path=>/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(path);
 self.addEventListener("message",event=>{
@@ -25,15 +33,26 @@ self.addEventListener("message",event=>{
  })());
 });
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));});
-self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("foon-pos-shell-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
+self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("foon-pos-shell-")&&key!==CACHE).map(key=>caches.delete(key)))).then(clearPrivateHtmlCaches).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",event=>{
  const request=event.request;
- if(request.method!=="GET")return;
  const url=new URL(request.url);
+ if(request.method==="POST"&&url.origin===self.location.origin&&["/api/auth/login","/api/auth/logout"].includes(url.pathname)){
+  event.waitUntil(clearPrivateHtmlCaches());return;
+ }
+ if(request.method!=="GET")return;
  if(url.origin===self.location.origin&&publicImage(url.pathname)&&request.destination==="image"){
   event.respondWith(fetch(request).catch(async()=>{const saved=await (await caches.open(MENU_CACHE)).match(url.pathname);return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:Response.error();}));return;
  }
  if(request.mode!=="navigate")return;
+ // Private navigation is network-only. Never store or replay SSR/RSC HTML.
+ if(url.origin===self.location.origin&&privatePage(url.pathname)){
+  event.respondWith((async()=>{
+   await clearPrivateHtmlCaches();
+   try{return await fetch(request,{cache:"no-store"});}
+   catch{return await caches.match("/offline")??Response.error();}
+  })());return;
+ }
  const slug=url.origin===self.location.origin?menuSlug(url.pathname):null;
  if(slug){event.respondWith((async()=>{
   const cache=await caches.open(MENU_CACHE);
@@ -43,8 +62,7 @@ self.addEventListener("fetch",event=>{
   try{const response=await fetch(request);if(response.status===404||response.status===410)await cache.delete("/"+slug);return response;}
   catch{return await fallback()??Response.error();}
  })());return;}
- if(url.origin!==self.location.origin||url.pathname.startsWith("/api/")||url.pathname.startsWith("/admin")||url.pathname.startsWith("/auth"))return;
- if(!url.pathname.startsWith("/restaurant")&&url.pathname!=="/offline")return;
+ if(url.origin!==self.location.origin||url.pathname!=="/offline")return;
  event.respondWith((async()=>{
   try{const response=await fetch(request);if(response.ok&&url.pathname==="/offline"&&response.headers.get("content-type")?.includes("text/html")){const cache=await caches.open(CACHE);await cache.put(request,response.clone());}return response;}
   catch{return await caches.match("/offline")??Response.error();}
