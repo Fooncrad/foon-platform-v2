@@ -7,6 +7,8 @@ import {supportedCountries} from "@/lib/tenant/country-catalog";
 import {registrationActivities} from "@/lib/tenant/registration-activities";
 import {MARKET_PAGE_SIZE,buildMarketWhere,marketListingOrderSql,marketPageCount,marketPageUrl,parseMarketFilters} from "@/lib/market/search";
 import CountryPicker from "./country-picker";
+import {PublicMarketShell,PublicSiteHeader,PublicSiteFooter} from "@/app/public-site-chrome";
+import {publicFooterPages} from "@/lib/platform/public-footer-pages";
 import "./country-picker.css";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
@@ -41,12 +43,12 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
  const chosen=supportedCountries.find(c=>c.code===filters.country);
  const chosenName=chosen?(chosen[language]??chosen.ar):"";
  const pages=marketPageCount(total);
+ const footerPages=await publicFooterPages();
  const label=(code:string)=>{
   const activity=registrationActivities.find(a=>a.id===code);
   return activity?.[language]??activity?.ar??translateUi("متجر");
  };
- return <main className="foonMarket" dir={language==="ar"?"rtl":"ltr"}>
-  <header className="foonMarketHeader"><Link href="/" className="foonMarketBrand">FOON</Link><nav><Link href="/">{translateUi("الرئيسية")}</Link><Link href="/login">{translateUi("دخول")}</Link><Link href="/register">{translateUi("أضف نشاطك مجانًا")}</Link></nav></header>
+ return <PublicMarketShell><PublicSiteHeader/><main className="foonMarket" dir={language==="ar"?"rtl":"ltr"}>
   <section className="foonMarketHero">
    <span>FOON MARKETPLACE</span><h1>{translateUi("اكتشف المتاجر والمطاعم")}</h1>
    <p>{translateUi("استكشف الأنشطة المتاحة على منصة FOON، وانتقل مباشرة إلى صفحة النشاط.")}</p>
@@ -81,5 +83,5 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
     {page<pages&&<Link href={marketPageUrl(filters,page+1)}>{translateUi("التالي")}</Link>}
    </nav>}</>}
   </section>
- </main>;
+ </main><PublicSiteFooter pages={footerPages}/></PublicMarketShell>;
 }
