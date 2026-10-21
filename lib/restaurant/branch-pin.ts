@@ -21,7 +21,7 @@ export function matchesBranchPin(pin:string,salt:string,hash:string){
 // Apply to every tenant-branch API that reads or mutates protected branch data.
 // PIN unlock supplements, never replaces, tenant membership and permission checks.
 export async function requireAdditionalBranchUnlock(tenantId:string,branchId:string|null,userId:string){
- const [branches]=await database().execute<RowDataPacket[]>("SELECT id,pin_hash FROM branches WHERE tenant_id=? ORDER BY created_at,id",[tenantId]);
+ const [branches]=await database().execute<RowDataPacket[]>("SELECT id,pin_hash FROM branches WHERE tenant_id=? ORDER BY (slug='main') DESC,created_at,id",[tenantId]);
  if(!branches.length)return;
  if(!branchId){
   if(branches.length>1)throw new BranchPinError("BRANCH_SELECTION_REQUIRED");
@@ -64,6 +64,6 @@ export async function onlyUnlockedBranchRows<T extends object>(tenantId:string,u
  * This intentionally fails closed until the owner initializes legacy PINs.
  */
 export async function requireAllAdditionalBranchesUnlocked(tenantId:string,userId:string){
- const [branches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? ORDER BY created_at,id",[tenantId]);
+ const [branches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? ORDER BY (slug='main') DESC,created_at,id",[tenantId]);
  for(const branch of branches.slice(1))await requireAdditionalBranchUnlock(tenantId,String(branch.id),userId);
 }
