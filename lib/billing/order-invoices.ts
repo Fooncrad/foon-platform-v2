@@ -33,7 +33,7 @@ export async function issuePaidOrderInvoice(db:PoolConnection,tenantId:string,or
  if(insert.affectedRows===0)return null;
  const lang=String(order.default_locale);
  const subject=lang==="fr"?"Reçu de commande #"+order.order_number:lang==="en"?"Order receipt #"+order.order_number:"إيصال الطلب #"+order.order_number;
- const origin=String(process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\/$/,"");
+ const origin=String(process.env.APP_URL||process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\/$/,"");
  const view=origin+"/receipts/"+orderId;
  const message=lang==="fr"?
   "Votre paiement a été confirmé. Reçu "+number+". Total : "+order.total+" "+order.currency+". Connectez-vous pour consulter le reçu : "+view+" (ce n'est pas une facture fiscale certifiée).":
