@@ -13,6 +13,7 @@ import {customerCartAvailable,deliveryCountryMatches} from "@/lib/platform/custo
 import {tenantPublicControls,channelControl,publicControlAllowed} from "@/lib/tenant/public-controls";
 import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
 import {saveCheckoutDeliveryAddress} from "@/lib/tenant/delivery-address-sync";
+import {deliveryZoneCheck} from "@/lib/tenant/free-location";
 export const runtime="nodejs";
 async function queueDeliveryDriverAlerts(db:PoolConnection,tenantId:string){
  await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[tenantId]);
@@ -57,6 +58,21 @@ export async function POST(request:Request){
   if(catalogDelivery&&(typeof body.deliveryAddress!=="string"||body.deliveryAddress.trim().length<5||body.deliveryAddress.length>900||!/^\+?[\d ()-]{7,40}$/.test(customerPhone)||customerPhone.replace(/\D/g,"").length<7))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
    if(catalogDelivery&&(typeof body.deliveryCity!=="string"||body.deliveryCity.trim().length<2||body.deliveryCity.trim().length>120))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
   if(body.channel==="delivery"){const destination=String(body.deliveryCountryCode??"").trim().toUpperCase();const approved=await allowedDeliveryCountries(tenantId,String(stores[0].country_code??""),String(stores[0].activity_code??""),db);if(!approved.includes(destination))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");}
+  if(body.channel==="delivery"){
+   const [zones]=await db.execute<RowDataPacket[]>(
+    "SELECT delivery_mode,latitude,longitude,radius_km FROM tenant_location_settings WHERE tenant_id=? LIMIT 1",
+    [tenantId]);
+   const zone=zones[0];
+   if(zone&&zone.delivery_mode==="radius"){
+    const decision=deliveryZoneCheck({
+     deliveryMode:"radius",
+     latitude:zone.latitude===null?null:Number(zone.latitude),
+     longitude:zone.longitude===null?null:Number(zone.longitude),
+     radiusKm:zone.radius_km===null?null:Number(zone.radius_km)
+    },body.latitude,body.longitude);
+    if(!decision.allowed)throw new ResourceError(decision.code);
+   }
+  }
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
   const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
