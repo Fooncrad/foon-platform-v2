@@ -1,5 +1,5 @@
-const CACHE="foon-pos-shell-v3";
-const SHELL=["/offline"];
+const CACHE="foon-pos-shell-v4";
+const SHELL=["/offline","/foon-offline-pos.html","/foon-offline-pos.js"];
 const MENU_CACHE="foon-public-menu-v1",MAX_AGE=7*86400000;
 // These roots belong to authenticated dashboards, never to public cached menus.
 // Keep activity aliases aligned with ACTIVITY_ROUTE_SLUGS in lib/tenant/workspace-routes.ts.
@@ -38,9 +38,23 @@ self.addEventListener("fetch",event=>{
  const request=event.request;
  const url=new URL(request.url);
  if(request.method==="POST"&&url.origin===self.location.origin&&["/api/auth/login","/api/auth/logout"].includes(url.pathname)){
-  event.waitUntil(clearPrivateHtmlCaches());return;
+  event.waitUntil((async()=>{
+   await clearPrivateHtmlCaches();
+   const clients=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+   for(const client of clients)client.postMessage({type:"FOON_AUTH_CHANGED"});
+  })());return;
  }
  if(request.method!=="GET")return;
+ // Only these data-free static files may be served offline. Private SSR/RSC and
+ // API responses are never stored, even if an activity alias resembles a menu.
+ if(url.origin===self.location.origin&&["/foon-offline-pos.html","/foon-offline-pos.js"].includes(url.pathname)){
+  event.respondWith((async()=>{
+   const cached=await caches.match(url.pathname);
+   if(self.navigator.onLine===false&&cached)return cached;
+   try{return await fetch(request,{cache:"no-store"});}
+   catch{return cached??Response.error();}
+  })());return;
+ }
  if(url.origin===self.location.origin&&publicImage(url.pathname)&&request.destination==="image"){
   event.respondWith(fetch(request).catch(async()=>{const saved=await (await caches.open(MENU_CACHE)).match(url.pathname);return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:Response.error();}));return;
  }
