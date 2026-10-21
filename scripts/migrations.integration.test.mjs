@@ -58,6 +58,30 @@ test("fresh migrations, repeat runs, manual 0014 import, tenant FK and wrong def
     successfulRun();
     const [[preservedQuote]]=await db.execute("SELECT enabled FROM package_plan_features WHERE plan_id=? AND feature_key='quotes'",[professional.id]);
     assert.equal(Number(preservedQuote.enabled),0,"0094 replay must preserve paid plan customization");
+    // 0106 must reconcile the actual Business feature rows; an absent grant
+    // must never be advertised as on merely because this is Enterprise.
+    const [[enterprise]]=await db.execute("SELECT id FROM package_plans WHERE code='enterprise'");
+    await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,'coupons',FALSE,3)",[enterprise.id]);
+    await db.execute("INSERT IGNORE INTO package_features(feature_key,name_ar,name_en,category) VALUES ('unreviewed_new_feature','غير معتمد','Not approved','test')");
+    await db.execute("DELETE FROM schema_migrations WHERE id='0106_business_feature_grants.sql'");
+    successfulRun();
+    const [businessFeatures]=await db.execute("SELECT feature_key,enabled,limit_value FROM package_plan_features WHERE plan_id=?",[enterprise.id]);
+    assert.equal(businessFeatures.length,62,"all 62 merchant feature rows must be persisted");
+    const businessByKey=new Map(businessFeatures.map(f=>[f.feature_key,f]));
+    for(const key of ['quotes','pos','delivery','room_service','catalog','payments','customer_invoices','branding.qr']){
+      assert.equal(Number(businessByKey.get(key)?.enabled),1,"Business grant missing: "+key);
+    }
+    assert.equal(Number(businessByKey.get('coupons')?.enabled),0,"saved explicit disable must be preserved");
+    assert.equal(Number(businessByKey.get('coupons')?.limit_value),3);
+    for(const key of ['creator_profile','content_marketplace','media_library','watermark','content_pricing','unreviewed_new_feature']){
+      assert.equal(businessByKey.has(key),false,"creator-only/unreviewed keys are not merchant grants: "+key);
+    }
+    await db.execute("DELETE FROM schema_migrations WHERE id='0106_business_feature_grants.sql'");
+    successfulRun();
+    const [[replayCount]]=await db.execute("SELECT COUNT(*) AS n FROM package_plan_features WHERE plan_id=?",[enterprise.id]);
+    assert.equal(Number(replayCount.n),62,"replaying 0106 must be idempotent");
+    const [[savedDisabled]]=await db.execute("SELECT enabled FROM package_plan_features WHERE plan_id=? AND feature_key='coupons'",[enterprise.id]);
+    assert.equal(Number(savedDisabled.enabled),0,"replay must preserve overrides");
     // Expiry columns must never auto-update. Reproduce legacy servers where
     // explicit_defaults_for_timestamp=OFF added ON UPDATE CURRENT_TIMESTAMP.
     const expiryTables=["auth_sessions","password_reset_tokens","email_verification_tokens","employee_invites","tenant_media_oauth_states"];
