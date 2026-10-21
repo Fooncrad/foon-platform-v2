@@ -9,10 +9,10 @@ export default function ActivityTools({tenantId,activity,language,personalMediaA
  const links=isActivityType(activity)?activityToolLinks(activity,tenantId,lang):[];
  const visibleLinks=personalMediaAllowed?links:links.filter(link=>!link.codes.includes("mediaLibrary"));
  if(!isActivityType(activity))return <section role="alert" dir={lang==="ar"?"rtl":"ltr"} className="foonActivityTools"><p>{t("نوع النشاط غير معروف. راجع إعدادات نشاطك.","Unknown business activity. Review your business settings.","Type d’activité inconnu. Vérifiez les paramètres de votre activité.")}</p></section>;
- return <section dir={lang==="ar"?"rtl":"ltr"} className="foonActivityTools" style={{marginBlock:24}}>
+ return <section dir={lang==="ar"?"rtl":"ltr"} className="foonActivityTools">
   <h2>{t("أدوات النشاط","Business tools","Outils de l’activité")}</h2><p>{t("افتح أداة النشاط المطلوبة من مكان واحد. تظل صلاحيات الحساب والباقة مطبقة داخل كل أداة.","Open your business tools from one place. Account and plan permissions apply inside each tool.","Accédez aux outils depuis un seul endroit. Les autorisations du compte et de l’abonnement restent appliquées.")}</p>
-  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,180px),1fr))",gap:12}}>
-   {visibleLinks.map(link=><a key={link.href} href={link.href} data-tools={link.codes.join(",")} style={{padding:16,border:"1px solid var(--border,#d9e2ee)",borderRadius:12,color:"inherit",textDecoration:"none",background:"var(--surface,#fff)",overflowWrap:"anywhere"}}>{link.label} ↗</a>)}
+  <div className="foonActivityToolsGrid">
+   {visibleLinks.map(link=><a className="foonActivityToolLink" key={link.href} href={link.href} data-tools={link.codes.join(",")}>{link.label} ↗</a>)}
   </div>
  </section>;
 }
