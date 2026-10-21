@@ -7,7 +7,8 @@ if ($branch -ne "feat/foon-windows-w27-offline-isolation-20261022") { throw "W27
 $bundled = Join-Path $PSScriptRoot "src-tauri\resources\edge-runtime\node.exe"
 $node = if (Test-Path -LiteralPath $bundled) { $bundled } else { (Get-Command node -ErrorAction Stop).Source }
 $version = (& $node -p "process.versions.node").Trim()
-if ($LASTEXITCODE -ne 0 -or -not $version.StartsWith("24.")) { throw "W27_NODE_24_REQUIRED" }
+if ($LASTEXITCODE -ne 0 -or -not ($version.StartsWith("24.") -or $version.StartsWith("26."))) { throw "W27_NODE_24_OR_26_REQUIRED" }
+if ($version.StartsWith("26.")) { Write-Warning "W27 Node 26 diagnostic only. Node 24 required before any release acceptance." }
 $tests = @(
  "scripts/foon-edge-offline-policy.test.mjs",
  "scripts/foon-edge-offline-console.integration.test.mjs",
