@@ -45,7 +45,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.ok(activeDashboard.includes('الاشتراك نشط'));
   const categoryA=await save(a,"categories","Drinks",{}),categoryB=await save(b,"categories","Private category",{});
   assert.equal((await resource(a,"menu",{name:"Invalid",status:"active",data:{price:10,categoryId:categoryB}})).status,404);
-  assert.equal((await resource(a,"menu",{name:"Invalid branch",status:"active",branchId:b.branch,data:{price:10,categoryId:categoryA}})).status,404);
+  const foreignBranchMenu=await resource(a,"menu",{name:"Invalid branch",status:"active",branchId:b.branch,data:{price:10,categoryId:categoryA}});assert.equal(foreignBranchMenu.status,403);assert.equal(foreignBranchMenu.body.code,"BRANCH_PIN_REQUIRED");
   const item=await save(a,"menu","Coffee",{price:10,oldPrice:15,calories:120,nutrition:"Protein 3g",allergens:"Milk",quantity:18,categoryId:categoryA});
   const persistedMenu=await resource(a,"menu",undefined,"GET"),persistedCoffee=persistedMenu.body.resources.find(r=>r.id===item);assert.equal(persistedCoffee.data.oldPrice,15);assert.equal(persistedCoffee.data.calories,120);assert.equal(persistedCoffee.data.quantity,18);assert.equal(persistedCoffee.data.nutrition,"Protein 3g");
   const editedCoffee=await resource(a,"menu",{id:item,version:persistedCoffee.version,name:"Coffee",status:"active",branchId:a.branch,data:{price:10,categoryId:categoryA,description:"Updated description"}},"PATCH");assert.equal(editedCoffee.status,200);const preservedCoffee=(await resource(a,"menu",undefined,"GET")).body.resources.find(r=>r.id===item);assert.equal(preservedCoffee.data.oldPrice,15);assert.equal(preservedCoffee.data.nutrition,"Protein 3g");
@@ -330,7 +330,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const approved=await resource(a,"quotations",{id:conversionId,version:source.version,name:source.name,status:"accepted",branchId:a.branch,data:source.data},"PATCH");
   assert.equal(approved.status,200,JSON.stringify(approved.body));
   const wrongBranchConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:b.branch});
-  assert.equal(wrongBranchConversion.body.code,"REFERENCE_NOT_FOUND");
+  assert.equal(wrongBranchConversion.body.code,"BRANCH_PIN_REQUIRED");
   const tamperedConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch,data:{amount:0}});
   assert.equal(tamperedConversion.body.code,"INVALID_INPUT");
   const conversionPayload={convertQuotationId:conversionId,branchId:a.branch};
@@ -581,7 +581,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const completedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:startedInvoiceRow.version,name:startedInvoiceRow.name,status:"completed",branchId:a.branch,data:startedInvoiceRow.data},"PATCH");
   assert.equal(completedSourceInvoice.status,200,JSON.stringify(completedSourceInvoice.body));
   const wrongBranchInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:b.branch});
-  assert.equal(wrongBranchInvoice.body.code,"REFERENCE_NOT_FOUND");
+  assert.equal(wrongBranchInvoice.body.code,"BRANCH_PIN_REQUIRED");
   const injectedInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch,data:{subtotal:0,status:"paid"}});
   assert.equal(injectedInvoice.body.code,"INVALID_INPUT");
   const invoiceDraftPayload={invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch};
