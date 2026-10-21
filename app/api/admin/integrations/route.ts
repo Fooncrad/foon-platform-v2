@@ -39,7 +39,7 @@ export async function PUT(request:Request){
   ||(b.recaptchaSiteKey!==""&&!/^[A-Za-z0-9_-]{20,200}$/.test(b.recaptchaSiteKey))
   ||typeof b.recaptchaRequested!=="boolean"
   ||!["off","openai","other"].includes(b.aiProvider)
-  ||typeof b.aiModel!=="string"||b.aiModel.length>80||!/^[a-zA-Z0-9._:/-]*$/.test(b.aiModel)
+  ||typeof b.aiModel!=="string"||b.aiModel.length>80||!/^[A-Za-z0-9._:-]*$/.test(b.aiModel)
   ||typeof b.trackingConsentRequired!=="boolean")return error("INVALID_INTEGRATION_SETTINGS",400);
  const vals=[b.recaptchaSiteKey,b.recaptchaRequested?"true":"false",b.aiProvider,b.aiModel,b.trackingConsentRequired?"true":"false"];
  const db=await database().getConnection();
