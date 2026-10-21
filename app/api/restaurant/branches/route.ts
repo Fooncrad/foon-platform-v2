@@ -43,6 +43,8 @@ export async function PATCH(request:Request){
   if(body.version!==branchVersion({name:branch.name,slug:branch.slug,enabled:branch.enabled})){await db.rollback();return NextResponse.json({ok:false,code:"CONFLICT"},{status:409});}
   const name=body.name===undefined?String(branch.name):typeof body.name==="string"?body.name.trim():"",slug=body.slug===undefined?String(branch.slug):typeof body.slug==="string"?body.slug.trim().toLowerCase():"",enabled=body.enabled===undefined?Boolean(branch.enabled):body.enabled;
   if(name.length<2||name.length>180||typeof enabled!=="boolean"||!/^[a-z0-9][a-z0-9-]{1,118}[a-z0-9]$/.test(slug)){await db.rollback();return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});}
+  // The canonical primary branch identity must not be transferred by renaming.
+  if((String(branch.slug)==="main")!==(slug==="main")){await db.rollback();return NextResponse.json({ok:false,code:"PRIMARY_BRANCH_SLUG_LOCKED"},{status:409});}
   if(!enabled){const [[open]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=? AND branch_id=? AND status IN ('new','preparing','ready')",[ctx.tenantId,body.id]);if(Number(open.n)>0){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_HAS_OPEN_ORDERS"},{status:409});}}
   await db.execute("UPDATE branches SET name=?,slug=?,enabled=?,pin_salt=COALESCE(?,pin_salt),pin_hash=COALESCE(?,pin_hash) WHERE id=? AND tenant_id=?",[name,slug,enabled,pinDetails?.salt??null,pinDetails?.hash??null,body.id,ctx.tenantId]);
   await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,'branch.update',?,?)",[ctx.tenantId,userId,body.id,JSON.stringify({name,slug,enabled})]);
