@@ -80,7 +80,10 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",couponCode:"SAVE10",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,a.cookie,b.tenant)).status,403);
   assert.equal((await resource(a,"categories",{id:categoryB,version:1},"DELETE")).status,404);
-  await save(a,"team","Kitchen employee",{email:staff.email,role:"kitchen"});
+  // Existing customer/owner identities must never silently become staff.
+  const collision=await resource(a,"team",{name:"Colliding identity",status:"active",branchId:a.branch,data:{email:staff.email,role:"kitchen"}});
+  assert.equal(collision.body.code,"ACCOUNT_ALREADY_EXISTS");
+  await save(a,"team","Kitchen employee",{email:"kitchen-profile-"+randomUUID().slice(0,8)+"@test.example",role:"kitchen"});
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
   await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'kitchen',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
