@@ -192,3 +192,54 @@
  .restaurantApp .restaurantReferenceOverview>.restaurantMetrics{grid-template-columns:1fr 1fr}
  .restaurantApp .restaurantReferenceOverview .restaurantHeroStats{grid-template-columns:1fr}
 }
+
+
+/* Activity shortcut tiles: always use the same resolved workspace palette.
+ * The legacy --surface fallback stayed white in dark mode, making white
+ * inherited labels unreadable. Keep every activity and role link intact. */
+.restaurantApp .foonActivityTools{margin-block:22px;min-width:0}
+.restaurantApp .foonActivityTools>h2{font-size:clamp(18px,2vw,22px);line-height:1.5;color:var(--rc-text,#182230);margin:0 0 6px}
+.restaurantApp .foonActivityTools>p{font-size:13px;line-height:1.7;color:var(--rc-muted,#64748b);margin:0 0 13px}
+.restaurantApp .foonActivityToolsGrid{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+ gap:12px;min-width:0;
+}
+.restaurantApp .foonActivityToolLink{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ min-width:0;min-height:70px;padding:13px 15px;
+ color:var(--rc-text,#182230);background:var(--rc-surface,#fff);
+ border:1px solid var(--rc-border,#e2e8f0);border-radius:12px;
+ box-shadow:0 2px 8px #151e2e0a;
+ font-size:13px;font-weight:700;line-height:1.6;
+ text-decoration:none;overflow-wrap:anywhere;
+ transition:border-color .16s ease,background .16s ease,transform .16s ease;
+}
+.restaurantApp .foonActivityToolLink:hover{
+ border-color:var(--rc-accent,#d92483);
+ background:color-mix(in srgb,var(--rc-accent,#d92483) 8%,var(--rc-surface,#fff));
+ transform:translateY(-1px);
+}
+.restaurantApp .foonActivityToolLink:focus-visible{
+ outline:3px solid var(--rc-accent,#d92483);outline-offset:2px;
+}
+.restaurantApp[data-theme="light"] .foonActivityToolLink{
+ color:var(--rc-text,#182230);background:var(--rc-surface,#fff);
+}
+.restaurantApp[data-theme="dark"] .foonActivityToolLink{
+ color:var(--rc-text,#f8f3e9);background:var(--rc-surface,#242832);
+ border-color:var(--rc-border,#424c5b);
+}
+.restaurantApp[data-theme="dark"] .foonActivityToolLink:hover{
+ background:color-mix(in srgb,var(--rc-accent,#d92483) 12%,var(--rc-surface,#242832));
+}
+@media(max-width:600px){
+ .restaurantApp .foonActivityToolsGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .restaurantApp .foonActivityToolLink{min-height:66px;padding:11px;font-size:12px}
+}
+@media(max-width:359px){
+ .restaurantApp .foonActivityToolsGrid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ .restaurantApp .foonActivityToolLink{transition:none}
+ .restaurantApp .foonActivityToolLink:hover{transform:none}
+}
