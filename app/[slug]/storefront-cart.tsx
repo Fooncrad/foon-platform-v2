@@ -127,7 +127,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  const branches=lines.length?lines[0].item.branches.filter(b=>lines.every(line=>line.item.branches.some(option=>option.id===b.id))):[];
  const suggested=nearestDeliveryBranch(savedBranches,locationCoords,branches.map(b=>b.id));
  const suggestedBranchId=channel==="delivery"&&suggested&&!suggested.approximate?suggested.branch.id:"";
- const chosenBranch=branches.some(b=>b.id===branch)?branch:suggestedBranchId||branches[0]?.id??"";
+ const chosenBranch=branches.some(b=>b.id===branch)?branch:(suggestedBranchId||branches[0]?.id||"");
  useEffect(()=>{if(!chosenBranch)return;let active=true;fetch("/api/customer/pickup-points?storeSlug="+encodeURIComponent(slug)+"&branchId="+encodeURIComponent(chosenBranch),{cache:"no-store"}).then(async response=>{const body=await response.json();if(!response.ok||!body.ok||!Array.isArray(body.points))throw Error();if(active)setPickupResult({branchId:chosenBranch,points:body.points as PickupPoint[],error:false});}).catch(()=>{if(active)setPickupResult({branchId:chosenBranch,points:[],error:true});});return()=>{active=false;};},[chosenBranch,slug]);
  const pickupPoints=pickupResult.branchId===chosenBranch?pickupResult.points:[],pickupPointsLoading=Boolean(chosenBranch)&&pickupResult.branchId!==chosenBranch,pickupPointsError=pickupResult.branchId===chosenBranch&&pickupResult.error,effectivePickupPointId=pickupPoints.some(point=>point.id===pickupPointId)?pickupPointId:"";
  const currency=lines[0]?.item.currency??pending?.item.currency??"";
