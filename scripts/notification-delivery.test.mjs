@@ -25,3 +25,21 @@ test('notification worker skips expired and already-used verification links',asy
  await deliverNotifications(f.db,{providerFor:async()=>({send(){throw Error("NOT_SENT")},close(){}})});
  assert.ok(f.calls.some(c=>c.sql.includes("JOIN email_verification_tokens v")&&c.sql.includes("VERIFICATION_LINK_EXPIRED")));
 });
+
+test('invoice delivery marks archive sent only after SMTP accepts, and never re-sends on status-sync failure',async()=>{
+ const calls=[];let delivered=0;
+ const db={async execute(sql,args){
+  calls.push({sql,args});
+  if(sql.startsWith('SELECT template_key'))return [[]];
+  if(sql.startsWith('SELECT o.id'))return [[{id:'invoice-uuid',tenant_id:'store-a',event_key:'order_invoice',recipient_email:'customer@test.example',subject:'Order receipt',body_text:'Paid',attempts:0,language:'en'}]];
+  if(sql.startsWith('UPDATE restaurant_customer_invoices SET email_status='))throw Error('ARCHIVE_TEMPORARILY_UNAVAILABLE');
+  return [{affectedRows:1}];
+ }};
+ const result=await deliverNotifications(db,{providerFor:async()=>({send:async()=>{delivered++;},close(){}})});
+ assert.equal(delivered,1);
+ assert.equal(result.sent,1);
+ assert.equal(result.retried,0);
+ assert.ok(calls.some(x=>x.sql.includes("platform_notification_outbox SET status='sent'")));
+ assert.ok(calls.some(x=>x.sql.includes("o.status='sent'")&&x.sql.includes("UPDATE restaurant_customer_invoices i")));
+ assert.equal(calls.some(x=>x.sql.includes('platform_notification_outbox SET status=?')),false);
+});
