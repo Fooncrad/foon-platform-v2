@@ -320,13 +320,21 @@ async function legacyDeleteVerified(prior){
  const database=await legacyDB();
  return new Promise((resolve,reject)=>{
   const trans=database.transaction("orders","readwrite"),store=trans.objectStore("orders"),get=store.get(prior.id);
+  let removalConfirmed=false;
   get.onsuccess=()=>{
    // Another tab might have updated payment/review status since the copy.
    // Never discard that fresher version; the operator must retry recovery.
    if(JSON.stringify(get.result)!==JSON.stringify(prior)){trans.abort();return;}
-   store.delete(prior.id);
+   try{
+    const removal=store.delete(prior.id);
+    removal.onsuccess=()=>{removalConfirmed=true;};
+   }catch{trans.abort();}
   };
-  trans.oncomplete=()=>{database.close();resolve();};
+  trans.oncomplete=()=>{
+   database.close();
+   if(removalConfirmed)resolve();
+   else reject(new Error("LEGACY_DELETE_NOT_CONFIRMED"));
+  };
   trans.onerror=()=>{database.close();reject(trans.error||new Error("LEGACY_DELETE_FAILED"));};
   trans.onabort=()=>{database.close();reject(new Error("LEGACY_ORDER_CHANGED_RETRY"));};
  });
