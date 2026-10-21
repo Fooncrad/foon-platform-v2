@@ -1,7 +1,7 @@
 "use client";
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
 import {useEffect,useState} from "react";
-import {activityFeatureSupport} from "@/lib/platform/activity-plan-entitlements";
+import {activityFeatureSupport,isCreatorOnlyFeature} from "@/lib/platform/activity-plan-entitlements";
 import {type ActivityType} from "@/lib/platform/activity-presets";
 import {registrationActivities} from "@/lib/tenant/registration-activities";
 type Feature={feature_key:string;name_ar:string;name_en?:string;category:string;enabled:number|boolean;limit_value:number|null;overridden:boolean|number};
@@ -32,8 +32,8 @@ function PlanFeatureEditor({planId,activity,canEdit}:{planId:string;activity:Act
    else setFeatures(v=>v.map(f=>f.feature_key===feature.feature_key?{...f,enabled,limit_value:limit,overridden:Boolean(activity)}:f));
   }catch(e){setError(String(e));}finally{setBusy("");}
  }
- const filtered=features.filter(f=>!activity||activityFeatureSupport(activity,f.feature_key)==="supported");
- return <div><p>{activity?t("تعرض هذه القائمة المميزات المناسبة للنشاط فقط. إعدادات بقية الأنشطة والباقة المشتركة محفوظة.","Only applicable features are shown. Other activity and shared settings remain intact.","Seules les fonctionnalités pertinentes sont affichées ; les autres paramètres sont conservés."):t("الإعدادات المشتركة لا تغيّر تخصيصات الأنشطة المحفوظة.","Shared defaults do not overwrite activity-specific settings.","Les paramètres communs ne remplacent pas les personnalisations.")}</p>{loading?<p role="status">{translateUi("جارٍ التحميل…")}</p>:<div style={{maxHeight:420,overflowY:"auto"}}>{filtered.map(f=><div key={f.feature_key} style={{padding:"8px 0",borderBottom:"1px solid #7774"}}>
+ const filtered=features.filter(f=>!isCreatorOnlyFeature(f.feature_key)&&(!activity||activityFeatureSupport(activity,f.feature_key)==="supported"));
+ return <div><p role="note">{t("تفعيل الباقة يمنح الإذن فقط، ولا يثبت جاهزية الوظيفة أو ربط خدماتها. ميزات صناع المحتوى تُدار بحسابات مستقلة عن باقات المتاجر.","A plan grant is permission only, not proof that the feature works or its provider is connected. Creator privileges are account-scoped.","Une autorisation ne prouve pas que la fonction fonctionne ou qu’un service est connecté. Les droits créateur sont liés au compte.")}</p><p>{activity?t("تعرض هذه القائمة المميزات المناسبة للنشاط فقط. إعدادات بقية الأنشطة والباقة المشتركة محفوظة.","Only applicable features are shown. Other activity and shared settings remain intact.","Seules les fonctionnalités pertinentes sont affichées ; les autres paramètres sont conservés."):t("الإعدادات المشتركة لا تغيّر تخصيصات الأنشطة المحفوظة.","Shared defaults do not overwrite activity-specific settings.","Les paramètres communs ne remplacent pas les personnalisations.")}</p>{loading?<p role="status">{translateUi("جارٍ التحميل…")}</p>:<div style={{maxHeight:420,overflowY:"auto"}}>{filtered.map(f=><div key={f.feature_key} style={{padding:"8px 0",borderBottom:"1px solid #7774"}}>
  <strong>{featureName(f)}</strong> <small dir="ltr">{f.feature_key}</small>{activity&&<small> · {f.overridden?t("مخصص لهذا النشاط","Customized","Personnalisé"):t("موروث من الباقة","Inherited","Hérité")}</small>}
  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
  <label><input type="checkbox" disabled={!canEdit||Boolean(busy)} checked={Boolean(f.enabled)} onChange={e=>void save(f,e.target.checked,f.limit_value)}/> {translateUi("مفعّلة")}</label>
