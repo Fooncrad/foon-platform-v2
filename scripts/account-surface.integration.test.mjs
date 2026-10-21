@@ -81,11 +81,14 @@ test('employees stay in their employer workspace and platform admins never inher
    assert.equal((await request('/api/customer/orders','POST',{},cookie)).status,403);
    await db.execute("UPDATE memberships SET status='suspended' WHERE user_id=?",[staff]);
    assert.equal((await request('/api/account/library','GET',undefined,cookie)).status,403);
+   assert.equal((await request('/api/account/addresses','GET',undefined,cookie)).status,403,'suspended staff retain customer address restriction');
    assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,cookie,owner.tenant.id)).status,403);
   }
   assert.equal((await request('/api/account/library','GET',undefined,owner.cookie)).status,200);
+  assert.equal((await request('/api/account/addresses','GET',undefined,owner.cookie)).status,200,'owner personal addresses remain available');
   const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerCookie=customer.headers.get('set-cookie').split(';')[0];
   assert.equal((await request('/api/customer/order-revision','GET',undefined,customerCookie)).status,200);
+  assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,200,'customer addresses remain available');
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,customerCookie,owner.tenant.id)).status,403);
   console.log('Six employee roles: personal shopping/library/pages denied, own permitted work retained, other tenants/admin denied, suspended staff denied, owners/customers preserved');
  }finally{server.kill();await db.end();}
