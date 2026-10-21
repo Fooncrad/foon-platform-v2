@@ -34,6 +34,7 @@ export async function POST(request:Request){
  if(!body||typeof body!=="object"||typeof body.storeSlug!=="string")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
  let tenantIdForAlert:string|null=null;
+ let deliveryOutsideMessage:string|null=null;
  try{
   await db.query("SET time_zone='+00:00'");await db.beginTransaction();
   // Acquire the same exclusive customer lock used by createOrder before any
@@ -60,7 +61,7 @@ export async function POST(request:Request){
   if(body.channel==="delivery"){const destination=String(body.deliveryCountryCode??"").trim().toUpperCase();const approved=await allowedDeliveryCountries(tenantId,String(stores[0].country_code??""),String(stores[0].activity_code??""),db);if(!approved.includes(destination))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");}
   if(body.channel==="delivery"){
    const [zones]=await db.execute<RowDataPacket[]>(
-    "SELECT delivery_mode,latitude,longitude,radius_km FROM tenant_location_settings WHERE tenant_id=? LIMIT 1",
+    "SELECT delivery_mode,latitude,longitude,radius_km,outside_message FROM tenant_location_settings WHERE tenant_id=? LIMIT 1",
     [tenantId]);
    const zone=zones[0];
    if(zone&&zone.delivery_mode==="radius"){
@@ -70,7 +71,7 @@ export async function POST(request:Request){
      longitude:zone.longitude===null?null:Number(zone.longitude),
      radiusKm:zone.radius_km===null?null:Number(zone.radius_km)
     },body.latitude,body.longitude);
-    if(!decision.allowed)throw new ResourceError(decision.code);
+    if(!decision.allowed){if(decision.code==="DELIVERY_OUT_OF_RANGE")deliveryOutsideMessage=String(zone.outside_message??"").slice(0,240);throw new ResourceError(decision.code);}
    }
   }
   if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
@@ -78,5 +79,5 @@ export async function POST(request:Request){
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
   if(catalogDelivery)await saveCheckoutDeliveryAddress(db,user,{countryCode:body.deliveryCountryCode,city:body.deliveryCity,address:body.deliveryAddress,phone:customerPhone,latitude:body.latitude,longitude:body.longitude});
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
- }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
+ }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code,...(code==="DELIVERY_OUT_OF_RANGE"&&deliveryOutsideMessage?{message:deliveryOutsideMessage}:{})},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }
