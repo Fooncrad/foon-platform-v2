@@ -14,10 +14,8 @@ async function context(tenantId:string,user:string,write=true){
  const db=database();
  const [assigned]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE",[tenantId,user]);
  const branches=[...new Set(assigned.map(r=>String(r.branch_id)))];
- if(!branches.length&&membership.role!=="owner"){
-  const [legacy]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='employee' AND archived=FALSE AND branch_id IS NOT NULL AND (JSON_UNQUOTE(JSON_EXTRACT(data,'$.userId'))=? OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(data,'$.email')))=(SELECT LOWER(email) FROM users WHERE id=? LIMIT 1))",[tenantId,user,user]);
-  branches.push(...legacy.map(r=>String(r.branch_id)));
- }
+ // Only explicit staff-to-branch assignment grants access. Never infer
+ // operational membership from an employee profile's matching email address.
  return {role:membership.role,branches:[...new Set(branches)],db};
 }
 export async function GET(request:Request){
