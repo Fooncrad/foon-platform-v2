@@ -50,7 +50,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  const [addressConfirmed,setAddressConfirmed]=useState(Boolean(deliveryAddress.trim().length>=5&&deliveryCity.trim().length>=2&&customerPhone.replace(/\D/g,"").length>=7));
  const [geoStatus,setGeoStatus]=useState("");
  const [geoBusy,setGeoBusy]=useState(false);
- const [locationCoords,setLocationCoords]=useState<{latitude:number;longitude:number}|null>(null);
+ const [locationCoords,setLocationCoords]=useState<{latitude:number;longitude:number}|null>(savedLatitude!==null&&savedLongitude!==null&&Number.isFinite(savedLatitude)&&Number.isFinite(savedLongitude)?{latitude:savedLatitude,longitude:savedLongitude}:null);
  const country=deliveryCountries.includes(deliveryCountryCode)?deliveryCountryCode:(deliveryCountries.includes(customerCountry)?customerCountry:deliveryCountries.includes(merchantCountry)?merchantCountry:deliveryCountries[0]??merchantCountry);
  function captureLocation(){
   if(typeof navigator==="undefined"||!navigator.geolocation){setGeoStatus(tr("الموقع غير متاح على هذا الجهاز.","Location is not available.","Géolocalisation indisponible."));return;}
