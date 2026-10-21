@@ -1,0 +1,13 @@
+.creatorPublic{min-height:100svh;max-width:1100px;margin:auto;padding:clamp(16px,4vw,44px);background:#171613;color:#f8f3e9}
+.creatorPublic nav{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:30px}.creatorPublic a{color:#e2a93b}
+.creatorPublicHeader{display:flex;align-items:center;gap:24px;flex-wrap:wrap;background:#24221e;padding:clamp(18px,4vw,32px);border-radius:22px}
+.creatorPublicHeader>img{width:112px;height:112px;object-fit:cover;border-radius:50%;background:#3b3730;border:2px solid #e2a93b}
+.creatorPublicHeader div{flex:1;min-width:min(100%,230px)}.creatorPublicHeader small{color:#e2a93b}
+.creatorPublicHeader h1{font-size:clamp(1.6rem,4vw,2.6rem);overflow-wrap:anywhere;margin:8px 0}
+.creatorPublicHeader p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}
+.creatorPublic>section>h2{font-size:1.3rem;margin:28px 0 16px}
+.creatorPublicGallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:14px}
+.creatorPublicGallery figure{min-width:0;margin:0;background:#24221e;border:1px solid #ffffff18;border-radius:14px;overflow:hidden}
+.creatorPublicGallery img{width:100%;aspect-ratio:1;object-fit:cover}
+.creatorPublicGallery figcaption{padding:12px;overflow-wrap:anywhere;white-space:pre-wrap}
+@media(max-width:460px){.creatorPublicGallery{grid-template-columns:repeat(2,minmax(0,1fr))}.creatorPublicHeader{gap:12px}.creatorPublicHeader>img{width:80px;height:80px}}
