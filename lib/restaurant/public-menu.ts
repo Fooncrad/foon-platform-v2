@@ -6,6 +6,8 @@ import {menuOptions} from "./menu";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {tenantPublicControls} from "@/lib/tenant/public-controls";
 import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
+import {deliveryBranchLocations} from "@/lib/tenant/nearest-delivery-branch";
+import {addressFromStoredFields} from "@/lib/tenant/delivery-address-sync";
 export async function publicMenuData(tenant:{id:string;name:string},slug:string){
  const tenantId=tenant.id,db=await database().getConnection();
  try{
@@ -15,12 +17,18 @@ export async function publicMenuData(tenant:{id:string;name:string},slug:string)
    db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND archived=FALSE AND status='active' LIMIT 1",[tenantId]),
    db.execute<RowDataPacket[]>("SELECT template_key,color_mode FROM restaurant_menu_appearance WHERE tenant_id=? LIMIT 1",[tenantId])
   ]);
+  const branchLocations=await deliveryBranchLocations(db,tenantId);
   const enabledCategories=categories.filter(c=>c.status==="active"),activeItems=items.filter(i=>i.status==="active"&&enabledCategories.some(c=>c.id===i.data.categoryId));
   const branding=brands.length?parseData(brands[0].data):{};branding.menuTheme=String(appearances[0]?.template_key??branding.menuTheme??"sufra");
   const imageRows=await resourceRows(db,tenantId,"menuImages");
   const options=await menuOptions(db,tenantId,activeItems.map(i=>i.id)),user=await currentUserId();let linked=false;
   if(user){const [relations]=await db.execute<RowDataPacket[]>("SELECT c.user_id FROM tenant_customers c JOIN users u ON u.id=c.user_id AND u.status='active' WHERE c.tenant_id=? AND c.user_id=? LIMIT 1",[tenantId,user]);linked=relations.length>0;}
 
+  let savedDelivery:{countryCode:string;city:string;address:string;phone:string;latitude:number|null;longitude:number|null}|null=null;
+  if(user){
+   const [addresses]=await db.execute<RowDataPacket[]>("SELECT country_code,city,district,street_address,delivery_notes,phone,latitude,longitude FROM customer_delivery_addresses WHERE user_id=? ORDER BY is_default DESC,updated_at DESC LIMIT 1",[user]);
+   if(addresses.length){const a=addresses[0];savedDelivery={countryCode:String(a.country_code??""),city:String(a.city??""),address:[a.district,addressFromStoredFields(a.street_address,a.delivery_notes)].filter(Boolean).join("، "),phone:String(a.phone??""),latitude:a.latitude===null?null:Number(a.latitude),longitude:a.longitude===null?null:Number(a.longitude)};}
+  }
   let customerEmail="";
   if(user){const [account]=await db.execute<RowDataPacket[]>("SELECT email FROM users WHERE id=? AND status='active' LIMIT 1",[user]);customerEmail=String(account[0]?.email??"");}
   branding.colorMode=String(appearances[0]?.color_mode??"template");
@@ -36,6 +44,6 @@ export async function publicMenuData(tenant:{id:string;name:string},slug:string)
   const tableSummary=(t:typeof tableRows[number])=>({id:t.id,name:t.name,branchId:t.branch_id,sectionId:t.data.sectionId?String(t.data.sectionId):null,sectionName:sections.find(s=>s.id===t.data.sectionId)?.name,capacity:Number(t.data.capacity)});
   const tables=tableRows.filter(t=>t.status==="available"&&!occupied.has(t.id)).map(tableSummary);
   const serviceTables=tableRows.filter(t=>t.status!=="inactive").map(tableSummary);
-  return {name:tenant.name,slug,branding,controls,deliveryCountries,options,customerEmail,services:{waiter:tableAccess.enabled&&controls.waiter,reservations:reservationAccess.enabled&&controls.reservations,roomService:roomServiceAccess.enabled&&controls.roomService&&branding.roomServiceEnabled!=="no"},tables,serviceTables,sections,items:activeItems.map(i=>({id:i.id,name:i.name,nameEn:String(i.data.nameEn||""),nameFr:String(i.data.nameFr||""),descriptionEn:String(i.data.descriptionEn||""),descriptionFr:String(i.data.descriptionFr||""),branchId:i.branch_id,categoryId:String(i.data.categoryId),price:Number(i.data.price),description:String(i.data.description||""),imageUrl:i.data.imageUrl?String(i.data.imageUrl):null,allergens:String(i.data.allergens||""),oldPrice:Number(i.data.oldPrice||0)>Number(i.data.price)?Number(i.data.oldPrice):null,images:imageRows.filter(image=>image.data.itemId===i.id&&(!image.branch_id||image.branch_id===i.branch_id)).map(image=>String(image.data.imageUrl)).slice(0,4),quantity:typeof i.data.quantity==="number"?i.data.quantity:null,calories:typeof i.data.calories==="number"?i.data.calories:null,nutrition:typeof i.data.nutrition==="string"?i.data.nutrition:"",nutritionEn:String(i.data.nutritionEn||""),nutritionFr:String(i.data.nutritionFr||"")})),categories:enabledCategories.map(c=>({id:c.id,name:c.name,nameEn:String(c.data.nameEn||""),nameFr:String(c.data.nameFr||""),imageUrl:c.data.imageUrl?String(c.data.imageUrl):null})),branches:branches.map(b=>({id:String(b.id),name:String(b.name)})),signedIn:Boolean(user),linked};
+  return {name:tenant.name,slug,branding,controls,deliveryCountries,branchLocations,savedDelivery,options,customerEmail,services:{waiter:tableAccess.enabled&&controls.waiter,reservations:reservationAccess.enabled&&controls.reservations,roomService:roomServiceAccess.enabled&&controls.roomService&&branding.roomServiceEnabled!=="no"},tables,serviceTables,sections,items:activeItems.map(i=>({id:i.id,name:i.name,nameEn:String(i.data.nameEn||""),nameFr:String(i.data.nameFr||""),descriptionEn:String(i.data.descriptionEn||""),descriptionFr:String(i.data.descriptionFr||""),branchId:i.branch_id,categoryId:String(i.data.categoryId),price:Number(i.data.price),description:String(i.data.description||""),imageUrl:i.data.imageUrl?String(i.data.imageUrl):null,allergens:String(i.data.allergens||""),oldPrice:Number(i.data.oldPrice||0)>Number(i.data.price)?Number(i.data.oldPrice):null,images:imageRows.filter(image=>image.data.itemId===i.id&&(!image.branch_id||image.branch_id===i.branch_id)).map(image=>String(image.data.imageUrl)).slice(0,4),quantity:typeof i.data.quantity==="number"?i.data.quantity:null,calories:typeof i.data.calories==="number"?i.data.calories:null,nutrition:typeof i.data.nutrition==="string"?i.data.nutrition:"",nutritionEn:String(i.data.nutritionEn||""),nutritionFr:String(i.data.nutritionFr||"")})),categories:enabledCategories.map(c=>({id:c.id,name:c.name,nameEn:String(c.data.nameEn||""),nameFr:String(c.data.nameFr||""),imageUrl:c.data.imageUrl?String(c.data.imageUrl):null})),branches:branches.map(b=>({id:String(b.id),name:String(b.name)})),signedIn:Boolean(user),linked};
  }finally{db.release();}
 }
