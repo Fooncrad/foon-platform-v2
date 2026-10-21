@@ -26,7 +26,7 @@ export function offlineMenuDocument(menu:OfflineMenu,now=Date.now(),language:Off
   items:menu.items.map(i=>({...label(i),branchId:i.branchId,categoryId:i.categoryId,
    description:str(i.description,3000),descriptionEn:str(i.descriptionEn,3000),descriptionFr:str(i.descriptionFr,3000),
    price:num(i.price)??0,oldPrice:num(i.oldPrice),imageUrl:publicImage(i.imageUrl),
-   images:[...new Set([...(i.images??[]),i.imageUrl].map(publicImage).filter((v):v is string=>Boolean(v)))].slice(0,4),
+   images:[...new Set([i.imageUrl,...(i.images??[])].map(publicImage).filter((v):v is string=>Boolean(v)))].slice(0,4),
    allergens:str(i.allergens,1000),calories:num(i.calories),quantity:num(i.quantity),
    nutrition:str(i.nutrition,2000),nutritionEn:str(i.nutritionEn,2000),nutritionFr:str(i.nutritionFr,2000)
   })),
