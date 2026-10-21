@@ -57,7 +57,10 @@ test("all operational screens have a dark counterpart, not only overview",()=>{
   "restaurantPosSyncBar","restaurantOrderNotes",
   "restaurantPosInvoiceBreakdown","restaurantResourceForm",
   "calendarGrid","calendarEvent","calendarNavigation",
-  "calendarSummary","calendarEditor"
+  "calendarSummary","calendarEditor",
+  "adminDataTable","adminTranslationTable","adminLanguageMenu",
+  "adminBillingCard","adminRoleGrid","customerUploadLabel",
+  "customerAddressForm","customerMobileNavigation"
  ])assert.ok(rules.includes(name),`Missing dark operation: ${name}`);
  assert.match(rules,/\[data-outside="true"\]/);
  assert.match(rules,/\[data-selected="true"\]/);
