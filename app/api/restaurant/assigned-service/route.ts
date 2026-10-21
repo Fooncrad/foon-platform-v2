@@ -16,7 +16,7 @@ export async function GET(request:Request){
   const entitlement=await tenantEntitlement(tenantId,"tables");
   if(!entitlement.enabled)return NextResponse.json({ok:false,code:entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED"},{status:403});
   const db=database();
-  const [employees]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='employee' AND archived=FALSE AND (JSON_UNQUOTE(JSON_EXTRACT(data,'$.userId'))=? OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(data,'$.email')))=(SELECT LOWER(email) FROM users WHERE id=? LIMIT 1))",[tenantId,user,user]);
+  const [employees]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='employee' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.userId'))=?",[tenantId,user]);
   if(!employees.length)return NextResponse.json({ok:true,tables:[],calls:[],assignmentStatus:"EMPLOYEE_PROFILE_NOT_LINKED"});
   const employeeIds=[...new Set([...employees.map(e=>String(e.id)),String(user)])];
   const parse=(value:unknown):Record<string,unknown>=>{try{return (typeof value==="string"?JSON.parse(value):value) as Record<string,unknown>??{};}catch{return {};}};
