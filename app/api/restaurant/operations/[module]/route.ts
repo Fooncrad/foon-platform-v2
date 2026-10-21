@@ -77,7 +77,7 @@ function failure(error:unknown,request:Request,module:string){
  const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  const cookieLocale=request.headers.get("cookie")?.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1];
  const locale=normalizeLocale(cookieLocale??request.headers.get("accept-language"));
- const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status===429?"RATE_LIMITED":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
+ const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
  const message=publicError(category,status,incidentId,locale).error.message;
  if(status>=500)logIncident({incidentId,code,location:"restaurant.operations."+module,error});
  else console.warn(JSON.stringify({level:"warn",incidentId,code,location:"restaurant.operations."+module,status,at:new Date().toISOString()}));
@@ -184,7 +184,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
   if(module==="security"){const current=await currentSessionId(),[rows]=await db.execute<RowDataPacket[]>("SELECT id,created_at,last_seen_at,expires_at FROM auth_sessions WHERE user_id=? AND expires_at>NOW() ORDER BY last_seen_at DESC LIMIT 100",[ctx.user]);return NextResponse.json({ok:true,sessions:rows.map(s=>({...s,current:s.id===current}))});}
   if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),geocodingConfigured:Boolean(process.env.GOOGLE_MAPS_GEOCODING_API_KEY),checkedAt:new Date().toISOString()});}
   throw new ResourceError("MODULE_NOT_FOUND");
- }catch(error){return failure(error,request,module);}finally{db?.release();}
+ }catch(error){return failure(error,request,(await params).module);}finally{db?.release();}
 }
 async function mutate(request:Request,module:string,method:string){
  let db:PoolConnection|undefined;
