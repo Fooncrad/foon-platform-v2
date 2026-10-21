@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {canRoleTransitionOrder,waiterCanSeeOrderChannel} from "../lib/restaurant/order-role-channel-policy.ts";
 
-test("waiters can finish table and room service, never delivery, pickup or takeaway",()=>{
- for(const channel of ["dine_in","room_service"]){
+test("waiters can finish assigned dine-in only, never room service or delivery",()=>{
+ for(const channel of ["dine_in"]){
   assert.equal(waiterCanSeeOrderChannel(channel),true);
   assert.equal(canRoleTransitionOrder("waiter",channel,"ready","completed"),true);
  }
- for(const channel of ["delivery","pickup","takeaway","hotel_service","reservation"]){
+ for(const channel of ["room_service","delivery","pickup","takeaway","hotel_service","reservation"]){
   assert.equal(waiterCanSeeOrderChannel(channel),false);
   assert.equal(canRoleTransitionOrder("waiter",channel,"ready","completed"),false);
  }
