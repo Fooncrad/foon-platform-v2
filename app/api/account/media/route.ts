@@ -6,9 +6,15 @@ import {database} from "@/lib/db/mysql";
 import type {RowDataPacket} from "mysql2/promise";
 export const runtime="nodejs";
 const fields={avatar:["avatar_image","avatar_mime"],logo:["logo_image","logo_mime"],cover:["cover_image","cover_mime"]} as const;
+async function activeAccount(id:string){
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status=\'active\' LIMIT 1",[id]);
+ return rows.length>0;
+}
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const id=await currentUserId();if(!id)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
+ try{if(!await activeAccount(id))return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});}
+ catch{return NextResponse.json({ok:false,code:"MEDIA_UNAVAILABLE"},{status:503});}
  if(Number(request.headers.get("content-length")||0)>3*1024*1024)return NextResponse.json({ok:false,code:"IMAGE_TOO_LARGE"},{status:413});
  const form=await request.formData().catch(()=>null);const type=String(form?.get("type")??"");
  if(!(type in fields))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
@@ -26,6 +32,8 @@ export async function POST(request:Request){
 }
 export async function GET(request:Request){
  const id=await currentUserId();if(!id)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
+ try{if(!await activeAccount(id))return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});}
+ catch{return NextResponse.json({ok:false,code:"MEDIA_UNAVAILABLE"},{status:503});}
  const type=new URL(request.url).searchParams.get("type")??"";if(!(type in fields))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const [imageCol,mimeCol]=fields[type as keyof typeof fields];
  try{const [rows]=await database().execute<RowDataPacket[]>(`SELECT ${imageCol} AS image,${mimeCol} AS mime FROM user_profiles WHERE user_id=?`,[id]);const row=rows[0];if(!row?.image)return new Response(null,{status:404});return new Response(new Uint8Array(row.image as Buffer),{headers:{"content-type":String(row.mime),"cache-control":"private, no-store","x-content-type-options":"nosniff"}});}catch{return NextResponse.json({ok:false,code:"MEDIA_UNAVAILABLE"},{status:503});}
