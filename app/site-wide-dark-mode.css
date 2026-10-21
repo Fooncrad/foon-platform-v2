@@ -257,3 +257,65 @@
   transition:none!important;
  }
 }
+
+/* Extended administration audit: tables, settings, permissions, translations,
+ * subscription approval, receipts, CMS and notifications were using legacy
+ * white-only selectors even while their enclosing panel was dark. */
+.adminShell[data-theme="dark"] .adminStage :is(
+ .admin-operations,.admin-operation-grid>a,.admin-operation-grid>article,
+ .adminOpsCard,.adminOpsForm,.adminOpsMessage,.adminBillingCard,
+ .adminPlanCatalogCard,.adminPlanCreateDetails,.adminCmsLocale,
+ .adminNotificationRule,.adminBillingReview,.adminStage .provision-form,
+ .tenant-list article,.adminEventRow,.adminPageRow,.adminAuditRow,
+ .admin-empty-state,.adminBillingEmpty,.adminUsersEmpty,.adminAuditEmpty,
+ .adminOverviewSecondary article,.adminChannelBadges
+){background:#242832;color:#f8f3e9;border-color:#424c5b}
+.adminShell[data-theme="dark"] .adminStage :is(
+ .adminDataTable,.adminTranslationTable
+){background:#242832;color:#f8f3e9;border-color:#424c5b}
+.adminShell[data-theme="dark"] .adminStage :is(
+ .adminDataTable th,.adminTranslationTable th,
+ .adminTranslationHead,.adminDataTable tbody tr:hover
+){background:#303846;color:#f8f3e9;border-color:#525c6e}
+.adminShell[data-theme="dark"] .adminStage :is(
+ .adminStatusPill,.adminTranslationStatus,
+ .adminOperationBadge,.adminCurrentLanguage,
+ .adminModuleIcon,.adminOperationIcon
+){background:#393528;color:#ffe0a4;border-color:#736348}
+.adminShell[data-theme="dark"] .adminStage :is(
+ .adminPagePick,.adminModuleCard,.adminPagePick:hover,.adminModuleCard:hover
+){background:#303846;color:#f8f3e9;border-color:#525c6e}
+.adminShell[data-theme="dark"] :is(
+ .adminTop button,.adminIconButton,.adminLanguageMenu summary,
+ .adminLanguageMenu>div,.adminLanguageMenu>div button,
+ .adminEventRow button,.adminRowActions button,.adminAuditRow button,
+ .adminPaymentMethods button,.adminRoleGrid button,
+ .adminTopActions a.adminIconButton
+){
+ background:#303846!important;color:#f8f3e9!important;
+ border-color:#525c6e!important;
+}
+.adminShell[data-theme="dark"] .adminTop button:hover,
+.adminShell[data-theme="dark"] .adminIconButton:hover{
+ background:#3d4859!important;color:#fff!important;
+}
+.adminShell[data-theme="dark"] .adminStage :is(
+ .adminOpsForm input,.adminOpsForm select,.adminOpsSearch input,
+ .adminTranslationTable textarea,.adminBillingReview input,
+ .adminUserFilters input,.adminUserFilters select
+){background:#29303b;color:#f8f3e9;border-color:#525c6e}
+.adminShell[data-theme="dark"] .adminStage :is(
+ .admin-operations p,.adminBillingCard p,.adminOpsCard p,
+ .adminPageRow small,.adminAuditRow small,.adminEventRow small
+){color:#c3ccd9}
+
+/* Customer account extras, including profile photo and delivery address
+ * controls, must not become bright islands within the dark account. */
+.customerDashboard[data-theme="dark"] :is(
+ .customerAddressItem,.customerAddressForm,.customerOrderEmpty,
+ .customerPhotoFrame,.customerMobileNavigation
+){background:#242832;color:#f8f3e9;border-color:#424c5b}
+.customerDashboard[data-theme="dark"] .customerUploadLabel{
+ background:#303846;color:#f8f3e9;border-color:#525c6e;
+}
+.customerDashboard[data-theme="dark"] .customerUploadLabel:hover{background:#3c4656}
