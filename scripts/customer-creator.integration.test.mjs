@@ -1,0 +1,71 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {spawn} from "node:child_process";
+import {randomUUID} from "node:crypto";
+import mysql from "mysql2/promise";
+
+test("customer creator profile visibility, public media, ownership and staff isolation",async()=>{
+ const url=new URL(process.env.DATABASE_URL||"");
+ assert.equal(url.protocol,"mysql:");
+ assert.equal(url.hostname,"127.0.0.1");
+ assert.equal(url.pathname,"/foon_migration_test","Never run these tests on production");
+ const origin="http://127.0.0.1:3137",db=await mysql.createConnection(url.href);
+ const server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3137"],{env:{...process.env,APP_URL:origin},stdio:["ignore","pipe","pipe"]});
+ let output="";server.stdout.on("data",s=>output+=s);server.stderr.on("data",s=>output+=s);
+ const call=async(path,method="GET",body,cookie="")=>{
+  const r=await fetch(origin+path,{method,redirect:"manual",headers:{origin,cookie,"content-type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)})});
+  let data=null;try{data=await r.clone().json();}catch{}
+  return{status:r.status,body:data,cookie:r.headers.get("set-cookie")?.split(";")[0],response:r};
+ };
+ const password="synthetic-strong-password";
+ try{
+  let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+"/login",{signal:AbortSignal.timeout(1000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,250));}}
+  assert.ok(ready,output);
+  const slug="creator-store-"+randomUUID().slice(0,8);
+  const owner=await call("/api/auth/register","POST",{name:"Owner",email:slug+"@test.example",password,storeName:"Creator test merchant",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"});
+  assert.equal(owner.status,201,JSON.stringify(owner.body));
+  const registerCustomer=async()=>{const email="creator-"+randomUUID()+"@test.example";const res=await call("/api/customer/register","POST",{name:"Test creator",email,password,storeSlug:slug});assert.equal(res.status,201,JSON.stringify(res.body));return {id:res.body.user.id,cookie:res.cookie};};
+  const creator=await registerCustomer(),second=await registerCustomer();
+  const profile="/api/account/creator-profile",handle="art-"+randomUUID().slice(0,12);
+  assert.equal((await call(profile)).status,401);
+  const empty=await call(profile,"GET",undefined,creator.cookie);
+  assert.equal(empty.status,200);assert.equal(empty.body.profile,null);
+  assert.equal((await call("/creators/"+handle)).status,404);
+  assert.equal((await call(profile,"PUT",{handle,displayName:"Visual creator",bio:"A portfolio",visibility:"hidden"},creator.cookie)).status,400);
+  const draft={handle,displayName:"Visual creator",bio:"A portfolio",visibility:"private"};
+  assert.equal((await call(profile,"PUT",draft,creator.cookie)).status,200);
+  assert.equal((await call("/creators/"+handle)).status,404,"private profile must be invisible even with exact URL");
+  const privateList=await call("/creators");
+  assert.equal(privateList.status,200);
+  assert.doesNotMatch(await privateList.response.text(),new RegExp(handle));
+  const mediaId=randomUUID(),bytes=Buffer.from("public-image-fixture");
+  await db.execute("INSERT INTO user_media_library(id,user_id,file_name,mime_type,image_data,size_bytes) VALUES (?,?,?,'image/jpeg',?,?)",[mediaId,creator.id,"test.jpg",bytes,bytes.length]);
+  const pub=await call(profile,"POST",{mediaId,caption:"Selected work"},creator.cookie);
+  assert.equal(pub.status,201,JSON.stringify(pub.body));
+  assert.equal((await call("/api/creators/"+handle+"/media/"+pub.body.id)).status,404,"private portfolio must never be readable publicly");
+  assert.equal((await call(profile,"POST",{mediaId,caption:"Duplicate"},creator.cookie)).status,409);
+  assert.equal((await call(profile,"POST",{mediaId:randomUUID(),caption:"Foreign"},creator.cookie)).status,404);
+  assert.equal((await call(profile,"DELETE",{id:pub.body.id},second.cookie)).status,404,"other customers cannot delete published items");
+  assert.equal((await call(profile,"PUT",{...draft,visibility:"public"},creator.cookie)).status,200);
+  const publicPage=await call("/creators/"+handle);
+  assert.equal(publicPage.status,200);
+  assert.match(await publicPage.response.text(),/Visual creator/);
+  const publicImage=await call("/api/creators/"+handle+"/media/"+pub.body.id);
+  assert.equal(publicImage.status,200);
+  assert.deepEqual(Buffer.from(await publicImage.response.arrayBuffer()),bytes);
+  assert.equal((await call("/creators/"+handle,"GET",undefined,second.cookie)).status,200);
+  const publicList=await call("/creators");
+  assert.match(await publicList.response.text(),new RegExp(handle));
+  assert.equal((await call(profile,"PUT",{handle,displayName:"Second",bio:"",visibility:"public"},second.cookie)).status,409,"handles must be unique");
+  assert.equal((await call(profile,"PUT",draft,creator.cookie)).status,200);
+  assert.equal((await call("/creators/"+handle)).status,404);
+  assert.equal((await call("/api/creators/"+handle+"/avatar")).status,404);
+  assert.equal((await call("/api/creators/"+handle+"/media/"+pub.body.id)).status,404);
+  const hiddenList=await call("/creators");assert.doesNotMatch(await hiddenList.response.text(),new RegExp(handle));
+  assert.equal((await call(profile,"PUT",draft,owner.cookie)).status,403,"merchant owners cannot create customer creator identities");
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'cashier','suspended')",[randomUUID(),owner.body.tenant.id,creator.id]);
+  assert.equal((await call(profile,"GET",undefined,creator.cookie)).status,403,"even suspended staff cannot use the creator account");
+  assert.equal((await call("/creators/"+handle)).status,404,"staff profile is never publicly searchable");
+  console.log("Customer creator: private by default; optional public page; published-only media; private 404; owner/staff denied");
+ }finally{server.kill();await db.end();}
+});
