@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {database} from "@/lib/db/mysql";
 import {encryptSmtpPassword,tenantMailSettings} from "@/lib/restaurant/mail-settings";
 export const runtime="nodejs";
@@ -9,6 +10,7 @@ async function authorize(request:Request,write:boolean){
  const user=await currentUserId();if(!user)throw Error("UNAUTHENTICATED");
  const tenantId=request.headers.get("x-foon-tenant")??"";
  await requireTenantMembership(user,tenantId,["owner","manager"],write);
+ if(write)await requireAllAdditionalBranchesUnlocked(tenantId,user);
  return tenantId;
 }
 export async function GET(request:Request){
