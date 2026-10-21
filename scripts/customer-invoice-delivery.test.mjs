@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {issuePaidOrderInvoice} from "../lib/billing/order-invoices.ts";
 const source=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 test("paid order triggers one immutable receipt and no invoice on checkout creation",()=>{
@@ -55,4 +56,42 @@ test("creator commission is earned once, and payout evidence is limited to the o
  assert.match(notice,/VALUES \(\?,\?,NULL,\?,\?,\?\)/);
  assert.match(receipt,/c.creator_user_id=\?/);
  assert.match(receipt,/customerCreatorUserId/);
+});
+
+test("runtime: receipt issuance is paid-only, idempotent and keeps unverified email out of SMTP",async()=>{
+ async function scenario({payment="paid",status="completed",verified=true}={}){
+  let inserts=0;
+  const writes=[];
+  const db={async execute(sql,args){
+   if(sql.startsWith("SELECT o.id,o.branch_id"))return [[{
+    id:"order-1",branch_id:"branch-1",order_number:123,customer_user_id:"customer-1",
+    payment_status:payment,status,subtotal:"90.00",discount:"0.00",total:"100.00",
+    currency:"SAR",checkout_snapshot:JSON.stringify({tax:"10.00"}),store_name:"Test Store",
+    email:"customer@example.test",email_verified_at:verified?"2026-10-21":null,default_locale:"en"
+   }]];
+   if(sql.startsWith("SELECT item_name"))return [[{item_name:"Item",quantity:2,unit_price:"45.00",line_total:"90.00",options_snapshot:null}]];
+   writes.push({sql,args});
+   if(sql.startsWith("INSERT IGNORE INTO restaurant_customer_invoices"))return [{affectedRows:inserts++===0?1:0}];
+   return [{affectedRows:1}];
+  }};
+  const first=await issuePaidOrderInvoice(db,"tenant-1","order-1");
+  const replay=await issuePaidOrderInvoice(db,"tenant-1","order-1");
+  const count=part=>writes.filter(row=>row.sql.includes(part)).length;
+  return {first,replay,notices:count("INSERT INTO customer_notifications"),emails:count("INSERT INTO platform_notification_outbox"),
+   invoices:count("INSERT IGNORE INTO restaurant_customer_invoices"),
+   state:writes.find(row=>row.sql.startsWith("INSERT IGNORE INTO restaurant_customer_invoices"))?.args.at(-1)};
+ }
+ const paid=await scenario();
+ assert.equal(paid.first?.emailQueued,true);
+ assert.equal(paid.replay,null);
+ assert.equal(paid.invoices,2);
+ assert.equal(paid.notices,1);
+ assert.equal(paid.emails,1);
+ assert.equal((await scenario({payment:"pending"})).invoices,0);
+ assert.equal((await scenario({status:"cancelled"})).invoices,0);
+ const unverified=await scenario({verified:false});
+ assert.equal(unverified.first?.emailQueued,false);
+ assert.equal(unverified.state,"skipped");
+ assert.equal(unverified.notices,1);
+ assert.equal(unverified.emails,0);
 });
