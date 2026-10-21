@@ -1,0 +1,35 @@
+/* Tenant free-location and optional integration editor, theme-aware by design. */
+.restaurantApp .foonLocationSettings{min-width:0}
+.restaurantApp .foonLocationSettings form{min-width:0}
+.restaurantApp .foonLocationSettings label{display:grid;gap:7px;font-size:13px;font-weight:700;min-width:0;color:var(--rc-text,#1c2636)}
+.restaurantApp .foonLocationSettings fieldset label,
+.restaurantApp .foonLocationSettings label:has(>input[type="checkbox"]){display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.restaurantApp .foonLocationSettings :is(input:not([type="radio"]):not([type="checkbox"]),select,textarea){
+ box-sizing:border-box;width:100%;min-width:0;min-height:43px;
+ padding:10px 12px;border-radius:10px;
+ border:1px solid var(--rc-border,#d1d5db);
+ background:var(--rc-surface,#fff);color:var(--rc-text,#1c2636);
+ font:inherit;line-height:1.6;
+}
+.restaurantApp .foonLocationSettings textarea{resize:vertical}
+.restaurantApp .foonLocationSettings :is(input,textarea)::placeholder{color:var(--rc-muted,#6b7280);opacity:1}
+.restaurantApp .foonLocationSettings :is(input[type="radio"],input[type="checkbox"]){
+ accent-color:var(--rc-accent,#d92483);width:19px;height:19px;flex:0 0 19px;
+}
+.restaurantApp .foonLocationSettings button:not(.restaurantPrimary){
+ padding:10px 14px;border:1px solid var(--rc-border,#d1d5db);
+ border-radius:10px;background:var(--rc-surface,#fff);color:var(--rc-text,#1c2636);
+ cursor:pointer;min-height:43px;font-weight:700;
+}
+.restaurantApp .foonLocationSettings a{color:var(--rc-accent,#d92483);font-weight:700}
+.restaurantApp .foonLocationSettings :is(button,input,a,select,textarea):focus-visible{
+ outline:3px solid var(--rc-accent,#d92483);outline-offset:2px;
+}
+.restaurantApp[data-theme="dark"] .foonLocationSettings :is(input:not([type="radio"]):not([type="checkbox"]),textarea,select){
+ background:#29303b;color:#f8f3e9;border-color:#525c6e;
+}
+.restaurantApp[data-theme="dark"] .foonLocationSettings button:not(.restaurantPrimary){
+ background:#303846;color:#f8f3e9;border-color:#525c6e;
+}
+.restaurantApp[data-theme="dark"] .foonLocationSettings a{color:#ff95cc}
+.restaurantApp[data-theme="dark"] .foonLocationSettings :is(input,textarea)::placeholder{color:#b9c6d6}
