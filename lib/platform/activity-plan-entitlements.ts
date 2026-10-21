@@ -89,6 +89,9 @@ const SERVER_RESTRICTED_FEATURES=new Set([
  "creator_profile","content_marketplace","media_library","watermark","content_pricing"
 ]);
 export function passesServerActivityRestriction(activity:unknown,featureKey:string):boolean{
+ // Creator entitlements are account-scoped, never inherited from a merchant
+ // plan, even when a legacy tenant has no recognized activity profile.
+ if(CREATOR_ONLY.has(featureKey))return false;
  if(!SERVER_RESTRICTED_FEATURES.has(featureKey)||typeof activity!=="string"||!isActivityType(activity))return true;
  return activityFeatureSupport(activity,featureKey)==="supported";
 }
