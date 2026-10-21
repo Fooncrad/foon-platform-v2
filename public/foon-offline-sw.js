@@ -50,6 +50,12 @@ self.addEventListener("message",event=>{
   let bytes=0;
   for(const path of requested.slice(0,160)){
    try{
+    const existing=await cache.match(path);
+    if(existing&&Date.now()-Number(existing.headers.get("x-foon-saved")||0)<=MAX_AGE){
+     const headers=new Headers(existing.headers);headers.set("x-foon-saved",saved);
+     await cache.put(path,new Response(existing.body,{headers}));
+     continue;
+    }
     const response=await fetch(path,{credentials:"omit",redirect:"error"});
     if(!response.ok||!/^image\/(png|jpeg|webp)$/.test(response.headers.get("content-type")??""))continue;
     const length=Number(response.headers.get("content-length")||0);
