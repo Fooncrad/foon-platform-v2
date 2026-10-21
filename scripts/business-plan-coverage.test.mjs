@@ -34,6 +34,9 @@ test("business grants cannot bypass server activity restrictions or create emplo
   }
   assert.equal(activityFeatureSupport(activity,"pos"),"supported",activity);
  }
+ for(const unknownActivity of [null,undefined,"", "legacy-unknown"]){
+  for(const feature of creatorOnly)assert.equal(passesServerActivityRestriction(unknownActivity,feature),false);
+ }
  for(const [module,config] of Object.entries(resourceModules)){
   if(config.feature)assert.ok(catalogKeys.includes(config.feature),module+" has no registered plan feature");
  }
