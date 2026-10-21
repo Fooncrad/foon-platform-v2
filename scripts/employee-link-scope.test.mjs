@@ -7,7 +7,7 @@ const branch="22222222-2222-4222-8222-222222222222";
 const otherBranch="33333333-3333-4333-8333-333333333333";
 const user="44444444-4444-4444-8444-444444444444";
 const linked={userId:user,role:"waiter"};
-function mockDB({role="waiter",assignedBranch=branch,memberActive=true,enabled=true,userActive=true,customer=false,tenantId=tenant}={}){
+function mockDB({role="waiter",assignedBranch=branch,memberActive=true,enabled=true,userActive=true,customer=false,customerProfile=false,platformAdmin=false,tenantId=tenant}={}){
  let queries=0;
  return {get queries(){return queries;},async execute(sql,params){
   queries++;
@@ -15,11 +15,12 @@ function mockDB({role="waiter",assignedBranch=branch,memberActive=true,enabled=t
    "a.tenant_id=m.tenant_id","a.user_id=m.user_id","a.branch_id=?",
    "a.enabled=TRUE","a.role=m.role","u.status='active'",
    "m.tenant_id=?","m.user_id=?","m.role=?","m.status='active'",
-   "NOT EXISTS","customer.role='customer'","customer.status='active'"
+   "NOT EXISTS","customer.role='customer'","customer.status='active'",
+   "tenant_customers tc","tc.user_id=m.user_id","platform_admins pa","pa.user_id=m.user_id"
   ])assert.ok(sql.includes(expected),`missing authorization guard: ${expected}`);
   const [requestedBranch,requestedTenant,requestedUser,requestedRole]=params;
   return [[...(requestedBranch===assignedBranch&&requestedTenant===tenantId&&
-   requestedUser===user&&requestedRole===role&&memberActive&&enabled&&userActive&&!customer?
+   requestedUser===user&&requestedRole===role&&memberActive&&enabled&&userActive&&!customer&&!customerProfile&&!platformAdmin?
    [{user_id:user}]:[])]];
  }};
 }
@@ -32,6 +33,8 @@ test("customer membership or staff/customer dual role is never eligible",async()
  const db=mockDB({customer:true});
  assert.equal(await resolveBoundEmployeeUser(db,tenant,branch,linked),"");
  assert.equal(await resolveBoundEmployeeUser(mockDB(),tenant,branch,{userId:user,role:"customer"}),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({customerProfile:true}),tenant,branch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({platformAdmin:true}),tenant,branch,linked),"");
 });
 test("wrong branch, wrong tenant, changed role and disabled assignment all fail closed",async()=>{
  assert.equal(await resolveBoundEmployeeUser(mockDB(),tenant,otherBranch,linked),"");
