@@ -45,7 +45,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.ok(activeDashboard.includes('الاشتراك نشط'));
   const categoryA=await save(a,"categories","Drinks",{}),categoryB=await save(b,"categories","Private category",{});
   assert.equal((await resource(a,"menu",{name:"Invalid",status:"active",data:{price:10,categoryId:categoryB}})).status,404);
-  assert.equal((await resource(a,"menu",{name:"Invalid branch",status:"active",branchId:b.branch,data:{price:10,categoryId:categoryA}})).status,404);
+  const foreignBranchMenu=await resource(a,"menu",{name:"Invalid branch",status:"active",branchId:b.branch,data:{price:10,categoryId:categoryA}});assert.equal(foreignBranchMenu.status,403);assert.equal(foreignBranchMenu.body.code,"BRANCH_PIN_REQUIRED");
   const item=await save(a,"menu","Coffee",{price:10,oldPrice:15,calories:120,nutrition:"Protein 3g",allergens:"Milk",quantity:18,categoryId:categoryA});
   const persistedMenu=await resource(a,"menu",undefined,"GET"),persistedCoffee=persistedMenu.body.resources.find(r=>r.id===item);assert.equal(persistedCoffee.data.oldPrice,15);assert.equal(persistedCoffee.data.calories,120);assert.equal(persistedCoffee.data.quantity,18);assert.equal(persistedCoffee.data.nutrition,"Protein 3g");
   const editedCoffee=await resource(a,"menu",{id:item,version:persistedCoffee.version,name:"Coffee",status:"active",branchId:a.branch,data:{price:10,categoryId:categoryA,description:"Updated description"}},"PATCH");assert.equal(editedCoffee.status,200);const preservedCoffee=(await resource(a,"menu",undefined,"GET")).body.resources.find(r=>r.id===item);assert.equal(preservedCoffee.data.oldPrice,15);assert.equal(preservedCoffee.data.nutrition,"Protein 3g");
@@ -80,32 +80,38 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"dine_in",couponCode:"SAVE10",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,a.cookie,b.tenant)).status,403);
   assert.equal((await resource(a,"categories",{id:categoryB,version:1},"DELETE")).status,404);
-  await save(a,"team","Kitchen employee",{email:staff.email,role:"kitchen"});
+  // Existing customer/owner identities must never silently become staff.
+  const collision=await resource(a,"team",{name:"Colliding identity",status:"active",branchId:a.branch,data:{email:staff.email,role:"kitchen"}});
+  assert.equal(collision.body.code,"ACCOUNT_ALREADY_EXISTS");
+  const kitchenEmail="kitchen-profile-"+randomUUID().slice(0,8)+"@test.example";
+  const kitchenEmployee=await save(a,"team","Kitchen employee",{email:kitchenEmail,role:"kitchen"});
+  const provisioned=await call("/api/restaurant/employee-provision","POST",{tenantId:a.tenant,resourceId:kitchenEmployee,password,permissions:["kitchen.view","kitchen.edit"]},a.cookie,a.tenant);
+  assert.equal(provisioned.status,200,JSON.stringify(provisioned.body));
+  const kitchenLogin=await call("/api/auth/login","POST",{email:kitchenEmail,password});
+  assert.equal(kitchenLogin.status,200,JSON.stringify(kitchenLogin.body));
   assert.equal((await call("/api/restaurant/operations/menu","GET",undefined,staff.cookie,a.tenant)).status,403);
   assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
-  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'kitchen',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
-  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'kitchen.view',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
-  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?, 'kitchen.edit',TRUE)",[randomUUID(),a.tenant,staff.user,a.branch]);
-  assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},staff.cookie,a.tenant)).status,403);
-  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"GET",undefined,staff.cookie,a.tenant)).status,403);
-  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"PATCH",{id:order.body.id,version:1,status:"preparing"},staff.cookie,a.tenant)).status,403);
-  const kitchenView=await call("/api/restaurant/operations/kds","GET",undefined,staff.cookie,a.tenant);assert.equal(kitchenView.status,200);assert.equal(kitchenView.body.orders[0].total,null);assert.equal(kitchenView.body.orders[0].customer_phone,null);
+  // Provisioning atomically created tenant membership, branch assignment and grants.
+  assert.equal((await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]},kitchenLogin.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"GET",undefined,kitchenLogin.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds?branch="+b.branch,"PATCH",{id:order.body.id,version:1,status:"preparing"},kitchenLogin.cookie,a.tenant)).status,403);
+  const kitchenView=await call("/api/restaurant/operations/kds","GET",undefined,kitchenLogin.cookie,a.tenant);assert.equal(kitchenView.status,200);assert.equal(kitchenView.body.orders[0].total,null);assert.equal(kitchenView.body.orders[0].customer_phone,null);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:1,paymentStatus:"paid"},"PATCH")).status,200);
   const unfinalizedReceipt=await call("/api/restaurant/receipts","POST",{id:order.body.id},a.cookie,a.tenant);
   assert.equal(unfinalizedReceipt.status,409,"a paid order is not a final receipt until it is completed");
   assert.equal(unfinalizedReceipt.body.code,"RECEIPT_NOT_FINAL");
   const [[uncompletedReceiptJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_paid'",[a.tenant,receiptPrinter,order.body.id]);assert.equal(Number(uncompletedReceiptJobCount.n),0,"customer receipts wait until the order is completed as well as paid");
   assert.equal((await resource(a,"orders",{id:order.body.id,version:2,status:"cancelled"},"PATCH")).body.code,"REFUND_REQUIRED");
-  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:2,status:"preparing"},staff.cookie,a.tenant)).status,200);
+  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:2,status:"preparing"},kitchenLogin.cookie,a.tenant)).status,200);
   const [[acceptedPrintJobs]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND status='pending'",[a.tenant,kitchenPrinter,order.body.id]);assert.equal(Number(acceptedPrintJobs.n),1,"the accepted order prints once at the section printer");
   const [[printJob]]=await db.execute("SELECT payload_json FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=?",[a.tenant,kitchenPrinter,order.body.id]);const printPayload=typeof printJob.payload_json==="string"?JSON.parse(printJob.payload_json):printJob.payload_json;assert.equal(printPayload.items.length,1);assert.equal(printPayload.items[0].copies,2);assert.ok(Number(printPayload.orderNumber)>0);
   const [[prepJobCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_print_jobs WHERE tenant_id=? AND printer_id=? AND source_id=? AND event_key LIKE '%on_prepare'",[a.tenant,prepPrinter,order.body.id]);assert.equal(Number(prepJobCount.n),1,"preparation events route to the assigned section printer");
   await db.execute("UPDATE restaurant_orders SET channel='delivery',order_notes='Private delivery address' WHERE id=?",[order.body.id]);
-  const privateDelivery=await call('/api/restaurant/operations/kds','GET',undefined,staff.cookie,a.tenant);
+  const privateDelivery=await call('/api/restaurant/operations/kds','GET',undefined,kitchenLogin.cookie,a.tenant);
   assert.equal(privateDelivery.body.orders.find(o=>o.id===order.body.id).order_notes,null);
   await db.execute("UPDATE restaurant_orders SET channel='dine_in',order_notes=NULL WHERE id=?",[order.body.id]);
-  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,paymentStatus:"refunded"},staff.cookie,a.tenant)).status,403);
-  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,status:"ready"},staff.cookie,a.tenant)).status,200);
+  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,paymentStatus:"refunded"},kitchenLogin.cookie,a.tenant)).status,403);
+  assert.equal((await call("/api/restaurant/operations/kds","PATCH",{id:order.body.id,version:3,status:"ready"},kitchenLogin.cookie,a.tenant)).status,200);
   assert.equal((await resource(a,"orders",{id:order.body.id,version:4,status:"completed"},"PATCH")).status,200);
   const finalReceipt=await call("/api/restaurant/receipts","POST",{id:order.body.id},a.cookie,a.tenant);
   assert.equal(finalReceipt.status,200,"completed paid orders may generate the final receipt link");
@@ -213,14 +219,24 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"reservations",{name:"Wrong section",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:bookingTime,sectionId:terrace,tableId:diningTable}})).body.code,"SECTION_TABLE_MISMATCH");
   await save(a,"reservations","Next guest",{partySize:2,scheduledAt:new Date(Date.parse(bookingTime)+90*60000).toISOString(),tableId:diningTable},"confirmed");
   const ranged=await call("/api/restaurant/operations/reservations?from="+encodeURIComponent(bookingTime)+"&to="+encodeURIComponent(new Date(Date.parse(bookingTime)+86400000).toISOString()),"GET",undefined,a.cookie,a.tenant);assert.equal(ranged.status,200);assert.equal(ranged.body.resources.length,2);
-  const waiterAccount=await register("operations-floor-waiter"),supervisorAccount=await register("operations-floor-supervisor");
-  const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterAccount.email,role:"waiter"}),supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorAccount.email,role:"manager"});
+  // Employees are created with fresh, non-customer identities and real
+  // passwords rather than taking over accounts registered for another store.
+  const waiterEmail="operations-floor-waiter-"+randomUUID().slice(0,8)+"@test.example";
+  const supervisorEmail="operations-floor-supervisor-"+randomUUID().slice(0,8)+"@test.example";
+  const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterEmail,role:"waiter"});
+  const supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorEmail,role:"supervisor"});
+  const waiterCreated=await call("/api/restaurant/employee-provision","POST",
+   {tenantId:a.tenant,resourceId:waiterEmployee,password,permissions:["orders.view","orders.edit"]},a.cookie,a.tenant);
+  assert.equal(waiterCreated.status,200,JSON.stringify(waiterCreated.body));
+  const supervisorCreated=await call("/api/restaurant/employee-provision","POST",
+   {tenantId:a.tenant,resourceId:supervisorEmployee,password,permissions:[]},a.cookie,a.tenant);
+  assert.equal(supervisorCreated.status,200,JSON.stringify(supervisorCreated.body));
+  const waiterLogin=await call("/api/auth/login","POST",{email:waiterEmail,password});
+  assert.equal(waiterLogin.status,200,JSON.stringify(waiterLogin.body));
+  const [[waiterUser]]=await db.execute("SELECT id FROM users WHERE email=?",[waiterEmail]);
+  const waiterAccount={user:String(waiterUser.id),cookie:waiterLogin.cookie,email:waiterEmail};
   // A linked waiter may manage only authorized branch order types, never
   // claim the assigned delivery driver's fulfillment transition.
-  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'waiter',TRUE)",[randomUUID(),a.tenant,waiterAccount.user,a.branch]);
-  for(const permission of ["orders.view","orders.edit"]){
-   await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),a.tenant,waiterAccount.user,a.branch,permission]);
-  }
   assert.equal((await resource(a,"orders",{id:deliveryOne.body.id,version:1,status:"preparing"},"PATCH")).status,200);
   assert.equal((await resource(a,"orders",{id:deliveryOne.body.id,version:2,status:"ready"},"PATCH")).status,200);
   const waiterOrders=await call("/api/restaurant/operations/orders?branch="+a.branch,"GET",undefined,waiterAccount.cookie,a.tenant);
@@ -330,7 +346,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const approved=await resource(a,"quotations",{id:conversionId,version:source.version,name:source.name,status:"accepted",branchId:a.branch,data:source.data},"PATCH");
   assert.equal(approved.status,200,JSON.stringify(approved.body));
   const wrongBranchConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:b.branch});
-  assert.equal(wrongBranchConversion.body.code,"REFERENCE_NOT_FOUND");
+  assert.equal(wrongBranchConversion.body.code,"BRANCH_PIN_REQUIRED");
   const tamperedConversion=await resource(a,"serviceOrders",{convertQuotationId:conversionId,branchId:a.branch,data:{amount:0}});
   assert.equal(tamperedConversion.body.code,"INVALID_INPUT");
   const conversionPayload={convertQuotationId:conversionId,branchId:a.branch};
@@ -357,7 +373,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(replayConversion.body.existing,true);
   await db.execute("UPDATE tenant_subscriptions SET plan_id=? WHERE tenant_id=?",["operations-enterprise",b.tenant]);
   const foreignConversion=await resource(b,"serviceOrders",conversionPayload);
-  assert.equal(foreignConversion.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(foreignConversion.body));
+   assert.equal(foreignConversion.status,403,JSON.stringify(foreignConversion.body));
+   assert.equal(foreignConversion.body.code,"BRANCH_PIN_REQUIRED","foreign tenant branch access must fail before resource lookup");
   const directDuplicate=await resource(a,"serviceOrders",{name:"Manual duplicate",status:"new",branchId:a.branch,data:{quotationId:conversionId,customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5}});
   assert.equal(directDuplicate.body.code,"SERVICE_ORDER_ALREADY_CREATED");
 
@@ -581,7 +598,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const completedSourceInvoice=await resource(a,"serviceOrders",{id:invoiceSourceId,version:startedInvoiceRow.version,name:startedInvoiceRow.name,status:"completed",branchId:a.branch,data:startedInvoiceRow.data},"PATCH");
   assert.equal(completedSourceInvoice.status,200,JSON.stringify(completedSourceInvoice.body));
   const wrongBranchInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:b.branch});
-  assert.equal(wrongBranchInvoice.body.code,"REFERENCE_NOT_FOUND");
+  assert.equal(wrongBranchInvoice.body.code,"BRANCH_PIN_REQUIRED");
   const injectedInvoice=await resource(a,"customerInvoices",{invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch,data:{subtotal:0,status:"paid"}});
   assert.equal(injectedInvoice.body.code,"INVALID_INPUT");
   const invoiceDraftPayload={invoiceFromServiceOrderId:invoiceSourceId,branchId:a.branch};
@@ -604,7 +621,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(replayInvoice.body.id,firstInvoice.body.id);
   assert.equal(replayInvoice.body.existing,true);
   const otherTenantInvoice=await resource(b,"customerInvoices",invoiceDraftPayload);
-  assert.equal(otherTenantInvoice.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(otherTenantInvoice.body));
+  assert.equal(otherTenantInvoice.status,403,JSON.stringify(otherTenantInvoice.body));
+  assert.equal(otherTenantInvoice.body.code,"BRANCH_PIN_REQUIRED","another tenant cannot reference a protected source branch");
   const [[generatedInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=?",[a.tenant,invoiceSourceId]);
   assert.equal(Number(generatedInvoiceCount.n),1);
   const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);

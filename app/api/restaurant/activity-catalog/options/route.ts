@@ -5,6 +5,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {combinationKey} from "@/lib/restaurant/activity-pos";
 import {validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
@@ -13,7 +14,7 @@ const fail=(code:string,status=400)=>NextResponse.json({ok:false,code},{status})
 async function authorize(request:Request){
  const user=await currentUserId(),tenant=request.headers.get("x-foon-tenant");
  if(!user||!tenant)return null;
- try{return await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET")}catch{return null}
+ try{const ctx=await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET");if(request.method!=="GET")await requireAllAdditionalBranchesUnlocked(ctx.tenantId,user);return ctx;}catch{return null}
 }
 export async function GET(request:Request){
  const ctx=await authorize(request);if(!ctx)return fail("FORBIDDEN",403);

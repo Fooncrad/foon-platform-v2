@@ -5,6 +5,7 @@ import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
+import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
 import type {TenantRole} from "@/lib/auth/roles";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
@@ -21,13 +22,13 @@ export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
 const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const allRoles:TenantRole[]=[...orderRoles];
-async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit"){
+async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit",requestedBranch?:string|null){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
  const special=["overview","orders","pos","kds","customers","security","health","reports"];
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
- const allowed=config?config.roles as TenantRole[]:module==="reports"?allRoles:module==="customers"||module==="health"?allRoles:module==="pos"?allRoles:module==="kds"?allRoles:allRoles;
+ const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:allRoles;
  const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
  let authorizedBranch:string|null=null;
  // Existing role checks remain mandatory. Explicit employee grants narrow them further.
@@ -62,6 +63,8 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
   if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
  }
+ const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch")??requestedBranch??null;
+ if(module!=="security"&&module!=="health")await requireAdditionalBranchUnlock(access.tenantId,selectedBranch,user);
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
  return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
@@ -69,8 +72,8 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
 function failure(error:unknown){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
- const code=error instanceof ResourceError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const code=error instanceof ResourceError||error instanceof BranchPinError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
+ const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  if(status>=500)console.error("[FOON operations]",{incidentId,code,error});
  return NextResponse.json({ok:false,code,incidentId},{status});
 }
@@ -173,24 +176,32 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
   }
   if(module==="customers"){const [rows]=await db.execute<RowDataPacket[]>("SELECT u.id,u.display_name,c.created_at FROM tenant_customers c JOIN users u ON u.id=c.user_id WHERE c.tenant_id=? ORDER BY c.created_at DESC LIMIT 200",[ctx.tenantId]);return NextResponse.json({ok:true,customers:rows});}
   if(module==="security"){const current=await currentSessionId(),[rows]=await db.execute<RowDataPacket[]>("SELECT id,created_at,last_seen_at,expires_at FROM auth_sessions WHERE user_id=? AND expires_at>NOW() ORDER BY last_seen_at DESC LIMIT 100",[ctx.user]);return NextResponse.json({ok:true,sessions:rows.map(s=>({...s,current:s.id===current}))});}
-  if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),checkedAt:new Date().toISOString()});}
+  if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),geocodingConfigured:Boolean(process.env.GOOGLE_MAPS_GEOCODING_API_KEY),checkedAt:new Date().toISOString()});}
   throw new ResourceError("MODULE_NOT_FOUND");
  }catch(error){return failure(error);}finally{db?.release();}
 }
 async function mutate(request:Request,module:string,method:string){
  let db:PoolConnection|undefined;
  try{
-  const ctx=await authorize(request,module,true),body=await request.json().catch(()=>null);
+  const body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   // Recording payment during POS create is also a financial edit. A cashier
   // who can create orders but lacks pos.edit must never mark them paid.
-  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit");
+  const requestedBranch=typeof body.branchId==="string"?body.branchId:null;
+  const ctx=await authorize(request,module,true,undefined,requestedBranch);
+  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit",requestedBranch);
   
   db=await connection();await db.beginTransaction();
   if(!["owner","manager"].includes(ctx.role)&&method==="POST"){
    if(!ctx.authorizedBranch)throw new ResourceError("BRANCH_REQUIRED");
    if(body.branchId!==undefined&&body.branchId!==ctx.authorizedBranch)throw new ResourceError("FORBIDDEN");
    body.branchId=ctx.authorizedBranch;
+  }
+  // The PIN must apply to the actual target record, not merely a chosen header.
+  if(typeof body.branchId==="string"&&body.branchId)await requireAdditionalBranchUnlock(ctx.tenantId,body.branchId,ctx.user);
+  if(typeof body.id==="string"&&Object.hasOwn(resourceModules,module)){
+   const [target]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
+   if(target.length&&target[0].branch_id)await requireAdditionalBranchUnlock(ctx.tenantId,String(target[0].branch_id),ctx.user);
   }
   // Existing records must belong to the employee's verified branch before any mutation.
   if(!["owner","manager"].includes(ctx.role)&&typeof body.id==="string"){

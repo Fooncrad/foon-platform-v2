@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {randomUUID,randomBytes,createHmac} from "node:crypto";
+import {randomUUID,randomBytes,createHmac,scryptSync} from "node:crypto";
 import {spawn} from "node:child_process";
 import bcrypt from "bcryptjs";
 import mysql from "mysql2/promise";
@@ -85,7 +85,18 @@ test("customer checkout persists before HTTP, isolates ownership, survives retri
   // Completed sandbox attempts no longer hold the merchant configuration lock.
   const update=await put({...payload,version:1,credentials:{}});assert.equal(update.status,200,await update.clone().text());
   const secondBranch=randomUUID();await pool.execute("INSERT INTO branches(id,tenant_id,name,slug) VALUES (?,?,'Other','other')",[secondBranch,tenant]);
-  const branchConfig=await put({...payload,branch_id:secondBranch,enabled:false,credentials:{},public_key:"",version:null});assert.equal(branchConfig.status,200);
+  // A second branch cannot change shared merchant settings until its owner
+  // initializes and unlocks the branch PIN for this authenticated session.
+  const denied=await put({...payload,branch_id:secondBranch,enabled:false,credentials:{},public_key:"",version:null});
+  assert.equal(denied.status,403,"locked additional branches must reject merchant mutations");
+  const pin="726391",salt=randomBytes(16).toString("hex");
+  await pool.execute("UPDATE branches SET pin_salt=?,pin_hash=? WHERE id=?",[salt,scryptSync(pin,salt,32).toString("hex"),secondBranch]);
+  const opened=await fetch(local+"/api/restaurant/branches/unlock",{method:"POST",headers:{cookie:ownerCookie,origin:app,"content-type":"application/json"},body:JSON.stringify({tenantId:tenant,branchId:secondBranch,pin})});
+  assert.equal(opened.status,200,await opened.clone().text());
+   assert.equal((await opened.clone().json()).expiresInSeconds,900,"secondary branch must be unlocked, not treated as primary");
+   const [[pinGrant]]=await pool.execute("SELECT a.unlocked_until,UTC_TIMESTAMP() AS db_now FROM branch_pin_access a JOIN auth_sessions s ON s.id=a.auth_session_id AND s.user_id=? AND s.expires_at>UTC_TIMESTAMP() WHERE a.tenant_id=? AND a.branch_id=? AND a.unlocked_until>UTC_TIMESTAMP() LIMIT 1",[owner.user.id,tenant,secondBranch]);
+   assert.ok(pinGrant,"branch PIN grant must be visible to the merchant API");
+  const branchConfig=await put({...payload,branch_id:secondBranch,enabled:false,credentials:{},public_key:"",version:null});assert.equal(branchConfig.status,200,await branchConfig.clone().text());
   const disabled=await order(secondBranch);await assert.rejects(()=>start(disabled),/CHECKOUT_NOT_ENABLED/);
   // An altered order during provider creation is retained for review, without exposing a URL.
   const changed=await order();
