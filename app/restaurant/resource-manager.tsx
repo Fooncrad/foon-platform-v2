@@ -86,7 +86,14 @@ export async function operationApi(tenantId:string,module:string,method="GET",bo
  const query=new URLSearchParams({...extra,...(branch?{branch}:{})}).toString();
  const response=await fetch("/api/restaurant/operations/"+module+(query?"?"+query:""),{method,headers:{"content-type":"application/json","x-foon-tenant":tenantId,...((branch||(body&&typeof body==="object"&&"branchId" in body&&typeof body.branchId==="string"?body.branchId:""))?{"x-foon-branch":String(branch||(body as {branchId?:string}).branchId)}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
  const result=await response.json().catch(()=>({}));
- if(!response.ok)throw Error(formatOperationError(result.code,module,response.status)+(result.incidentId?(typeof document!=="undefined"&&document.documentElement.lang==="en"?" · Reference: ":typeof document!=="undefined"&&document.documentElement.lang==="fr"?" · Référence : ":" · رمز التتبع: ")+String(result.incidentId):""));
+ if(!response.ok){
+  const code=typeof result.code==="string"?result.code:"UNKNOWN_ERROR";
+  const known=Boolean(translatedErrors[code]||operationLabels[code]);
+  const safeMessage=typeof result.message==="string"&&result.message.length<=350?result.message:"";
+  const message=known||!safeMessage?formatOperationError(code,module,response.status):safeMessage;
+  const reference=result.incidentId??response.headers.get("X-Foon-Incident-Id");
+  throw Error(message+(reference?(typeof document!=="undefined"&&document.documentElement.lang==="en"?" · Reference: ":typeof document!=="undefined"&&document.documentElement.lang==="fr"?" · Référence : ":" · رمز التتبع: ")+String(reference):""));
+ }
  return result;
 }
 const allergenChoices=[["banana","موز","Banana","Banane"],["milk","حليب","Milk","Lait"],["cheese","جبن","Cheese","Fromage"],["eggs","بيض","Eggs","Œufs"],["peanuts","فول سوداني","Peanuts","Arachides"],["tree_nuts","مكسرات","Tree nuts","Fruits à coque"],["wheat","قمح / جلوتين","Wheat / gluten","Blé / gluten"],["soy","صويا","Soy","Soja"],["sesame","سمسم","Sesame","Sésame"],["fish","سمك","Fish","Poisson"],["shellfish","محار وقشريات","Shellfish","Crustacés"]] as const;
