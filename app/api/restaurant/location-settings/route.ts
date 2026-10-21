@@ -4,6 +4,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
+import {BranchPinError,requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {defaultLocationSettings,parseLocationSettings} from "@/lib/tenant/free-location";
 export const runtime="nodejs";
 const headers={"Cache-Control":"private, no-store"};
@@ -41,6 +42,13 @@ export async function PUT(request:Request){
  const body=await request.json().catch(()=>null);
  const settings=parseLocationSettings(body);
  if(!settings)return failed("INVALID_LOCATION_SETTINGS",400);
+ // Location, radius and analytics settings affect the entire business.
+ // All additional branches require a valid session-bound PIN unlock.
+ try{await requireAllAdditionalBranchesUnlocked(ctx.tenantId,ctx.user);}
+ catch(error){
+  if(error instanceof BranchPinError)return failed(error.code,error.code==="BRANCH_PIN_SETUP_REQUIRED"?409:403);
+  return failed("BRANCH_PIN_UNAVAILABLE",503);
+ }
  try{
   const db=database();
   await db.execute(
