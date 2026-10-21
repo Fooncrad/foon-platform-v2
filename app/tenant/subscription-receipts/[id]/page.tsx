@@ -1,3 +1,4 @@
+import PrintReceiptButton from "@/app/components/print-receipt-button";
 import {notFound,redirect} from "next/navigation";
 import Link from "next/link";
 import {cookies} from "next/headers";
@@ -20,6 +21,9 @@ export default async function SubscriptionReceiptPage({params}:{params:Promise<{
  const lang=(await cookies()).get("foon_language")?.value,t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
  const plan=lang==="en"?receipt.name_en:lang==="fr"?receipt.name_fr:receipt.name_ar;
  return <main lang={lang==="en"||lang==="fr"?lang:"ar"} dir={lang==="en"||lang==="fr"?"ltr":"rtl"} style={{maxWidth:720,margin:"32px auto",padding:24}}>
+  <style>{`@media print {.receiptPrintButton,.receiptPrintNav{display:none!important} body{background:white!important;color:black!important} main{padding:0!important;margin:0!important}}`}</style>
+  <PrintReceiptButton label={t("طباعة / حفظ PDF","Print / Save as PDF","Imprimer / enregistrer en PDF")}/>
+  <nav className="receiptPrintNav"><Link href="/account">{t("حسابي","My account","Mon compte")}</Link></nav>
   <Link href="/account">{t("حسابي","My account","Mon compte")}</Link>
   <h1>{t("إيصال اشتراك FOON","FOON subscription receipt","Reçu d'abonnement FOON")}</h1>
   <p><b dir="ltr">{String(receipt.receipt_number)}</b></p>
