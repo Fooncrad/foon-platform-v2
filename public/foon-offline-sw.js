@@ -10,6 +10,31 @@ async function clearPrivateHtmlCaches(){
  const names=await caches.keys();
  await Promise.all(names.filter(name=>name.startsWith("foon-workspace-pages-")).map(name=>caches.delete(name)));
 }
+async function requireSecurePosReauth(){
+ if(!self.indexedDB)return;
+ // Keep encrypted unsent orders; only invalidate the local authorization grant.
+ await new Promise(resolve=>{
+  const open=indexedDB.open("foon-pos-secure-v1",1);
+  open.onupgradeneeded=()=>{
+   if(!open.result.objectStoreNames.contains("profiles"))open.result.createObjectStore("profiles",{keyPath:"id"});
+  };
+  open.onerror=()=>resolve();
+  open.onsuccess=()=>{
+   const database=open.result;
+   if(!database.objectStoreNames.contains("profiles")){database.close();resolve();return;}
+   const tx=database.transaction("profiles","readwrite");
+   const cursor=tx.objectStore("profiles").openCursor();
+   cursor.onsuccess=()=>{
+    const item=cursor.result;
+    if(!item)return;
+    item.update({...item.value,reauthRequired:true});item.continue();
+   };
+   tx.oncomplete=()=>{database.close();resolve();};
+   tx.onerror=()=>{database.close();resolve();};
+   tx.onabort=()=>{database.close();resolve();};
+  };
+ });
+}
 function menuSlug(path){const match=path.match(/^\/(?:menu\/)?([a-z0-9][a-z0-9-]{1,118}[a-z0-9])\/?$/);return match&&!reserved.has(match[1])?match[1]:null;}
 const publicImage=path=>/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(path);
 self.addEventListener("message",event=>{
@@ -40,6 +65,7 @@ self.addEventListener("fetch",event=>{
  if(request.method==="POST"&&url.origin===self.location.origin&&["/api/auth/login","/api/auth/logout"].includes(url.pathname)){
   event.waitUntil((async()=>{
    await clearPrivateHtmlCaches();
+   await requireSecurePosReauth();
    const clients=await self.clients.matchAll({type:"window",includeUncontrolled:true});
    for(const client of clients)client.postMessage({type:"FOON_AUTH_CHANGED"});
   })());return;
