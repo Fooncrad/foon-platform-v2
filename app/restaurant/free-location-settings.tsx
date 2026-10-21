@@ -18,7 +18,7 @@ export default function FreeLocationSettings({tenantId}:{tenantId:string}){
  const [error,setError]=useState(""),[message,setMessage]=useState("");
  const [locating,setLocating]=useState(false);
  useEffect(()=>{
-  let live=true;setLoading(true);
+  let live=true;
   fetch("/api/restaurant/location-settings",{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
    .then(async r=>{const j=await r.json();if(!r.ok||!j.ok)throw Error(j.code);return j;})
    .then(j=>{if(live){setValues(fromSettings(j.settings));setError("");}})
