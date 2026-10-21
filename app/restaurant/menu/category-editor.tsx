@@ -6,7 +6,7 @@ type Category={id:string;name:string;nameEn:string;nameFr:string;enabled:boolean
 type Names={name:string;nameEn:string;nameFr:string};
 export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
  const language=useUiLanguage();
- const tr=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
+ const tr=useCallback((ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar,[language]);
  const [categories,setCategories]=useState<Category[]>([]);
  const [names,setNames]=useState<Names>({name:"",nameEn:"",nameFr:""});
  const [busy,setBusy]=useState(""),[error,setError]=useState(""),[message,setMessage]=useState(""),[loading,setLoading]=useState(true);
@@ -20,8 +20,8 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
   try{setCategories(await load());setError("")}catch{setError(tr("تعذر تحميل الأقسام.","Unable to load categories.","Impossible de charger les catégories."))}
   finally{setLoading(false)}
  // The message translations update when language changes without needing a new request.
- },[load,language]);
- useEffect(()=>{let live=true;load().then(rows=>{if(live){setCategories(rows);setError("")}}).catch(()=>{if(live)setError(tr("تعذر تحميل الأقسام.","Unable to load categories.","Impossible de charger les catégories."))}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[load,language]);
+ },[load,tr]);
+ useEffect(()=>{let live=true;load().then(rows=>{if(live){setCategories(rows);setError("")}}).catch(()=>{if(live)setError(tr("تعذر تحميل الأقسام.","Unable to load categories.","Impossible de charger les catégories."))}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[load,tr]);
  async function save(event:FormEvent<HTMLFormElement>,id?:string){
   event.preventDefault();if(busy)return;
   const values=id?Object.fromEntries(new FormData(event.currentTarget)) as Record<string,string>:names;
