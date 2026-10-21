@@ -1,0 +1,20 @@
+import type {RowDataPacket} from "mysql2/promise";
+import {database} from "@/lib/db/mysql";
+import {validCreatorHandle} from "@/lib/creator/profile-policy";
+export const runtime="nodejs";
+export const dynamic="force-dynamic";
+export async function GET(_request:Request,{params}:{params:Promise<{handle:string}>}){
+ const {handle}=await params;
+ if(!validCreatorHandle(handle))return new Response(null,{status:404});
+ try{
+  const [rows]=await database().execute<RowDataPacket[]>(
+   "SELECT up.avatar_image AS image,up.avatar_mime AS mime FROM customer_creator_profiles p "+
+   "JOIN users u ON u.id=p.user_id AND u.status='active' "+
+   "JOIN user_profiles up ON up.user_id=p.user_id "+
+   "WHERE p.handle=? AND p.visibility='public' "+
+   "AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=p.user_id) "+
+   "AND NOT EXISTS (SELECT 1 FROM platform_admins a WHERE a.user_id=p.user_id) LIMIT 1",[handle]);
+  if(!rows.length||!rows[0].image)return new Response(null,{status:404,headers:{"Cache-Control":"no-store"}});
+  return new Response(new Uint8Array(rows[0].image as Buffer),{headers:{"Content-Type":"image/jpeg","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
+ }catch{return new Response(null,{status:503,headers:{"Cache-Control":"no-store"}});}
+}
