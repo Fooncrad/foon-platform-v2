@@ -294,6 +294,86 @@ async function importEncrypted(event){
  }
  await renderQueue();notice("تمت استعادة "+restored+" طلبات مشفرة، دون مسح أو استبدال الطلبات الموجودة.");
 }
+
+const LEGACY_DB="foon-pos-offline-v1";
+async function legacyDB(){
+ return new Promise((resolve,reject)=>{
+  const req=indexedDB.open(LEGACY_DB,2);
+  req.onupgradeneeded=()=>{
+   for(const name of ["orders","snapshots"])if(!req.result.objectStoreNames.contains(name))req.result.createObjectStore(name,{keyPath:"id"});
+  };
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+}
+async function legacyAction(store,mode,fn){
+ const database=await legacyDB();
+ return new Promise((resolve,reject)=>{
+  const transaction=database.transaction(store,mode),request=fn(transaction.objectStore(store));
+  let value;
+  request.onsuccess=()=>{value=request.result;};
+  transaction.oncomplete=()=>{database.close();resolve(value);};
+  transaction.onerror=()=>{database.close();reject(transaction.error||new Error("LEGACY_DATABASE_FAILED"));};
+  transaction.onabort=()=>{database.close();reject(transaction.error||new Error("LEGACY_DATABASE_ABORTED"));};
+ });
+}
+async function legacyScopedRows(tenantId,branchId){
+ const rows=await legacyAction("orders","readonly",store=>store.getAll());
+ return rows.filter(row=>row?.tenantId===tenantId&&row?.branchId===branchId);
+}
+function legacyOrderValid(row,tenantId,branchId){
+ return !!row&&typeof row==="object"&&idPattern.test(row.id)&&
+  row.tenantId===tenantId&&row.branchId===branchId&&row.payload?.branchId===branchId&&
+  row.payload?.requestKey===row.id&&Array.isArray(row.payload?.items)&&
+  typeof row.createdAt==="string"&&Number.isFinite(Date.parse(row.createdAt))&&
+  ["pending","needs_review"].includes(row.status);
+}
+async function recoverLegacy(){
+ const {record,key,data}=valid();
+ if(!navigator.onLine)throw new Error("INTERNET_REQUIRED");
+ if(!$("legacy-confirm").checked)throw new Error("CONFIRM_LEGACY_OWNERSHIP_FIRST");
+ if(!navigator.locks?.request)throw new Error("WEB_LOCKS_REQUIRED");
+ // These legacy rows have no creator-user binding. Recover only after the
+ // server confirms THIS user is owner/manager on THIS tenant's POS branch.
+ const access=await authorized(data.tenantId,data.branchId,data.userId);
+ if(access.data.legacyRecoveryAllowed!==true)throw new Error("LEGACY_RECOVERY_MANAGER_ONLY");
+ let count=0;
+ await navigator.locks.request("foon-legacy-recovery-"+data.tenantId+":"+data.branchId,{mode:"exclusive",ifAvailable:true},async lock=>{
+  if(!lock)throw new Error("RECOVERY_ALREADY_RUNNING");
+  const rows=await legacyScopedRows(data.tenantId,data.branchId);
+  if(rows.length>5000)throw new Error("LEGACY_QUEUE_TOO_LARGE");
+  if(rows.some(row=>!legacyOrderValid(row,data.tenantId,data.branchId)))throw new Error("INVALID_LEGACY_ORDER_RETAINED");
+  if(new Set(rows.map(row=>row.id)).size!==rows.length)throw new Error("DUPLICATE_LEGACY_ORDER");
+  for(const row of rows){
+   // Never rewrite the requestKey. It is the server's idempotency identity.
+   const secureId=record.id+"|"+row.id,prior=await get("orders",secureId);
+   const encryptedOrder={id:row.id,createdAt:row.createdAt,status:row.status,
+    ...(row.lastError?{lastError:row.lastError}:{}),payload:row.payload};
+   if(prior){
+    const existing=await unseal(key,record.id,"order:"+row.id,prior);
+    if(existing.id!==row.id||JSON.stringify(existing.payload)!==JSON.stringify(row.payload))throw new Error("LEGACY_SECURE_ORDER_CONFLICT");
+   }else{
+    const cipher=await seal(key,record.id,"order:"+row.id,encryptedOrder);
+    await put("orders",{id:secureId,profileId:record.id,orderId:row.id,createdAt:row.createdAt,...cipher});
+   }
+   const verified=await get("orders",secureId);
+   const decoded=await unseal(key,record.id,"order:"+row.id,verified);
+   if(decoded.id!==row.id||JSON.stringify(decoded.payload)!==JSON.stringify(row.payload))throw new Error("RECOVERY_VERIFY_FAILED");
+   // Copy, decrypt & validate first. Only then delete this precise plaintext row.
+   // A crash before deletion leaves both copies; retry is idempotent.
+   await legacyAction("orders","readwrite",store=>store.delete(row.id));
+   count++;
+  }
+  // The old catalog may have private commerce data. Delete only this branch's
+  // stale plaintext snapshot after all scoped pending orders are recovered.
+  if(!(await legacyScopedRows(data.tenantId,data.branchId)).length){
+   await legacyAction("snapshots","readwrite",store=>store.delete(data.tenantId+":"+data.branchId));
+  }
+ });
+ $("legacy-confirm").checked=false;
+ await renderQueue();
+ notice("نُقل "+count+" طلبات إلى التخزين المشفر بعد التحقق من حساب المدير والفرع. راجع قائمة المزامنة قبل إرسالها.");
+}
+
 function action(id,handler){$(id).addEventListener("click",()=>{Promise.resolve().then(handler).catch(error=>notice(String(error.message||error),true));});}
 async function init(){
  if(!globalThis.isSecureContext||!crypto.subtle||typeof indexedDB==="undefined")throw new Error("HTTPS_WEBCRYPTO_INDEXEDDB_REQUIRED");
@@ -305,6 +385,7 @@ async function init(){
  action("sync-btn",sync);
  action("refresh-btn",refresh);
  action("export-btn",exportEncrypted);
+ action("legacy-recover",recoverLegacy);
  $("import-file").addEventListener("change",event=>{importEncrypted(event).catch(error=>notice(String(error.message||error),true));});
  if(navigator.serviceWorker&&navigator.onLine)void navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"}).catch(()=>{});
  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&active)lock();});
