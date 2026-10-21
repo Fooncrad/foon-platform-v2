@@ -2,6 +2,7 @@ import {UiLanguageProvider} from "@/lib/i18n/ui-language";
 import "./globals.css";
 import "./action-card-effects.css";
 import "./experience.css";
+import "./site-wide-dark-mode.css";
 import {cookies} from "next/headers";
 export const metadata={title:"FOON",description:"FOON multi-tenant commerce platform"};
 export default async function RootLayout({children}:{children:React.ReactNode}){
