@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS branch_pin_access (
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  PRIMARY KEY(auth_session_id,branch_id),
  KEY idx_branch_pin_tenant (tenant_id,branch_id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
