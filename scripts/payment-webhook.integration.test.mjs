@@ -51,7 +51,9 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   // Bind a genuine customer, preserving the staff/customer separation and tenant FK.
   const customerResponse=await fetch(origin+"/api/customer/register",{method:"POST",headers:{origin,"content-type":"application/json",cookie:"foon_language=en"},body:JSON.stringify({name:"Payment customer",email:randomUUID()+"@test.example",password:"synthetic-customer-password-2026",storeSlug:account.slug})});assert.equal(customerResponse.status,201,await customerResponse.clone().text());const customerId=(await customerResponse.json()).user.id;
   await db.execute("UPDATE restaurant_orders SET customer_user_id=? WHERE id=?",[customerId,main]);
-  const paidNotices=async()=>Number((await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND resource_id=? AND event_key='order_payment_paid'",[customerId,main]))[0][0].n);
+  // Disposable test account: explicitly verify the email before asserting SMTP queue creation.
+  await db.execute("UPDATE users SET email_verified_at=NOW() WHERE id=?",[customerId]);
+  const paidNotices=async()=>Number((await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND resource_id=? AND event_key='order_invoice'",[customerId,main]))[0][0].n);
 
   const blockedChange=await fetch(origin+"/api/restaurant/payments/settings",{method:"PUT",headers,body:JSON.stringify({...payload,version:2,mode:"test",public_key:"pk_test_synthetic",credentials:{secret_key:"sk_test_synthetic",webhook_secret:secret}})});assert.equal(blockedChange.status,409);assert.equal((await blockedChange.json()).code,"PAYMENT_ATTEMPTS_PENDING");
   assert.equal((await send(event("evt_invalid","pi_live_synthetic"),webhook,false)).status,400);
@@ -60,6 +62,7 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   assert.equal((await send(event("evt_case_sensitive","pi_LIVE_synthetic"))).status,200);assert.equal((await paymentStatus(main)).payment_status,"unpaid");
   assert.equal((await send(event("evt_paid","pi_live_synthetic"))).status,200);
   assert.equal(await paidNotices(),1);
+  assert.equal(Number((await db.execute("SELECT COUNT(*) AS n FROM restaurant_customer_invoices WHERE tenant_id=? AND order_id=? AND invoice_kind='receipt'",[account.tenant,main]))[0][0].n),1);
   assert.equal((await paymentStatus(main)).payment_status,"paid");const version=(await paymentStatus(main)).version;
   assert.equal((await invoiceStatus(mainInvoice)).status,"paid","an issued order invoice follows the verified live payment");
   const invoiceVersion=(await invoiceStatus(mainInvoice)).version;
@@ -108,7 +111,7 @@ test("webhook routes verify signatures, settle mapped live orders exactly once a
   // Each distinct authenticated event is preserved, while the financial settlement is unique.
   assert.equal((await db.execute("SELECT COUNT(*) AS n FROM tenant_payment_webhook_receipts WHERE payment_id='pi_live_synthetic'"))[0][0].n,2);
   assert.equal(await paidNotices(),1,"distinct verified replay events cannot send duplicate payment notices");
-  const [[mailNotice]]=await db.execute("SELECT COUNT(*) AS n FROM platform_notification_outbox WHERE tenant_id=? AND event_key='order_payment_paid'",[account.tenant]);assert.equal(Number(mailNotice.n),1);
+  const [[mailNotice]]=await db.execute("SELECT COUNT(*) AS n FROM platform_notification_outbox WHERE tenant_id=? AND event_key='order_invoice'",[account.tenant]);assert.equal(Number(mailNotice.n),1);
 
   const wrongInvoiceOrder=await order(),wrongInvoiceId=await invoice(wrongInvoiceOrder,12.33);
   await bind(wrongInvoiceOrder,"pi_invoice_mismatch");

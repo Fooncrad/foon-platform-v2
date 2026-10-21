@@ -22,6 +22,11 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
  // The message translations update when language changes without needing a new request.
  },[load,tr]);
  useEffect(()=>{let live=true;load().then(rows=>{if(live){setCategories(rows);setError("")}}).catch(()=>{if(live)setError(tr("تعذر تحميل الأقسام.","Unable to load categories.","Impossible de charger les catégories."))}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[load,tr]);
+ useEffect(()=>{
+  const onImport=(event:Event)=>{if((event as CustomEvent<{tenantId:string}>).detail?.tenantId===tenantId)void refresh();};
+  window.addEventListener('foon:catalog-imported',onImport);
+  return()=>window.removeEventListener('foon:catalog-imported',onImport);
+ },[tenantId,refresh]);
  async function save(event:FormEvent<HTMLFormElement>,id?:string){
   event.preventDefault();if(busy)return;
   const values=id?Object.fromEntries(new FormData(event.currentTarget)) as Record<string,string>:names;
