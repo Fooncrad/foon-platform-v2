@@ -12,7 +12,11 @@ export async function GET(request:Request){
  const userId=await currentUserId(); if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const tenant=request.headers.get("x-foon-tenant"); if(!tenant)return NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400});
  try{const ctx=await requireTenantMembership(userId,tenant,["owner","manager","cashier","waiter","kitchen","driver","accountant"],false);
- const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,slug,enabled,created_at FROM branches WHERE tenant_id=? ORDER BY created_at",[ctx.tenantId]);return NextResponse.json({ok:true,branches:rows.map(b=>({...b,version:branchVersion({name:b.name,slug:b.slug,enabled:b.enabled})}))});}
+ const staff=!["owner","manager"].includes(ctx.role);
+ const [rows]=staff
+  ?await database().execute<RowDataPacket[]>("SELECT b.id,b.name,b.slug,b.enabled,b.created_at FROM branches b JOIN employee_branch_assignments a ON a.branch_id=b.id AND a.tenant_id=b.tenant_id AND a.user_id=? AND a.enabled=TRUE WHERE b.tenant_id=? ORDER BY b.created_at",[userId,ctx.tenantId])
+  :await database().execute<RowDataPacket[]>("SELECT id,name,slug,enabled,created_at FROM branches WHERE tenant_id=? ORDER BY created_at",[ctx.tenantId]);
+ return NextResponse.json({ok:true,branches:rows.map(b=>({...b,version:branchVersion({name:b.name,slug:b.slug,enabled:b.enabled})}))});}
  catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
 }
 export async function PATCH(request:Request){
