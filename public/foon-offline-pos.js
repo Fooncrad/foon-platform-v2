@@ -316,6 +316,21 @@ async function legacyAction(store,mode,fn){
   transaction.onabort=()=>{database.close();reject(transaction.error||new Error("LEGACY_DATABASE_ABORTED"));};
  });
 }
+async function legacyDeleteVerified(prior){
+ const database=await legacyDB();
+ return new Promise((resolve,reject)=>{
+  const trans=database.transaction("orders","readwrite"),store=trans.objectStore("orders"),get=store.get(prior.id);
+  get.onsuccess=()=>{
+   // Another tab might have updated payment/review status since the copy.
+   // Never discard that fresher version; the operator must retry recovery.
+   if(JSON.stringify(get.result)!==JSON.stringify(prior)){trans.abort();return;}
+   store.delete(prior.id);
+  };
+  trans.oncomplete=()=>{database.close();resolve();};
+  trans.onerror=()=>{database.close();reject(trans.error||new Error("LEGACY_DELETE_FAILED"));};
+  trans.onabort=()=>{database.close();reject(new Error("LEGACY_ORDER_CHANGED_RETRY"));};
+ });
+}
 async function legacyScopedRows(tenantId,branchId){
  const rows=await legacyAction("orders","readonly",store=>store.getAll());
  return rows.filter(row=>row?.tenantId===tenantId&&row?.branchId===branchId);
@@ -360,7 +375,7 @@ async function recoverLegacy(){
    if(decoded.id!==row.id||JSON.stringify(decoded.payload)!==JSON.stringify(row.payload))throw new Error("RECOVERY_VERIFY_FAILED");
    // Copy, decrypt & validate first. Only then delete this precise plaintext row.
    // A crash before deletion leaves both copies; retry is idempotent.
-   await legacyAction("orders","readwrite",store=>store.delete(row.id));
+   await legacyDeleteVerified(row);
    count++;
   }
   // The old catalog may have private commerce data. Delete only this branch's
