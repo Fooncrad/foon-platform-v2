@@ -62,7 +62,7 @@ export function UtilityWorkspace({tenantId,section}:{tenantId:string;section:str
 
  const translateUi=useUiText();
 
- const [data,setData]=useState<{sessions?:Session[];customers?:Customer[];database?:string;migrations?:number;mailConfigured?:boolean;checkedAt?:string}>({}),[error,setError]=useState(""),[loading,setLoading]=useState(true);
+ const [data,setData]=useState<{sessions?:Session[];customers?:Customer[];database?:string;migrations?:number;mailConfigured?:boolean;geocodingConfigured?:boolean;checkedAt?:string}>({}),[error,setError]=useState(""),[loading,setLoading]=useState(true);
  async function refresh(){const result=await operationApi(tenantId,section);setData(result);setError("");setLoading(false);}
  useEffect(()=>{let alive=true;operationApi(tenantId,section).then(result=>{if(alive){setData(result);setLoading(false);setError("");}}).catch(error=>{if(alive){setError(String(error.message));setLoading(false);}});return()=>{alive=false;};},[tenantId,section]);
  async function revoke(session:Session){try{await operationApi(tenantId,"security","DELETE",{id:session.id});await refresh();}catch(error){setError(error instanceof Error?error.message:"تعذر إنهاء الجلسة.");}}
