@@ -1,4 +1,3 @@
-import type {ImportKind} from './import-csv';
 export type ImportLanguage='ar'|'en'|'fr';
 const dictionary:Record<string,[string,string,string]>={
  REQUIRED_category:['اسم القسم مطلوب؛ اختر القسم من القائمة أو املأ عمود category.','Category is required; select an existing category or fill the category column.','La catégorie est obligatoire ; choisissez une catégorie ou renseignez la colonne category.'],
@@ -33,7 +32,7 @@ const index:Record<ImportLanguage,number>={ar:0,en:1,fr:2};
 /** Keep the original technical code for maintenance without showing an untranslated error alone. */
 export function formatImportError(raw:string,language:ImportLanguage='ar',rowOffset=0):string{
  const code=String(raw||'IMPORT_FAILED');
- const match=/^ROW_(\\d+):\\s*(.*)$/.exec(code);
+ const match=/^ROW_(\d+):\s*(.*)$/.exec(code);
  const reason=match?.[2]??code;
  const normalized=reason.startsWith('DUPLICATE_CSV_REFERENCE_ROW_')?'DUPLICATE_CSV_REFERENCE':reason;
  const reasonText=dictionary[normalized]?.[index[language]]??
