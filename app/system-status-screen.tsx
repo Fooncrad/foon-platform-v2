@@ -10,7 +10,7 @@ export default function SystemStatusScreen({status,httpStatus,error,reset,source
  const [language,setLanguage]=useState<SystemLocale>("ar");
  const [reference,setReference]=useState(error?.digest??(status==="NOT_FOUND"?"HTTP-404":status==="MAINTENANCE"?"MAINT-503":"SYSTEM-ERROR"));
  useEffect(()=>{
-  const documentLocale=systemLocale(document.documentElement.lang||document.cookie.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1]);
+  const documentLocale=systemLocale(document.cookie.match(/(?:^|;\\s*)foon_language=(ar|en|fr)/)?.[1]??document.documentElement.lang);
   setLanguage(documentLocale);
  },[]);
  useEffect(()=>{
@@ -23,7 +23,7 @@ export default function SystemStatusScreen({status,httpStatus,error,reset,source
  },[error,source]);
  const t=localizedSystemStatus(language,status);
  const code=httpStatus??(status==="NOT_FOUND"?404:status==="BAD_GATEWAY"?502:status==="GATEWAY_TIMEOUT"?504:status==="SERVER_ERROR"?500:503);
- function changeLanguage(next:SystemLocale){setLanguage(next);document.documentElement.lang=next;document.documentElement.dir=next==="ar"?"rtl":"ltr";}
+ function changeLanguage(next:SystemLocale){setLanguage(next);document.documentElement.lang=next;document.documentElement.dir=next==="ar"?"rtl":"ltr";document.cookie="foon_language="+next+"; Path=/; Max-Age=31536000; SameSite=Lax";}
  return <main className="foonSystemStatus" lang={language} dir={language==="ar"?"rtl":"ltr"}>
   <section className="foonSystemStatusCard" role={status==="NOT_FOUND"?"status":"alert"}>
    <div className="foonSystemStatusBrand">FOON</div>
