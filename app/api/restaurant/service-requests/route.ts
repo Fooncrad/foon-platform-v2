@@ -7,6 +7,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {serviceRequestTransitionAllowed} from "@/lib/platform/service-request-policy";
+import {requireAdditionalBranchUnlock,onlyUnlockedBranchRows,BranchPinError} from "@/lib/restaurant/branch-pin";
 export const runtime="nodejs";
 const error=(code:string,status=400)=>NextResponse.json({ok:false,code},{status,headers:{"Cache-Control":"no-store"}});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -28,14 +29,15 @@ export async function GET(request:Request){
   const [rows]=await db.execute<RowDataPacket[]>(
    "SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE"+(branch?" AND branch_id=?":"")+" ORDER BY created_at DESC,id DESC LIMIT 100",
    [ctx.tenantId,...(branch?[branch]:[])]);
-  const requests=rows.map(r=>{
+  const unlocked=await onlyUnlockedBranchRows(ctx.tenantId,ctx.user,rows);
+  const requests=unlocked.map(r=>{
    const d=typeof r.data==="string"?JSON.parse(r.data):r.data;
    return {id:String(r.id),branchId:r.branch_id,name:String(r.name),status:String(r.status),version:Number(r.version),
     requestType:String(d.requestType??""),customerName:String(d.customerName??""),customerPhone:String(d.customerPhone??""),
     scheduledAt:d.scheduledAt??null,notes:String(d.notes??""),createdAt:r.created_at};
   });
   return NextResponse.json({ok:true,requests},{headers:{"Cache-Control":"no-store, private"}});
- }catch{return error("REQUESTS_UNAVAILABLE",503)}
+ }catch(e){return error(e instanceof BranchPinError?e.code:"REQUESTS_UNAVAILABLE",e instanceof BranchPinError?403:503)}
 }
 export async function PATCH(request:Request){
  try{assertSameOrigin(request)}catch{return error("FORBIDDEN",403)}
@@ -45,9 +47,11 @@ export async function PATCH(request:Request){
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
-  const [rows]=await db.execute<RowDataPacket[]>("SELECT status,version,name,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='service_customer_request' AND archived=FALSE FOR UPDATE",[ctx.tenantId,body.id]);
+  const [rows]=await db.execute<RowDataPacket[]>("SELECT branch_id,status,version,name,data FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='service_customer_request' AND archived=FALSE FOR UPDATE",[ctx.tenantId,body.id]);
   if(!rows.length){await db.rollback();return error("REQUEST_NOT_FOUND",404)}
-  const row=rows[0],data=typeof row.data==="string"?JSON.parse(row.data):row.data;
+  const row=rows[0];
+  await requireAdditionalBranchUnlock(ctx.tenantId,typeof row.branch_id==="string"?row.branch_id:null,ctx.user);
+  const data=typeof row.data==="string"?JSON.parse(row.data):row.data;
   if(Number(row.version)!==body.version){await db.rollback();return error("CONFLICT",409)}
   if(!serviceRequestTransitionAllowed(String(row.status),body.status,String(data.requestType))){await db.rollback();return error("INVALID_TRANSITION",409)}
   await db.execute("UPDATE restaurant_resources SET status=?,version=version+1 WHERE tenant_id=? AND id=? AND version=?",[body.status,ctx.tenantId,body.id,body.version]);
@@ -55,5 +59,5 @@ export async function PATCH(request:Request){
   if(typeof data.customerUserId==="string")await notifyCustomer(db,{userId:data.customerUserId,tenantId:ctx.tenantId,event:"service_request_"+body.status,resourceId:body.id,reference:String(body.id).slice(0,8),status:body.status});
   await db.commit();dispatchNotifications();
   return NextResponse.json({ok:true,status:body.status});
- }catch{await db.rollback();return error("REQUEST_UPDATE_FAILED",503)}finally{db.release()}
+ }catch(e){await db.rollback();return error(e instanceof BranchPinError?e.code:"REQUEST_UPDATE_FAILED",e instanceof BranchPinError?403:503)}finally{db.release()}
 }
