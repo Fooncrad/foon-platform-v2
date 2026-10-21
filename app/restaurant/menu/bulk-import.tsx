@@ -3,7 +3,7 @@ import {useState} from 'react';
 import {useUiLanguage} from '@/lib/i18n/ui-language';
 import {importHeaders,parseImportCsv,type ImportKind,type ImportRow} from '@/lib/catalog/import-csv';
 import {formatImportError} from '@/lib/catalog/import-errors';
-export default function BulkImport({tenantId,kind,onChanged,canonical=false,categoryHint='',productHint='',groupHint='',optionsHint='}:{tenantId:string;kind:ImportKind;onChanged?:()=>void;canonical?:boolean;categoryHint?:string;productHint?:string;groupHint?:string;optionsHint?:string}){
+export default function BulkImport({tenantId,kind,onChanged,canonical=false,categoryHint='',productHint='',groupHint='',optionsHint=''}:{tenantId:string;kind:ImportKind;onChanged?:()=>void;canonical?:boolean;categoryHint?:string;productHint?:string;groupHint?:string;optionsHint?:string}){
  const language=useUiLanguage(),t=(ar:string,en:string,fr:string)=>language==='ar'?ar:language==='en'?en:fr;
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[progress,setProgress]=useState({done:0,total:0});
  const [availableCategories,setAvailableCategories]=useState<string[]>([]),[selectedCategory,setSelectedCategory]=useState(''),[loadingCategories,setLoadingCategories]=useState(false);
