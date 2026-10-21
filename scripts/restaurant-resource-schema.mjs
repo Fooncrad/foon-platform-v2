@@ -1,3 +1,4 @@
+import {normalizeHotelRoomNumber,validHotelRoomNumber} from "../lib/restaurant/hotel-room.mjs";
 const managers=["owner","manager"];
 const menuEditors=["owner","manager","cashier"];
 const inventoryEditors=["owner","manager","cashier","accountant"];
@@ -84,8 +85,9 @@ export function validateResource(module,body){
  if(module==="pickupPoints"&&!branchId)throw new ResourceError("REQUIRED_BRANCH");
  if(module==="hotelRooms"){
   if(!branchId)throw new ResourceError("REQUIRED_BRANCH");
-  if(!/^[\p{L}\p{N}][\p{L}\p{N} -]{0,23}$/u.test(data.roomNumber))throw new ResourceError("INVALID_roomNumber");
-  data.roomNumber=data.roomNumber.toLocaleUpperCase("en-US");
+  const normalized=normalizeHotelRoomNumber(data.roomNumber);
+  if(!validHotelRoomNumber(normalized))throw new ResourceError("INVALID_roomNumber");
+  data.roomNumber=normalized;
  }
  return {name,status:body.status,data,branchId};
 }
