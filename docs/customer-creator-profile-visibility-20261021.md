@@ -26,3 +26,16 @@ This implementation completes the **initial customer creator profile + opt-in vi
 3. With `DATABASE_URL` constrained to local `mysql://...@127.0.0.1:3306/foon_migration_test`, run `node --test scripts/customer-creator.integration.test.mjs` after an isolated build and migration.
 4. Manually exercise public/private toggles in customer browser, anonymous public browser, suspended staff, merchant owner, change username, empty avatar, 320px, AR/EN/FR and image removal.
 5. Only after verification should the PR be merged manually and deployed to Hostinger. A merge alone is not deployment. **No production data or migrations were touched in this change.**
+
+## Social links + QR extension (2026-10-21)
+- Migration `0108_customer_creator_social_links.sql` is additive and must run **after 0107**. It stores at most one URL for each of 12 platforms per customer profile; no merchant plan or tenant ownership is involved.
+- The profile editor includes **Instagram, TikTok, Snapchat, YouTube, X, Facebook, WhatsApp, Telegram, Threads, LinkedIn, Pinterest and personal website** with graphical iconography.
+- Links are explicitly entered/edited by the customer and validated on every write (HTTPS, expected official domain and profile/contact path, input size, no duplicate platforms, no localhost/private IP for custom web links). Saved links are revalidated before public rendering. WhatsApp phone link is optional and not derived from the user's private account phone.
+- The public creator profile displays modern icon cards for selected platforms. A private profile exposes neither links nor its QR image.
+- First-party `qrcode` (already in `package.json`) generates a genuine SVG from the canonical `APP_URL` origin at `/api/creators/[handle]/qr`. The route repeats checks for **public visibility, active account, non-employee/non-owner/non-admin status**, responds with no-store and has no third-party image-provider dependency.
+- An opted-in public customer can **download QR and copy the profile link** in the personal editor. Anonymous users see the QR directly on the public profile.
+- Switching the profile back to private yields 404 for the public profile and QR immediately; an already-saved QR code can still be scanned but will lead to the blocked private profile.
+- Tests added: `scripts/creator-social-qr.test.mjs`; `scripts/customer-creator.integration.test.mjs` now checks saving social links, rejecting malicious URLs, public rendering, real QR SVG response and privacy revocation.
+- Do not confuse static source checks with completed Node/Next/MySQL/browser tests. Production is untouched by the PR.
+
+**Migration order:** 0107 then 0108 on isolated test/staging; after successful tests and manual release approval, apply both to production *before* deploying routes. Recording a migration in `schema_migrations` must happen only after its SQL actually succeeded. `APP_URL` should be configured with the canonical public host so QR encodes the real website, not a test host.
