@@ -3,6 +3,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
 import type {RowDataPacket} from "mysql2/promise";
 export const runtime="nodejs";
 export async function GET(request:Request){
@@ -23,6 +24,9 @@ export async function PUT(request:Request){
  ||!Number.isFinite(body.latitude)||!Number.isFinite(body.longitude)||body.latitude< -90||body.latitude>90||body.longitude< -180||body.longitude>180)
  return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(user,tenant,["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ try{
+  await requireAdditionalBranchUnlock(tenant,body.branchId,user);
+ }catch(error){return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
  try{
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[body.branchId,tenant]);
   if(!rows.length)return NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404});
