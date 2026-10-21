@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {nearestDeliveryBranch} from "../lib/tenant/nearest-delivery-branch.ts";
+import {nearestDeliveryBranch,nearestOperatingBranch} from "../lib/tenant/nearest-delivery-branch.ts";
 const a={id:"north",name:"North",latitude:24.8,longitude:46.7,acceptsDelivery:true};
 const b={id:"south",name:"South",latitude:24.6,longitude:46.7,acceptsDelivery:true};
 test("selects closest configured delivery branch from eligible branches",()=>{
