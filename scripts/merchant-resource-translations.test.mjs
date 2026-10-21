@@ -70,6 +70,6 @@ test("merchant forms and public selectors use the translations with Arabic fallb
 test("all merchant resource labels have actual English and French UI translations",async()=>{
  const {uiCopy}=await import("../lib/i18n/ui-copy.ts");
  const labels=new Set(Object.values(resourceModules).flatMap(module=>[module.label,...module.fields.map(field=>field.label)]));
- const missing=[...labels].filter(label=>/[\\u0600-\\u06ff]/u.test(label)&&(!uiCopy[label]||uiCopy[label].length!==2||uiCopy[label].some(text=>!text.trim()||/[\\u0600-\\u06ff]/u.test(text))));
+ const missing=[...labels].filter(label=>/[\u0600-\u06ff]/u.test(label)&&(!uiCopy[label]||uiCopy[label].length!==2||uiCopy[label].some(text=>!text.trim()||/[\u0600-\u06ff]/u.test(text))));
  assert.deepEqual(missing,[],`Untranslated resource labels: ${missing.join(", ")}`);
 });
