@@ -22,7 +22,7 @@ test("receipt belongs to the customer and is accessible in their account indepen
  assert.match(api,/employeePersonalAccessDenied/);
  assert.match(api,/i.customer_user_id=\? AND o.customer_user_id=\?/);
  assert.match(api,/o.id AS order_id/);
- assert.match(view,/receipts\/"/);
+ assert.match(view,/customer\/invoices/);
  assert.match(view,/email_status/);
  const schema=source("migrations/0072_customer_invoice_archive.sql");
  assert.match(schema,/UNIQUE KEY uq_customer_invoice_order_kind/);
