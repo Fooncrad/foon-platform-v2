@@ -509,6 +509,33 @@ test("all 15 activities expose their own tools; service orders work in three lan
     await page.goto(origin+"/restaurant?tenant="+account.tenant.id);
     await expect(page.locator('.restaurantApp')).toHaveAttribute('data-activity',activity);
     await expect(page.locator('.foonActivityTools')).toBeVisible();
+    await expect(page.locator('.foonActivityToolIcon').first()).toBeVisible();
+    // Check computed contrast, not merely CSS classes: the former white tiles
+    // inherited light text in dark mode and were effectively unreadable.
+    if(activity==="restaurant"||activity==="carwash"){
+     const toolCard=page.locator('.foonActivityToolLink').first();
+     const contrast=()=>toolCard.evaluate(node=>{
+      const luminance=(color)=>{
+       const values=(color.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
+       const channels=values.map(v=>{const c=v/255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4;});
+       return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+      };
+      const style=getComputedStyle(node),workspace=getComputedStyle(node.closest(".restaurantApp"));
+      const foreground=luminance(style.color),background=luminance(style.backgroundColor);
+      const ratio=(Math.max(foreground,background)+0.05)/(Math.min(foreground,background)+0.05);
+      return {ratio,text:style.color,background:style.backgroundColor,inline:node.getAttribute("style"),cardSurface:style.getPropertyValue("--rc-surface").trim(),selectorMatch:node.matches(".restaurantApp[data-theme=dark] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink"),closestContent:Boolean(node.closest(".restaurantContent")),workspaceText:workspace.color,workspaceSurface:workspace.getPropertyValue("--rc-surface").trim(),workspaceTheme:node.closest(".restaurantApp").getAttribute("data-theme")};
+     });
+     await page.getByRole("combobox",{name:"المظهر"}).selectOption("dark");
+     await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
+     const darkCard=await contrast();
+     expect(darkCard.ratio,activity+" dark tool-card computed styles: "+JSON.stringify(darkCard)).toBeGreaterThanOrEqual(4.5);
+     await captureScreenshot(page,{path:"work/merchant-"+activity+"-dark-tools.png",fullPage:true});
+     await page.getByRole("combobox",{name:"المظهر"}).selectOption("light");
+     await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","light");
+     const lightCard=await contrast();
+     expect(lightCard.ratio,activity+" light tool-card computed styles: "+JSON.stringify(lightCard)).toBeGreaterThanOrEqual(4.5);
+     await captureScreenshot(page,{path:"work/merchant-"+activity+"-light-tools.png",fullPage:true});
+    }
     const destinations=await page.locator('.foonActivityTools a').evaluateAll(links=>links.map(link=>link.href));expect(new Set(destinations).size).toBe(destinations.length);
     await expect(page.locator('.foonActivityTools a[href$="/payments"]')).toBeVisible();
     const navigation=page.getByRole('navigation',{name:'أقسام النشاط',exact:true});
