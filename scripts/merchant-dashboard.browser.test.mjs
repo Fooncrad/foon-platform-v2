@@ -523,7 +523,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
       const style=getComputedStyle(node),workspace=getComputedStyle(node.closest(".restaurantApp"));
       const foreground=luminance(style.color),background=luminance(style.backgroundColor);
       const ratio=(Math.max(foreground,background)+0.05)/(Math.min(foreground,background)+0.05);
-      return {ratio,text:style.color,background:style.backgroundColor,workspaceText:workspace.color,workspaceSurface:workspace.getPropertyValue("--rc-surface").trim(),workspaceTheme:node.closest(".restaurantApp").getAttribute("data-theme")};
+      return {ratio,text:style.color,background:style.backgroundColor,inline:node.getAttribute("style"),cardSurface:style.getPropertyValue("--rc-surface").trim(),selectorMatch:node.matches(".restaurantApp[data-theme=dark] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink"),closestContent:Boolean(node.closest(".restaurantContent")),workspaceText:workspace.color,workspaceSurface:workspace.getPropertyValue("--rc-surface").trim(),workspaceTheme:node.closest(".restaurantApp").getAttribute("data-theme")};
      });
      await page.getByRole("combobox",{name:"المظهر"}).selectOption("dark");
      await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
