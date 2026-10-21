@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
-import {requireTenantMembership} from "@/lib/auth/tenant-membership";
+import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import type {RowDataPacket} from "mysql2/promise";
 export const runtime="nodejs";
