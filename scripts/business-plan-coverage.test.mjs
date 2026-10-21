@@ -45,7 +45,7 @@ test("business grants cannot bypass server activity restrictions or create emplo
 test("Business entitlement is denied without a stored shared/activity grant",()=>{
  const backend=source("../lib/plans/entitlements.ts");
  const admin=source("../app/api/admin/plans/[id]/features/route.ts");
- assert.match(backend,/const enabled=Boolean\(rows\[0\]\.enabled\)/);
+ assert.match(backend,/const enabled=Number\(rows\[0\]\.enabled\)===1/);
  assert.doesNotMatch(backend,/rows\[0\]\.plan_code==="enterprise"/);
  assert.match(admin,/COALESCE\(af\.enabled,pf\.enabled,0\) AS enabled/);
  assert.doesNotMatch(admin,/CASE WHEN p\.code='enterprise' THEN 1 ELSE 0 END/);
