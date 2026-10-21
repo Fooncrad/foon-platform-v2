@@ -5,6 +5,8 @@ import {
  CREATOR_SOCIAL_PLATFORMS,normalizeCreatorSocialLink,parseCreatorSocialLinks
 } from "../lib/creator/social-links.ts";
 
+import {publicCreatorImageMime} from "../lib/creator/image-policy.ts";
+
 const src=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 test("12 platform icons and valid social URLs are accepted with strict HTTPS",()=>{
  const cases={
@@ -91,4 +93,22 @@ test("QR is genuine first-party SVG based on verified public profile and canonic
  assert.match(route,/new URL\("\/creators\/"/);
  const publicPage=src("../app/creators/[handle]/page.tsx");
  assert.match(publicPage,/encodeURIComponent\(handle\)\+"\/qr"/);
+});
+
+test("public creator images use their stored raster MIME, never executable SVG or HTML",()=>{
+ for(const type of ["image/jpeg","image/png","image/webp"])assert.equal(publicCreatorImageMime(type),type);
+ for(const type of ["image/svg+xml","text/html","application/javascript","",null,undefined])
+  assert.equal(publicCreatorImageMime(type),null);
+ const avatar=src("../app/api/creators/[handle]/avatar/route.ts");
+ const portfolio=src("../app/api/creators/[handle]/media/[id]/route.ts");
+ assert.match(avatar,/up\.\$\{mimeColumn\} AS mime/);
+ assert.match(avatar,/publicCreatorImageMime\(rows\[0\]\.mime\)/);
+ assert.match(portfolio,/SELECT m\.image_data,m\.mime_type/);
+ assert.match(portfolio,/publicCreatorImageMime\(rows\[0\]\.mime_type\)/);
+ for(const route of [avatar,portfolio]){
+  assert.match(route,/p\.visibility='public'/);
+  assert.match(route,/X-Content-Type-Options":"nosniff"/);
+  assert.match(route,/Cache-Control":"no-store"/);
+  assert.doesNotMatch(route,/Content-Type":"image\/jpeg"/);
+ }
 });
