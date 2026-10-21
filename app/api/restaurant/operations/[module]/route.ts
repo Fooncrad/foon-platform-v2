@@ -5,6 +5,7 @@ import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
+import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
 import type {TenantRole} from "@/lib/auth/roles";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
@@ -62,6 +63,8 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
   if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
  }
+ const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch");
+ if(module!=="security"&&module!=="health")await requireAdditionalBranchUnlock(access.tenantId,selectedBranch,user);
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
  return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
@@ -69,8 +72,8 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
 function failure(error:unknown){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
- const code=error instanceof ResourceError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const code=error instanceof ResourceError||error instanceof BranchPinError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
+ const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  if(status>=500)console.error("[FOON operations]",{incidentId,code,error});
  return NextResponse.json({ok:false,code,incidentId},{status});
 }
@@ -191,6 +194,12 @@ async function mutate(request:Request,module:string,method:string){
    if(!ctx.authorizedBranch)throw new ResourceError("BRANCH_REQUIRED");
    if(body.branchId!==undefined&&body.branchId!==ctx.authorizedBranch)throw new ResourceError("FORBIDDEN");
    body.branchId=ctx.authorizedBranch;
+  }
+  // The PIN must apply to the actual target record, not merely a chosen header.
+  if(typeof body.branchId==="string"&&body.branchId)await requireAdditionalBranchUnlock(ctx.tenantId,body.branchId,ctx.user);
+  if(typeof body.id==="string"&&Object.hasOwn(resourceModules,module)){
+   const [target]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
+   if(target.length&&target[0].branch_id)await requireAdditionalBranchUnlock(ctx.tenantId,String(target[0].branch_id),ctx.user);
   }
   // Existing records must belong to the employee's verified branch before any mutation.
   if(!["owner","manager"].includes(ctx.role)&&typeof body.id==="string"){
