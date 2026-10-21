@@ -26,7 +26,7 @@ import "./shared-dashboard-legibility.css";
 import "./reference-dashboard-layout.css";
 import "./sidebar-clarity.css";
 import StaffHelpPanel from "./staff-help-panel";
-import {groupVisibleMerchantSections,merchantNavGroupFor,MERCHANT_NAV_LABELS} from "@/lib/ux/merchant-navigation";
+import {groupVisibleMerchantSections,MERCHANT_NAV_LABELS} from "@/lib/ux/merchant-navigation";
 
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;nameEn?:string;enabled:boolean;limit:number|null};
@@ -173,7 +173,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   // Schedule state synchronization outside the effect body to avoid render cascades.
   let cancelled=false;
   const target=requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview";
-  queueMicrotask(()=>{if(!cancelled){setActive(target);setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
+  queueMicrotask(()=>{if(!cancelled){setActive(target);}});
   return ()=>{cancelled=true;};
  },[pathname,routeParams,data.tenantId,visibleKeys]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
@@ -213,7 +213,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route=activityWorkspaceUrl(data.activityCode),paymentRoute=activityPaymentsUrl(data.activityCode);
- function navigate(section:Section){if(!visible.some(m=>m.key===section))return;setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(section)));if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
+ function navigate(section:Section){if(!visible.some(m=>m.key===section))return;if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
  async function switchTenant(nextTenant:string){
   if(nextTenant===data.tenantId||busy)return;
   setBusy(true);setMessage("");
