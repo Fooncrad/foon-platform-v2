@@ -1,3 +1,4 @@
+import {normalizeHotelRoomNumber,validHotelRoomNumber} from "./hotel-room.mjs";
 import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
@@ -215,9 +216,9 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  const diningLookup=await prepareDiningResource(db,tenantId,module,input,id);
  let lookup:string|null=diningLookup??(config.singleton?"config":module==="coupons"?String(input.data.code):null);
  if(module==="hotelRooms"){
-  const roomNumber=String(input.data.roomNumber),roomKey=String(input.branchId)+":"+roomNumber;
-  const [duplicates]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND lookup_key=? AND archived=FALSE AND id<>? LIMIT 1 FOR UPDATE",[tenantId,input.branchId,roomKey,id]);
-  if(duplicates.length)throw new ResourceError("DUPLICATE_HOTEL_ROOM");
+  const roomNumber=normalizeHotelRoomNumber(input.data.roomNumber),roomKey=String(input.branchId)+":"+roomNumber;
+  const [duplicates]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND archived=FALSE AND id<>? FOR UPDATE",[tenantId,input.branchId,id]);
+  if(duplicates.some(room=>normalizeHotelRoomNumber(parseData(room.data).roomNumber)===roomNumber))throw new ResourceError("DUPLICATE_HOTEL_ROOM");
   lookup=roomKey;
  }
  if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
@@ -403,8 +404,8 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(cart.some(item=>item.options!==undefined&&(!Array.isArray(item.options)||item.options.length>100||item.options.some(id=>typeof id!=="string"||id.length>36))))throw new ResourceError("INVALID_OPTIONS");
  const reservationId=body.reservationId==null?null:String(body.reservationId);
  if(reservationId&&!/^[a-f0-9-]{36}$/i.test(reservationId))throw new ResourceError("INVALID_INPUT");
- const roomNumber=body.channel==="room_service"&&typeof body.roomNumber==="string"?body.roomNumber.trim().toLocaleUpperCase("en-US"):"";
- if(body.channel==="room_service"&&(!customerId||!roomNumber||roomNumber.length>24||!/^[\p{L}\p{N}][\p{L}\p{N} -]{0,23}$/u.test(roomNumber))||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
+ const roomNumber=body.channel==="room_service"?normalizeHotelRoomNumber(body.roomNumber):"";
+ if(body.channel==="room_service"&&(!customerId||!validHotelRoomNumber(roomNumber))||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
  const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,...(roomNumber?{roomNumber}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,...(body.paymentStatus==="paid"?{manualPayment:{status:"paid",method:body.paymentMethod??null}}:{}),items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
  if(requestKey){
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
@@ -435,8 +436,8 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  if(!availability.allowed)throw new ResourceError(availability.reason!);
  let hotelRoomSnapshot:{roomNumber:string}|null=null;
  if(body.channel==="room_service"){
-  const [rooms]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND lookup_key=? AND status='active' AND archived=FALSE LIMIT 1 FOR UPDATE",[tenantId,branchId,branchId+":"+roomNumber]);
-  if(!rooms.length)throw new ResourceError("HOTEL_ROOM_UNAVAILABLE");
+  const [rooms]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='hotel_room' AND status='active' AND archived=FALSE FOR UPDATE",[tenantId,branchId]);
+  if(!rooms.some(room=>normalizeHotelRoomNumber(parseData(room.data).roomNumber)===roomNumber))throw new ResourceError("HOTEL_ROOM_UNAVAILABLE");
   hotelRoomSnapshot={roomNumber};
  }
  let pickupPointSnapshot:{id:string;name:string;address:string;instructions:string|null;mapUrl:string|null}|null=null;
