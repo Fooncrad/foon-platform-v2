@@ -25,6 +25,7 @@ test("employee accounts are provisioned only by explicit password and branch",()
  assert.match(provision,/employee\.branch_id/);
  assert.match(provision,/ACCOUNT_ALREADY_EXISTS/);
  assert.match(provision,/employee\.password_reset/);
+ assert.match(provision,/DELETE FROM auth_sessions WHERE user_id=\?/);
  assert.match(resources,/EMPLOYEE_MANAGER_ROLE_PROTECTED/);
  assert.match(resources,/EMPLOYEE_ACCOUNT_IMMUTABLE/);
 });
