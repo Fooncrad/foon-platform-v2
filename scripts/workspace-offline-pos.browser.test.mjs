@@ -233,12 +233,13 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   const orig=IDBObjectStore.prototype.add;let calls=0;
   IDBObjectStore.prototype.add=function(value,key){
    if(this.name==="orders"&&this.transaction.db.name==="foon-pos-secure-v1"&&++calls===2){
-    this.transaction.abort();throw new Error("SIMULATED_POWER_INTERRUPTION");
+    throw new Error("SIMULATED_POWER_INTERRUPTION");
    }
    return orig.call(this,value,key);
   };
  });
  await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
+ await page.waitForTimeout(200);
  console.log("BACKUP_IMPORT_ABORT_NOTICE:",await page.locator("#notice").innerText());
  await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ENCRYPTED_IMPORT_CONFLICT"),null,{timeout:7000});
  checkpoint("backup-abort-rollback");
