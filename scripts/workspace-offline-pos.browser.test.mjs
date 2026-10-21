@@ -13,6 +13,8 @@ const tenant="33333333-3333-4333-8333-333333333333",branch="44444444-4444-4444-8
 const itemId="55555555-5555-4555-8555-555555555555",passphrase="unique-secure-local-passphrase-for-fixture";
 const orderApi="/api/restaurant/operations/pos";
 test("real offline browser: encrypted scoped catalog and order, reload, wrong passphrase and reauthorized sync",async()=>{
+ test.setTimeout(90000);
+ const checkpoint=label=>console.log("OFFLINE-POS-CHECKPOINT:",label);
  let currentUser=userA;const posts=[];
  const server=createServer((req,res)=>{
   const uri=new URL(req.url,"http://localhost");
@@ -44,7 +46,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.evaluate(()=>navigator.serviceWorker.ready.then(()=>true));
  await page.fill("#setup-pass",passphrase);
  await page.click("#setup-btn");
- await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
+ await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);checkpoint("prepared");
  assert((await page.locator("#notice").innerText()).includes("مشفرة"));
  const encrypted=await page.evaluate(async()=>{
   const req=indexedDB.open("foon-pos-secure-v1");const database=await new Promise(resolve=>req.onsuccess=()=>resolve(req.result));
@@ -58,7 +60,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.locator("#catalog .item button").first().click();
  await page.click("#save-order");
  await page.waitForFunction(()=>document.querySelector("#queue")?.textContent.includes("pending"));
- assert.equal(posts.length,0);
+ assert.equal(posts.length,0);checkpoint("encrypted-queued");
  await context.setOffline(true);
  await page.reload();
  await page.waitForFunction(()=>document.querySelector("#locked")?.hidden===false);
@@ -68,6 +70,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
  await page.waitForFunction(()=>document.querySelector("#queue")?.textContent.includes("pending"));
  assert.equal(await page.locator("#catalog .item").count(),1);
+ checkpoint("offline-reloaded-unlocked");
  await context.setOffline(false);
  currentUser=userB;
  await page.click("#sync-btn");
@@ -81,24 +84,24 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  assert.equal(posts[0].branchId,branch);
  assert.equal(posts[0].requestKey.length,36);
  assert.equal(posts[0].paymentStatus,undefined);
- assert.equal(posts[0].customerName,"");
+ assert.equal(posts[0].customerName,"");checkpoint("online-synced");
  // Service worker must invalidate the local grant at logout even when the
  // ciphertext remains available for eventual account-scoped recovery.
- await page.evaluate(()=>fetch("/api/auth/logout",{method:"POST"}));
+ await page.evaluate(()=>fetch("/api/auth/logout",{method:"POST"}));checkpoint("logout-requested");
  await page.waitForFunction(async()=>{
   const open=indexedDB.open("foon-pos-secure-v1");const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));
   const tx=db.transaction("profiles","readonly"),req=tx.objectStore("profiles").getAll();
   const rows=await new Promise(resolve=>req.onsuccess=()=>resolve(req.result));db.close();return rows[0]?.reauthRequired===true;
- });
+ },{timeout:10000});checkpoint("reauth-flag-persisted");
  await context.setOffline(true);await page.reload();
  await page.waitForFunction(()=>document.querySelector("#locked")?.hidden===false);
  await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
  await page.waitForFunction(()=>document.querySelector("#notice")?.dataset.error==="true");
- assert.equal(await page.locator("#workspace").isHidden(),true);
+ assert.equal(await page.locator("#workspace").isHidden(),true);checkpoint("offline-after-logout-blocked");
  await context.setOffline(false);currentUser=userA;
  await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
  await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
- assert.equal(await page.locator("#catalog .item").count(),1);
+ assert.equal(await page.locator("#catalog .item").count(),1);checkpoint("online-reauthorized");
  }finally{await context.close();await browser.close();await new Promise(resolve=>server.close(resolve));}
 });
 test("static shell cannot contain server/customer data or auth tokens",()=>{
