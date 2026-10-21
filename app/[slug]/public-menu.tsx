@@ -63,7 +63,7 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
 
  const [reservations,setReservations]=useState<CustomerReservation[]>([]),[reservationId,setReservationId]=useState(""),[roomNumber,setRoomNumber]=useState("");
  const isLinked=linked||checkoutAuthenticated;
- const nearest=nearestDeliveryBranch(availableBranchLocations,savedDelivery?.latitude!=null&&savedDelivery?.longitude!=null?{latitude:savedDelivery.latitude,longitude:savedDelivery.longitude}:null,branches.map(b=>b.id));
+ const nearest=nearestDeliveryBranch(availableBranchLocations,savedDelivery?.latitude!=null&&savedDelivery?.longitude!=null?{latitude:savedDelivery.latitude,longitude:savedDelivery.longitude}:null,branches.filter(b=>Object.values(cart).every(line=>{const item=items.find(x=>x.id===line.itemId);return !item?.branchId||item.branchId===b.id;})).map(b=>b.id));
  const preferredBranchId=nearest&&!nearest.approximate?nearest.branch.id:"";
  useEffect(()=>{if(preferredBranchId&&orderChannel==="delivery"&&!deliveryBranchSuggestion){setBranch(preferredBranchId);setDeliveryBranchSuggestion(preferredBranchId);}},[preferredBranchId,orderChannel,deliveryBranchSuggestion]);
 
