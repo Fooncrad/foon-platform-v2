@@ -1,4 +1,4 @@
-import {issuePaidOrderInvoice} from "@/lib/billing/order-invoices";
+import {issuePaidOrderInvoice} from "../billing/order-invoices.ts";
 import {randomUUID} from 'node:crypto';
 import type {PoolConnection,RowDataPacket} from 'mysql2/promise';
 import {notificationCopy} from '../../scripts/customer-notification-copy.mjs';
