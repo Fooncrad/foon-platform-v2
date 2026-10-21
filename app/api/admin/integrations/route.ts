@@ -20,6 +20,7 @@ export async function GET(){
    "SELECT config_key,config_value FROM platform_configuration WHERE config_key IN (?,?,?,?,?)",
    [...keys]);
   const raw=Object.fromEntries(rows.map(r=>[String(r.config_key),String(r.config_value)]));
+  const [locations]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS configured,SUM(delivery_mode='radius') AS radius_enabled FROM tenant_location_settings");
   return NextResponse.json({ok:true,configuration:{
    recaptchaSiteKey:raw.recaptcha_site_key??"",recaptchaRequested:raw.recaptcha_requested==="true",
    aiProvider:raw.ai_provider??"off",aiModel:raw.ai_model??"",
@@ -27,7 +28,7 @@ export async function GET(){
   },environment:{
    recaptchaSecretPresent:Boolean(process.env.RECAPTCHA_SECRET_KEY),
    aiKeyPresent:Boolean(process.env.OPENAI_API_KEY)
-  },integrationActive:false},{headers});
+  },locationSummary:{configured:Number(locations[0]?.configured??0),radiusEnabled:Number(locations[0]?.radius_enabled??0)},integrationActive:false},{headers});
  }catch{return error("INTEGRATIONS_UNAVAILABLE",503);}
 }
 export async function PUT(request:Request){
