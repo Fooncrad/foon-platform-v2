@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {isPaymentProvider,paymentMissingFields,validatePaymentKeys} from "@/lib/payments/provider-catalog";
 import {decryptPaymentCredentials,encryptPaymentCredentials,paymentVaultReady} from "@/lib/payments/credential-vault.mjs";
 
@@ -15,7 +16,7 @@ const failure=(code:string,status:number)=>NextResponse.json({ok:false,code},{st
 async function access(req:Request,write:boolean){
  const user=await currentUserId();if(!user)return {error:failure("UNAUTHENTICATED",401)};
  const tenant=req.headers.get("x-foon-tenant");if(!tenant)return {error:failure("TENANT_CONTEXT_REQUIRED",400)};
- try{const ctx=await requireTenantMembership(user,tenant,write?["owner","manager"]:["owner","manager","accountant"]);return {tenantId:ctx.tenantId,userId:user};}catch{return {error:failure("FORBIDDEN",403)};}
+ try{const ctx=await requireTenantMembership(user,tenant,write?["owner","manager"]:["owner","manager","accountant"]);if(write)await requireAllAdditionalBranchesUnlocked(ctx.tenantId,user);return {tenantId:ctx.tenantId,userId:user};}catch{return {error:failure("FORBIDDEN",403)};}
 }
 export async function GET(req:Request){
  const a=await access(req,false);if(a.error)return a.error;
