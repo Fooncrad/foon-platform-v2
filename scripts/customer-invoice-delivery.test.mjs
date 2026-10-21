@@ -38,7 +38,7 @@ test("subscription receipt is stored and sent only after admin approval",()=>{
  const billing=source("app/api/admin/billing/route.ts");
  const owner=source("app/api/tenant/subscription-requests/route.ts");
  assert.match(billing,/if\(b.status==="approved"\)await db.execute\("INSERT INTO platform_payment_receipts/);
- assert.match(billing,/event_key,tenant_id,recipient_email,subject,body_text\) VALUES \(\?,'payment_receipt'/);
+ assert.match(billing,/event_key,tenant_id,recipient_email,subject,body_text\) VALUES \(\?,'payment_receipt',NULL/);
  assert.match(owner,/requireTenantMembership\(user,id,\["owner"\]/);
  assert.match(owner,/p.status='approved'/);
  assert.match(owner,/platform_payment_receipts/);
