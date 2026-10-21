@@ -3,6 +3,8 @@ import {notFound} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {validCreatorHandle} from "@/lib/creator/profile-policy";
+import {normalizeCreatorSocialLink} from "@/lib/creator/social-links";
+import CreatorSocialIcon from "@/app/components/creator-social-icon";
 import "./creator-public.css";
 
 export const dynamic="force-dynamic";
@@ -24,12 +26,32 @@ export default async function CreatorPublicPage({params}:{params:Promise<{handle
   "JOIN user_media_library m ON m.id=cp.media_id AND m.user_id=cp.user_id "+
   "WHERE p.handle=? AND p.visibility='public' "+
   "ORDER BY cp.created_at DESC,cp.id DESC LIMIT 24",[handle]);
+ const [socialRows]=await database().execute<RowDataPacket[]>(
+  "SELECT sl.platform,sl.url FROM customer_creator_social_links sl "+
+  "JOIN customer_creator_profiles p ON p.user_id=sl.user_id "+
+  "WHERE p.handle=? AND p.visibility='public' ORDER BY sl.display_order,sl.platform LIMIT 12",[handle]);
+ // Validate stored links again before placing them in a clickable public element.
+ const socialLinks=socialRows.flatMap(row=>{
+  const parsed=normalizeCreatorSocialLink(row.platform,row.url);
+  return parsed?[parsed]:[];
+ });
  return <main className="creatorPublic">
   <nav><Link href="/">FOON</Link><Link href="/market">استكشاف المتاجر</Link></nav>
   <section className="creatorPublicHeader">
    {/* A failed image request must not reveal whether a private avatar exists. */}
    {Number(profile.has_avatar)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar"} alt="الصورة الشخصية لصانع المحتوى" width={112} height={112}/>}
    <div><small>ملف صانع المحتوى</small><h1>{String(profile.display_name)}</h1><p>{String(profile.bio??"")}</p></div>
+  </section>
+  {socialLinks.length>0&&<section className="creatorPublicSocial"><h2>تابع صانع المحتوى</h2>
+   <div className="creatorSocialGrid">{socialLinks.map(link=><a key={link.platform} href={link.url} target="_blank" rel="noopener noreferrer nofollow external" className={"creatorSocialLink creatorSocialLink--"+link.platform} aria-label={link.platform}>
+    <CreatorSocialIcon platform={link.platform}/><span>{link.platform==="x"?"X":link.platform==="website"?"الموقع الشخصي":link.platform.charAt(0).toUpperCase()+link.platform.slice(1)}</span>
+   </a>)}</div>
+  </section>}
+  <section className="creatorPublicQr" aria-label="رمز QR لزيارة الملف">
+   <div><h2>امسح QR لفتح الملف الشخصي</h2><p>وجّه كاميرا الجوال إلى الرمز لفتح هذا الملف العام مباشرة.</p>
+    <a href={"/api/creators/"+encodeURIComponent(handle)+"/qr"} download={"foon-"+handle+"-qr.svg"}>حفظ رمز QR</a>
+   </div>
+   <img src={"/api/creators/"+encodeURIComponent(handle)+"/qr"} alt={"QR لملف "+String(profile.display_name)} width={200} height={200}/>
   </section>
   <section><h2>معرض الأعمال المنشورة</h2>
    {images.length?<div className="creatorPublicGallery">{images.map(item=><figure key={String(item.id)}>
