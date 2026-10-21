@@ -27,12 +27,15 @@ export async function deliverNotifications(db,{providerFor=tenant=>queuedMailPro
   try{
    provider=await providerFor(row.tenant_id);
    await provider.send({id:row.id,to:row.recipient_email,...renderQueuedEmail(row,templates)});
-   await db.execute("UPDATE platform_notification_outbox SET status='sent',sent_at=NOW(),last_error=NULL WHERE id=? AND status='processing' AND attempts=?",[row.id,attempt]);result.sent++;
+   await db.execute("UPDATE platform_notification_outbox SET status='sent',sent_at=NOW(),last_error=NULL WHERE id=? AND status='processing' AND attempts=?",[row.id,attempt]);
+   if(row.event_key==='order_invoice')await db.execute("UPDATE restaurant_customer_invoices SET email_status='sent',email_attempts=?,emailed_at=NOW(),email_last_error=NULL WHERE id=? AND tenant_id=?",[attempt,row.id,row.tenant_id]);
+   result.sent++;
   }catch(error){
    const code=String(error.code??error.message??'MAIL_DELIVERY_FAILED');
    // Store codes only: SMTP responses can contain addresses or credentials.
    const safe=/^[A-Z][A-Z0-9_]{1,99}$/.test(code)?code:'MAIL_DELIVERY_FAILED';
-   await db.execute("UPDATE platform_notification_outbox SET status=?,last_error=?,next_attempt_at=DATE_ADD(NOW(),INTERVAL ? SECOND) WHERE id=? AND status='processing' AND attempts=?",[attempt>=5?'failed':'pending',safe,Math.min(3600,2**Math.min(attempt,10)*60),row.id,attempt]);result[attempt>=5?'failed':'retried']++;
+   await db.execute("UPDATE platform_notification_outbox SET status=?,last_error=?,next_attempt_at=DATE_ADD(NOW(),INTERVAL ? SECOND) WHERE id=? AND status='processing' AND attempts=?",[attempt>=5?'failed':'pending',safe,Math.min(3600,2**Math.min(attempt,10)*60),row.id,attempt]);if(row.event_key==='order_invoice')await db.execute("UPDATE restaurant_customer_invoices SET email_status=?,email_attempts=?,email_last_error=? WHERE id=? AND tenant_id=?",[attempt>=5?'failed':'pending',attempt,safe,row.id,row.tenant_id]);
+   result[attempt>=5?'failed':'retried']++;
   }finally{provider?.close();}
  }
  return result;
