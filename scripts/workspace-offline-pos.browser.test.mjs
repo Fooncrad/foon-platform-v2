@@ -134,6 +134,42 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  assert(migrated);
  assert(!JSON.stringify(migrated).includes("Sensitive legacy guest"));
  assert((await page.locator("#queue").innerText()).includes(ownOld));
+ // Simulate a power/storage failure after the encrypted copy is verified,
+ // but before the plaintext row can be deleted. Both must remain recoverable.
+ const interruptedId="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+ await page.evaluate(async({tenant,branch,interruptedId,itemId})=>{
+  const open=indexedDB.open("foon-pos-offline-v1",2);
+  const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));
+  const tx=db.transaction("orders","readwrite");
+  tx.objectStore("orders").put({id:interruptedId,tenantId:tenant,branchId:branch,status:"pending",
+   createdAt:"2026-10-20T13:00:00.000Z",payload:{branchId:branch,requestKey:interruptedId,channel:"takeaway",
+    items:[{id:itemId,quantity:1,options:[]}],customerName:"PRIVATE INTERRUPTED ORDER"}});
+  await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();
+  const original=IDBObjectStore.prototype.delete;
+  IDBObjectStore.prototype.delete=function(id){
+   if(id===interruptedId&&this.transaction.db.name==="foon-pos-offline-v1"){
+    this.transaction.abort();throw new Error("SIMULATED_DELETE_INTERRUPTION");
+   }
+   return original.call(this,id);
+  };
+ },{tenant,branch,interruptedId,itemId});
+ await page.check("#legacy-confirm");await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ORDER_CHANGED_RETRY"));
+ const interrupted=await page.evaluate(async id=>{
+  const read=async name=>{const open=indexedDB.open(name);const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));
+   const tx=db.transaction("orders","readonly"),r=tx.objectStore("orders").getAll();
+   const rows=await new Promise(resolve=>r.onsuccess=()=>resolve(r.result));db.close();return rows;};
+  return {old:(await read("foon-pos-offline-v1")).some(row=>row.id===id),
+   encrypted:(await read("foon-pos-secure-v1")).some(row=>row.orderId===id)};
+ },interruptedId);
+ assert.deepEqual(interrupted,{old:true,encrypted:true});
+ await page.reload();
+ await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
+ await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
+ await page.check("#legacy-confirm");await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("نُقل 1"));
+ assert((await page.locator("#queue").innerText()).includes(interruptedId));
+ checkpoint("legacy-delete-interruption-retains-plaintext-and-encrypted-retry");
  // Simulated cashier/ordinary POS operator: GET POS still succeeds, but the
  // server explicitly refuses management of unowned legacy plaintext data.
  legacyAllowed=false;
