@@ -11,6 +11,16 @@ async function captureScreenshot(target,options){
  await target.screenshot(options);
 }
 test.use({actionTimeout:15000,navigationTimeout:30000});
+/* Verify real rendered surface/text pairs in Chromium, not just CSS declarations. */
+async function assertReadableSurface(locator,name){
+ await expect.poll(()=>locator.evaluate(node=>{
+  const parse=color=>(color.match(/[0-9.]+/g)||[]).slice(0,3).map(Number);
+  const l=rgb=>{const c=rgb.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return (c[0]||0)*.2126+(c[1]||0)*.7152+(c[2]||0)*.0722;};
+  const style=getComputedStyle(node),foreground=l(parse(style.color)),background=l(parse(style.backgroundColor));
+  return (Math.max(foreground,background)+.05)/(Math.min(foreground,background)+.05);
+ }),{message:name+" dark-surface text contrast",timeout:2500}).toBeGreaterThanOrEqual(4.5);
+}
+
 let server;
 const origin="http://localhost:3102";
 test.beforeAll(async()=>{
@@ -31,6 +41,7 @@ test("public landing and marketplace share language, theme, footer and safe coun
   await expect(header.getByRole("link",{name:"حسابي / دخول"})).toBeVisible();
   await header.getByRole("button",{name:"تبديل المظهر"}).click();
   await expect(landing).toHaveAttribute("data-theme","dark");
+  await assertReadableSurface(page.locator(".foonFeatureCard").first(),"Public landing feature");
   await page.locator(".foonHeroActions").getByRole("link",{name:"استكشف السوق"}).click();
   const market=page.locator(".foonPublicMarket"),marketHeader=market.locator(".foonPublicHeader"),marketFooter=market.locator(".foonPublicFooter");
   await expect(market).toHaveAttribute("data-theme","dark");
@@ -80,6 +91,7 @@ test("public login and registration retain form behavior under one site header/f
   await page.locator(".foonPublicHeader").getByRole("button",{name:"تبديل المظهر"}).click();
   await expect(page.locator(".foonPublicJourney")).toHaveAttribute("data-theme","dark");
   await expect(page.locator(".foonAuthPage")).toHaveAttribute("data-theme","dark");
+  await assertReadableSurface(page.locator(".foonAuthPage .auth-card"),"Registration account");
   await page.locator(".foonPublicHeader").getByRole("combobox",{name:"اللغة / Language / Langue"}).selectOption("en");
   await expect(page.getByRole("heading",{name:"Create your account and store"})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -115,6 +127,7 @@ test("published CMS pages share public chrome and follow explicit language/appea
   await expect(page.locator(".foonPublicFooter").getByRole("link",{name:"Draft"})).toHaveCount(0);
   await page.locator(".foonPublicHeader").getByRole("button",{name:"Toggle appearance"}).click();
   await expect(page.locator(".foonPublicContent")).toHaveAttribute("data-theme","dark");
+  await assertReadableSurface(page.locator(".publicContentPage article"),"CMS published page");
   await page.goto(origin+"/p/"+slug+"?lang=ar");
   await expect(page.locator(".publicContentPage")).toHaveAttribute("dir","rtl");
   await expect(page.getByRole("heading",{name:"سياسة الاختبار"})).toBeVisible();
@@ -150,6 +163,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(merchantTheme).toHaveValue("system");
  await merchantTheme.selectOption("dark");
  await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
+ await assertReadableSurface(page.locator(".restaurantMetrics article").first(),"Merchant dashboard KPI");
  await page.reload();
  await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
  await page.getByRole("combobox",{name:"المظهر"}).selectOption("system");
@@ -195,6 +209,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
+ await page.getByRole("combobox",{name:"المظهر"}).selectOption("dark");
+ await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
+ await assertReadableSurface(page.locator(".restaurantPosProduct").filter({hasText:"قهوة المعاينة"}),"POS product");
+ await page.getByRole("combobox",{name:"المظهر"}).selectOption("light");
  await page.locator(".restaurantPosMenu article").filter({hasText:"قهوة المعاينة"}).getByRole("button").click();
  const firstQuantity=page.locator('.restaurantCart input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
