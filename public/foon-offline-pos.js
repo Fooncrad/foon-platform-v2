@@ -110,7 +110,7 @@ async function prepare(){
  // Deliberately exclude customers, orders, private staff data and auth tokens.
  const publicCatalog={userId:user,tenantId:tenant,branchId:branch,menu:data.menu||[],tables:data.tables||[],options:data.options||{},currency:String(data.currency||"SAR"),checkoutPolicy:data.checkoutPolicy||null,savedAt:now,expiresAt};
  const encrypted=await seal(key,id,"profile",publicCatalog);
- await put("profiles",{id,salt,...encrypted,savedAt:now,expiresAt});
+ await put("profiles",{id,salt,...encrypted,savedAt:now,expiresAt,reauthRequired:false});
  $("setup-pass").value="";await refreshProfiles();$("profiles").value=id;
  await openProfile(id,pass);notice(msg("prepared"));
 }
@@ -120,14 +120,14 @@ async function openProfile(id,pass){
  const key=await keyFor(pass,record.salt);
  let data;try{data=await unseal(key,id,"profile",record);}catch{throw new Error(msg("bad"));}
  if(id!==idOf(data.userId,data.tenantId,data.branchId))throw new Error("SCOPE_MISMATCH");
- if(Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt)){
-  // Expiry blocks offline access; pending encrypted orders remain recoverable
-  // after fresh authentication and a POS permission check when back online.
+ if(record.reauthRequired||Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt)){
+  // Logout, account switch or expiry blocks offline access. Pending encrypted
+  // orders are retained and can be recovered after new server authentication.
   if(!navigator.onLine)throw new Error(msg("expired"));
   const access=await authorized(data.tenantId,data.branchId,data.userId);
   const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
   data={...data,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},savedAt:now,expiresAt};
-  record={...record,...await seal(key,id,"profile",data),savedAt:now,expiresAt};
+  record={...record,...await seal(key,id,"profile",data),savedAt:now,expiresAt,reauthRequired:false};
   await put("profiles",record);
  }
  active={record,data,key};
@@ -253,7 +253,7 @@ async function refresh(){
  const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
  const update={...data,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},currency:String(access.data.currency||data.currency),checkoutPolicy:access.data.checkoutPolicy||null,savedAt:now,expiresAt};
  const encrypted=await seal(active.key,record.id,"profile",update);
- const next={...record,...encrypted,savedAt:now,expiresAt};
+ const next={...record,...encrypted,savedAt:now,expiresAt,reauthRequired:false};
  await put("profiles",next);active={record:next,data:update,key:active.key};cart.clear();renderCatalog();await refreshProfiles();notice("تم تحديث بيانات الفرع بعد التحقق من الصلاحية.");
 }
 async function exportEncrypted(){
