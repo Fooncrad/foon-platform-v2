@@ -54,11 +54,13 @@ test('activation purges all legacy private HTML caches while retaining public me
  await (await sw.caches.open('foon-workspace-pages-v1')).put('/restaurant',new Response('SECRET'));
  await (await sw.caches.open('foon-workspace-pages-v7')).put('/salon',new Response('SECRET'));
  await (await sw.caches.open('foon-pos-shell-v2')).put('/offline',new Response('OLD SHELL'));
+ await (await sw.caches.open('foon-pos-shell-v4')).put('/foon-offline-pos.js',new Response('OUTDATED JS'));
  await (await sw.caches.open('foon-public-menu-v1')).put('/alpha',new Response('PUBLIC MENU'));
  await sw.fire('activate');
  assert.equal(await sw.caches.has('foon-workspace-pages-v1'),false);
  assert.equal(await sw.caches.has('foon-workspace-pages-v7'),false);
  assert.equal(await sw.caches.has('foon-pos-shell-v2'),false);
+ assert.equal(await sw.caches.has('foon-pos-shell-v4'),false);
  assert.equal(await sw.caches.has('foon-public-menu-v1'),true);
 });
 
