@@ -44,13 +44,13 @@ test('server-side batch validation catches invalid columns and repeats',()=>{
 });
 
 test('owner-selected category fills missing CSV references but never overrides explicit categories',()=>{
- assert.throws(()=>parseImportCsv('name,price\\nقميص,25','items'),/ROW_2: REQUIRED_category/);
- const rows=parseImportCsv('name,price\\nقميص,25','items',{defaultCategory:'ملابس'});
+ assert.throws(()=>parseImportCsv('name,price\nقميص,25','items'),/ROW_2: REQUIRED_category/);
+ const rows=parseImportCsv('name,price\nقميص,25','items',{defaultCategory:'ملابس'});
  assert.deepEqual(rows,[{name:'قميص',price:'25',category:'ملابس'}]);
- const mixed=parseImportCsv('category,name,price\\n,قميص,25\\nإكسسوارات,حقيبة,50','items',{defaultCategory:'ملابس'});
+ const mixed=parseImportCsv('category,name,price\n,قميص,25\nإكسسوارات,حقيبة,50','items',{defaultCategory:'ملابس'});
  assert.deepEqual(mixed.map(row=>row.category),['ملابس','إكسسوارات']);
- assert.throws(()=>parseImportCsv('name,price\\nقميص,25','items',{defaultCategory:' '}),/REQUIRED_category/);
- assert.deepEqual(parseImportCsv('name\\nملابس','categories',{defaultCategory:'تجاهل'}),[{name:'ملابس'}]);
+ assert.throws(()=>parseImportCsv('name,price\nقميص,25','items',{defaultCategory:' '}),/REQUIRED_category/);
+ assert.deepEqual(parseImportCsv('name\nملابس','categories',{defaultCategory:'تجاهل'}),[{name:'ملابس'}]);
 });
 test('CSV row errors are translated and correctly offset across 5-row batches',()=>{
  const ar=formatImportError('ROW_2: REQUIRED_category','ar',5);
