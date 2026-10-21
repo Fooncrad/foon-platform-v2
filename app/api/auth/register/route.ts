@@ -1,4 +1,5 @@
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
+import {recordCreatorReferral} from "@/lib/creator/subscription-commission";
 import {cookies} from "next/headers";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
@@ -47,6 +48,7 @@ export async function POST(request:Request){
       stage="store";
       const workspace=await provisionStore(db,{ownerId:id,name:storeName,slug,kind:restaurantActivities.has(activity)?"restaurant":"store"});
       await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
+      await recordCreatorReferral(db,workspace.tenant.id,id,body.referralHandle);
       const locale=(await cookies()).get("foon_language")?.value;
    await db.execute("UPDATE users SET default_locale=? WHERE id=?",[locale==="en"||locale==="fr"?locale:"ar",id]);
    await notifyCustomer(db,{userId:id,tenantId:workspace.tenant.id,event:"account_welcome",resourceId:id});
@@ -56,6 +58,7 @@ export async function POST(request:Request){
       return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free"},{status:201});
     }catch(error){
       await db.rollback();
+      if((error as Error).message==="REFERRAL_INVALID")return NextResponse.json({ok:false,code:"REFERRAL_INVALID"},{status:400});
       if((error as {code?:string}).code==="ER_DUP_ENTRY")return NextResponse.json({ok:false,code:stage==="user"?"EMAIL_EXISTS":"SLUG_EXISTS"},{status:409});
       throw error;
     }finally{db.release();}

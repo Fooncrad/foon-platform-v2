@@ -15,7 +15,7 @@ export default function RestaurantRegisterPage(){
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy)return;setBusy(true);setError("");const data=new FormData(event.currentTarget);
   try{
-   const response=await fetch("/api/restaurant/onboard",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),slug:data.get("slug"),activity,countryCode:country,currency:currencyForCountry(country),region,taxNumber:data.get("taxNumber")})});
+   const response=await fetch("/api/restaurant/onboard",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),slug:data.get("slug"),activity,countryCode:country,currency:currencyForCountry(country),region,taxNumber:data.get("taxNumber"),referralHandle:new URLSearchParams(window.location.search).get("ref")??undefined})});
    const result=await response.json().catch(()=>({}));
    if(response.ok){
     // The active tenant is bound to the authenticated session, not the URL.

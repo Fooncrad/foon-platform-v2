@@ -55,7 +55,7 @@ async function startOnce(pool:Pool,input:CheckoutInput,fetcher?:typeof fetch){
   if(order.tenant_id!==candidate.tenant_id||order.branch_id!==candidate.branch_id)fail("ORDER_CHANGED");
   // Authorization is checked again for every retry; staff membership is irrelevant.
   const [grants]=await db.execute<RowDataPacket[]>("SELECT p.code,COALESCE(af.enabled,pf.enabled) AS enabled FROM tenant_subscriptions s JOIN package_plans p ON p.id=s.plan_id AND p.enabled=TRUE JOIN package_features f ON f.feature_key='orders' LEFT JOIN package_plan_features pf ON pf.plan_id=p.id AND pf.feature_key=f.feature_key LEFT JOIN tenant_business_profiles bp ON bp.tenant_id=s.tenant_id LEFT JOIN package_plan_activity_features af ON af.plan_id=p.id AND af.feature_key=f.feature_key AND af.activity_code=bp.activity_code WHERE s.tenant_id=? AND s.status='active' AND (s.starts_at IS NULL OR s.starts_at<=NOW()) AND (s.ends_at IS NULL OR s.ends_at>NOW()) LIMIT 1",[order.tenant_id]);
-  if(!grants[0]||!(grants[0].enabled===null?grants[0].code==="enterprise":Boolean(grants[0].enabled)))fail("PLAN_FEATURE_REQUIRED",403);
+  if(!grants[0]||Number(grants[0].enabled)!==1)fail("PLAN_FEATURE_REQUIRED",403);
   tenantId=String(order.tenant_id);scope=String(setting.scope_key);
   const credentials=decryptPaymentCredentials(String(setting.credentials_ciphertext),{tenantId,scope,provider:"tap",mode:"test"});
   if(typeof credentials.secret_key!=="string"||!credentials.secret_key.startsWith("sk_test_")||/[\r\n]/.test(credentials.secret_key))fail("PAYMENT_SETUP_INCOMPLETE");
