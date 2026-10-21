@@ -14,7 +14,7 @@ export const defaultLocationSettings:TenantLocationSettings={
  outsideMessage:"",googleAnalyticsId:"",facebookPixelId:"",
  aiAssistantRequested:false
 };
-export function validPoint(latitude:unknown,longitude:unknown):latitude is number{
+export function validPoint(latitude:unknown,longitude:unknown):boolean{
  return typeof latitude==="number"&&typeof longitude==="number"
   &&Number.isFinite(latitude)&&Number.isFinite(longitude)
   &&latitude>=-90&&latitude<=90&&longitude>=-180&&longitude<=180;
@@ -56,7 +56,7 @@ export function deliveryZoneCheck(settings:Pick<TenantLocationSettings,"delivery
  if(!validPoint(settings.latitude,settings.longitude)||settings.radiusKm===null
   ||settings.radiusKm<=0)return {allowed:false,code:"DELIVERY_GPS_REQUIRED"};
  if(!validPoint(lat,lon))return {allowed:false,code:"DELIVERY_GPS_REQUIRED"};
- const distanceKm=greatCircleKm(settings.latitude,settings.longitude,lat,lon);
+ const distanceKm=greatCircleKm(Number(settings.latitude),Number(settings.longitude),Number(lat),Number(lon));
  if(distanceKm>settings.radiusKm)return {allowed:false,code:"DELIVERY_OUT_OF_RANGE"};
  return {allowed:true,distanceKm};
 }
