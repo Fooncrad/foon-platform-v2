@@ -85,7 +85,8 @@ const SERVER_RESTRICTED_FEATURES=new Set([
  "tables","reservations","waitlist","kds","waiter_call","digital_menu","nfc_menu",
  "service_catalog","appointments","queue","room_service","split_bills","split_bill_requests",
  "table_qr","table_minimum_charge","reservation_fees","waitlist_fees","service_fees",
- "takeaway","variants","excise_tax"
+ "takeaway","variants","excise_tax",
+ "creator_profile","content_marketplace","media_library","watermark","content_pricing"
 ]);
 export function passesServerActivityRestriction(activity:unknown,featureKey:string):boolean{
  if(!SERVER_RESTRICTED_FEATURES.has(featureKey)||typeof activity!=="string"||!isActivityType(activity))return true;
