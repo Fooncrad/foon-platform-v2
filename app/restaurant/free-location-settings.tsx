@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useEffect,useState,type FormEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {defaultLocationSettings,type TenantLocationSettings} from "@/lib/tenant/free-location";
 type FormState={deliveryMode:"manual"|"radius";latitude:string;longitude:string;radiusKm:string;outsideMessage:string;googleAnalyticsId:string;facebookPixelId:string;aiAssistantRequested:boolean};
@@ -35,7 +35,7 @@ export default function FreeLocationSettings({tenantId}:{tenantId:string}){
    {enableHighAccuracy:true,timeout:12000,maximumAge:0}
   );
  }
- async function save(e:React.FormEvent<HTMLFormElement>){
+ async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();setError("");setMessage("");setSaving(true);
   const parsed={
    ...values,
