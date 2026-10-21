@@ -200,14 +200,14 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  checkpoint("backup-import-start");
  await page.check("#legacy-confirm");
  await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,tenantId:"99999999-9999-4999-8999-999999999999"}));
- console.log("BACKUP_IMPORT_FOREIGN_NOTICE:",await page.locator("#notice").innerText());
  await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_FOREIGN_NOTICE:",await page.locator("#notice").innerText());
  checkpoint("backup-foreign-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  // One malformed/other-branch row rejects the entire batch.
  await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[backupRow(backupA),{...backupRow(backupB),branchId:"99999999-9999-4999-8999-999999999999"}]}));
- console.log("BACKUP_IMPORT_MIXED_NOTICE:",await page.locator("#notice").innerText());
  await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP_ORDERS"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_MIXED_NOTICE:",await page.locator("#notice").innerText());
  checkpoint("backup-mixed-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  // Another tab or operation may hold the Web Lock: no import and no data loss.
@@ -217,8 +217,8 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  },"foon-legacy-recovery-"+tenant+":"+branch);
  await page.waitForFunction(()=>typeof window.__releaseRecoveryLock==="function");
  await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
- console.log("BACKUP_IMPORT_LOCKED_NOTICE:",await page.locator("#notice").innerText());
  await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("RECOVERY_ALREADY_RUNNING"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_LOCKED_NOTICE:",await page.locator("#notice").innerText());
  checkpoint("backup-web-lock-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  await page.evaluate(()=>window.__releaseRecoveryLock());
@@ -239,9 +239,9 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   };
  });
  await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
- await page.waitForTimeout(200);
- console.log("BACKUP_IMPORT_ABORT_NOTICE:",await page.locator("#notice").innerText());
  await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ENCRYPTED_IMPORT_CONFLICT"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_ABORT_NOTICE:",await page.locator("#notice").innerText());
+ assert.equal(await page.locator("#notice").getAttribute("data-error"),"true");
  checkpoint("backup-abort-rollback");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  assert(!(await secureRows()).some(row=>row.orderId===backupB));
@@ -267,6 +267,15 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.check("#legacy-confirm");
  await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[{...backupRow(backupA),payload:{...backupRow(backupA).payload,customerName:"ATTACK DIFFERENT CUSTOMER"}}]}));
  await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_SECURE_ORDER_CONFLICT"));
+ assert.equal((await secureRows()).filter(row=>[backupA,backupB].includes(row.orderId)).length,2);
+ // Reused request key and payload must also retain its original order date.
+ await page.evaluate(()=>{document.querySelector("#notice").textContent="";});
+ await page.check("#legacy-confirm");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[{
+  ...backupRow(backupA),createdAt:"2026-10-19T11:00:00.000Z"
+ }]}));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_SECURE_ORDER_CONFLICT"),null,{timeout:7000});
+ assert.equal(await page.locator("#notice").getAttribute("data-error"),"true");
  assert.equal((await secureRows()).filter(row=>[backupA,backupB].includes(row.orderId)).length,2);
  checkpoint("legacy-backup-atomic-rollback-reload-duplicate-conflict-tested");
 
