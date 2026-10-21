@@ -1,3 +1,4 @@
+import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
@@ -31,14 +32,18 @@ async function lockUser(db:PoolConnection,userId:string){
  return rows.length>0;
 }
 export async function GET(){
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const userId=await currentUserId();if(!userId)return fail("UNAUTHENTICATED",401);
  try{
+  const [account]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status=\'active\' LIMIT 1",[userId]);
+  if(!account.length)return fail("UNAUTHENTICATED",401);
   const [addresses]=await database().execute<RowDataPacket[]>("SELECT id,label,recipient_name,phone,country_code,city,district,street_address,building,apartment,delivery_notes,latitude,longitude,is_default,created_at,updated_at FROM customer_delivery_addresses WHERE user_id=? ORDER BY is_default DESC,created_at DESC,id",[userId]);
   return NextResponse.json({ok:true,addresses},{...noStore});
  }catch{return fail("ADDRESSES_UNAVAILABLE",503);}
 }
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const userId=await currentUserId();if(!userId)return fail("UNAUTHENTICATED",401);
  const address=parseAddress(await request.json().catch(()=>null));if(!address)return fail("INVALID_INPUT",400);
  const db=await database().getConnection();
@@ -54,6 +59,7 @@ export async function POST(request:Request){
 }
 export async function PATCH(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const userId=await currentUserId();if(!userId)return fail("UNAUTHENTICATED",401);
  const body=await request.json().catch(()=>null),id=typeof body?.id==="string"?body.id:"",address=parseAddress(body);
  if(!idPattern.test(id)||!address)return fail("INVALID_INPUT",400);
@@ -70,6 +76,7 @@ export async function PATCH(request:Request){
 }
 export async function DELETE(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
+ const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const userId=await currentUserId();if(!userId)return fail("UNAUTHENTICATED",401);
  const body=await request.json().catch(()=>null),id=typeof body?.id==="string"?body.id:"";
  if(!idPattern.test(id))return fail("INVALID_INPUT",400);
