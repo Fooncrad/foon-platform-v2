@@ -8,6 +8,10 @@ test("selects closest configured delivery branch from eligible branches",()=>{
  assert.equal(nearestDeliveryBranch([a,b],24.61,46.7,["north"]),"north");
  assert.equal(nearestDeliveryBranch([{...b,acceptsDelivery:false},a],24.61,46.7),"north");
 });
+test("dine-in and pickup may use a nearby branch even if it disables delivery",()=>{
+ assert.equal(nearestOperatingBranch([{...b,acceptsDelivery:false},a],24.61,46.7),"south");
+ assert.equal(nearestDeliveryBranch([{...b,acceptsDelivery:false},a],24.61,46.7),"north");
+});
 test("unknown coordinates, disabled delivery, or missing customer's location never selects a fabricated nearest branch",()=>{
  assert.equal(nearestDeliveryBranch([a,b],null,null),null);
  assert.equal(nearestDeliveryBranch([{...a,latitude:null,longitude:null}],24.61,46.7),null);
