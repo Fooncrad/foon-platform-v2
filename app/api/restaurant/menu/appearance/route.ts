@@ -4,6 +4,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 export const runtime="nodejs";
 import {isMenuTemplate,isMenuColorMode} from "@/lib/restaurant/menu-templates";
 import {publicMenuData} from "@/lib/restaurant/public-menu";
@@ -14,6 +15,7 @@ async function scope(request:Request){
  if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
  const ctx=await requireTenantMembership(userId,tenant,["owner","manager"],request.method!=="GET");
+ if(request.method!=="GET")await requireAllAdditionalBranchesUnlocked(ctx.tenantId,userId);
  const [rows]=await database().execute<RowDataPacket[]>("SELECT kind,name,slug FROM tenants WHERE id=? AND status='active' LIMIT 1",[ctx.tenantId]);
  if(rows[0]?.kind!=="restaurant")return {error:NextResponse.json({ok:false,code:"RESTAURANT_ONLY"},{status:403})};
  return {tenantId:ctx.tenantId,name:String(rows[0].name),slug:String(rows[0].slug)};
