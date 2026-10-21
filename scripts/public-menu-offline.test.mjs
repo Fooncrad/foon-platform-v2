@@ -43,7 +43,7 @@ test('real service worker: tenant isolation, offline reload, images, languages, 
   assert.match(await page.locator('#modal-price strong').textContent(),/14\.50/);
   await page.locator('#close').click();
   await page.selectOption('#language','fr');assert.equal(await page.locator('article h2').textContent(),'Plat alpha');
-  await page.selectOption('#language','en');await page.fill('#search','absent');assert.equal(await page.locator('article').count(),0);await page.fill('#search','');await page.selectOption('#branch','two');assert.equal(await page.locator('h2').textContent(),'فرع آخر');
+  await page.selectOption('#language','en');await page.fill('#search','absent');assert.equal(await page.locator('article').count(),0);await page.fill('#search','');await page.selectOption('#branch','two');assert.equal(await page.locator('article h2').textContent(),'فرع آخر');
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.equal(await page.locator('#cover img').count(),1);
   await page.reload();assert.equal(await page.locator('h1').textContent(),'alpha');
