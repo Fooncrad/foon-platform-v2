@@ -317,3 +317,26 @@
  background:#303846;color:#f8f3e9;border-color:#525c6e;
 }
 .customerDashboard[data-theme="dark"] .customerUploadLabel:hover{background:#3c4656}
+
+/* Minimal pages: offline connectivity notice, receipt view and safe account
+ * routing fallback must not remain unthemed just because they have no sidebar. */
+.foonStandaloneTheme{min-height:100svh;background:#f8f7f3;color:#24221e;color-scheme:light}
+.foonStandaloneTheme[data-theme="dark"]{background:#171a20;color:#f8f3e9;color-scheme:dark}
+.foonStandaloneTheme[data-theme="dark"] :is(a,button){color:#f7b36c}
+.foonStandaloneTheme[data-theme="dark"] :is(input,select,textarea){
+ background:#29303b;color:#f8f3e9;border-color:#525c6e;
+}
+.foonStandaloneTheme[data-theme="dark"] :is(table,th,td){
+ background:#242832;color:#f8f3e9;border-color:#424c5b;
+}
+.foonStandaloneTheme[data-theme="dark"] :is(a,button,input,select,textarea):focus-visible{
+ outline:3px solid #edb956;outline-offset:2px;
+}
+@media print{
+ /* Paper receipts stay legible with ordinary printers regardless of screen mode. */
+ .foonStandaloneTheme,.foonStandaloneTheme[data-theme="dark"],
+ .foonStandaloneTheme[data-theme="dark"] :is(table,th,td){
+  background:#fff!important;color:#111!important;box-shadow:none!important;
+ }
+ .foonStandaloneTheme{min-height:0}
+}
