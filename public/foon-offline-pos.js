@@ -262,6 +262,42 @@ async function exportEncrypted(){
  const anchor=document.createElement("a");anchor.href=url;anchor.download="foon-encrypted-pos-"+new Date().toISOString().slice(0,10)+".json";anchor.click();
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+
+/* All encrypted backup rows are prevalidated before opening this transaction.
+   Never await crypto/network between IndexedDB requests: a failure must roll
+   back every new order, not leave a partially imported backup. */
+async function commitEncryptedRestore(prepared){
+ const database=await db();
+ return new Promise((resolve,reject)=>{
+  let transaction;
+  try{transaction=database.transaction("orders","readwrite");}
+  catch(error){database.close();reject(error);return;}
+  const store=transaction.objectStore("orders");
+  let inserted=0;
+  for(const {row,prior} of prepared){
+   const request=store.get(row.id);
+   request.onsuccess=()=>{
+    try{
+     const current=request.result;
+     if(prior){
+      // An already-saved encrypted order may not be silently overwritten.
+      if(JSON.stringify(current)!==JSON.stringify(prior)){transaction.abort();return;}
+     }else{
+      // A concurrent tab may have inserted the same ID after preflight.
+      if(current!==undefined){transaction.abort();return;}
+      store.add(row);inserted++;
+     }
+    }catch{
+     try{transaction.abort();}catch{/* Already aborted by storage. */}
+    }
+   };
+  }
+  transaction.oncomplete=()=>{database.close();resolve(inserted);};
+  transaction.onerror=()=>{}; // Reject only after rollback is confirmed.
+  transaction.onabort=()=>{database.close();reject(new Error("ENCRYPTED_BACKUP_RESTORE_CONFLICT"));};
+ });
+}
+
 async function importEncrypted(event){
  const file=event.target.files?.[0];event.target.value="";
  if(!file)return;
@@ -276,22 +312,34 @@ async function importEncrypted(event){
  if(profile.id!==record.id||JSON.stringify(profile.salt)!==JSON.stringify(record.salt))throw new Error("BACKUP_DIFFERENT_USER_BRANCH");
  const decrypted=await unseal(key,profile.id,"profile",profile);
  if(decrypted.userId!==data.userId||decrypted.tenantId!==data.tenantId||decrypted.branchId!==data.branchId)throw new Error("BACKUP_DIFFERENT_SCOPE");
- const prepared=[];
- for(const row of parsed.orders){
-  if(row.profileId!==record.id||!idPattern.test(row.orderId)||row.id!==record.id+"|"+row.orderId)throw new Error("BACKUP_DIFFERENT_SCOPE");
-  const item=await unseal(key,record.id,"order:"+row.orderId,row);
-  if(item.id!==row.orderId||item.payload?.requestKey!==item.id||item.payload?.branchId!==data.branchId||!["pending","needs_review"].includes(item.status))throw new Error("INVALID_BACKUP_ORDER");
-  prepared.push(row);
- }
- if(new Set(prepared.map(row=>row.id)).size!==prepared.length)throw new Error("DUPLICATE_BACKUP_ORDER");
- let restored=0;
- for(const row of prepared){
-  const old=await get("orders",row.id);
-  if(old){const existing=await unseal(key,record.id,"order:"+row.orderId,old);
-   const incoming=await unseal(key,record.id,"order:"+row.orderId,row);
-   if(JSON.stringify(existing.payload)!==JSON.stringify(incoming.payload))throw new Error("BACKUP_ORDER_CONFLICT");
-  }else{await put("orders",row);restored++;}
- }
+ if(!navigator.locks?.request)throw new Error("WEB_LOCKS_REQUIRED");
+ // Share the sync lock: a server-acknowledged order must not be resurrected
+ // by a concurrent backup import on the same account and branch.
+ const restored=await navigator.locks.request("foon-pos-secure-sync-"+record.id,{mode:"exclusive",ifAvailable:true},async grant=>{
+  if(!grant)throw new Error("SYNC_ALREADY_RUNNING");
+  const prepared=[];
+  for(const row of parsed.orders){
+   if(row.profileId!==record.id||!idPattern.test(row.orderId)||row.id!==record.id+"|"+row.orderId)throw new Error("BACKUP_DIFFERENT_SCOPE");
+   const item=await unseal(key,record.id,"order:"+row.orderId,row);
+   if(item.id!==row.orderId||item.payload?.requestKey!==item.id||item.payload?.branchId!==data.branchId||!["pending","needs_review"].includes(item.status))throw new Error("INVALID_BACKUP_ORDER");
+   prepared.push(row);
+  }
+  if(new Set(prepared.map(row=>row.id)).size!==prepared.length)throw new Error("DUPLICATE_BACKUP_ORDER");
+  const snapshots=[];
+  for(const row of prepared){
+   const prior=await get("orders",row.id);
+   if(prior){
+    const existing=await unseal(key,record.id,"order:"+row.orderId,prior);
+    const incoming=await unseal(key,record.id,"order:"+row.orderId,row);
+    if(JSON.stringify(existing.payload)!==JSON.stringify(incoming.payload))throw new Error("BACKUP_ORDER_CONFLICT");
+   }
+   snapshots.push({row,prior:prior??null});
+  }
+  // Reject if the operator locked this profile during asynchronous validation.
+  const current=valid();
+  if(current.record.id!==record.id||current.key!==key)throw new Error("USER_CHANGED");
+  return commitEncryptedRestore(snapshots);
+ });
  await renderQueue();notice("تمت استعادة "+restored+" طلبات مشفرة، دون مسح أو استبدال الطلبات الموجودة.");
 }
 
