@@ -14,6 +14,14 @@ test('employees stay in their employer workspace and platform admins never inher
  try{
   let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+'/login',{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}assert.ok(ready,serverOutput);
   const owner=await register(),other=await register(),admin=await register();
+  // Corrupt JPEG bytes with a plausible header must fail cleanly, not crash
+  // the personal-media route or write a bogus profile image.
+  const damagedMedia=new FormData();
+  damagedMedia.set('type','avatar');
+  damagedMedia.set('file',new File([Uint8Array.from([255,216,255,0,0])],'damaged.jpg',{type:'image/jpeg'}));
+  const damagedResponse=await fetch(origin+'/api/account/media',{method:'POST',headers:{origin,cookie:owner.cookie},body:damagedMedia});
+  assert.equal(damagedResponse.status,400,'corrupt image must be a client error');
+  assert.equal((await damagedResponse.json()).code,'INVALID_IMAGE');
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user.id]);
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,admin.cookie,owner.tenant.id)).status,403);
   const supportAccess=await request('/api/admin/tenants/'+owner.tenant.id+'/access','POST',{},admin.cookie);assert.equal(supportAccess.status,200,await supportAccess.clone().text());
@@ -50,7 +58,7 @@ test('employees stay in their employer workspace and platform admins never inher
    assert.equal(workspace.status,200,role+' own authorized workspace');
    assert.doesNotMatch(await workspace.text(),/href="\/account\/library"/);
    assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,cookie,other.tenant.id)).status,403,role+' other employer');
-   for(const [path,method] of [['/api/customer/orders','POST'],['/api/customer/services','POST'],['/api/customer/payments','POST'],['/api/customer/join-store','POST'],['/api/customer/stores','POST'],['/api/customer/register','POST'],['/api/customer/order-revision','GET'],['/api/customer/notifications','POST'],['/api/customer/invoices','GET'],['/api/customer/cart','GET'],['/api/account/library','GET'],['/api/account/library','POST'],['/api/account/library','DELETE'],['/api/account/library/'+randomUUID(),'GET'],['/api/restaurant/onboard','POST']]){
+   for(const [path,method] of [['/api/customer/orders','POST'],['/api/customer/services','POST'],['/api/customer/payments','POST'],['/api/customer/join-store','POST'],['/api/customer/stores','POST'],['/api/customer/register','POST'],['/api/customer/order-revision','GET'],['/api/customer/notifications','POST'],['/api/customer/invoices','GET'],['/api/customer/cart','GET'],['/api/account/addresses','GET'],['/api/account/addresses','POST'],['/api/account/addresses','PATCH'],['/api/account/addresses','DELETE'],['/api/account/library','GET'],['/api/account/library','POST'],['/api/account/library','DELETE'],['/api/account/library/'+randomUUID(),'GET'],['/api/restaurant/onboard','POST']]){
     const r=await request(path,method,method==='GET'?undefined:{},cookie);assert.equal(r.status,403,role+' '+path);assert.equal((await r.json()).code,'EMPLOYEE_OPERATIONAL_ACCESS_ONLY');
    }
    for(const path of ['/customer','/account/library','/restaurant/register','/'+owner.slug,'/'+owner.slug+'/order','/'+owner.slug+'/register','/'+owner.slug+'/login']){
@@ -73,12 +81,33 @@ test('employees stay in their employer workspace and platform admins never inher
    assert.equal((await request('/api/customer/orders','POST',{},cookie)).status,403);
    await db.execute("UPDATE memberships SET status='suspended' WHERE user_id=?",[staff]);
    assert.equal((await request('/api/account/library','GET',undefined,cookie)).status,403);
+   assert.equal((await request('/api/account/addresses','GET',undefined,cookie)).status,403,'suspended staff retain customer address restriction');
+   await db.execute("UPDATE users SET status=\'suspended\' WHERE id=?",[staff]);
+   assert.equal((await request('/api/account/media?type=avatar','GET',undefined,cookie)).status,401,'inactive staff cannot read personal media');
+   const suspendedProfile=await request('/api/account/profile','PATCH',{name:'Forbidden Account Change',phone:'0500000000'},cookie);
+   assert.equal(suspendedProfile.status,401,'suspended account cannot change its profile');
    assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,cookie,owner.tenant.id)).status,403);
   }
   assert.equal((await request('/api/account/library','GET',undefined,owner.cookie)).status,200);
-  const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerCookie=customer.headers.get('set-cookie').split(';')[0];
+  assert.equal((await request('/api/account/addresses','GET',undefined,owner.cookie)).status,200,'owner personal addresses remain available');
+  const profileResponse=await request('/api/account/profile','PATCH',{name:'Owner Updated',phone:'+966500000001'},owner.cookie);
+  assert.equal(profileResponse.status,200,'owner profile name and phone save together');
+  const [[savedOwner]]=await db.execute('SELECT u.display_name,p.phone FROM users u JOIN user_profiles p ON p.user_id=u.id WHERE u.id=?',[owner.user.id]);
+  assert.equal(savedOwner.display_name,'Owner Updated');
+  assert.equal(savedOwner.phone,'+966500000001');
+  const languageResponse=await request('/api/account/language','PATCH',{language:'fr'},owner.cookie);
+  assert.equal(languageResponse.status,200,'active owner can change default language');
+  const [[localeSaved]]=await db.execute('SELECT default_locale FROM users WHERE id=?',[owner.user.id]);
+  assert.equal(localeSaved.default_locale,'fr');
+  const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerData=await customer.json();const customerCookie=customer.headers.get('set-cookie').split(';')[0];
   assert.equal((await request('/api/customer/order-revision','GET',undefined,customerCookie)).status,200);
+  assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,200,'customer addresses remain available');
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,customerCookie,owner.tenant.id)).status,403);
+  await db.execute("UPDATE users SET status=\'suspended\' WHERE id=?",[customerData.user.id]);
+  assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,401,'suspended customer cannot read address book');
+  assert.equal((await request('/api/account/media?type=avatar','GET',undefined,customerCookie)).status,401,'suspended customer cannot read account media');
+  assert.equal((await request('/api/account/media','POST',{},customerCookie)).status,401,'suspended customer cannot upload account media');
+  assert.equal((await request('/api/account/language','PATCH',{language:'en'},customerCookie)).status,401,'suspended account cannot change language');
   console.log('Six employee roles: personal shopping/library/pages denied, own permitted work retained, other tenants/admin denied, suspended staff denied, owners/customers preserved');
  }finally{server.kill();await db.end();}
 });

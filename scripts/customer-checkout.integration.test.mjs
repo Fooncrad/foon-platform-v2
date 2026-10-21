@@ -87,6 +87,11 @@ test("customer checkout persists before HTTP, isolates ownership, survives retri
   const secondBranch=randomUUID();await pool.execute("INSERT INTO branches(id,tenant_id,name,slug) VALUES (?,?,'Other','other')",[secondBranch,tenant]);
   // A second branch cannot change shared merchant settings until its owner
   // initializes and unlocks the branch PIN for this authenticated session.
+  const location={deliveryMode:"manual",latitude:null,longitude:null,radiusKm:null,outsideMessage:"Synthetic branch coverage",googleAnalyticsId:"",facebookPixelId:"",aiAssistantRequested:false};
+  const saveLocation=()=>fetch(local+"/api/restaurant/location-settings",{method:"PUT",headers,body:JSON.stringify(location)});
+  const locationLocked=await saveLocation();
+  assert.equal(locationLocked.status,409,"tenant-wide location changes require secondary branch PIN setup");
+  assert.equal((await locationLocked.json()).code,"BRANCH_PIN_SETUP_REQUIRED");
   const denied=await put({...payload,branch_id:secondBranch,enabled:false,credentials:{},public_key:"",version:null});
   assert.equal(denied.status,403,"locked additional branches must reject merchant mutations");
   const pin="726391",salt=randomBytes(16).toString("hex");
@@ -96,6 +101,9 @@ test("customer checkout persists before HTTP, isolates ownership, survives retri
    assert.equal((await opened.clone().json()).expiresInSeconds,900,"secondary branch must be unlocked, not treated as primary");
    const [[pinGrant]]=await pool.execute("SELECT a.unlocked_until,UTC_TIMESTAMP() AS db_now FROM branch_pin_access a JOIN auth_sessions s ON s.id=a.auth_session_id AND s.user_id=? AND s.expires_at>UTC_TIMESTAMP() WHERE a.tenant_id=? AND a.branch_id=? AND a.unlocked_until>UTC_TIMESTAMP() LIMIT 1",[owner.user.id,tenant,secondBranch]);
    assert.ok(pinGrant,"branch PIN grant must be visible to the merchant API");
+  const savedLocation=await saveLocation();assert.equal(savedLocation.status,200,await savedLocation.clone().text());
+  const [[savedZone]]=await pool.execute("SELECT outside_message FROM tenant_location_settings WHERE tenant_id=?",[tenant]);
+  assert.equal(savedZone.outside_message,location.outsideMessage);
   const branchConfig=await put({...payload,branch_id:secondBranch,enabled:false,credentials:{},public_key:"",version:null});assert.equal(branchConfig.status,200,await branchConfig.clone().text());
   const disabled=await order(secondBranch);await assert.rejects(()=>start(disabled),/CHECKOUT_NOT_ENABLED/);
   // An altered order during provider creation is retained for review, without exposing a URL.

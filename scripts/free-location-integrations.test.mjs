@@ -39,6 +39,7 @@ test("tenant role, tenant id, same-origin and server order guards exist",()=>{
  assert.match(api,/\["owner","manager"\]/);
  assert.match(api,/assertSameOrigin\(request\)/);
  assert.match(api,/tenant_id=\?/);
+ assert.match(api,/requireAllAdditionalBranchesUnlocked\(ctx.tenantId,ctx.user\)/);
  assert.match(orders,/deliveryZoneCheck/);
  assert.match(orders,/DELIVERY_OUT_OF_RANGE|decision\.code/);
  assert.ok(orders.indexOf("deliveryZoneCheck")<orders.indexOf("await createOrder"),"check before creating orders");
