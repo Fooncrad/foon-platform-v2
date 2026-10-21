@@ -176,7 +176,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
   }
   if(module==="customers"){const [rows]=await db.execute<RowDataPacket[]>("SELECT u.id,u.display_name,c.created_at FROM tenant_customers c JOIN users u ON u.id=c.user_id WHERE c.tenant_id=? ORDER BY c.created_at DESC LIMIT 200",[ctx.tenantId]);return NextResponse.json({ok:true,customers:rows});}
   if(module==="security"){const current=await currentSessionId(),[rows]=await db.execute<RowDataPacket[]>("SELECT id,created_at,last_seen_at,expires_at FROM auth_sessions WHERE user_id=? AND expires_at>NOW() ORDER BY last_seen_at DESC LIMIT 100",[ctx.user]);return NextResponse.json({ok:true,sessions:rows.map(s=>({...s,current:s.id===current}))});}
-  if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),checkedAt:new Date().toISOString()});}
+  if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),geocodingConfigured:Boolean(process.env.GOOGLE_MAPS_GEOCODING_API_KEY),checkedAt:new Date().toISOString()});}
   throw new ResourceError("MODULE_NOT_FOUND");
  }catch(error){return failure(error);}finally{db?.release();}
 }
