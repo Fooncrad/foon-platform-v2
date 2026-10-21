@@ -95,6 +95,10 @@ test('employees stay in their employer workspace and platform admins never inher
   const [[savedOwner]]=await db.execute('SELECT u.display_name,p.phone FROM users u JOIN user_profiles p ON p.user_id=u.id WHERE u.id=?',[owner.user.id]);
   assert.equal(savedOwner.display_name,'Owner Updated');
   assert.equal(savedOwner.phone,'+966500000001');
+  const languageResponse=await request('/api/account/language','PATCH',{language:'fr'},owner.cookie);
+  assert.equal(languageResponse.status,200,'active owner can change default language');
+  const [[localeSaved]]=await db.execute('SELECT default_locale FROM users WHERE id=?',[owner.user.id]);
+  assert.equal(localeSaved.default_locale,'fr');
   const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerCookie=customer.headers.get('set-cookie').split(';')[0];
   assert.equal((await request('/api/customer/order-revision','GET',undefined,customerCookie)).status,200);
   assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,200,'customer addresses remain available');
@@ -103,6 +107,7 @@ test('employees stay in their employer workspace and platform admins never inher
   assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,401,'suspended customer cannot read address book');
   assert.equal((await request('/api/account/media?type=avatar','GET',undefined,customerCookie)).status,401,'suspended customer cannot read account media');
   assert.equal((await request('/api/account/media','POST',{},customerCookie)).status,401,'suspended customer cannot upload account media');
+  assert.equal((await request('/api/account/language','PATCH',{language:'en'},customerCookie)).status,401,'suspended account cannot change language');
   console.log('Six employee roles: personal shopping/library/pages denied, own permitted work retained, other tenants/admin denied, suspended staff denied, owners/customers preserved');
  }finally{server.kill();await db.end();}
 });
