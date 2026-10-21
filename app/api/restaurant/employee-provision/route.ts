@@ -14,10 +14,8 @@ async function resolveEmployeeUser(db:Pool | PoolConnection,tenantId:string,data
   const [members]=await db.execute<RowDataPacket[]>("SELECT 1 FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,explicit]);
   if(members.length)return explicit;
  }
- const email=String(data?.email??"").trim().toLowerCase();
- if(!email.includes("@")||!email.includes("."))return "";
- const [users]=await db.execute<RowDataPacket[]>("SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE LOWER(u.email)=? AND m.tenant_id=? AND m.status='active' LIMIT 2",[email,tenantId]);
- return users.length===1?String(users[0].id):"";
+ // Never infer a staff account from an email address; only an explicit account binding is authoritative.
+ return "";
 }
 
 const modules=["orders","pos","kitchen","menu","categories","tables","sections","reservations","waitlist","waiterCalls","team","attendance","inventory","coupons","marketing","customerInvoices","internalInvoices","printers","reports","storefront","notifications","loyalty","delivery","security"] as const;
