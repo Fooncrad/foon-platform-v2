@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseImportCsv,validateImportRow,validateImportRows} from '../lib/catalog/import-csv.ts';
 import {publicImageAddress} from '../lib/media/remote-image.ts';
+import {formatImportError} from '../lib/catalog/import-errors.ts';
 test('CSV preserves multilingual quoted content and rejects invalid rows before writing',()=>{
  const rows=parseImportCsv('\uFEFFname,name_en,description,image_1\r\n"قسم, واحد",Category,"سطر\nثان",https://example.com/image.jpg','categories');assert.equal(rows[0].name,'قسم, واحد');assert.equal(rows[0].description,'سطر\nثان');
  for(const csv of ['name,name\nx,y','name,unknown\nx,y','name\n"unclosed'])assert.throws(()=>parseImportCsv(csv,'categories'));
@@ -40,4 +41,21 @@ test('variant combinations detect reordered options even when their SKU differs'
 test('server-side batch validation catches invalid columns and repeats',()=>{
  assert.throws(()=>validateImportRows('categories',[{name:'قسم'}, {name:'قسم'}]),/DUPLICATE_CSV_REFERENCE/);
  assert.throws(()=>validateImportRows('items',[{category:'قسم',name:'صنف',price:'10.001'}]),/ROW_2: INVALID_PRICE_PRECISION/);
+});
+
+test('owner-selected category fills missing CSV references but never overrides explicit categories',()=>{
+ assert.throws(()=>parseImportCsv('name,price\\nقميص,25','items'),/ROW_2: REQUIRED_category/);
+ const rows=parseImportCsv('name,price\\nقميص,25','items',{defaultCategory:'ملابس'});
+ assert.deepEqual(rows,[{name:'قميص',price:'25',category:'ملابس'}]);
+ const mixed=parseImportCsv('category,name,price\\n,قميص,25\\nإكسسوارات,حقيبة,50','items',{defaultCategory:'ملابس'});
+ assert.deepEqual(mixed.map(row=>row.category),['ملابس','إكسسوارات']);
+ assert.throws(()=>parseImportCsv('name,price\\nقميص,25','items',{defaultCategory:' '}),/REQUIRED_category/);
+ assert.deepEqual(parseImportCsv('name\\nملابس','categories',{defaultCategory:'تجاهل'}),[{name:'ملابس'}]);
+});
+test('CSV row errors are translated and correctly offset across 5-row batches',()=>{
+ const ar=formatImportError('ROW_2: REQUIRED_category','ar',5);
+ assert.match(ar,/الصف 7:/);assert.match(ar,/اسم القسم مطلوب/);assert.match(ar,/ROW_7: REQUIRED_category/);
+ assert.match(formatImportError('ROW_3: DUPLICATE_CSV_REFERENCE_ROW_2','en'),/Row 3: Duplicate entry/);
+ assert.match(formatImportError('PLAN_FEATURE_REQUIRED','fr'),/abonnement/);
+ assert.match(formatImportError('CSV_INVALID_HEADERS','ar'),/أعمدة الملف/);
 });
