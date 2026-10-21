@@ -1,4 +1,4 @@
-import test from "node:test";
+import {test} from "@playwright/test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {createServer} from "node:http";
@@ -12,7 +12,7 @@ const userA="11111111-1111-4111-8111-111111111111",userB="22222222-2222-4222-822
 const tenant="33333333-3333-4333-8333-333333333333",branch="44444444-4444-4444-8444-444444444444";
 const itemId="55555555-5555-4555-8555-555555555555",passphrase="unique-secure-local-passphrase-for-fixture";
 const orderApi="/api/restaurant/operations/pos";
-test("real offline browser: encrypted scoped catalog and order, reload, wrong passphrase and reauthorized sync",async t=>{
+test("real offline browser: encrypted scoped catalog and order, reload, wrong passphrase and reauthorized sync",async()=>{
  let currentUser=userA;const posts=[];
  const server=createServer((req,res)=>{
   const uri=new URL(req.url,"http://localhost");
@@ -30,12 +30,13 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   send(404,"missing","text/plain");
  });
  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
- t.after(()=>new Promise(resolve=>server.close(resolve)));
+
  const origin="http://127.0.0.1:"+server.address().port;
  const browser=await chromium.launch({headless:true});
  const context=await browser.newContext({viewport:{width:320,height:720}});
  const page=await context.newPage();
- t.after(()=>browser.close());
+ try{
+
  const path="/foon-offline-pos.html?tenant="+tenant+"&branch="+branch;
  await page.goto(origin+path);
  await page.evaluate(()=>navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"}));
@@ -80,6 +81,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  assert.equal(posts[0].requestKey.length,36);
  assert.equal(posts[0].paymentStatus,undefined);
  assert.equal(posts[0].customerName,"");
+ }finally{await context.close();await browser.close();await new Promise(resolve=>server.close(resolve));}
 });
 test("static shell cannot contain server/customer data or auth tokens",()=>{
  const text=html.toString();assert(text.includes('Content-Security-Policy'));
