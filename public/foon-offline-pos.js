@@ -379,7 +379,7 @@ async function importLegacyBackup(event){
    const id=record.id+"|"+row.id,prior=await get("orders",id);
    if(prior){
     const existing=await unseal(key,record.id,"order:"+row.id,prior);
-    if(existing.id!==row.id||JSON.stringify(existing.payload)!==JSON.stringify(row.payload))throw new Error("LEGACY_SECURE_ORDER_CONFLICT");
+    if(existing.id!==row.id||existing.createdAt!==row.createdAt||JSON.stringify(existing.payload)!==JSON.stringify(row.payload))throw new Error("LEGACY_SECURE_ORDER_CONFLICT");
     prepared.push({id,prior,newRecord:null});
    }else{
     const plaintext={id:row.id,createdAt:row.createdAt,status:row.status,
@@ -416,8 +416,11 @@ async function importLegacyBackup(event){
     };
    }
    tx.oncomplete=()=>{database.close();resolve(inserted);};
+   // IndexedDB raises transaction "error" BEFORE "abort" on failed requests.
+   // Do not reject/close early: wait for confirmed rollback, then report one
+   // stable failure code. In particular, no partial import can report success.
+   tx.onerror=()=>{};
    tx.onabort=()=>{database.close();reject(new Error("LEGACY_ENCRYPTED_IMPORT_CONFLICT"));};
-   tx.onerror=()=>{database.close();reject(tx.error||new Error("LEGACY_IMPORT_FAILED"));};
   });
  });
  $("legacy-confirm").checked=false;
