@@ -10,8 +10,9 @@ export default async function CreatorPublicPage({params}:{params:Promise<{handle
  const {handle}=await params;
  if(!validCreatorHandle(handle))notFound();
  const [profiles]=await database().execute<RowDataPacket[]>(
-  "SELECT p.handle,p.display_name,p.bio FROM customer_creator_profiles p "+
+  "SELECT p.handle,p.display_name,p.bio,CASE WHEN up.avatar_image IS NULL THEN 0 ELSE 1 END AS has_avatar FROM customer_creator_profiles p "+
   "JOIN users u ON u.id=p.user_id AND u.status='active' "+
+  "LEFT JOIN user_profiles up ON up.user_id=p.user_id "+
   "WHERE p.handle=? AND p.visibility='public' "+
   "AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=p.user_id) "+
   "AND NOT EXISTS (SELECT 1 FROM platform_admins a WHERE a.user_id=p.user_id) LIMIT 1",[handle]);
@@ -27,7 +28,7 @@ export default async function CreatorPublicPage({params}:{params:Promise<{handle
   <nav><Link href="/">FOON</Link><Link href="/market">استكشاف المتاجر</Link></nav>
   <section className="creatorPublicHeader">
    {/* A failed image request must not reveal whether a private avatar exists. */}
-   <img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar"} alt="الصورة الشخصية لصانع المحتوى" width={112} height={112}/>
+   {Number(profile.has_avatar)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar"} alt="الصورة الشخصية لصانع المحتوى" width={112} height={112}/>}
    <div><small>ملف صانع المحتوى</small><h1>{String(profile.display_name)}</h1><p>{String(profile.bio??"")}</p></div>
   </section>
   <section><h2>معرض الأعمال المنشورة</h2>
