@@ -1,5 +1,5 @@
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
-import {greatCircleKm,validPoint} from "./free-location";
+import {greatCircleKm,validPoint} from "./free-location.ts";
 
 export type DeliveryBranchLocation={id:string;name:string;latitude:number|null;longitude:number|null;acceptsDelivery:boolean};
 
