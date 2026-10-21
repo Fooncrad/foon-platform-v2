@@ -320,13 +320,21 @@ async function legacyDeleteVerified(prior){
  const database=await legacyDB();
  return new Promise((resolve,reject)=>{
   const trans=database.transaction("orders","readwrite"),store=trans.objectStore("orders"),get=store.get(prior.id);
+  let removalConfirmed=false;
   get.onsuccess=()=>{
    // Another tab might have updated payment/review status since the copy.
    // Never discard that fresher version; the operator must retry recovery.
    if(JSON.stringify(get.result)!==JSON.stringify(prior)){trans.abort();return;}
-   store.delete(prior.id);
+   try{
+    const removal=store.delete(prior.id);
+    removal.onsuccess=()=>{removalConfirmed=true;};
+   }catch{trans.abort();}
   };
-  trans.oncomplete=()=>{database.close();resolve();};
+  trans.oncomplete=()=>{
+   database.close();
+   if(removalConfirmed)resolve();
+   else reject(new Error("LEGACY_DELETE_NOT_CONFIRMED"));
+  };
   trans.onerror=()=>{database.close();reject(trans.error||new Error("LEGACY_DELETE_FAILED"));};
   trans.onabort=()=>{database.close();reject(new Error("LEGACY_ORDER_CHANGED_RETRY"));};
  });
@@ -342,6 +350,84 @@ function legacyOrderValid(row,tenantId,branchId){
   typeof row.createdAt==="string"&&Number.isFinite(Date.parse(row.createdAt))&&
   ["pending","needs_review"].includes(row.status);
 }
+
+async function importLegacyBackup(event){
+ const file=event.target.files?.[0];event.target.value="";
+ if(!file)return;
+ if(!navigator.onLine)throw new Error("INTERNET_REQUIRED");
+ if(!$("legacy-confirm").checked)throw new Error("CONFIRM_LEGACY_OWNERSHIP_FIRST");
+ if(!navigator.locks?.request)throw new Error("WEB_LOCKS_REQUIRED");
+ if(file.size>5000000)throw new Error("LEGACY_BACKUP_TOO_LARGE");
+ const {record,key,data}=valid();
+ // The historical export did not bind orders to their creator user.
+ // Only a manager/owner for the current branch may import such a file.
+ const check=await authorized(data.tenantId,data.branchId,data.userId);
+ if(check.data.legacyRecoveryAllowed!==true)throw new Error("LEGACY_RECOVERY_MANAGER_ONLY");
+ const parsed=JSON.parse(await file.text());
+ if(!parsed||parsed.format!=="foon-pos-recovery-v1"||parsed.tenantId!==data.tenantId||
+   parsed.branchId!==data.branchId||!Array.isArray(parsed.orders)||parsed.orders.length>500)throw new Error("INVALID_LEGACY_BACKUP");
+ const rows=parsed.orders;
+ if(rows.some(row=>!legacyOrderValid(row,data.tenantId,data.branchId))||
+    new Set(rows.map(row=>row.id)).size!==rows.length)throw new Error("INVALID_LEGACY_BACKUP_ORDERS");
+ let count=0;
+ await navigator.locks.request("foon-legacy-recovery-"+data.tenantId+":"+data.branchId,{mode:"exclusive",ifAvailable:true},async granted=>{
+  if(!granted)throw new Error("RECOVERY_ALREADY_RUNNING");
+  // Precompute AEAD ciphertext outside the IndexedDB transaction; ensure the
+  // transaction remains atomic and never awaits WebCrypto between IDB requests.
+  const prepared=[];
+  for(const row of rows){
+   const id=record.id+"|"+row.id,prior=await get("orders",id);
+   if(prior){
+    const existing=await unseal(key,record.id,"order:"+row.id,prior);
+    if(existing.id!==row.id||existing.createdAt!==row.createdAt||JSON.stringify(existing.payload)!==JSON.stringify(row.payload))throw new Error("LEGACY_SECURE_ORDER_CONFLICT");
+    prepared.push({id,prior,newRecord:null});
+   }else{
+    const plaintext={id:row.id,createdAt:row.createdAt,status:row.status,
+     ...(row.lastError?{lastError:row.lastError}:{}),payload:row.payload};
+    const encrypted=await seal(key,record.id,"order:"+row.id,plaintext);
+    // Verify encryption and scope before opening any write transaction.
+    const verified=await unseal(key,record.id,"order:"+row.id,encrypted);
+    if(verified.id!==row.id||JSON.stringify(verified.payload)!==JSON.stringify(row.payload))throw new Error("RECOVERY_VERIFY_FAILED");
+    prepared.push({id,prior:null,newRecord:{id,profileId:record.id,orderId:row.id,createdAt:row.createdAt,...encrypted}});
+   }
+  }
+  valid();
+  const database=await db();
+  count=await new Promise((resolve,reject)=>{
+   const tx=database.transaction("orders","readwrite"),store=tx.objectStore("orders");
+   let inserted=0;
+   for(const item of prepared){
+    const req=store.get(item.id);
+    req.onsuccess=()=>{
+     try{
+      const current=req.result;
+      if(item.prior){
+       // Reject a simultaneous edit/removal of the prior encrypted order.
+       if(JSON.stringify(current)!==JSON.stringify(item.prior)){tx.abort();return;}
+      }else{
+       if(current!==undefined){tx.abort();return;}
+       store.add(item.newRecord);inserted++;
+      }
+     }catch{
+      // A synchronous IndexedDB exception inside an onsuccess callback must
+      // abort the WHOLE batch; never let it silently leave a pending Promise.
+      try{tx.abort();}catch{/* Already aborted by the storage layer. */}
+     }
+    };
+   }
+   tx.oncomplete=()=>{database.close();resolve(inserted);};
+   // IndexedDB raises transaction "error" BEFORE "abort" on failed requests.
+   // Do not reject/close early: wait for confirmed rollback, then report one
+   // stable failure code. In particular, no partial import can report success.
+   tx.onerror=()=>{};
+   tx.onabort=()=>{database.close();reject(new Error("LEGACY_ENCRYPTED_IMPORT_CONFLICT"));};
+  });
+ });
+ $("legacy-confirm").checked=false;
+ await renderQueue();
+ notice("تم استيراد "+count+" طلبات من نسخة الطوارئ القديمة وتشفيرها دون إنشاء نسخ مكشوفة. احتفظ بالملف حتى تتأكد من المزامنة، ثم احذف نسخته غير المشفرة بأمان.");
+}
+
 async function recoverLegacy(){
  const {record,key,data}=valid();
  if(!navigator.onLine)throw new Error("INTERNET_REQUIRED");
@@ -401,6 +487,7 @@ async function init(){
  action("refresh-btn",refresh);
  action("export-btn",exportEncrypted);
  action("legacy-recover",recoverLegacy);
+ $("legacy-import-file").addEventListener("change",event=>{importLegacyBackup(event).catch(error=>notice(String(error.message||error),true));});
  $("import-file").addEventListener("change",event=>{importEncrypted(event).catch(error=>notice(String(error.message||error),true));});
  if(navigator.serviceWorker&&navigator.onLine)void navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"}).catch(()=>{});
  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&active)lock();});

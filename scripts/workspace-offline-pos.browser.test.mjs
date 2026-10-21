@@ -134,6 +134,42 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  assert(migrated);
  assert(!JSON.stringify(migrated).includes("Sensitive legacy guest"));
  assert((await page.locator("#queue").innerText()).includes(ownOld));
+ // Simulate a power/storage failure after the encrypted copy is verified,
+ // but before the plaintext row can be deleted. Both must remain recoverable.
+ const interruptedId="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+ await page.evaluate(async({tenant,branch,interruptedId,itemId})=>{
+  const open=indexedDB.open("foon-pos-offline-v1",2);
+  const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));
+  const tx=db.transaction("orders","readwrite");
+  tx.objectStore("orders").put({id:interruptedId,tenantId:tenant,branchId:branch,status:"pending",
+   createdAt:"2026-10-20T13:00:00.000Z",payload:{branchId:branch,requestKey:interruptedId,channel:"takeaway",
+    items:[{id:itemId,quantity:1,options:[]}],customerName:"PRIVATE INTERRUPTED ORDER"}});
+  await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});db.close();
+  const original=IDBObjectStore.prototype.delete;
+  IDBObjectStore.prototype.delete=function(id){
+   if(id===interruptedId&&this.transaction.db.name==="foon-pos-offline-v1"){
+    this.transaction.abort();throw new Error("SIMULATED_DELETE_INTERRUPTION");
+   }
+   return original.call(this,id);
+  };
+ },{tenant,branch,interruptedId,itemId});
+ await page.check("#legacy-confirm");await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ORDER_CHANGED_RETRY"));
+ const interrupted=await page.evaluate(async id=>{
+  const read=async name=>{const open=indexedDB.open(name);const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));
+   const tx=db.transaction("orders","readonly"),r=tx.objectStore("orders").getAll();
+   const rows=await new Promise(resolve=>r.onsuccess=()=>resolve(r.result));db.close();return rows;};
+  return {old:(await read("foon-pos-offline-v1")).some(row=>row.id===id),
+   encrypted:(await read("foon-pos-secure-v1")).some(row=>row.orderId===id)};
+ },interruptedId);
+ assert.deepEqual(interrupted,{old:true,encrypted:true});
+ await page.reload();
+ await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
+ await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
+ await page.check("#legacy-confirm");await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("نُقل 1"));
+ assert((await page.locator("#queue").innerText()).includes(interruptedId));
+ checkpoint("legacy-delete-interruption-retains-plaintext-and-encrypted-retry");
  // Simulated cashier/ordinary POS operator: GET POS still succeeds, but the
  // server explicitly refuses management of unowned legacy plaintext data.
  legacyAllowed=false;
@@ -145,6 +181,104 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.click("#legacy-recover");
  await page.waitForFunction(()=>document.querySelector("#notice")?.dataset.error==="true");
  checkpoint("legacy-plaintext-encrypted-and-isolated");
+ // Recover from the historical plaintext JSON backup AFTER the original
+ // IndexedDB data has been lost. Import must never write a plaintext store.
+ legacyAllowed=true;
+ const backupA="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",backupB="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+ const backupRow=id=>({id,tenantId:tenant,branchId:branch,createdAt:"2026-10-20T11:00:00.000Z",status:"pending",
+  payload:{branchId:branch,requestKey:id,channel:"takeaway",items:[{id:itemId,quantity:1,options:[]}],customerName:"LEGACY BACKUP PRIVATE CUSTOMER"}});
+ const oldBackup={format:"foon-pos-recovery-v1",tenantId:tenant,branchId:branch,orders:[backupRow(backupA),backupRow(backupB)]};
+ const fileOf=obj=>({name:"legacy-foon-emergency.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(obj))});
+ const secureRows=()=>page.evaluate(async()=>{
+  const req=indexedDB.open("foon-pos-secure-v1");
+  const db=await new Promise(resolve=>req.onsuccess=()=>resolve(req.result));
+  const t=db.transaction("orders","readonly"),get=t.objectStore("orders").getAll();
+  const rows=await new Promise(resolve=>get.onsuccess=()=>resolve(get.result));
+  db.close();return rows;
+ });
+ // Cross-tenant backup must fail even for a real manager.
+ checkpoint("backup-import-start");
+ await page.check("#legacy-confirm");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,tenantId:"99999999-9999-4999-8999-999999999999"}));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_FOREIGN_NOTICE:",await page.locator("#notice").innerText());
+ checkpoint("backup-foreign-rejected");
+ assert(!(await secureRows()).some(row=>row.orderId===backupA));
+ // One malformed/other-branch row rejects the entire batch.
+ await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[backupRow(backupA),{...backupRow(backupB),branchId:"99999999-9999-4999-8999-999999999999"}]}));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP_ORDERS"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_MIXED_NOTICE:",await page.locator("#notice").innerText());
+ checkpoint("backup-mixed-rejected");
+ assert(!(await secureRows()).some(row=>row.orderId===backupA));
+ // Another tab or operation may hold the Web Lock: no import and no data loss.
+ await page.evaluate(name=>{
+  window.__releaseRecoveryLock=null;
+  navigator.locks.request(name,{mode:"exclusive"},()=>new Promise(resolve=>{window.__releaseRecoveryLock=resolve;}));
+ },"foon-legacy-recovery-"+tenant+":"+branch);
+ await page.waitForFunction(()=>typeof window.__releaseRecoveryLock==="function");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("RECOVERY_ALREADY_RUNNING"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_LOCKED_NOTICE:",await page.locator("#notice").innerText());
+ checkpoint("backup-web-lock-rejected");
+ assert(!(await secureRows()).some(row=>row.orderId===backupA));
+ await page.evaluate(()=>window.__releaseRecoveryLock());
+ await page.waitForFunction(async name=>{
+  const result=await navigator.locks.query();
+  return !result.held.some(lock=>lock.name===name);
+ },"foon-legacy-recovery-"+tenant+":"+branch,{timeout:7000});
+ checkpoint("backup-web-lock-released");
+ // Force IndexedDB transaction abort on the second inserted order. The first
+ // one must roll back too. Reload simulates losing the in-memory recovery task.
+ await page.evaluate(()=>{
+  const orig=IDBObjectStore.prototype.add;let calls=0;
+  IDBObjectStore.prototype.add=function(value,key){
+   if(this.name==="orders"&&this.transaction.db.name==="foon-pos-secure-v1"&&++calls===2){
+    throw new Error("SIMULATED_POWER_INTERRUPTION");
+   }
+   return orig.call(this,value,key);
+  };
+ });
+ await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ENCRYPTED_IMPORT_CONFLICT"),null,{timeout:7000});
+ console.log("BACKUP_IMPORT_ABORT_NOTICE:",await page.locator("#notice").innerText());
+ assert.equal(await page.locator("#notice").getAttribute("data-error"),"true");
+ checkpoint("backup-abort-rollback");
+ assert(!(await secureRows()).some(row=>row.orderId===backupA));
+ assert(!(await secureRows()).some(row=>row.orderId===backupB));
+ await page.reload();
+ await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
+ await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
+ await page.check("#legacy-confirm");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
+ console.log("BACKUP_IMPORT_RETRY_NOTICE:",await page.locator("#notice").innerText());
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("تم استيراد 2"),null,{timeout:7000});
+ checkpoint("backup-retry-success");
+ const saved=await secureRows();
+ assert(saved.some(row=>row.orderId===backupA));
+ assert(saved.some(row=>row.orderId===backupB));
+ assert(!JSON.stringify(saved).includes("LEGACY BACKUP PRIVATE CUSTOMER"));
+ // Importing the identical file twice is idempotent: no duplicate/overwrite.
+ await page.check("#legacy-confirm");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("تم استيراد 0"));
+ assert.equal((await secureRows()).filter(row=>[backupA,backupB].includes(row.orderId)).length,2);
+ // A different payload with the same id/requestKey must be rejected and
+ // cannot overwrite the previously encrypted order.
+ await page.check("#legacy-confirm");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[{...backupRow(backupA),payload:{...backupRow(backupA).payload,customerName:"ATTACK DIFFERENT CUSTOMER"}}]}));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_SECURE_ORDER_CONFLICT"));
+ assert.equal((await secureRows()).filter(row=>[backupA,backupB].includes(row.orderId)).length,2);
+ // Reused request key and payload must also retain its original order date.
+ await page.evaluate(()=>{document.querySelector("#notice").textContent="";});
+ await page.check("#legacy-confirm");
+ await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[{
+  ...backupRow(backupA),createdAt:"2026-10-19T11:00:00.000Z"
+ }]}));
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_SECURE_ORDER_CONFLICT"),null,{timeout:7000});
+ assert.equal(await page.locator("#notice").getAttribute("data-error"),"true");
+ assert.equal((await secureRows()).filter(row=>[backupA,backupB].includes(row.orderId)).length,2);
+ checkpoint("legacy-backup-atomic-rollback-reload-duplicate-conflict-tested");
+
  }finally{await context.close();await browser.close();await new Promise(resolve=>server.close(resolve));}
 });
 test("static shell cannot contain server/customer data or auth tokens",()=>{
