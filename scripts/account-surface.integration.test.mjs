@@ -82,6 +82,8 @@ test('employees stay in their employer workspace and platform admins never inher
    await db.execute("UPDATE memberships SET status='suspended' WHERE user_id=?",[staff]);
    assert.equal((await request('/api/account/library','GET',undefined,cookie)).status,403);
    assert.equal((await request('/api/account/addresses','GET',undefined,cookie)).status,403,'suspended staff retain customer address restriction');
+   await db.execute("UPDATE users SET status=\'suspended\' WHERE id=?",[staff]);
+   assert.equal((await request('/api/account/media?type=avatar','GET',undefined,cookie)).status,401,'inactive staff cannot read personal media');
    const suspendedProfile=await request('/api/account/profile','PATCH',{name:'Forbidden Account Change',phone:'0500000000'},cookie);
    assert.equal(suspendedProfile.status,401,'suspended account cannot change its profile');
    assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,cookie,owner.tenant.id)).status,403);
@@ -97,6 +99,10 @@ test('employees stay in their employer workspace and platform admins never inher
   assert.equal((await request('/api/customer/order-revision','GET',undefined,customerCookie)).status,200);
   assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,200,'customer addresses remain available');
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,customerCookie,owner.tenant.id)).status,403);
+  await db.execute("UPDATE users SET status=\'suspended\' WHERE id=?",[customer.user.id]);
+  assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,401,'suspended customer cannot read address book');
+  assert.equal((await request('/api/account/media?type=avatar','GET',undefined,customerCookie)).status,401,'suspended customer cannot read account media');
+  assert.equal((await request('/api/account/media','POST',{},customerCookie)).status,401,'suspended customer cannot upload account media');
   console.log('Six employee roles: personal shopping/library/pages denied, own permitted work retained, other tenants/admin denied, suspended staff denied, owners/customers preserved');
  }finally{server.kill();await db.end();}
 });
