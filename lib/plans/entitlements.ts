@@ -9,7 +9,7 @@ export async function tenantEntitlement(tenantId:string,featureKey:string,connec
   [featureKey,tenantId]);
  if(!rows.length)return {enabled:false,limit:null,reason:"NO_ACTIVE_SUBSCRIPTION"};
  if(!passesServerActivityRestriction(rows[0].activity_code,featureKey))return {enabled:false,limit:null,reason:"UNSUPPORTED_ACTIVITY"};
- const enabled=rows[0].enabled===null?rows[0].plan_code==="enterprise":Boolean(rows[0].enabled);
+ const enabled=Boolean(rows[0].enabled);
  return {enabled,limit:rows[0].limit_value==null?null:Number(rows[0].limit_value),reason:enabled?"ACTIVE":"NOT_GRANTED"};
 }
 
