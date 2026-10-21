@@ -27,6 +27,12 @@ export async function resolveBoundEmployeeUser(
     SELECT 1 FROM memberships customer
     WHERE customer.user_id=m.user_id AND customer.role='customer' AND customer.status='active'
    )
+   AND NOT EXISTS (
+    SELECT 1 FROM tenant_customers tc WHERE tc.user_id=m.user_id
+   )
+   AND NOT EXISTS (
+    SELECT 1 FROM platform_admins pa WHERE pa.user_id=m.user_id
+   )
   LIMIT 2
  `,[branchId,tenantId,userId,role]);
  return rows.length===1?userId:"";
