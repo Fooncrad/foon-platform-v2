@@ -4,12 +4,13 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {PUBLIC_CONTROLS,normalizePublicControls,tenantPublicControls} from "@/lib/tenant/public-controls";
 export const runtime="nodejs";
 async function context(request:Request,write:boolean){
  const user=await currentUserId();if(!user)return {error:NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401})};
  const tenant=request.headers.get("x-foon-tenant")??"";
- try{const member=await requireTenantMembership(user,tenant,["owner","manager"],write);return {tenantId:member.tenantId};}
+ try{const member=await requireTenantMembership(user,tenant,["owner","manager"],write);if(write)await requireAllAdditionalBranchesUnlocked(member.tenantId,user);return {tenantId:member.tenantId};}
  catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})};}
 }
 export async function GET(request:Request){
