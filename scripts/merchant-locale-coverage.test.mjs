@@ -49,7 +49,7 @@ test("translation audit identifies missing locales but never invents merchant wo
 
 test("editing a partial merchant form retains previously saved translations",()=>{
  const source=sourceFile("app/restaurant/resource-manager.tsx");
- assert.match(source,/data:Record<string,unknown>=editing\?\.data\?\{\.\.\.editing\.data\}:\{\}/);
+ assert.match(source,/data:Record<string,unknown>=visibleFieldKeys&&editing\?Object\.fromEntries/);
  assert.match(source,/missingResourceTranslations\(row,config\.fields\)/);
  assert.match(source,/setMissingOnly/);
  const sections=sourceFile("app/restaurant/service-workspace.tsx");
