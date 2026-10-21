@@ -82,6 +82,8 @@ export async function PATCH(request:Request){
   if(password!==undefined){
    const nextHash=await hashPassword(password);
    await db.execute("UPDATE users SET password_hash=? WHERE id=? AND status='active'",[nextHash,userId]);
+   // Password reset must revoke every previously authenticated employee device.
+   await db.execute("DELETE FROM auth_sessions WHERE user_id=?",[userId]);
    await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?, ?, 'employee.password_reset', ?, ?)",[tenantId,actor,resourceId,JSON.stringify({employeeUserId:userId})]);
   }
   await db.commit();return NextResponse.json({ok:true});
