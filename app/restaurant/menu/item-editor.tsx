@@ -12,6 +12,14 @@ export default function ItemEditor({tenantId}:{tenantId:string}){
  const load=useCallback(async()=>{const headers={"x-foon-tenant":tenantId};const [a,b]=await Promise.all([fetch("/api/restaurant/menu/categories",{headers,cache:"no-store"}),fetch("/api/restaurant/menu/items",{headers,cache:"no-store"})]);if(!a.ok||!b.ok)throw Error("LOAD_FAILED");return {categories:(await a.json()).categories||[],items:(await b.json()).items||[]};},[tenantId]);
  async function refresh(){try{const data=await load();setCategories(data.categories);setItems(data.items)}catch{setError(translateUi("تعذر تحميل بيانات المنيو."))}}
  useEffect(()=>{let active=true;load().then(data=>{if(active){setCategories(data.categories);setItems(data.items)}}).catch(()=>{if(active)setError(translateUi("تعذر تحميل بيانات المنيو."))});return()=>{active=false}},[load]);
+ useEffect(()=>{
+  const onImport=(event:Event)=>{
+   if((event as CustomEvent<{tenantId:string}>).detail?.tenantId!==tenantId)return;
+   void load().then(data=>{setCategories(data.categories);setItems(data.items)}).catch(()=>setError(translateUi('تعذر تحديث بيانات المنيو.')));
+  };
+  window.addEventListener('foon:catalog-imported',onImport);
+  return()=>window.removeEventListener('foon:catalog-imported',onImport);
+ },[tenantId,load,translateUi]);
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;setBusy(true);setError("");setNotice("");
   try{

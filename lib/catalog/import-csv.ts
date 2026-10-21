@@ -42,7 +42,7 @@ export function validateImportRows(kind:ImportKind,rows:ImportRow[]):void{
   firstByIdentity.set(key,i);
  }
 }
-export function parseImportCsv(input:string,kind:ImportKind):ImportRow[]{
+export function parseImportCsv(input:string,kind:ImportKind,options:{defaultCategory?:string}={}):ImportRow[]{
  if(input.length>1000000)throw Error('CSV_TOO_LARGE');
  const text=input.replace(/^\uFEFF/,'');
  const lines:string[][]=[];
@@ -72,7 +72,11 @@ export function parseImportCsv(input:string,kind:ImportKind):ImportRow[]{
  if(!lines.length||lines.length>500)throw Error('CSV_ROW_LIMIT_500');
  const rows=lines.map((values,index)=>{
   if(values.length>header.length)throw Error('ROW_'+(index+2)+': CSV_EXTRA_CELLS');
-  return Object.fromEntries(header.map((h,i)=>[h,values[i]??'']));
+  const row:ImportRow=Object.fromEntries(header.map((h,i)=>[h,values[i]??'']));
+  // A category selected explicitly by the owner fills only missing CSV references.
+  // Existing category values always win; the server still resolves tenant-scoped names.
+  if(kind!=='categories'&&!row.category?.trim()&&options.defaultCategory?.trim())row.category=options.defaultCategory.trim();
+  return row;
  });
  validateImportRows(kind,rows);
  return rows;
