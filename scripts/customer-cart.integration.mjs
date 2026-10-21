@@ -33,6 +33,21 @@ export async function runCustomerCartChecks({db,call,fixtures}){
   const noDriver=await call('/api/customer/orders','POST',{...delivery,requestKey:randomUUID(),customerPhone:'+966500000000',deliveryAddress:'Test address, Riyadh'},customer.cookie);
   assert.equal(noDriver.status,409,JSON.stringify(noDriver.body));assert.equal(noDriver.body.code,'DELIVERY_DRIVER_UNAVAILABLE');
   const [[driverAlert]]=await db.execute("SELECT COUNT(*) AS n FROM platform_notification_outbox WHERE tenant_id=? AND event_key='delivery_driver_unavailable' AND recipient_email=?",[owner.tenant,owner.email]);assert.ok(Number(driverAlert.n)>=1,'the merchant is notified when delivery has no available driver');
+  if(activity==='grocery'){
+   const driverUser=randomUUID(),driverResource=randomUUID();
+   await db.execute("INSERT INTO users(id,email,display_name,status) VALUES (?,?,?,'active')",[driverUser,'driver-'+randomUUID()+'@test.example','Driver']);
+   await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'driver','active')",[randomUUID(),owner.tenant,driverUser]);
+   await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,'driver',TRUE)",[randomUUID(),owner.tenant,driverUser,owner.branch]);
+   await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data) VALUES (?,?,?,'employee','Driver','active',?)",[driverResource,owner.tenant,owner.branch,JSON.stringify({role:'driver',userId:driverUser})]);
+   const delivered=await call('/api/customer/orders','POST',{...delivery,requestKey:randomUUID(),customerPhone:'+966500000000',deliveryAddress:'Test address, Riyadh'},customer.cookie);
+   assert.equal(delivered.status,201,JSON.stringify(delivered.body));
+   const [[record]]=await db.execute("SELECT customer_user_id,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[delivered.body.id,owner.tenant]);
+   assert.equal(String(record.customer_user_id),String(customer.body.user.id),'delivery belongs to the signed-in customer account');
+   const snapshot=typeof record.checkout_snapshot==='string'?JSON.parse(record.checkout_snapshot):record.checkout_snapshot;
+   assert.equal(snapshot.assignedDriverId,driverResource,'delivery is accepted only with a real available branch driver');
+   // Restore the synthetic stock fixture so the shared idempotency assertions remain isolated.
+   await db.execute('UPDATE catalog_products SET stock_quantity=5 WHERE id=?',[product]);
+  }
   if(activity==='cafe'){const reads=await Promise.all(Array.from({length:20},()=>call(path,'GET')));assert.ok(reads.every(r=>r.status===200));}
   const attempts=await Promise.all(Array.from({length:12},()=>call('/api/customer/orders','POST',payload,customer.cookie)));
   const [created,replay]=attempts;assert.ok(attempts.every(r=>r.status===201&&r.body.id===created.body.id),JSON.stringify(attempts.map(r=>r.body)));

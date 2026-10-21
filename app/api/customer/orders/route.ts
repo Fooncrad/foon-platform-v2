@@ -55,9 +55,10 @@ export async function POST(request:Request){
   if(body.channel==="room_service"&&!(await tenantEntitlement(tenantId,"room_service",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
   const [profiles]=await db.execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[user]);
   const customerPhone=typeof body.customerPhone==="string"&&body.customerPhone.trim()?body.customerPhone.trim():String(profiles[0]?.phone||"");
-  const catalogDelivery=body.channel==="delivery"&&String(stores[0].activity_code??"")!=="restaurant"&&Boolean(stores[0].activity_code);
-  if(catalogDelivery&&(typeof body.deliveryAddress!=="string"||body.deliveryAddress.trim().length<5||body.deliveryAddress.length>900||!/^\+?[\d ()-]{7,40}$/.test(customerPhone)||customerPhone.replace(/\D/g,"").length<7))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
-   if(catalogDelivery&&(typeof body.deliveryCity!=="string"||body.deliveryCity.trim().length<2||body.deliveryCity.trim().length>120))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
+  // Every customer delivery, including restaurants/cafés/sweets and catalog stores, must carry verifiable account contact and destination details.
+  const customerDelivery=body.channel==="delivery";
+  if(customerDelivery&&(typeof body.deliveryAddress!=="string"||body.deliveryAddress.trim().length<5||body.deliveryAddress.length>900||!/^\+?[\d ()-]{7,40}$/.test(customerPhone)||customerPhone.replace(/\D/g,"").length<7))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
+   if(customerDelivery&&(typeof body.deliveryCity!=="string"||body.deliveryCity.trim().length<2||body.deliveryCity.trim().length>120))throw new ResourceError("DELIVERY_DETAILS_REQUIRED");
   if(body.channel==="delivery"){const destination=String(body.deliveryCountryCode??"").trim().toUpperCase();const approved=await allowedDeliveryCountries(tenantId,String(stores[0].country_code??""),String(stores[0].activity_code??""),db);if(!approved.includes(destination))throw new ResourceError("DELIVERY_COUNTRY_MISMATCH");}
   if(body.channel==="delivery"){
    const [zones]=await db.execute<RowDataPacket[]>(
@@ -74,10 +75,10 @@ export async function POST(request:Request){
     if(!decision.allowed){if(decision.code==="DELIVERY_OUT_OF_RANGE")deliveryOutsideMessage=String(zone.outside_message??"").slice(0,240);throw new ResourceError(decision.code);}
    }
   }
-  if(catalogDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
-  const orderNotes=catalogDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
+  if(customerDelivery)await db.execute("INSERT INTO user_profiles(user_id,phone) VALUES (?,?) ON DUPLICATE KEY UPDATE phone=VALUES(phone)",[user,customerPhone]);
+  const orderNotes=customerDelivery?"Delivery address: "+body.deliveryAddress.trim():body.orderNotes;
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
-  if(catalogDelivery)await saveCheckoutDeliveryAddress(db,user,{countryCode:body.deliveryCountryCode,city:body.deliveryCity,address:body.deliveryAddress,phone:customerPhone,latitude:body.latitude,longitude:body.longitude});
+  if(customerDelivery)await saveCheckoutDeliveryAddress(db,user,{countryCode:body.deliveryCountryCode,city:body.deliveryCity,address:body.deliveryAddress,phone:customerPhone,latitude:body.latitude,longitude:body.longitude});
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
  }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code,...(code==="DELIVERY_OUT_OF_RANGE"&&deliveryOutsideMessage?{message:deliveryOutsideMessage}:{})},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }

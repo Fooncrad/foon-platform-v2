@@ -291,6 +291,19 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const roomServiceOrder=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceOrder.status,201,JSON.stringify(roomServiceOrder.body));assert.equal(roomServiceOrder.body.total,25);
   const roomServiceReplay=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceReplay.status,201);assert.equal(roomServiceReplay.body.id,roomServiceOrder.body.id);
   const [[roomServiceSnapshot]]=await db.execute("SELECT channel,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[roomServiceOrder.body.id,a.tenant]);assert.equal(roomServiceSnapshot.channel,"room_service");const savedRoomSnapshot=typeof roomServiceSnapshot.checkout_snapshot==="string"?JSON.parse(roomServiceSnapshot.checkout_snapshot):roomServiceSnapshot.checkout_snapshot;assert.equal(savedRoomSnapshot.hotelRoom.roomNumber,"101");
+  // A saved room entered with Arabic-Indic digits must be usable from the
+  // customer menu, which sends Latin digits. No duplicate or cross-branch room.
+  const arabicRoom=await resource(a,"hotelRooms",{name:"غرفة ٢٠٢",status:"active",branchId:a.branch,data:{roomNumber:"٢٠٢"}});
+  assert.equal(arabicRoom.status,201,JSON.stringify(arabicRoom.body));
+  const [[canonicalRoom]]=await db.execute("SELECT JSON_UNQUOTE(JSON_EXTRACT(data,'$.roomNumber')) AS room_number FROM restaurant_resources WHERE id=? AND tenant_id=?",[arabicRoom.body.id,a.tenant]);
+  assert.equal(canonicalRoom.room_number,"202");
+  const translatedDuplicate=await resource(a,"hotelRooms",{name:"Room 202",status:"active",branchId:a.branch,data:{roomNumber:"202"}});
+  assert.equal(translatedDuplicate.body.code,"DUPLICATE_HOTEL_ROOM");
+  const arabicRoomOrder=await call("/api/customer/orders","POST",{...roomServicePayload,roomNumber:"٢٠٢",requestKey:randomUUID()},customer.cookie);
+  assert.equal(arabicRoomOrder.status,201,JSON.stringify(arabicRoomOrder.body));
+  const [[arabicSnapshot]]=await db.execute("SELECT checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[arabicRoomOrder.body.id,a.tenant]);
+  const parsedArabicSnapshot=typeof arabicSnapshot.checkout_snapshot==="string"?JSON.parse(arabicSnapshot.checkout_snapshot):arabicSnapshot.checkout_snapshot;
+  assert.equal(parsedArabicSnapshot.hotelRoom.roomNumber,"202");
   const tenantOrders=await resource(a,"orders",undefined,"GET");assert.equal(tenantOrders.status,200);assert.equal(tenantOrders.body.orders.find(row=>row.id===roomServiceOrder.body.id).hotel_room.roomNumber,"101");
   // Real HTTP + database coverage for quote -> invoice references, tenant isolation and duplicate billing.
   const quoteData={customerName:"Integration customer",serviceDescription:"Approved service",amount:22};
