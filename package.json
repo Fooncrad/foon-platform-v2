@@ -46,6 +46,7 @@
     "test:merchant-navigation": "node --experimental-strip-types --test scripts/merchant-navigation.test.mjs",
     "test:workspace-theme": "node --experimental-strip-types --test scripts/workspace-theme.test.mjs",
     "test:dashboard-layout": "node --test scripts/reference-dashboard-layout.test.mjs",
+    "test:site-wide-theme": "node --test scripts/site-wide-dark-mode.test.mjs",
     "test:public-site-links": "node --experimental-strip-types --test scripts/public-site-links.test.mjs",
     "test:public-content-locale": "node --experimental-strip-types --test scripts/public-content-locale.test.mjs"
   },
