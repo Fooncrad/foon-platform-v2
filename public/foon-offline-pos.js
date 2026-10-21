@@ -115,7 +115,7 @@ async function prepare(){
  await openProfile(id,pass);notice(msg("prepared"));
 }
 async function openProfile(id,pass){
- const record=await get("profiles",id);
+ let record=await get("profiles",id);
  if(!record||!pass)throw new Error("PROFILE_NOT_FOUND");
  const key=await keyFor(pass,record.salt);
  let data;try{data=await unseal(key,id,"profile",record);}catch{throw new Error(msg("bad"));}
