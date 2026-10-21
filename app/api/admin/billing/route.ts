@@ -52,7 +52,7 @@ export async function PATCH(request:Request){
    const text=locale==="fr"?"Votre paiement est confirmé. Reçu : "+ref+". Montant : "+rows[0].amount+" "+rows[0].currency+". Consultez-le : "+origin+path+". Reçu administratif, pas une facture fiscale.":
     locale==="en"?"Your subscription payment was confirmed. Receipt: "+ref+". Amount: "+rows[0].amount+" "+rows[0].currency+". View: "+origin+path+". Administrative receipt, not a tax invoice.":
     "تم تأكيد سداد الاشتراك. رقم الإيصال: "+ref+". المبلغ: "+rows[0].amount+" "+rows[0].currency+". عرض الإيصال: "+origin+path+". إيصال إداري وليس فاتورة ضريبية.";
-   await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'payment_receipt',?,?,?,?)",[randomUUID(),rows[0].tenant_id,owner.email,subject,text]);
+   await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'payment_receipt',NULL,?,?,?)",[randomUUID(),owner.email,subject,text]);
   }
  }
  await db.commit();dispatchNotifications();return NextResponse.json({ok:true});}
