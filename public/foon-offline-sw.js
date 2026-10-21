@@ -39,22 +39,34 @@ function menuSlug(path){const match=path.match(/^\/(?:menu\/)?([a-z0-9][a-z0-9-]
 const publicImage=path=>/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(path);
 self.addEventListener("message",event=>{
  const data=event.data;
- if(data?.type!=="SAVE_PUBLIC_MENU"||typeof data.html!=="string"||data.html.length>2000000||menuSlug("/"+data.slug)!==data.slug)return;
+ if(data?.type!=="SAVE_PUBLIC_MENU"||typeof data.html!=="string"||data.html.length>8000000||menuSlug("/"+data.slug)!==data.slug)return;
  event.waitUntil((async()=>{
   const client=await self.clients.get(event.source?.id);if(!client)return;
   const source=new URL(client.url);if(source.origin!==self.location.origin||!(["/"+data.slug,"/"+data.slug+"/order","/menu/"+data.slug].includes(source.pathname)))return;
   const cache=await caches.open(MENU_CACHE),saved=String(Date.now());
   await cache.put("/"+data.slug,new Response(data.html,{headers:{"content-type":"text/html;charset=utf-8","x-foon-saved":saved,"content-security-policy":"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; connect-src 'none'"}}));
-  let bytes=0;for(const path of [...new Set(Array.isArray(data.images)?data.images:[])].slice(0,40)){
-   if(typeof path!=="string"||!publicImage(path))continue;
-   try{const response=await fetch(path,{credentials:"omit",redirect:"error"});if(!response.ok||!/^image\/(png|jpeg|webp)$/.test(response.headers.get("content-type")??""))continue;const body=await response.arrayBuffer();if(body.byteLength>2000000||bytes+body.byteLength>20000000)continue;bytes+=body.byteLength;await cache.put(path,new Response(body,{headers:{"content-type":response.headers.get("content-type"),"x-foon-saved":saved}}));}catch{/* Text browsing remains available when an image cannot be saved. */}
+  // Limit storage, but keep all text, options and translations independent of image quota.
+  const requested=[...new Set(Array.isArray(data.images)?data.images:[])].filter(path=>typeof path==="string"&&publicImage(path));
+  let bytes=0;
+  for(const path of requested.slice(0,160)){
+   try{
+    const response=await fetch(path,{credentials:"omit",redirect:"error"});
+    if(!response.ok||!/^image\/(png|jpeg|webp)$/.test(response.headers.get("content-type")??""))continue;
+    const length=Number(response.headers.get("content-length")||0);
+    if(length>4000000||length&&bytes+length>60000000)continue;
+    const body=await response.arrayBuffer();
+    if(body.byteLength>4000000||bytes+body.byteLength>60000000)continue;
+    await cache.put(path,new Response(body,{headers:{"content-type":response.headers.get("content-type"),"x-foon-saved":saved,"x-foon-bytes":String(body.byteLength)}}));
+    bytes+=body.byteLength;
+   }catch{/* The text-based menu remains browsable if a picture cannot be stored. */}
   }
   const keys=await cache.keys();for(const key of keys){const response=await cache.match(key);if(Date.now()-Number(response.headers.get("x-foon-saved")||0)>MAX_AGE)await cache.delete(key);}
   const remaining=await cache.keys();for(const group of [remaining.filter(k=>publicImage(new URL(k.url).pathname)),remaining.filter(k=>!publicImage(new URL(k.url).pathname))]){
-   const limit=publicImage(new URL(group[0]?.url??self.location.origin).pathname)?80:20;
+   const limit=publicImage(new URL(group[0]?.url??self.location.origin).pathname)?320:20;
    for(const key of group.slice(0,Math.max(0,group.length-limit)))await cache.delete(key);
   }
-  event.ports[0]?.postMessage({ok:true});
+  const savedImages=(await Promise.all(requested.map(path=>cache.match(path)))).filter(Boolean).length;
+  event.ports[0]?.postMessage({ok:true,savedImages,missingImages:requested.length-savedImages});
  })());
 });
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));});
