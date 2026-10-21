@@ -11,7 +11,8 @@ test("staff RBAC rejects ungranted actions and forbids privileged role aliases",
  assert.match(api,/employee_branch_assignments/);
  assert.match(api,/authorizedBranch/);
  assert.match(dashboard,/data\.staffPermissions/);
- assert.match(dashboard,/canAccess/);
+ assert.match(dashboard,/allowedSection=/);
+ assert.match(dashboard,/sectionPolicy\?\.roles\.includes\(data\.role\)/);
 });
 
 test("employee accounts are provisioned only by explicit password and branch",()=>{
