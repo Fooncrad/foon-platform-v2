@@ -4,6 +4,7 @@ import {useUiLanguage} from "@/lib/i18n/ui-language";
 import Link from "next/link";
 import CreatorSocialLinksEditor from "./social-links-editor";
 import CreatorQr from "./creator-qr";
+import CreatorReferralEarnings from "./referral-earnings";
 type Profile={handle:string;display_name:string;bio:string;visibility:"public"|"private"};
 type Portfolio={id:string;media_id:string;caption:string;file_name:string};
 type LibraryImage={id:string;name:string};
@@ -66,6 +67,7 @@ export default function CreatorEditor(){
    </form>
    {publicUrl&&<p className="creatorPublicLink"><a href={publicUrl} target="_blank" rel="noopener noreferrer">{t("عرض ملفي العام","Open my public profile","Voir mon profil public")}</a></p>}
    <CreatorSocialLinksEditor ready={Boolean(saved)}/>
+   {saved&&<CreatorReferralEarnings handle={saved.handle}/>}
    {saved?.visibility==="public"&&<CreatorQr handle={saved.handle}/>}
    {saved&&<section className="creatorPortfolio">
     <h2>{t("معرض أعمالي","My portfolio","Mon portfolio")}</h2>

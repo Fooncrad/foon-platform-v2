@@ -1,4 +1,5 @@
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
+import {recordCreatorReferral} from "@/lib/creator/subscription-commission";
 import {isActivityType,defaultActivityModules} from "@/lib/platform/activity-presets";
 import {currencyForCountry,countryRegions} from "@/lib/tenant/country-catalog";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
@@ -32,10 +33,12 @@ export async function POST(request:Request){
   if(!users.length){await db.rollback();return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
   const workspace=await provisionStore(db,{ownerId:userId,name,slug,kind});
   await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
+  await recordCreatorReferral(db,workspace.tenant.id,userId,body.referralHandle);
   await db.commit();
   return NextResponse.json({ok:true,...workspace,activity,activityModules:defaultActivityModules(activity),plan:"free"},{status:201});
  }catch(error){
   await db.rollback();
+  if((error as Error).message==="REFERRAL_INVALID")return NextResponse.json({ok:false,code:"REFERRAL_INVALID"},{status:400});
   if((error as {code?:string}).code==="ER_DUP_ENTRY")return NextResponse.json({ok:false,code:"SLUG_EXISTS"},{status:409});
   return NextResponse.json({ok:false,code:"ONBOARD_UNAVAILABLE"},{status:503});
  }finally{db.release();}
