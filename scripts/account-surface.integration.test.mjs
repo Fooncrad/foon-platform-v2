@@ -82,10 +82,17 @@ test('employees stay in their employer workspace and platform admins never inher
    await db.execute("UPDATE memberships SET status='suspended' WHERE user_id=?",[staff]);
    assert.equal((await request('/api/account/library','GET',undefined,cookie)).status,403);
    assert.equal((await request('/api/account/addresses','GET',undefined,cookie)).status,403,'suspended staff retain customer address restriction');
+   const suspendedProfile=await request('/api/account/profile','PATCH',{name:'Forbidden Account Change',phone:'0500000000'},cookie);
+   assert.equal(suspendedProfile.status,401,'suspended account cannot change its profile');
    assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,cookie,owner.tenant.id)).status,403);
   }
   assert.equal((await request('/api/account/library','GET',undefined,owner.cookie)).status,200);
   assert.equal((await request('/api/account/addresses','GET',undefined,owner.cookie)).status,200,'owner personal addresses remain available');
+  const profileResponse=await request('/api/account/profile','PATCH',{name:'Owner Updated',phone:'+966500000001'},owner.cookie);
+  assert.equal(profileResponse.status,200,'owner profile name and phone save together');
+  const [[savedOwner]]=await db.execute('SELECT u.display_name,p.phone FROM users u JOIN user_profiles p ON p.user_id=u.id WHERE u.id=?',[owner.user.id]);
+  assert.equal(savedOwner.display_name,'Owner Updated');
+  assert.equal(savedOwner.phone,'+966500000001');
   const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerCookie=customer.headers.get('set-cookie').split(';')[0];
   assert.equal((await request('/api/customer/order-revision','GET',undefined,customerCookie)).status,200);
   assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,200,'customer addresses remain available');
