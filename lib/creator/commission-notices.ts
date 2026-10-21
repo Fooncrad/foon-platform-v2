@@ -14,7 +14,7 @@ export async function queueCommissionNotice(db:PoolConnection,commissionId:strin
   locale==="fr"?(event==="earned"?"Commission de parrainage acquise":event==="paid"?"Commission de parrainage versée":"Commission annulée"):
   event==="earned"?"تم تسجيل عمولة إحالة مستحقة":event==="paid"?"تم صرف عمولة الإحالة":"تم إلغاء عمولة الإحالة";
  const path="/customer/creator/referrals/"+encodeURIComponent(commissionId);
- const origin=String(process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\/$/,"");
+ const origin=String(process.env.APP_URL||process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\/$/,"");
  const description=locale==="en"?
   (event==="earned"?"You earned a commission; it has not yet been paid. ":event==="paid"?"Your commission payout has been confirmed. ":"This commission has been reversed. "):
   locale==="fr"?(event==="earned"?"Commission acquise mais non encore versée. ":event==="paid"?"Le versement de votre commission est confirmé. ":"Cette commission est annulée. "):
