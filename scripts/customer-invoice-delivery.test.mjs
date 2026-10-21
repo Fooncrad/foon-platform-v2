@@ -30,8 +30,9 @@ test("receipt belongs to the customer and is accessible in their account indepen
 test("SMTP retries update archived order receipts without claiming delivery early",()=>{
  const worker=source("scripts/notification-delivery.mjs");
  const send=worker.indexOf("await provider.send(");
- const update=worker.indexOf("email_status='sent'");
- assert.ok(send>=0&&update>send);
+ const outbox=worker.indexOf("UPDATE platform_notification_outbox SET status='sent'",send);
+ const archive=worker.indexOf("UPDATE restaurant_customer_invoices SET email_status='sent'",send);
+ assert.ok(send>=0&&outbox>send&&archive>outbox);
  assert.match(worker,/attempt>=5\?'failed':'pending'/);
 });
 test("subscription receipt is stored and sent only after admin approval",()=>{
