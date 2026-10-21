@@ -81,7 +81,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   const id=requestRef.current.key,body={...payload,requestKey:id};
   setBusy(true);
   try{
-   if(!navigator.onLine){setMessage("الطلب لم يُحفظ. افتح نقطة البيع المحلية المشفرة من الشريط العلوي لإنشاء طلب دون اتصال؛ لن نخزن بيانات العملاء دون تشفير.");return;}}await queuePosOrder({id,tenantId,branchId:String(payload.branchId??""),createdAt:new Date().toISOString(),payload:body,status:"pending"});requestRef.current=null;setCart({});setQuantityDrafts({});await updateQueueCounts();setMessage(channel==="dine_in"?"حُفظ طلب الطاولة على هذا الجهاز. سيتحقق الخادم من إشغال الطاولة عند عودة الإنترنت؛ إن كانت مشغولة سيظهر الطلب في قائمة المراجعة.":"حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.");return;}
+   if(!navigator.onLine){setMessage("الطلب لم يُحفظ. افتح نقطة البيع المحلية المشفرة من الشريط العلوي لإنشاء طلب دون اتصال؛ لن نخزن بيانات العملاء دون تشفير.");return;}
    await operationApi(tenantId,"pos","POST",body);requestRef.current=null;setCart({});setQuantityDrafts({});setMessage(ui.created);void refresh().then(()=>onChanged()).catch(()=>setMessage("تم تأكيد الطلب من الخادم، لكن تعذر تحديث القائمة. أعد تحميل الطلبات عند عودة الاتصال."));
   }catch(error){
    if(isNetworkFailure(error)){
