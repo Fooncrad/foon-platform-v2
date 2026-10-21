@@ -17,7 +17,7 @@ export default function CustomerInvoiceArchive(){
    rows.length?<div className="customerOrderList">{rows.map(row=><section className="customerOrderCard" key={row.id}><header><strong dir="ltr">{row.invoice_number}</strong><small>{t("إيصال دفع","Payment receipt","Reçu de paiement")}</small></header><p>{t("الطلب","Order","Commande")} #{row.order_number}</p>
     <p><strong dir="ltr">{Number(row.total).toFixed(2)} {row.currency}</strong></p>
     <p>{row.email_status==="sent"?t("أُرسل إلى البريد","Sent by email","Envoyé par e-mail"):row.email_status==="failed"?t("تعذر إرسال البريد، الإيصال محفوظ هنا","Email failed; receipt saved here","E-mail échoué ; reçu conservé"):row.email_status==="skipped"?t("الإيصال محفوظ في الحساب","Saved in your account","Enregistré dans le compte"):t("البريد قيد الإرسال","Email queued","E-mail en attente")}</p>
-    <Link href={"/receipts/"+encodeURIComponent(row.order_id)}>{t("عرض الإيصال","View receipt","Voir le reçu")}</Link>
+    <Link href={"/customer/invoices/"+encodeURIComponent(row.id)}>{t("عرض الإيصال","View receipt","Voir le reçu")}</Link>
    </section>)}</div>:<p>{t("لا توجد إيصالات مدفوعة حتى الآن.","No paid receipts yet.","Aucun reçu payé pour le moment.")}</p>}
  </article>;
 }
