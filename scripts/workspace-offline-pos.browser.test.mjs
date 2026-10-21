@@ -222,6 +222,11 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  checkpoint("backup-web-lock-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  await page.evaluate(()=>window.__releaseRecoveryLock());
+ await page.waitForFunction(async name=>{
+  const result=await navigator.locks.query();
+  return !result.held.some(lock=>lock.name===name);
+ },"foon-legacy-recovery-"+tenant+":"+branch,{timeout:7000});
+ checkpoint("backup-web-lock-released");
  // Force IndexedDB transaction abort on the second inserted order. The first
  // one must roll back too. Reload simulates losing the in-memory recovery task.
  await page.evaluate(()=>{
