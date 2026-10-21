@@ -4,12 +4,19 @@ import {greatCircleKm,validPoint} from "./free-location.ts";
 export type DeliveryBranchLocation={id:string;name:string;latitude:number|null;longitude:number|null;acceptsDelivery:boolean};
 
 /** Only documented branch coordinates qualify; never guess from a postal code or city. */
-export function nearestDeliveryBranch(branches:DeliveryBranchLocation[], latitude:unknown,longitude:unknown,availableIds?:readonly string[]):string|null{
+function nearest(branches:DeliveryBranchLocation[],latitude:unknown,longitude:unknown,availableIds?:readonly string[],requireDelivery=false):string|null{
  if(!validPoint(latitude,longitude))return null;
  const allowed=availableIds?new Set(availableIds):null;
- const candidates=branches.filter(b=>b.acceptsDelivery&&(!allowed||allowed.has(b.id))&&validPoint(b.latitude,b.longitude));
+ const candidates=branches.filter(b=>(!requireDelivery||b.acceptsDelivery)&&(!allowed||allowed.has(b.id))&&validPoint(b.latitude,b.longitude));
  candidates.sort((a,b)=>greatCircleKm(latitude as number,longitude as number,a.latitude!,a.longitude!)-greatCircleKm(latitude as number,longitude as number,b.latitude!,b.longitude!));
  return candidates[0]?.id??null;
+}
+export function nearestDeliveryBranch(branches:DeliveryBranchLocation[],latitude:unknown,longitude:unknown,availableIds?:readonly string[]):string|null{
+ return nearest(branches,latitude,longitude,availableIds,true);
+}
+/** In-store and takeaway orders may use a nearby branch that disables delivery. */
+export function nearestOperatingBranch(branches:DeliveryBranchLocation[],latitude:unknown,longitude:unknown,availableIds?:readonly string[]):string|null{
+ return nearest(branches,latitude,longitude,availableIds,false);
 }
 
 /** Tenant-scoped configuration of branch coordinates and enabled delivery channels. */
