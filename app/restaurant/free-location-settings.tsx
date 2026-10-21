@@ -2,6 +2,7 @@
 import {useEffect,useState,type FormEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {defaultLocationSettings,type TenantLocationSettings} from "@/lib/tenant/free-location";
+import "./free-location-settings.css";
 type FormState={deliveryMode:"manual"|"radius";latitude:string;longitude:string;radiusKm:string;outsideMessage:string;googleAnalyticsId:string;facebookPixelId:string;aiAssistantRequested:boolean};
 const fromSettings=(s:TenantLocationSettings):FormState=>({
  deliveryMode:s.deliveryMode,latitude:s.latitude===null?"":String(s.latitude),
