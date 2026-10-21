@@ -38,7 +38,7 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
   }catch(e){setError(tr("تعذر حفظ القسم. تحقق من صلاحياتك أو قفل الفرع.","Could not save category. Check your access and branch lock.","Enregistrement impossible. Vérifiez vos droits et le verrouillage de succursale.")+" ("+String(e)+")")}
   finally{setBusy("")}
  }
- const fields=[["name",tr("اسم القسم بالعربية","Arabic category name","Nom arabe"),"rtl"],["nameEn","English","English","ltr"],["nameFr","Français","Français","ltr"]] as const;
+ const fields=[["name",tr("اسم القسم بالعربية","Arabic category name","Nom arabe"),"rtl"],["nameEn","English","ltr"],["nameFr","Français","ltr"]] as const;
  return <section className="adminPanel">
   <h2>{tr("أقسام المنيو وترجماتها","Menu categories and translations","Catégories du menu et traductions")}</h2>
   <p>{tr("أدخل أسماء الأقسام بالعربية والإنجليزية والفرنسية، ثم احفظها لتظهر في المنيو حسب لغة العميل.","Enter category names in Arabic, English and French. Saved names appear in the customer's selected language.","Saisissez les noms en arabe, anglais et français. Le menu affiche la langue choisie par le client.")}</p>
