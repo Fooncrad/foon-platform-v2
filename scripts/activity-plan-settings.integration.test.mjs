@@ -27,6 +27,9 @@ test('activity plan overrides isolate grants, limits and administrator permissio
   const irrelevant=await save('automotive','digital_menu',true,null);
   assert.equal(irrelevant.status,422);assert.equal(irrelevant.body.code,'FEATURE_NOT_APPLICABLE');
   assert.equal((await save('restaurant','creator_profile',true,null)).status,422);
+  // Shared merchant packages must not use the owner/employee plans to grant creator privileges.
+  assert.equal((await call(endpoint,'PUT',{feature_key:'creator_profile',enabled:true,limit_value:null},admin.cookie)).status,422);
+  assert.equal((await call(endpoint,'PUT',{feature_key:'watermark',enabled:true,limit_value:null},admin.cookie)).status,422);
   // Existing legacy overrides may still be removed (reset) without re-granting them.
   assert.equal((await call(endpoint,'DELETE',{activity:'automotive',feature_key:'digital_menu'},admin.cookie)).status,200);
   assert.equal((await save('grocery','orders',false,null)).status,200);
