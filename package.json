@@ -35,7 +35,7 @@
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
     "test:checkout:integration": "node --test scripts/checkout-orders.integration.mjs",
-    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs",
+    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs",
     "test:offline-workspace-security": "node --test scripts/workspace-offline-security.test.mjs",
     "test:browser-receipt": "node --experimental-strip-types --test scripts/browser-receipt-width.test.mjs",
     "test:order-roles": "node --experimental-strip-types --test scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs",
