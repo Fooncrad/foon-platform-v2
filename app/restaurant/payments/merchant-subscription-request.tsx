@@ -15,7 +15,7 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
   setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);
  };
  useEffect(()=>{let active=true;fetch("/api/tenant/subscription-requests?tenantId="+encodeURIComponent(tenantId),{cache:"no-store"})
-  .then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.code??"LOAD_FAILED");if(active){setPrices(data.prices??[]);setRequests(data.requests??[]);}})
+  .then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.code??"LOAD_FAILED");if(active){setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);}})
   .catch(()=>{if(active)setError(t("تعذر تحميل اشتراكات المنصة.","Subscriptions unavailable.","Abonnements indisponibles."));}).finally(()=>{if(active)setLoading(false);});
  return()=>{active=false;};},[tenantId,lang]);
  async function uploadEvidence(paymentRequestId:string,file:File){
