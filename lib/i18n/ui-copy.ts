@@ -6819,7 +6819,7 @@ export const uiCopy:Record<string,readonly [string,string]>={
  "واجهة المتجر": [
   "Storefront",
   "Vitrine"
- ]
+ ],
  "اسم قسم التشغيل بالإنجليزية": ["Operating department name in English", "Nom du service opérationnel en anglais"],
  "اسم قسم التشغيل بالفرنسية": ["Operating department name in French", "Nom du service opérationnel en français"],
  "وصف القسم بالعربية": ["Section description in Arabic", "Description de la section en arabe"],
