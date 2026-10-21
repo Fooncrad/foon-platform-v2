@@ -120,7 +120,16 @@ async function openProfile(id,pass){
  const key=await keyFor(pass,record.salt);
  let data;try{data=await unseal(key,id,"profile",record);}catch{throw new Error(msg("bad"));}
  if(id!==idOf(data.userId,data.tenantId,data.branchId))throw new Error("SCOPE_MISMATCH");
- if(Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt))throw new Error(msg("expired"));
+ if(Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt)){
+  // Expiry blocks offline access; pending encrypted orders remain recoverable
+  // after fresh authentication and a POS permission check when back online.
+  if(!navigator.onLine)throw new Error(msg("expired"));
+  const access=await authorized(data.tenantId,data.branchId,data.userId);
+  const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
+  data={...data,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},savedAt:now,expiresAt};
+  record={...record,...await seal(key,id,"profile",data),savedAt:now,expiresAt};
+  await put("profiles",record);
+ }
  active={record,data,key};
  cart.clear();setHidden("locked",true);setHidden("setup",true);setHidden("workspace",false);
  $("unlock-pass").value="";$("scope").textContent="فرع "+data.branchId.slice(-8)+" · "+new Date(data.expiresAt).toLocaleString();
@@ -176,6 +185,17 @@ async function renderQueue(){
   const p=document.createElement("p");
   p.textContent=(item?.id||row.orderId)+" · "+(item?.status||"CORRUPTED")+" · "+(item?.lastError||"");
   el.append(p);
+  if(item?.status==="needs_review"){
+   const retry=document.createElement("button");retry.type="button";retry.className="secondary";
+   retry.textContent="إعادة إدراج بعد مراجعة الطلب لدى المطعم";
+   retry.addEventListener("click",()=>{Promise.resolve().then(async()=>{
+    valid();const reset={...item,status:"pending",lastError:undefined};
+    const updated=await seal(active.key,active.record.id,"order:"+item.id,reset);
+    await put("orders",{...row,...updated});await renderQueue();
+    notice("يُرجى التأكد أن الطلب لم ينفذ سابقًا. سيعاد فحصه عند المزامنة.");
+   }).catch(error=>notice(String(error.message||error),true));});
+   el.append(retry);
+  }
  }
  if(!el.children.length)el.textContent="لا توجد طلبات محلية معلقة.";
 }
@@ -242,6 +262,38 @@ async function exportEncrypted(){
  const anchor=document.createElement("a");anchor.href=url;anchor.download="foon-encrypted-pos-"+new Date().toISOString().slice(0,10)+".json";anchor.click();
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+async function importEncrypted(event){
+ const file=event.target.files?.[0];event.target.value="";
+ if(!file)return;
+ if(file.size>5000000)throw new Error("BACKUP_TOO_LARGE");
+ const parsed=JSON.parse(await file.text());
+ if(parsed?.format!=="foon-pos-encrypted-backup-v1"||!parsed.profile||!Array.isArray(parsed.orders)||parsed.orders.length>500)throw new Error("INVALID_ENCRYPTED_BACKUP");
+ const profile=parsed.profile;
+ if(!profile.id||!Array.isArray(profile.salt)||profile.salt.length!==16)throw new Error("INVALID_BACKUP_SCOPE");
+ // Import only for a profile the operator already unlocked. Recovery of a
+ // lost profile requires a separately authenticated online restoration flow.
+ const {record,key,data}=valid();
+ if(profile.id!==record.id||JSON.stringify(profile.salt)!==JSON.stringify(record.salt))throw new Error("BACKUP_DIFFERENT_USER_BRANCH");
+ const decrypted=await unseal(key,profile.id,"profile",profile);
+ if(decrypted.userId!==data.userId||decrypted.tenantId!==data.tenantId||decrypted.branchId!==data.branchId)throw new Error("BACKUP_DIFFERENT_SCOPE");
+ const prepared=[];
+ for(const row of parsed.orders){
+  if(row.profileId!==record.id||!idPattern.test(row.orderId)||row.id!==record.id+"|"+row.orderId)throw new Error("BACKUP_DIFFERENT_SCOPE");
+  const item=await unseal(key,record.id,"order:"+row.orderId,row);
+  if(item.id!==row.orderId||item.payload?.requestKey!==item.id||item.payload?.branchId!==data.branchId||!["pending","needs_review"].includes(item.status))throw new Error("INVALID_BACKUP_ORDER");
+  prepared.push(row);
+ }
+ if(new Set(prepared.map(row=>row.id)).size!==prepared.length)throw new Error("DUPLICATE_BACKUP_ORDER");
+ let restored=0;
+ for(const row of prepared){
+  const old=await get("orders",row.id);
+  if(old){const existing=await unseal(key,record.id,"order:"+row.orderId,old);
+   const incoming=await unseal(key,record.id,"order:"+row.orderId,row);
+   if(JSON.stringify(existing.payload)!==JSON.stringify(incoming.payload))throw new Error("BACKUP_ORDER_CONFLICT");
+  }else{await put("orders",row);restored++;}
+ }
+ await renderQueue();notice("تمت استعادة "+restored+" طلبات مشفرة، دون مسح أو استبدال الطلبات الموجودة.");
+}
 function action(id,handler){$(id).addEventListener("click",()=>{Promise.resolve().then(handler).catch(error=>notice(String(error.message||error),true));});}
 async function init(){
  if(!globalThis.isSecureContext||!crypto.subtle||typeof indexedDB==="undefined")throw new Error("HTTPS_WEBCRYPTO_INDEXEDDB_REQUIRED");
@@ -253,6 +305,8 @@ async function init(){
  action("sync-btn",sync);
  action("refresh-btn",refresh);
  action("export-btn",exportEncrypted);
+ $("import-file").addEventListener("change",event=>{importEncrypted(event).catch(error=>notice(String(error.message||error),true));});
+ if(navigator.serviceWorker&&navigator.onLine)void navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"}).catch(()=>{});
  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&active)lock();});
  if(navigator.serviceWorker){
   navigator.serviceWorker.addEventListener("message",event=>{if(event.data?.type==="FOON_AUTH_CHANGED")lock("تغير تسجيل الدخول؛ أعد التحقق من الحساب قبل الوصول للبيانات المحلية.");});
