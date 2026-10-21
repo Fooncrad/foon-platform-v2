@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 
-export async function runActivityEntitlementGateChecks({db,call,resource,restaurant,staff,fixtures}){
+export async function runActivityEntitlementGateChecks({db,call,restaurant,staff,fixtures}){
+ // Select the current branch explicitly so the activity entitlement check is
+ // reached without weakening the multi-branch PIN guard.
+ const resource=(owner,module,body,method="POST")=>call("/api/restaurant/operations/"+module+"?branch="+encodeURIComponent(owner.branch),method,body,owner.cookie,owner.tenant);
  // Called only by the operations suite after its disposable-DB safety checks.
  const plan="activity-entitlement-guard-plan";
  await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,'Activity guard','Activity guard')",[plan,plan,"اختبار قيود النشاط"]);
