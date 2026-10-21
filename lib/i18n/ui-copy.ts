@@ -6872,5 +6872,6 @@ export const uiCopy:Record<string,readonly [string,string]>={
  "نقطة الاستلام": ["Pickup point", "Point de retrait"],
  "طلب مسبق مرتبط بحجز": ["Preorder linked to a reservation", "Précommande liée à une réservation"],
  "مرتبط بالحجز": ["Linked to reservation", "Lié à la réservation"],
+ "تحميل إثبات التحويل للمراجعة": ["Download bank transfer proof for review", "Télécharger le justificatif de virement pour examen"],
 };
 export function uiText(value:string,language:UiLanguage):string{return language==="ar"?value:uiCopy[value]?.[language==="en"?0:1]??value;}
