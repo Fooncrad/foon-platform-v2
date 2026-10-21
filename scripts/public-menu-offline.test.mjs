@@ -31,7 +31,7 @@ test('real service worker: tenant isolation, offline reload, images, languages, 
   await page.waitForFunction(async()=>!!await (await caches.open('foon-public-menu-v1')).match('/api/restaurant/assets/11111111-1111-1111-1111-111111111111'));
   await page.reload();await page.waitForFunction(()=>document.body.dataset.menuSaved==='true');await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await page.waitForFunction(async()=>{const cache=await caches.open('foon-public-menu-v1');return !!(await cache.match('/alpha'));});await context.setOffline(true);await page.goto(origin+'/alpha?table=private');
   assert.equal(await page.locator('h1').textContent(),'alpha');assert(!(await page.content()).includes('PRIVATE@example.test'));assert.equal(await page.locator('article').count(),1);
-  assert.equal(await page.locator('form').count(),0);assert.equal(await page.locator('a').count(),0);assert.equal(await page.locator('img').evaluate(i=>i.complete&&i.naturalWidth>0),true);
+  assert.equal(await page.locator('form').count(),0);assert.equal(await page.locator('a').count(),0);assert.equal(await page.locator('article .photo img').evaluate(i=>i.complete&&i.naturalWidth>0),true);
   await page.selectOption('#language','en');assert.equal(await page.locator('article h2').textContent(),'Dish alpha');
   await page.locator('article .details button').click();
   assert.equal(await page.locator('#product-dialog').evaluate(d=>d.open),true);
