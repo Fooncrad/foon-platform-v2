@@ -20,7 +20,7 @@ export async function POST(request:Request){
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
-  const [branches]=await db.execute<RowDataPacket[]>("SELECT id,pin_salt,pin_hash FROM branches WHERE tenant_id=? ORDER BY created_at,id",[membership.tenantId]);
+  const [branches]=await db.execute<RowDataPacket[]>("SELECT id,pin_salt,pin_hash FROM branches WHERE tenant_id=? ORDER BY (slug='main') DESC,created_at,id",[membership.tenantId]);
   const pos=branches.findIndex(b=>String(b.id)===branchId);
   if(pos<0){await db.rollback();return fail("BRANCH_NOT_FOUND",404);}
   if(pos===0){await db.rollback();return NextResponse.json({ok:true,primary:true});}
