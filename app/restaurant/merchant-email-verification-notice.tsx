@@ -1,6 +1,7 @@
 "use client";
 import {useState} from "react";
 import Link from "next/link";
+import "./merchant-email-verification-notice.css";
 
 type Language="ar"|"en"|"fr";
 type Status="queued"|"cooldown"|"verified"|"error"|"";
