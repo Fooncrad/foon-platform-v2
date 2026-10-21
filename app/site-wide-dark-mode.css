@@ -1,0 +1,259 @@
+/*
+ * FOON platform-wide dark surfaces, 2026-10-21.
+ * All selectors are scoped to an existing resolved theme owner. Do not
+ * turn tenant-level branding into a cross-tenant preference, do not mutate
+ * access roles and do not repaint intentionally colorful status buttons.
+ *
+ * Paired surfaces and text use the same theme tokens. This also avoids
+ * mid-transition white-on-light-text flashes when changing appearance.
+ */
+
+/* Platform, admin, merchant, staff, customer, public content and storefronts. */
+.adminShell[data-theme="dark"]{
+ --foon-bg:#171a20;--foon-surface:#242832;--foon-text:#f8f3e9;
+ --foon-muted:#c3ccd9;--foon-line:#424c5b;--foon-control:#29303b;
+ color-scheme:dark;background:var(--foon-bg);color:var(--foon-text);
+}
+.restaurantApp[data-theme="dark"]{
+ --rc-page:#171a20;--rc-surface:#242832;--rc-text:#f8f3e9;
+ --rc-muted:#c3ccd9;--rc-border:#424c5b;--rc-control:#29303b;
+ color-scheme:dark;background:var(--rc-page);color:var(--rc-text);
+}
+.customerDashboard[data-theme="dark"]{
+ --customer-surface:#242832;--customer-ink:#f8f3e9;
+ --customer-muted:#c3ccd9;--customer-line:#424c5b;
+ color-scheme:dark;background:#171a20;color:var(--customer-ink);
+}
+.foonPublic[data-theme="dark"]{
+ --fp-bg:#171a20;--fp-surface:#242832;--fp-ink:#f8f3e9;
+ --fp-muted:#c3ccd9;--fp-line:#424c5b;
+ color-scheme:dark;
+}
+:is(.publicMenu,.foonActivityStorefront)[data-color-mode="dark"]{
+ color-scheme:dark;
+}
+.publicMenu[data-color-mode="dark"]{
+ --public-bg:#171a20;--public-surface:#242832;
+ --public-text:#f8f3e9;--public-muted:#c3ccd9;--public-line:#424c5b;
+}
+.foonActivityStorefront[data-color-mode="dark"]{
+ --activity-page:#171a20;--activity-panel:#242832;
+ --activity-ink:#f8f3e9;--activity-muted:#c3ccd9;
+ --activity-border:#424c5b;
+}
+
+/* Operational cards: kitchen, delivery, orders and POS. */
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantResourceForm,.restaurantOrderCards article,
+ .restaurantResourceList article,.restaurantPosCatalog,.restaurantPosCheckout,
+ .restaurantPosMenu article,.restaurantPosProduct,.restaurantPosSyncBar,
+ .restaurantPosSyncStats>span,.restaurantOfflineBackup,.restaurantHealthList>div,
+ .restaurantImageUpload,.restaurantCart,.restaurantPosInvoiceBreakdown,
+ .restaurantOrderMeta,.restaurantBranchActions,.restaurantStatusFilters,
+ .restaurantOrderDining,.restaurantOrderSymbol
+){
+ background:#242832;color:#f8f3e9;border-color:#424c5b;
+}
+/* Some menu and table tiles use a light gradient rather than background-color. */
+.restaurantApp[data-theme="dark"] .restaurantPosModern .restaurantPosProduct,
+.restaurantApp[data-theme="dark"] .restaurantPanel[data-module="tables"] .restaurantResourceList article{
+ background:#242832;color:#f8f3e9;border-color:#424c5b;
+ background-image:none;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantPosProduct b,.restaurantPosProduct strong,
+ .restaurantOrderGuest strong,.restaurantOrderIdentity b,
+ .restaurantOrderCards header b,.restaurantCart b,
+ .restaurantPosInvoiceBreakdown h4,.restaurantPosInvoiceBreakdown>div,
+ .restaurantOrderMeta dd,.restaurantOrderDetailsToggle,
+ .restaurantResourceDetailsToggle,.restaurantOrderNotes strong
+){color:#f8f3e9}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantPosProduct>span,.restaurantPosInvoiceBreakdown strong
+){color:#f7b36c}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantOrderTime,.restaurantOrderIdentity small,
+ .restaurantPosProduct>span small,.restaurantPosInvoiceBreakdown>p,
+ .restaurantPosInvoiceBreakdown>div>span:last-child,
+ .restaurantOrderMeta dt,.restaurantPosSyncStats small
+){color:#c3ccd9!important}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantOrderDetailsToggle,.restaurantResourceDetailsToggle,
+ .restaurantOrderActions button:not(.restaurantOrderAdvance),
+ .restaurantBranchActions button,.restaurantStatusFilters button,
+ .restaurantPosCategories button:not([aria-pressed="true"]),
+ .restaurantOfflineBackup button,.restaurantPosQuickBar button,
+ .restaurantPosQuickBar>span,.restaurantPosQuickBar>strong,
+ .restaurantTableQuickActions select
+){
+ background:#303846;color:#f8f3e9;border-color:#525c6e;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantOrderDetailsToggle,.restaurantResourceDetailsToggle,
+ .restaurantOrderActions button:not(.restaurantOrderAdvance)
+):hover{background:#3c4656;color:#fff}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantPosBrowse>input,.restaurantPosPaymentFields,
+ .restaurantPosFullField textarea,.restaurantPosMenu input,
+ .restaurantPosCategories,.restaurantListTools input,.restaurantResourceForm input,
+ .restaurantResourceForm select,.restaurantResourceForm textarea
+){color:#f8f3e9;border-color:#525c6e}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(
+ .restaurantPosBrowse>input,.restaurantPosFullField textarea,
+ .restaurantResourceForm input,.restaurantResourceForm select,.restaurantResourceForm textarea
+){background:#29303b}
+.restaurantApp[data-theme="dark"] .restaurantContent :is(input,textarea)::placeholder{color:#b3c0d0;opacity:1}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantOrderGuest>span{
+ background:#343c49;color:#f8f3e9!important;border-color:#596579;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantOrderNotes{
+ background:#393021;border-color:#a97635;color:#ffe9bd;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantOrderNotes :is(p,strong){color:#ffe9bd}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantOrderMeta>div{background:#303846;border-color:#525c6e}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantPosSyncStats b{color:#f8f3e9}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantPosQuickBar{
+ background:#242832;color:#f8f3e9;border-color:#424c5b;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantPosProduct>button{
+ background:#ac461d;color:#fff;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .restaurantPosProduct>button:disabled{opacity:.5}
+
+/* Calendar: never mix bright future-day cells into the dark month grid.
+ * Outside-month dates are distinguished by opacity / tone, not whiteness. */
+.restaurantApp[data-theme="dark"] .reservationCalendar :is(
+ .calendarToolbar,.calendarNavigation,.calendarFilters,.calendarGrid,.calendarLegend
+){color:#f8f3e9}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarGrid{
+ background:#242832;border-color:#515c6a;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarGrid>section{
+ background:#242832;color:#f8f3e9;border-color:#515c6a;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarGrid>section[data-outside="true"]{
+ background:#1c212a;color:#b9c3d2;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarGrid>section[data-selected="true"]{
+ background:#363040;color:#fff;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarGrid>section>header button{
+ color:inherit;background:transparent;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarNavigation button,
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarFilters :is(input,select){
+ background:#29303b;border-color:#525c6e;color:#f8f3e9;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarSummary>span{
+ background:#303846;border-color:#515c6a;color:#c3ccd9;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarSummary b{color:#fff}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent[data-status="pending"]{
+ background:#433722;color:#ffdfa5;border-color:#cf963d;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent[data-status="confirmed"]{
+ background:#293e59;color:#d0e6ff;border-color:#649fe8;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent[data-status="seated"]{
+ background:#234839;color:#c1f5dc;border-color:#50b789;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent[data-status="completed"]{
+ background:#384252;color:#f0f3f7;border-color:#96a3b7;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent[data-status="cancelled"]{
+ background:#532e36;color:#ffced5;border-color:#dc798d;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent :is(b,small,em,strong){color:inherit}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEvent em{background:#ffffff15}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEditor{
+ background:#242832;color:#f8f3e9;border-color:#515c6a;
+}
+.restaurantApp[data-theme="dark"] .reservationCalendar .calendarEditor::backdrop{background:#000a}
+
+/* Admin: keep legacy invoice, plans, translation and permissions cards readable. */
+.adminShell[data-theme="dark"] :is(
+ .adminDashboard .adminMetric,.adminDashboard .adminOverviewSecondary article,
+ .adminDashboard .adminModules,.adminDashboard .adminPanel,
+ .adminDashboard .adminModuleCard,.adminRecentActivity,
+ .tenant-summary article,.workspace-grid article,
+ .adminPaymentMethods article,.adminBillingStats article,
+ .adminAccessStats article,.adminSubscriptionStats article,
+ .adminPageStats article,.adminTranslationStats article,
+ .adminRoleGrid article,.adminPlanCard,.adminToolCard
+){background:#242832;color:#f8f3e9;border-color:#424c5b}
+.adminShell[data-theme="dark"] :is(
+ .adminDashboard .adminMetric strong,.adminDashboard .adminMetric span,
+ .adminDashboard .adminModuleCard b,.adminDashboard .adminPanel h3,
+ .adminDashboard .adminOverviewSecondary strong,.adminTop b,
+ .adminStage h1,.adminStage h2,.adminStage h3
+){color:#f8f3e9}
+.adminShell[data-theme="dark"] :is(
+ .adminTop,.adminSide,.adminDrawer,.adminStage,
+ .adminDashboardHead,.adminModules,.adminRecentActivity
+){border-color:#424c5b}
+.adminShell[data-theme="dark"] .adminTop{background:#242832;color:#f8f3e9}
+.adminShell[data-theme="dark"] .adminStage{background:#171a20;color:#f8f3e9}
+.adminShell[data-theme="dark"] :is(input:not([type="color"]),select,textarea){
+ background:#29303b;color:#f8f3e9;border-color:#525c6e;
+}
+.adminShell[data-theme="dark"] :is(input,textarea)::placeholder{color:#b9c6d6;opacity:1}
+
+/* Customer account + order history, profile, delivery addresses. */
+.customerDashboard[data-theme="dark"] :is(
+ .customerOverview>article,.customerOrderCard,.customerAddresses,
+ .customerProfileEditor,.customerDeliveryAddresses,
+ .customerSection,.customerPanel
+){color:#f8f3e9;border-color:#424c5b}
+.customerDashboard[data-theme="dark"] :is(
+ input:not([type="checkbox"]):not([type="color"]),select,textarea
+){background:#29303b;color:#f8f3e9;border-color:#525c6e}
+.customerDashboard[data-theme="dark"] :is(input,textarea)::placeholder{color:#b9c6d6;opacity:1}
+
+/* Public landing, markets, authentication, and CMS pages. */
+.foonPublic[data-theme="dark"] :is(
+ .foonFeatureCard,.foonPlanCard,.foonMarketCard,
+ .publicContentPage article,.foonPublicHeader
+){background-color:#242832;color:#f8f3e9;border-color:#424c5b}
+.foonPublic[data-theme="dark"] :is(
+ .foonMarket,.foonMarketResults,.publicContentPage
+){background-color:#171a20;color:#f8f3e9}
+.foonPublic[data-theme="dark"] :is(input:not([type="color"]),select,textarea){
+ background:#29303b;color:#f8f3e9;border-color:#525c6e;
+}
+.foonPublic[data-theme="dark"] :is(input,textarea)::placeholder{color:#b9c6d6;opacity:1}
+.foonPublic[data-theme="dark"] :is(.foonHeaderCta,.foonButtonPrimary){
+ background:var(--fp-gold);color:var(--fp-gold-ink)!important;
+}
+
+/* Public restaurant menu and other 14 activities: preserve product identity
+ * and brand accents, only repair neutral containers and controls. */
+.publicMenu[data-color-mode="dark"] :is(
+ .publicMenuCart,.publicMenuCategories button,.publicMenuSearch,
+ .publicMenuCategoryRail,.publicMenuServiceDialog,.publicMenuCategoryDialog
+){background:#242832;color:#f8f3e9;border-color:#424c5b}
+.publicMenu[data-color-mode="dark"] :is(input,select,textarea){
+ background:#29303b;color:#f8f3e9;border-color:#525c6e;
+}
+.foonActivityStorefront[data-color-mode="dark"] :is(
+ .foonActivityEmpty,.foonActivityProduct,.foonActivityStoreMeta,
+ .foonActivitySearch,.foonActivityCategories a
+){background-color:#242832;color:#f8f3e9;border-color:#424c5b}
+.foonActivityStorefront[data-color-mode="dark"] :is(input,select,textarea){
+ background:#29303b;color:#f8f3e9;border-color:#525c6e;
+}
+:is(.publicMenu[data-color-mode="dark"],.foonActivityStorefront[data-color-mode="dark"]) :is(input,textarea)::placeholder{
+ color:#b9c6d6;opacity:1;
+}
+/* Focus rings and user-requested motion preferences work everywhere. */
+:is(.restaurantApp[data-theme="dark"],.adminShell[data-theme="dark"],
+ .customerDashboard[data-theme="dark"],.foonPublic[data-theme="dark"],
+ .publicMenu[data-color-mode="dark"],.foonActivityStorefront[data-color-mode="dark"])
+ :is(button,a,input,select,textarea,summary):focus-visible{
+ outline:3px solid #edb956;outline-offset:2px;
+}
+@media(prefers-reduced-motion:reduce){
+ :is(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,
+ .publicMenu,.foonActivityStorefront) :is(button,a,input,select,textarea){
+  transition:none!important;
+ }
+}
