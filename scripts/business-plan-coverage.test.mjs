@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {referenceFeatures} from "../lib/plans/reference-catalog.ts";
 import {ACTIVITY_PRESETS} from "../lib/platform/activity-presets.ts";
-import {activityFeatureSupport,passesServerActivityRestriction} from "../lib/platform/activity-plan-entitlements.ts";
+import {activityFeatureSupport,passesServerActivityRestriction,isCreatorOnlyFeature} from "../lib/platform/activity-plan-entitlements.ts";
 import {resourceModules} from "./restaurant-resource-schema.mjs";
 
 const source=path=>readFileSync(new URL(path,import.meta.url),"utf8");
@@ -49,6 +49,15 @@ test("Business entitlement is denied without a stored shared/activity grant",()=
  assert.doesNotMatch(backend,/rows\[0\]\.plan_code==="enterprise"/);
  assert.match(admin,/COALESCE\(af\.enabled,pf\.enabled,0\) AS enabled/);
  assert.doesNotMatch(admin,/CASE WHEN p\.code='enterprise' THEN 1 ELSE 0 END/);
+});
+
+test("merchant admin cannot accidentally re-enable creator privileges or advertise catalog grants as verified operation",()=>{
+ const api=source("../app/api/admin/plans/[id]/features/route.ts");
+ const ui=source("../app/admin/plans/plan-features.tsx");
+ assert.match(api,/!reset&&isCreatorOnlyFeature\(body\.feature_key\)/);
+ assert.match(ui,/!isCreatorOnlyFeature\(f\.feature_key\)/);
+ assert.match(ui,/تفعيل الباقة يمنح الإذن فقط/);
+ for(const key of creatorOnly)assert.equal(isCreatorOnlyFeature(key),true);
 });
 
 test("new paid plan bootstrap excludes creator-only features from merchant plans",()=>{
