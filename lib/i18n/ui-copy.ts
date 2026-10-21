@@ -1,5 +1,10 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "وصف المتجر بالإنجليزية": ["Store description in English", "Description de la boutique en anglais"],
+ "وصف المتجر بالفرنسية": ["Store description in French", "Description de la boutique en français"],
+ "عنوان المتجر بالإنجليزية": ["Store address in English", "Adresse de la boutique en anglais"],
+ "عنوان المتجر بالفرنسية": ["Store address in French", "Adresse de la boutique en français"],
+
  "وصف القسم بالإنجليزية":["Category description in English","Description de catégorie en anglais"],
  "وصف القسم بالفرنسية":["Category description in French","Description de catégorie en français"],
  "رابط صورة القسم":["Category image URL","URL de l’image de catégorie"],
