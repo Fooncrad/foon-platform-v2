@@ -6,6 +6,7 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
+import {requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
 export const runtime="nodejs";
 async function resolveEmployeeUser(db:Pool | PoolConnection,tenantId:string,data:Record<string,unknown>):Promise<string>{
  const explicit=String(data?.userId??"");
@@ -36,6 +37,7 @@ export async function POST(request:Request){
   const [rows]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE FOR UPDATE",[resourceId,tenantId]);
   if(!rows.length){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});}
   const employee=rows[0],data=typeof employee.data==="string"?JSON.parse(employee.data):employee.data;
+  try{await requireAdditionalBranchUnlock(tenantId,employee.branch_id?String(employee.branch_id):null,actor);}catch(error){await db.rollback();return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
   const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!["supervisor","cashier","waiter","kitchen","driver","accountant"].includes(role)||data.userId){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
   if(!employee.branch_id){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_REQUIRED"},{status:400});}
@@ -70,6 +72,7 @@ export async function PATCH(request:Request){
   const [rows]=await db.execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE FOR UPDATE",[resourceId,tenantId]);
   if(!rows.length){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});}
   const employee=rows[0],data=typeof employee.data==="string"?JSON.parse(employee.data):employee.data;
+  try{await requireAdditionalBranchUnlock(tenantId,employee.branch_id?String(employee.branch_id):null,actor);}catch(error){await db.rollback();return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
   const userId=await resolveEmployeeUser(db,tenantId,data);
   if(!/^[a-f0-9-]{36}$/i.test(userId)){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});}
   const [memberships]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,userId]);
@@ -93,6 +96,7 @@ export async function GET(request:Request){
  try{await requireTenantMembership(actor,tenantId,["owner","manager"],false);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const [rows]=await database().execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1",[resourceId,tenantId]);
  if(!rows.length)return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});
+ try{await requireAdditionalBranchUnlock(tenantId,rows[0].branch_id?String(rows[0].branch_id):null,actor);}catch(error){return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
  const data=typeof rows[0].data==="string"?JSON.parse(rows[0].data):rows[0].data,userId=await resolveEmployeeUser(database(),tenantId,data);
  if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (branch_id IS NULL OR branch_id <=> ?) AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
