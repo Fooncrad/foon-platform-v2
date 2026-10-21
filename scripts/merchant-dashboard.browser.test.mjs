@@ -520,17 +520,20 @@ test("all 15 activities expose their own tools; service orders work in three lan
        const channels=values.map(v=>{const c=v/255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4;});
        return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
       };
-      const style=getComputedStyle(node);
+      const style=getComputedStyle(node),workspace=getComputedStyle(node.closest(".restaurantApp"));
       const foreground=luminance(style.color),background=luminance(style.backgroundColor);
-      return (Math.max(foreground,background)+0.05)/(Math.min(foreground,background)+0.05);
+      const ratio=(Math.max(foreground,background)+0.05)/(Math.min(foreground,background)+0.05);
+      return {ratio,text:style.color,background:style.backgroundColor,workspaceText:workspace.color,workspaceSurface:workspace.getPropertyValue("--rc-surface").trim(),workspaceTheme:node.closest(".restaurantApp").getAttribute("data-theme")};
      });
      await page.getByRole("combobox",{name:"المظهر"}).selectOption("dark");
      await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
-     expect(await contrast(),activity+" tool card dark contrast").toBeGreaterThanOrEqual(4.5);
+     const darkCard=await contrast();
+     expect(darkCard.ratio,activity+" dark tool-card computed styles: "+JSON.stringify(darkCard)).toBeGreaterThanOrEqual(4.5);
      await captureScreenshot(page,{path:"work/merchant-"+activity+"-dark-tools.png",fullPage:true});
      await page.getByRole("combobox",{name:"المظهر"}).selectOption("light");
      await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","light");
-     expect(await contrast(),activity+" tool card light contrast").toBeGreaterThanOrEqual(4.5);
+     const lightCard=await contrast();
+     expect(lightCard.ratio,activity+" light tool-card computed styles: "+JSON.stringify(lightCard)).toBeGreaterThanOrEqual(4.5);
      await captureScreenshot(page,{path:"work/merchant-"+activity+"-light-tools.png",fullPage:true});
     }
     const destinations=await page.locator('.foonActivityTools a').evaluateAll(links=>links.map(link=>link.href));expect(new Set(destinations).size).toBe(destinations.length);
