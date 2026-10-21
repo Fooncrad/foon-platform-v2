@@ -47,7 +47,7 @@ test('real service worker: tenant isolation, offline reload, images, languages, 
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.equal(await page.locator('#cover img').count(),1);
   await page.reload();assert.equal(await page.locator('h1').textContent(),'alpha');
-  await page.goto(origin+'/bravo');assert.equal(await page.locator('h1').textContent(),'bravo');assert(!(await page.locator('h2').textContent()).includes('alpha'));
+  await page.goto(origin+'/bravo');assert.equal(await page.locator('h1').textContent(),'bravo');assert.equal(await page.locator('article h2').textContent(),'طبق bravo');
   await assert.rejects(page.goto(origin+'/alpha/login'));
   await context.setOffline(false);removed=true;await page.goto(origin+'/alpha');assert.equal(await page.locator('body').textContent(),'Removed');await context.setOffline(true);await assert.rejects(page.goto(origin+'/alpha'));
  }finally{await browser.close();}
