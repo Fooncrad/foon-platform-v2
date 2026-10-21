@@ -26,7 +26,7 @@ import "./shared-dashboard-legibility.css";
 import "./reference-dashboard-layout.css";
 import "./sidebar-clarity.css";
 import StaffHelpPanel from "./staff-help-panel";
-import {groupVisibleMerchantSections,merchantNavGroupFor,MERCHANT_NAV_LABELS,type MerchantNavGroup} from "@/lib/ux/merchant-navigation";
+import {groupVisibleMerchantSections,merchantNavGroupFor,MERCHANT_NAV_LABELS} from "@/lib/ux/merchant-navigation";
 
 type Branch={id:string;name:string;slug:string;enabled:boolean;version:string};
 type Feature={key:string;name:string;nameEn?:string;enabled:boolean;limit:number|null};
@@ -89,7 +89,6 @@ const sectionTranslations:Partial<Record<Section,{en:string;fr:string}>>={
  health:{en:"System health",fr:"État du système"},
  subscription:{en:"Subscription and features",fr:"Abonnement et fonctionnalités"}
 };
-const roles:Record<string,string>={owner:"مالك النشاط",manager:"مدير المطعم",cashier:"الكاشير",waiter:"النادل",kitchen:"المطبخ",driver:"التوصيل",accountant:"المحاسب"};
 const statuses:Record<string,string>={active:"نشط",pending:"معلق",expired:"منتهي",cancelled:"ملغي"};
 type LiveOrder={currency?:string;dining_snapshot:{name:string;sectionName:string}|null;party_size:number|null;id:string;order_number:number;channel:string;status:string;payment_status:string;total:number|null;items:{name:string;quantity:number}[]};
 type LiveOverview={attention?:Record<string,number>;summary:{sales:number|null;orders:number;average:number|null;newOrders:number;outstandingOrders?:number;preparing:number;ready:number;tables:number;waiterCalls:number;reservations:number};series:{day:string;total:number}[];orders:LiveOrder[]};
