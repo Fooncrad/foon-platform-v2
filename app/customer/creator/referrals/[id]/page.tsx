@@ -1,3 +1,4 @@
+import PrintReceiptButton from "@/app/components/print-receipt-button";
 import {notFound,redirect} from "next/navigation";
 import {cookies} from "next/headers";
 import Link from "next/link";
@@ -19,6 +20,9 @@ export default async function ReferralStatementPage({params}:{params:Promise<{id
  const lang=(await cookies()).get("foon_language")?.value,t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
  const plan=lang==="en"?statement.name_en:lang==="fr"?statement.name_fr:statement.name_ar;
  return <main lang={lang==="en"||lang==="fr"?lang:"ar"} dir={lang==="en"||lang==="fr"?"ltr":"rtl"} style={{maxWidth:720,margin:"32px auto",padding:24}}>
+  <style>{`@media print {.receiptPrintButton,.receiptPrintNav{display:none!important} body{background:white!important;color:black!important} main{padding:0!important;margin:0!important}}`}</style>
+  <PrintReceiptButton label={t("طباعة الكشف / حفظ PDF","Print statement / Save as PDF","Imprimer le relevé / enregistrer en PDF")}/>
+  <nav className="receiptPrintNav"><Link href="/account">{t("حسابي","My account","Mon compte")}</Link></nav>
   <Link href="/customer/creator">{t("حساب صانع المحتوى","Creator account","Compte créateur")}</Link>
   <h1>{statement.status==="paid"?t("إثبات صرف عمولة إحالة","Referral commission payout receipt","Reçu de versement de commission"):t("كشف عمولة الإحالة","Referral commission statement","Relevé de commission")}</h1>
   <p>{t("مرجع العمولة","Commission reference","Référence de commission")}: <b dir="ltr">{String(statement.id)}</b></p>
