@@ -6,12 +6,13 @@ type Environment={recaptchaSecretPresent:boolean;aiKeyPresent:boolean};
 export default function IntegrationSettings({canEdit}:{canEdit:boolean}){
  const [settings,setSettings]=useState<Integrations>(initial);
  const [environment,setEnvironment]=useState<Environment|null>(null);
+ const [locations,setLocations]=useState<{configured:number;radiusEnabled:number}|null>(null);
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  const [error,setError]=useState(""),[message,setMessage]=useState("");
  useEffect(()=>{let active=true;
   fetch("/api/admin/integrations",{cache:"no-store"})
    .then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.code);return j;})
-   .then(j=>{if(active){setSettings(j.configuration);setEnvironment(j.environment);}})
+   .then(j=>{if(active){setSettings(j.configuration);setEnvironment(j.environment);setLocations(j.locationSummary??null);}})
    .catch(()=>{if(active)setError("تعذر قراءة إعدادات التكاملات.")})
    .finally(()=>{if(active)setLoading(false)});
   return()=>{active=false};
@@ -42,6 +43,9 @@ export default function IntegrationSettings({canEdit}:{canEdit:boolean}){
    </label>
    <label>اسم النموذج<input dir="ltr" maxLength={80} value={settings.aiModel} readOnly={!canEdit} onChange={e=>setSettings(v=>({...v,aiModel:e.target.value}))} placeholder="اسم النموذج عند الربط"/></label>
    <p role="note">المفتاح السري للذكاء الاصطناعي محفوظ في بيئة الخادم فقط. حالة OPENAI_API_KEY: <b>{environment?.aiKeyPresent?"موجود":"غير مهيأ"}</b>. لا يُرسل محتوى العملاء لأي مزود بمجرد تهيئة هذا القسم.</p>
+   <h3>الموقع المجاني وإعداد نطاق التوصيل</h3>
+   <p role="status">إعدادات GPS المجانية لا تحتاج مفتاح خرائط. عدد الأنشطة التي حفظت إعدادات الموقع: <b>{locations?.configured??"—"}</b>، والأنشطة التي فعّلت نصف قطر التوصيل: <b>{locations?.radiusEnabled??"—"}</b>.</p>
+   <p role="note">يضبط مالك المتجر أو مدير المطعم موقع النشاط ونطاق التوصيل من «تشغيل واجهة العملاء». يمكن للأدمن مراجعة إعدادات المتجر في جلسة دعم مصرح بها، دون فتح بيانات العملاء.</p>
    <h3>الخصوصية والتحليلات</h3>
    <label><input type="checkbox" checked={settings.trackingConsentRequired} disabled={!canEdit} onChange={e=>setSettings(v=>({...v,trackingConsentRequired:e.target.checked}))}/> اشتراط موافقة العميل قبل تشغيل التتبع التسويقي</label>
    <p role="note">تُحفظ معرّفات Google Analytics وMeta Pixel لكل متجر من لوحة التاجر. لا يتم تحميل أدوات تتبع تلقائيًا دون تنفيذ موافقة الخصوصية.</p>
