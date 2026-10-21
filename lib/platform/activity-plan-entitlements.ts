@@ -24,6 +24,8 @@ const COMMON_FEATURES=new Set([
 ]);
 /** Creator account privileges are not merchant subscription features. */
 const CREATOR_ONLY=new Set(["creator_profile","content_marketplace","content_pricing","media_library","watermark"]);
+/** Merchant plans never manage creator-account privileges. */
+export function isCreatorOnlyFeature(key:string):boolean{return CREATOR_ONLY.has(key);}
 const knownCapabilities=new Set<string>(Object.values(ACTIVITY_PRESETS).flatMap(modules=>[...modules]));
 const exciseActivities=new Set(["restaurant","cafe","sweets","grocery","perfume"]);
 /** Classification does not grant access; exact subscription keys remain independent. */
