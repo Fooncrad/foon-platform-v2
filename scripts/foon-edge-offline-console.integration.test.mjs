@@ -7,6 +7,7 @@ import {mkdtemp,writeFile,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import net from "node:net";
+import {fileURLToPath} from "node:url";
 import {hashOperatorPassword} from "./foon-edge-console-server.mjs";
 
 async function freePort(){
@@ -51,7 +52,7 @@ test("W27 cached POS accepts local orders without cloud URL, preserves pending S
  };
  const launch=async()=>{
    child=spawn(process.execPath,["scripts/start-edge-console.mjs"],{
-      env:environment,stdio:"ignore",cwd:new URL("../",import.meta.url).pathname});
+      env:environment,stdio:"ignore",cwd:fileURLToPath(new URL("../",import.meta.url))});
    for(let i=0;i<100;i++){
      if(child.exitCode!==null)throw Error("W27_LOCAL_PROCESS_EXITED");
      try {const response=await fetch(origin+"/");if(response.ok)return;}catch{}
