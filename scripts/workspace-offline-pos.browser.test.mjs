@@ -15,7 +15,7 @@ const orderApi="/api/restaurant/operations/pos";
 test("real offline browser: encrypted scoped catalog and order, reload, wrong passphrase and reauthorized sync",async()=>{
  test.setTimeout(90000);
  const checkpoint=label=>console.log("OFFLINE-POS-CHECKPOINT:",label);
- let currentUser=userA;const posts=[];
+ let currentUser=userA,legacyAllowed=true;const posts=[];
  const server=createServer((req,res)=>{
   const uri=new URL(req.url,"http://localhost");
   const send=(status,body,ct="application/json")=>{res.writeHead(status,{"content-type":ct,"cache-control":"no-store"});res.end(body);};
@@ -27,7 +27,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   if(uri.pathname==="/api/auth/me")return send(200,JSON.stringify({ok:true,user:{id:currentUser,email:"private-user@example.test"}}));
   if(uri.pathname===orderApi){
    if(currentUser!==userA)return send(403,JSON.stringify({ok:false,code:"ACCESS_DENIED"}));
-   if(req.method==="GET")return send(200,JSON.stringify({ok:true,legacyRecoveryAllowed:true,orders:[{customer_name:"PRIVATE-SERVER-CUSTOMER"}],menu:[{id:itemId,name:"Test espresso",status:"active",data:{price:12}}],tables:[{id:"66666666-6666-4666-8666-666666666666",name:"Table 1",status:"available",data:{capacity:4}}],options:{},currency:"SAR"}));
+   if(req.method==="GET")return send(200,JSON.stringify({ok:true,legacyRecoveryAllowed:legacyAllowed,orders:[{customer_name:"PRIVATE-SERVER-CUSTOMER"}],menu:[{id:itemId,name:"Test espresso",status:"active",data:{price:12}}],tables:[{id:"66666666-6666-4666-8666-666666666666",name:"Table 1",status:"available",data:{capacity:4}}],options:{},currency:"SAR"}));
    if(req.method==="POST"){let payload="";req.on("data",data=>payload+=data);req.on("end",()=>{posts.push(JSON.parse(payload));send(200,JSON.stringify({ok:true}));});return;}
   }
   send(404,"missing","text/plain");
@@ -134,6 +134,14 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  assert(migrated);
  assert(!JSON.stringify(migrated).includes("Sensitive legacy guest"));
  assert((await page.locator("#queue").innerText()).includes(ownOld));
+ // Simulated cashier/ordinary POS operator: GET POS still succeeds, but the
+ // server explicitly refuses management of unowned legacy plaintext data.
+ legacyAllowed=false;
+ await page.check("#legacy-confirm");
+ await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_RECOVERY_MANAGER_ONLY"));
+ assert.equal(await page.locator("#notice").getAttribute("data-error"),"true");
+ await page.uncheck("#legacy-confirm");
  await page.click("#legacy-recover");
  await page.waitForFunction(()=>document.querySelector("#notice")?.dataset.error==="true");
  checkpoint("legacy-plaintext-encrypted-and-isolated");
