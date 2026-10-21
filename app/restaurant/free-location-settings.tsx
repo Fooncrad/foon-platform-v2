@@ -17,6 +17,25 @@ export default function FreeLocationSettings({tenantId}:{tenantId:string}){
  const [loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  const [error,setError]=useState(""),[message,setMessage]=useState("");
  const [locating,setLocating]=useState(false);
+ const [branchLocations,setBranchLocations]=useState<{id:string;name:string;enabled:boolean;latitude:number|null;longitude:number|null}[]>([]);
+ const [branchSaved,setBranchSaved]=useState(""),[branchError,setBranchError]=useState("");
+ useEffect(()=>{
+  let active=true;
+  fetch("/api/restaurant/branch-delivery-locations",{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
+   .then(async r=>{const data=await r.json();if(!r.ok||!data.ok)throw Error(data.code);return data;})
+   .then(data=>{if(active)setBranchLocations(data.branches);})
+   .catch(()=>{if(active)setBranchError(tr("تعذر تحميل إحداثيات الفروع.","Unable to load branch locations.","Impossible de charger les succursales."));});
+  return()=>{active=false};
+ },[tenantId]);
+ async function saveBranchLocation(branchId:string,latitude:number,longitude:number){
+  setBranchError("");setBranchSaved("");
+  try{
+   const r=await fetch("/api/restaurant/branch-delivery-locations",{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({branchId,latitude,longitude})});
+   const result=await r.json();if(!r.ok||!result.ok)throw Error(result.code);
+   setBranchSaved(tr("تم حفظ إحداثيات الفرع.","Branch coordinates saved.","Position enregistrée."));
+  }catch{setBranchError(tr("تعذر حفظ إحداثيات الفرع.","Could not save branch coordinates.","Échec de l'enregistrement."));}
+ }
+
  useEffect(()=>{
   let live=true;
   fetch("/api/restaurant/location-settings",{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
@@ -74,6 +93,17 @@ export default function FreeLocationSettings({tenantId}:{tenantId:string}){
    </div>
    <label>{tr("رسالة خارج نطاق التوصيل","Outside delivery zone message","Message hors zone")}<textarea maxLength={240} value={values.outsideMessage} onChange={e=>update("outsideMessage",e.target.value)} rows={2} placeholder={tr("عذرًا، موقعك خارج نطاق التوصيل المحدد.","Sorry, your address is outside the delivery radius.","Votre adresse est hors de la zone de livraison.")}/></label>
    <p style={{fontSize:12,opacity:.88}}>{tr("المسافة خط مستقيم تقريبية وليست مسافة طريق. عند تفعيل نصف القطر يجب مشاركة إحداثيات العميل لتأكيد طلب التوصيل، مع إبقاء العنوان اليدوي؛ قد لا يتوفر GPS لدى جميع العملاء.","Radius is straight-line distance, not driving distance. Radius mode requires customer GPS for delivery checkout; manual address remains available.","Distance à vol d’oiseau, pas routière. Le GPS client est requis en mode rayon.")}</p>
+   <section aria-label={tr("مواقع الفروع","Branch locations","Positions des succursales")} style={{display:"grid",gap:10}}>
+    <h4>{tr("مراكز الفروع لأقرب توصيل","Branch locations for nearest delivery","Succursales pour la livraison la plus proche")}</h4>
+    <p>{tr("اضبط إحداثيات كل فرع مرة واحدة ليقترح النظام أقرب فرع للعميل عند توفر إحداثيات عنوانه المحفوظ. فرع بلا إحداثيات لا يدخل حساب الأقرب.","Set each branch's coordinates once. The nearest available branch is recommended when the customer's saved address has coordinates. Branches without coordinates are not distance-ranked.","Indiquez les coordonnées des succursales pour suggérer la plus proche.")}</p>
+    {branchLocations.filter(item=>item.enabled).map(item=><form key={item.id} onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);void saveBranchLocation(item.id,Number(data.get("latitude")),Number(data.get("longitude")));}} style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"end"}}>
+     <strong style={{minWidth:130}}>{item.name}</strong>
+     <label>Latitude <input name="latitude" required type="number" step="any" min={-90} max={90} dir="ltr" defaultValue={item.latitude??""}/></label>
+     <label>Longitude <input name="longitude" required type="number" step="any" min={-180} max={180} dir="ltr" defaultValue={item.longitude??""}/></label>
+     <button type="submit">{tr("حفظ الفرع","Save branch","Enregistrer")}</button>
+    </form>)}
+    {branchSaved&&<p role="status">{branchSaved}</p>}{branchError&&<p role="alert">{branchError}</p>}
+   </section>
    <h4>{tr("التحليلات والذكاء الاصطناعي (إعدادات اختيارية)","Analytics and AI (optional settings)","Analyses et IA (facultatif)")}</h4>
    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,240px),1fr))",gap:12}}>
     <label>{tr("معرف Google Analytics (G-...)","Google Analytics ID (G-...)","Identifiant Google Analytics")}<input dir="ltr" maxLength={32} value={values.googleAnalyticsId} onChange={e=>update("googleAnalyticsId",e.target.value)} placeholder="G-XXXXXXXXXX"/></label>
