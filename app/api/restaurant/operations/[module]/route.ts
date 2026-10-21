@@ -1,6 +1,7 @@
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
+import {normalizeLocale,publicError,logIncident,type PublicErrorCode} from "@/lib/platform/incidents";
 import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
@@ -69,13 +70,18 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
  if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
  return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
 }
-function failure(error:unknown){
+function failure(error:unknown,request:Request,module:string){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
  const code=error instanceof ResourceError||error instanceof BranchPinError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
  const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
- if(status>=500)console.error("[FOON operations]",{incidentId,code,error});
- return NextResponse.json({ok:false,code,incidentId},{status});
+ const cookieLocale=request.headers.get("cookie")?.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1];
+ const locale=normalizeLocale(cookieLocale??request.headers.get("accept-language"));
+ const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status===429?"RATE_LIMITED":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
+ const message=publicError(category,status,incidentId,locale).error.message;
+ if(status>=500)logIncident({incidentId,code,location:"restaurant.operations."+module,error});
+ else console.warn(JSON.stringify({level:"warn",incidentId,code,location:"restaurant.operations."+module,status,at:new Date().toISOString()}));
+ return NextResponse.json({ok:false,code,message,incidentId,status},{status,headers:{"Cache-Control":"no-store","Content-Language":locale,"X-Foon-Incident-Id":incidentId}});
 }
 async function connection(){const db=await database().getConnection();try{await db.query("SET time_zone='+00:00'");return db;}catch(error){db.release();throw error;}}
 async function overview(db:PoolConnection,tenantId:string,role:string,branch:string|null,actorUserId:string){
@@ -178,7 +184,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
   if(module==="security"){const current=await currentSessionId(),[rows]=await db.execute<RowDataPacket[]>("SELECT id,created_at,last_seen_at,expires_at FROM auth_sessions WHERE user_id=? AND expires_at>NOW() ORDER BY last_seen_at DESC LIMIT 100",[ctx.user]);return NextResponse.json({ok:true,sessions:rows.map(s=>({...s,current:s.id===current}))});}
   if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),geocodingConfigured:Boolean(process.env.GOOGLE_MAPS_GEOCODING_API_KEY),checkedAt:new Date().toISOString()});}
   throw new ResourceError("MODULE_NOT_FOUND");
- }catch(error){return failure(error);}finally{db?.release();}
+ }catch(error){return failure(error,request,module);}finally{db?.release();}
 }
 async function mutate(request:Request,module:string,method:string){
  let db:PoolConnection|undefined;
@@ -280,7 +286,7 @@ async function mutate(request:Request,module:string,method:string){
    }
   }
   return NextResponse.json({ok:true,...result,...(gatewayReconciliation?{gatewayReconciliation}:{})},{status:method==="POST"?201:200});
- }catch(error){if(db)await db.rollback();return failure(error);}finally{db?.release();}
+ }catch(error){if(db)await db.rollback();return failure(error,request,module);}finally{db?.release();}
 }
 export async function POST(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"POST");}
 export async function PATCH(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"PATCH");}
