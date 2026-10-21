@@ -197,13 +197,18 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   db.close();return rows;
  });
  // Cross-tenant backup must fail even for a real manager.
+ checkpoint("backup-import-start");
  await page.check("#legacy-confirm");
  await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,tenantId:"99999999-9999-4999-8999-999999999999"}));
- await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP"));
+ console.log("BACKUP_IMPORT_FOREIGN_NOTICE:",await page.locator("#notice").innerText());
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP"),null,{timeout:7000});
+ checkpoint("backup-foreign-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  // One malformed/other-branch row rejects the entire batch.
  await page.locator("#legacy-import-file").setInputFiles(fileOf({...oldBackup,orders:[backupRow(backupA),{...backupRow(backupB),branchId:"99999999-9999-4999-8999-999999999999"}]}));
- await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP_ORDERS"));
+ console.log("BACKUP_IMPORT_MIXED_NOTICE:",await page.locator("#notice").innerText());
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("INVALID_LEGACY_BACKUP_ORDERS"),null,{timeout:7000});
+ checkpoint("backup-mixed-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  // Another tab or operation may hold the Web Lock: no import and no data loss.
  await page.evaluate(name=>{
@@ -212,7 +217,9 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  },"foon-legacy-recovery-"+tenant+":"+branch);
  await page.waitForFunction(()=>typeof window.__releaseRecoveryLock==="function");
  await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
- await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("RECOVERY_ALREADY_RUNNING"));
+ console.log("BACKUP_IMPORT_LOCKED_NOTICE:",await page.locator("#notice").innerText());
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("RECOVERY_ALREADY_RUNNING"),null,{timeout:7000});
+ checkpoint("backup-web-lock-rejected");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  await page.evaluate(()=>window.__releaseRecoveryLock());
  // Force IndexedDB transaction abort on the second inserted order. The first
@@ -227,7 +234,9 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   };
  });
  await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
- await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ENCRYPTED_IMPORT_CONFLICT"));
+ console.log("BACKUP_IMPORT_ABORT_NOTICE:",await page.locator("#notice").innerText());
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_ENCRYPTED_IMPORT_CONFLICT"),null,{timeout:7000});
+ checkpoint("backup-abort-rollback");
  assert(!(await secureRows()).some(row=>row.orderId===backupA));
  assert(!(await secureRows()).some(row=>row.orderId===backupB));
  await page.reload();
@@ -235,7 +244,9 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
  await page.check("#legacy-confirm");
  await page.locator("#legacy-import-file").setInputFiles(fileOf(oldBackup));
- await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("تم استيراد 2"));
+ console.log("BACKUP_IMPORT_RETRY_NOTICE:",await page.locator("#notice").innerText());
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("تم استيراد 2"),null,{timeout:7000});
+ checkpoint("backup-retry-success");
  const saved=await secureRows();
  assert(saved.some(row=>row.orderId===backupA));
  assert(saved.some(row=>row.orderId===backupB));
