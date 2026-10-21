@@ -323,14 +323,14 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByRole('button',{name:'مشروبات المعاينة',exact:false}).click();
  await expect(publicPage.getByRole('dialog')).toHaveCount(0);
  const groupedNav=page.getByRole('navigation',{name:'أقسام النشاط'});
- const dailyToggle=groupedNav.getByRole('button',{name:/العمل اليومي/});
- await expect(dailyToggle).toHaveAttribute('aria-expanded','true');
- await dailyToggle.click();
- await expect(dailyToggle).toHaveAttribute('aria-expanded','false');
- await expect(groupedNav.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
- await dailyToggle.click();
- await expect(dailyToggle).toHaveAttribute('aria-expanded','true');
+ const dailyHeading=groupedNav.getByRole('heading',{name:/العمل اليومي/});
+ await expect(dailyHeading).toBeVisible();
  await expect(groupedNav.getByRole('button',{name:'الطاولات',exact:true})).toBeVisible();
+ await expect(groupedNav.locator('.restaurantNavChevron')).toHaveCount(0);
+ await expect(groupedNav.locator('.restaurantNavGroupCount')).toHaveCount(0);
+ await expect(page.locator('.restaurantSidebar .restaurantNavContext')).toHaveCount(0);
+ // Business name is available in the topbar tenant selector, not repeated in sidebar.
+ await expect(page.getByRole('combobox',{name:'اختيار المطعم'})).toBeVisible();
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الطاولات',exact:true}).click();
  await page.getByRole('button',{name:'الإضافة الجماعية',exact:true}).click();
  await page.getByLabel('اسم القسم',{exact:true}).fill('صالة العائلات');
@@ -483,7 +483,8 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"فتح قائمة النشاط",exact:true}).click();
  const mobileNavigation=page.locator(".restaurantDrawer").getByRole("navigation",{name:"أقسام النشاط"});
  await expect(mobileNavigation.locator(".restaurantNavTaskGroup")).toHaveCount(6);
- await expect(mobileNavigation.getByRole("button",{name:/الفروع والفريق/})).toHaveAttribute("aria-expanded","true");
+ await expect(mobileNavigation.getByRole("heading",{name:/الفروع والفريق/})).toBeVisible();
+ await expect(mobileNavigation.locator(".restaurantNavChevron")).toHaveCount(0);
  await page.locator(".restaurantDrawer").getByRole("button",{name:"الفروع والإعدادات",exact:true}).click();
  await expect(page.getByRole("heading",{name:"فروع المطعم",exact:true})).toBeVisible();
  // Branch selection lives in the responsive topbar; verify the branch card after navigating on mobile.
