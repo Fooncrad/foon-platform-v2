@@ -1,4 +1,4 @@
-import {queueCommissionNotice} from "./commission-notices";
+import {queueCommissionNotice} from "./commission-notices.ts";
 import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {validCreatorHandle} from "./profile-policy.ts";
