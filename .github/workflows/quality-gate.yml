@@ -29,6 +29,8 @@ jobs:
         run: npm run test:migrations
       - name: Validate mail flows
         run: npm run test:mail
+      - name: Validate system error pages and references
+        run: npm run test:system-errors
       - name: Validate admin permissions
         run: npm run test:admin-policy
       - name: Validate LAN persistence, authentication and backups

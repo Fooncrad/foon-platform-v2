@@ -1,0 +1,18 @@
+.foonSystemStatus{--bg:#171613;--panel:#24221e;--gold:#e2a93b;--line:#524535;min-height:100svh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 0%,#3c3022 0,#171613 58%,#11100e 100%);color:#f8f3e9;font:16px/1.7 system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;box-sizing:border-box}
+.foonSystemStatus *{box-sizing:border-box}
+.foonSystemStatusCard{width:min(100%,620px);padding:clamp(24px,6vw,50px);border:1px solid var(--line);border-radius:24px;background:var(--panel);box-shadow:0 24px 65px #0005;text-align:center}
+.foonSystemStatusBrand{font-size:29px;font-weight:900;letter-spacing:.12em;color:var(--gold)}
+.foonSystemStatusSymbol{width:64px;height:64px;margin:20px auto;border-radius:20px;background:#e2a93b16;display:grid;place-items:center;font-size:32px;color:var(--gold)}
+.foonSystemStatus h1{font-size:clamp(1.6rem,5vw,2.3rem);line-height:1.45;margin:0 0 10px}
+.foonSystemStatus p{margin:0;color:#d5cdc2}
+.foonSystemStatusActions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:24px}
+.foonSystemStatusActions a,.foonSystemStatusActions button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;min-width:150px;padding:11px 20px;border-radius:12px;font:inherit;font-weight:750;cursor:pointer;text-decoration:none}
+.foonSystemStatusRetry{border:1px solid var(--gold);background:var(--gold);color:#1b1914}
+.foonSystemStatusHome{border:1px solid #827054;background:transparent;color:#f8f3e9}
+.foonSystemStatusMeta{margin-top:22px;padding-top:16px;border-top:1px solid #ffffff20;font-size:.87rem;display:flex;flex-direction:column;align-items:center;gap:4px}
+.foonSystemStatusMeta code{direction:ltr;unicode-bidi:isolate;display:inline-block;user-select:all;padding:3px 8px;border-radius:6px;background:#151411;color:#e2a93b;overflow-wrap:anywhere}
+.foonSystemStatusLanguages{display:flex;justify-content:center;gap:8px;margin-top:20px}
+.foonSystemStatusLanguages button{border:1px solid #827054;border-radius:10px;background:transparent;color:#f8f3e9;min-height:36px;min-width:48px;cursor:pointer}
+.foonSystemStatusLanguages button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);font-weight:800}
+.foonSystemStatus :is(a,button):focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:420px){.foonSystemStatus{padding:12px}.foonSystemStatusActions{flex-direction:column}.foonSystemStatusActions a,.foonSystemStatusActions button{width:100%}}
