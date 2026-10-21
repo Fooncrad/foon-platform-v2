@@ -5,6 +5,7 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {onlyUnlockedBranchRows} from "@/lib/restaurant/branch-pin";
 export const runtime="nodejs";
 export async function GET(request:Request){
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
@@ -26,18 +27,20 @@ export async function GET(request:Request){
   const hasExplicitAssignments=assignments.length>0;
   // Legacy employee profiles may predate the branch-assignment migration.
   if(!hasExplicitAssignments)for(const employee of employees)if(employee.branch_id)myBranches.add(String(employee.branch_id));
+  const unlockedBranches=await onlyUnlockedBranchRows(tenantId,user,[...myBranches].map(branch_id=>({branch_id})));
+  const accessibleBranches=new Set(unlockedBranches.map(row=>row.branch_id));
   const [tables]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE",[tenantId]);
   const mine=tables.filter(t=>{
    const details=parse(t.data);
    const section=sections.find(section=>String(section.id)===String(details.sectionId??""));
    const tableBranch=String(t.branch_id??section?.branch_id??"");
-   if(!tableBranch||!myBranches.has(tableBranch))return false;
+   if(!tableBranch||!accessibleBranches.has(tableBranch))return false;
    const explicit=String(details.waiterId??"");
    // Explicit table assignment overrides the hall default.
    return explicit?employeeIds.includes(explicit):Boolean(section&&mySections.has(String(section.id))&&String(section.branch_id??"")===tableBranch);
   });
   const [calls]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='waiter_call' AND archived=FALSE AND status IN ('pending','in_progress','new','requested','open')",[tenantId]);
-  return NextResponse.json({ok:true,assignmentStatus:!myBranches.size?"NO_BRANCH_ASSIGNMENT":mine.length?"ASSIGNED":"NO_MATCHING_TABLE_ASSIGNMENT",tables:mine.map(t=>({id:t.id,name:t.name,status:t.status,branchId:t.branch_id})),calls:calls.filter(c=>{const d=parse(c.data);const branch=String(c.branch_id??"");if(!branch||!myBranches.has(branch))return false;
+  return NextResponse.json({ok:true,assignmentStatus:!myBranches.size?"NO_BRANCH_ASSIGNMENT":mine.length?"ASSIGNED":"NO_MATCHING_TABLE_ASSIGNMENT",tables:mine.map(t=>({id:t.id,name:t.name,status:t.status,branchId:t.branch_id})),calls:calls.filter(c=>{const d=parse(c.data);const branch=String(c.branch_id??"");if(!branch||!accessibleBranches.has(branch))return false;
    const table=mine.find(t=>String(t.id)===String(d.tableId??"")&&String(t.branch_id)===branch);
    if(table)return true;
    // Legacy call payloads may use table number/name, but never match across branches.
