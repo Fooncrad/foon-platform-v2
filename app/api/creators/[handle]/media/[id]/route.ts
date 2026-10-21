@@ -1,6 +1,7 @@
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {validCreatorHandle} from "@/lib/creator/profile-policy";
+import {publicCreatorImageMime} from "@/lib/creator/image-policy";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,6 +19,8 @@ export async function GET(_request:Request,{params}:{params:Promise<{handle:stri
    "AND NOT EXISTS (SELECT 1 FROM platform_admins a WHERE a.user_id=p.user_id) LIMIT 1",
    [id,handle]);
   if(!rows.length)return new Response(null,{status:404,headers:{"Cache-Control":"no-store"}});
-  return new Response(new Uint8Array(rows[0].image_data as Buffer),{headers:{"Content-Type":"image/jpeg","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
+  const mime=publicCreatorImageMime(rows[0].mime_type);
+  if(!mime)return new Response(null,{status:404,headers:{"Cache-Control":"no-store"}});
+  return new Response(new Uint8Array(rows[0].image_data as Buffer),{headers:{"Content-Type":mime,"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
  }catch{return new Response(null,{status:503,headers:{"Cache-Control":"no-store"}});}
 }
