@@ -516,7 +516,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
      const toolCard=page.locator('.foonActivityToolLink').first();
      const contrast=()=>toolCard.evaluate(node=>{
       const luminance=(color)=>{
-       const values=(color.match(/[\\d.]+/g)||[]).slice(0,3).map(Number);
+       const values=(color.match(/[\d.]+/g)||[]).slice(0,3).map(Number);
        const channels=values.map(v=>{const c=v/255;return c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4;});
        return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
       };
