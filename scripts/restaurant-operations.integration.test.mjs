@@ -621,7 +621,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(replayInvoice.body.id,firstInvoice.body.id);
   assert.equal(replayInvoice.body.existing,true);
   const otherTenantInvoice=await resource(b,"customerInvoices",invoiceDraftPayload);
-  assert.equal(otherTenantInvoice.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(otherTenantInvoice.body));
+  assert.equal(otherTenantInvoice.status,403,JSON.stringify(otherTenantInvoice.body));
+  assert.equal(otherTenantInvoice.body.code,"BRANCH_PIN_REQUIRED","another tenant cannot reference a protected source branch");
   const [[generatedInvoiceCount]]=await db.execute("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind='customer_invoice' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.serviceOrderId'))=?",[a.tenant,invoiceSourceId]);
   assert.equal(Number(generatedInvoiceCount.n),1);
   const [[customerOrder]]=await db.execute("SELECT customer_user_id FROM restaurant_orders WHERE id=?",[placed.body.id]);assert.equal(customerOrder.customer_user_id,customer.body.user.id);
