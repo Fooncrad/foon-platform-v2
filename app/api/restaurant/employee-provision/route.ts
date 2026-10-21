@@ -7,6 +7,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
 import {requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
+import {normalizeEmployeePermissions,validPermissions} from "@/lib/restaurant/employee-permissions";
 export const runtime="nodejs";
 async function resolveEmployeeUser(db:Pool | PoolConnection,tenantId:string,data:Record<string,unknown>):Promise<string>{
  const explicit=String(data?.userId??"");
@@ -18,16 +19,13 @@ async function resolveEmployeeUser(db:Pool | PoolConnection,tenantId:string,data
  return "";
 }
 
-const modules=["orders","pos","kitchen","menu","categories","tables","sections","reservations","waitlist","waiterCalls","team","attendance","inventory","coupons","marketing","customerInvoices","internalInvoices","printers","reports","storefront","notifications","loyalty","delivery","security"] as const;
-const actions=["view","create","edit","accept","reject","cancel","delete","manage"] as const;
-const validPermissions=new Set(modules.flatMap(module=>actions.map(action=>module+"."+action)));
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null);
  const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??""),password=String(body?.password??"");
- const permissions=Array.isArray(body?.permissions)?body.permissions:[];
- if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||password.length<9||password.length>128||permissions.length>validPermissions.size||permissions.some((p:unknown)=>typeof p!=="string"||!validPermissions.has(p)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const permissions=normalizeEmployeePermissions(body?.permissions===undefined?[]:body?.permissions);
+ if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||password.length<9||password.length>128||permissions===null)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(actor,tenantId,["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const passwordHash=await hashPassword(password),db=await database().getConnection();
  try{
@@ -61,8 +59,8 @@ export async function PATCH(request:Request){
  const actor=await currentUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null);
  const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??""),password=body?.password;
- const permissions=body?.permissions;
- if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||(password!==undefined&&(typeof password!=="string"||password.length<9||password.length>128))||!Array.isArray(permissions)||permissions.length>validPermissions.size||permissions.some((p:unknown)=>typeof p!=="string"||!validPermissions.has(p))||new Set(permissions).size!==permissions.length)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const permissions=normalizeEmployeePermissions(body?.permissions);
+ if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||(password!==undefined&&(typeof password!=="string"||password.length<9||password.length>128))||permissions===null)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(actor,tenantId,["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const db=await database().getConnection();
  try{
