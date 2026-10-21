@@ -142,7 +142,13 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
 
  const allowedSection=(section:Section)=> {
   if(section==="assigned")return data.role==="waiter";
-  if(canManage||data.adminAccess||section==="overview")return true;
+  if(canManage)return true;
+  if(section==="overview")return true; // Operational landing only; manager data is never fetched for staff.
+  if(data.adminAccess)return false;
+  const sectionPolicy=modules.find(item=>item.key===section);
+  if(!sectionPolicy?.roles.includes(data.role))return false;
+  // Administrative surfaces are never unlocked merely by a similarly named staff grant.
+  if(["branches","team","marketing","customers","storefront","publicControls","remote","payments","health","subscription"].includes(section))return false;
 
   const key=({kds:"kitchen",branches:"storefront",remote:"team",payments:"internalInvoices",subscription:"reports",customers:"orders",overview:"orders"} as Partial<Record<Section,string>>)[section]??(section==="reservations"&&!dining?"serviceOrders":section);
   return data.staffPermissions.some(permission=>permission===key+".view"||permission===key+".manage");
