@@ -15,7 +15,7 @@ const orderApi="/api/restaurant/operations/pos";
 test("real offline browser: encrypted scoped catalog and order, reload, wrong passphrase and reauthorized sync",async()=>{
  test.setTimeout(90000);
  const checkpoint=label=>console.log("OFFLINE-POS-CHECKPOINT:",label);
- let currentUser=userA;const posts=[];
+ let currentUser=userA,legacyAllowed=true;const posts=[];
  const server=createServer((req,res)=>{
   const uri=new URL(req.url,"http://localhost");
   const send=(status,body,ct="application/json")=>{res.writeHead(status,{"content-type":ct,"cache-control":"no-store"});res.end(body);};
@@ -27,7 +27,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   if(uri.pathname==="/api/auth/me")return send(200,JSON.stringify({ok:true,user:{id:currentUser,email:"private-user@example.test"}}));
   if(uri.pathname===orderApi){
    if(currentUser!==userA)return send(403,JSON.stringify({ok:false,code:"ACCESS_DENIED"}));
-   if(req.method==="GET")return send(200,JSON.stringify({ok:true,orders:[{customer_name:"PRIVATE-SERVER-CUSTOMER"}],menu:[{id:itemId,name:"Test espresso",status:"active",data:{price:12}}],tables:[{id:"66666666-6666-4666-8666-666666666666",name:"Table 1",status:"available",data:{capacity:4}}],options:{},currency:"SAR"}));
+   if(req.method==="GET")return send(200,JSON.stringify({ok:true,legacyRecoveryAllowed:legacyAllowed,orders:[{customer_name:"PRIVATE-SERVER-CUSTOMER"}],menu:[{id:itemId,name:"Test espresso",status:"active",data:{price:12}}],tables:[{id:"66666666-6666-4666-8666-666666666666",name:"Table 1",status:"available",data:{capacity:4}}],options:{},currency:"SAR"}));
    if(req.method==="POST"){let payload="";req.on("data",data=>payload+=data);req.on("end",()=>{posts.push(JSON.parse(payload));send(200,JSON.stringify({ok:true}));});return;}
   }
   send(404,"missing","text/plain");
@@ -102,6 +102,49 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
  await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
  assert.equal(await page.locator("#catalog .item").count(),1);checkpoint("online-reauthorized");
+ // Seed one legacy plaintext order from this tenant/branch and one foreign
+ // order on the same shared browser. Only a server-authorized manager may
+ // migrate the matching row, retaining its request key and its original time.
+ const ownOld="77777777-7777-4777-8777-777777777777";
+ const otherOld="88888888-8888-4888-8888-888888888888";
+ await page.evaluate(async({tenant,branch,ownOld,otherOld,itemId})=>{
+  const open=indexedDB.open("foon-pos-offline-v1",2);
+  open.onupgradeneeded=()=>{for(const name of ["orders","snapshots"])if(!open.result.objectStoreNames.contains(name))open.result.createObjectStore(name,{keyPath:"id"});};
+  const database=await new Promise((resolve,reject)=>{open.onsuccess=()=>resolve(open.result);open.onerror=()=>reject(open.error);});
+  const trans=database.transaction(["orders","snapshots"],"readwrite"),orders=trans.objectStore("orders");
+  for(const [id,ownerTenant] of [[ownOld,tenant],[otherOld,"99999999-9999-4999-8999-999999999999"]]){
+   orders.put({id,tenantId:ownerTenant,branchId:branch,createdAt:"2026-10-20T08:00:00.000Z",status:"pending",payload:{branchId:branch,requestKey:id,channel:"takeaway",items:[{id:itemId,quantity:2,options:[]}],customerName:"Sensitive legacy guest"}});
+  }
+  trans.objectStore("snapshots").put({id:tenant+":"+branch,tenantId:tenant,branchId:branch,menu:[{name:"PRIVATE OLD PRODUCT"}]});
+  await new Promise((resolve,reject)=>{trans.oncomplete=resolve;trans.onerror=()=>reject(trans.error);});database.close();
+ },{tenant,branch,ownOld,otherOld,itemId});
+ await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.dataset.error==="true");
+ await page.check("#legacy-confirm");
+ await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("نُقل 1"));
+ const results=await page.evaluate(async({ownOld,otherOld,tenant,branch})=>{
+  async function read(name,store){const open=indexedDB.open(name);const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));const trx=db.transaction(store,"readonly"),req=trx.objectStore(store).getAll();const rows=await new Promise(resolve=>req.onsuccess=()=>resolve(req.result));db.close();return rows;}
+  return {legacy:await read("foon-pos-offline-v1","orders"),snapshots:await read("foon-pos-offline-v1","snapshots"),secure:await read("foon-pos-secure-v1","orders")};
+ },{ownOld,otherOld,tenant,branch});
+ assert(results.legacy.some(row=>row.id===otherOld));
+ assert(!results.legacy.some(row=>row.id===ownOld));
+ assert(!results.snapshots.some(row=>row.id===tenant+":"+branch));
+ const migrated=results.secure.find(row=>row.orderId===ownOld);
+ assert(migrated);
+ assert(!JSON.stringify(migrated).includes("Sensitive legacy guest"));
+ assert((await page.locator("#queue").innerText()).includes(ownOld));
+ // Simulated cashier/ordinary POS operator: GET POS still succeeds, but the
+ // server explicitly refuses management of unowned legacy plaintext data.
+ legacyAllowed=false;
+ await page.check("#legacy-confirm");
+ await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.textContent.includes("LEGACY_RECOVERY_MANAGER_ONLY"));
+ assert.equal(await page.locator("#notice").getAttribute("data-error"),"true");
+ await page.uncheck("#legacy-confirm");
+ await page.click("#legacy-recover");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.dataset.error==="true");
+ checkpoint("legacy-plaintext-encrypted-and-isolated");
  }finally{await context.close();await browser.close();await new Promise(resolve=>server.close(resolve));}
 });
 test("static shell cannot contain server/customer data or auth tokens",()=>{
