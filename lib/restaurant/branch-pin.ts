@@ -43,11 +43,12 @@ export async function requireAdditionalBranchUnlock(tenantId:string,branchId:str
  * merely because no branch filter was supplied. Skip only expected PIN denials;
  * propagate database failures, rather than returning a misleading empty list.
  */
-export async function onlyUnlockedBranchRows<T extends {branch_id:unknown}>(tenantId:string,userId:string,rows:T[]):Promise<T[]>{
+export async function onlyUnlockedBranchRows<T extends object>(tenantId:string,userId:string,rows:T[]):Promise<T[]>{
  const allowed=new Map<string,boolean>();
  const visible:T[]=[];
  for(const row of rows){
-  const branchId=typeof row.branch_id==="string"?row.branch_id:null;
+  const value=(row as {branch_id?:unknown}).branch_id;
+  const branchId=typeof value==="string"?value:null;
   const key=branchId??"";
   if(!allowed.has(key)){
    try{await requireAdditionalBranchUnlock(tenantId,branchId,userId);allowed.set(key,true);}
