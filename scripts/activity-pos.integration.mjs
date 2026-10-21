@@ -4,7 +4,10 @@ import {runCatalogImageChecks} from "./catalog-images.integration.mjs";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 
-export async function runActivityPosChecks({db,call,resource,register}){
+export async function runActivityPosChecks({db,call,resource:unscopedResource,register}){
+ // Explicitly select each activity's authorized branch, including after an extra
+ // branch exists. The production APIs reject ambiguous tenant-wide reads.
+ const resource=(owner,module,body,method="POST")=>call("/api/restaurant/operations/"+module+"?branch="+encodeURIComponent(owner.branch),method,body,owner.cookie,owner.tenant);
  const activities=["cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"];
  const services=new Set(["carwash","laundry","automotive","salon","publicworks"]);
  const fixtures=[];
