@@ -28,7 +28,7 @@ test("global and route-level errors display digest or report browser-only refere
 test("client incident endpoint rejects attacker-controlled details",()=>{
  const route=file("app/api/system/client-incident/route.ts");
  assert.match(route,/assertSameOrigin/);
- assert.match(route,/^WEB-\[A-F0-9\]/m);
+ assert.ok(route.includes("^WEB-[A-F0-9]{12}$"));
  assert.match(route,/\["app-error","global-error"\]/);
  assert.match(route,/logIncident/);
  assert.doesNotMatch(route,/body\?\.stack|body\?\.message|body\?\.url/);
