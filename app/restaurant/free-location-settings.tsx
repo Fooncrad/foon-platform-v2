@@ -96,12 +96,12 @@ export default function FreeLocationSettings({tenantId}:{tenantId:string}){
    <section aria-label={tr("مواقع الفروع","Branch locations","Positions des succursales")} style={{display:"grid",gap:10}}>
     <h4>{tr("مراكز الفروع لأقرب توصيل","Branch locations for nearest delivery","Succursales pour la livraison la plus proche")}</h4>
     <p>{tr("اضبط إحداثيات كل فرع مرة واحدة ليقترح النظام أقرب فرع للعميل عند توفر إحداثيات عنوانه المحفوظ. فرع بلا إحداثيات لا يدخل حساب الأقرب.","Set each branch's coordinates once. The nearest available branch is recommended when the customer's saved address has coordinates. Branches without coordinates are not distance-ranked.","Indiquez les coordonnées des succursales pour suggérer la plus proche.")}</p>
-    {branchLocations.filter(item=>item.enabled).map(item=><form key={item.id} onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);void saveBranchLocation(item.id,Number(data.get("latitude")),Number(data.get("longitude")));}} style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"end"}}>
+    {branchLocations.filter(item=>item.enabled).map(item=><div key={item.id} style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"end"}}>
      <strong style={{minWidth:130}}>{item.name}</strong>
      <label>Latitude <input name="latitude" required type="number" step="any" min={-90} max={90} dir="ltr" defaultValue={item.latitude??""}/></label>
      <label>Longitude <input name="longitude" required type="number" step="any" min={-180} max={180} dir="ltr" defaultValue={item.longitude??""}/></label>
-     <button type="submit">{tr("حفظ الفرع","Save branch","Enregistrer")}</button>
-    </form>)}
+     <button type="button" onClick={event=>{const el=event.currentTarget.parentElement;const lat=el?.querySelector<HTMLInputElement>('input[name="latitude"]')?.value??"";const lon=el?.querySelector<HTMLInputElement>('input[name="longitude"]')?.value??"";if(lat.trim()&&lon.trim()&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lon))&&Number(lat)>=-90&&Number(lat)<=90&&Number(lon)>=-180&&Number(lon)<=180)void saveBranchLocation(item.id,Number(lat),Number(lon));else setBranchError(tr("أدخل إحداثيات صحيحة.","Enter valid coordinates.","Saisissez des coordonnées valides."));}}>{tr("حفظ الفرع","Save branch","Enregistrer")}</button>
+    </div>)}
     {branchSaved&&<p role="status">{branchSaved}</p>}{branchError&&<p role="alert">{branchError}</p>}
    </section>
    <h4>{tr("التحليلات والذكاء الاصطناعي (إعدادات اختيارية)","Analytics and AI (optional settings)","Analyses et IA (facultatif)")}</h4>
