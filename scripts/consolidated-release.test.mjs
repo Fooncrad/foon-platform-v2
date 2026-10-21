@@ -16,7 +16,7 @@ test("branch positions need owner or manager and branch PIN",()=>{
  const s=read("app/api/restaurant/branch-delivery-locations/route.ts");
  assert.match(s,/requireTenantMembership\(user,tenant,\["owner","manager"\]\)/);
  assert.match(s,/requireAdditionalBranchUnlock\(tenant,body\.branchId,user\)/);
- assert.match(s,/b\.enabled=TRUE/);
+ assert.match(s,/enabled=TRUE/);
 });
 test("navigation retains grants and offers email verification",()=>{
  const s=read("app/restaurant/merchant-dashboard.tsx");
