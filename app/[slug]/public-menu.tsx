@@ -25,7 +25,7 @@ import type {MenuGroup} from "@/lib/restaurant/menu";
 import {isMenuTemplate,menuTemplates} from "@/lib/restaurant/menu-templates";
 import {cartKey,choicePrice,choicesValid,type CartLine} from "../restaurant/menu-choices";
 import {supportedCountries} from "@/lib/tenant/country-catalog";
-import {nearestDeliveryBranch,type DeliveryBranchLocation} from "@/lib/tenant/nearest-delivery-branch";
+import {nearestOperatingBranch,type DeliveryBranchLocation} from "@/lib/tenant/nearest-delivery-branch";
 import {greatCircleKm} from "@/lib/tenant/free-location";
 import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls-core";
 type MenuItem=ProductItem;
@@ -43,7 +43,7 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
  const t=translations[language];
  const localizedName=(v:{name:string;nameEn?:string;nameFr?:string})=>language==="en"?v.nameEn||v.name:language==="fr"?v.nameFr||v.name:v.name;
  const localizedDescription=(v:MenuItem)=>language==="en"?v.descriptionEn||v.description:language==="fr"?v.descriptionFr||v.description:v.description;
- const savedNearest=nearestDeliveryBranch(branchLocations,savedDelivery?.latitude,savedDelivery?.longitude,branches.map(b=>b.id));
+ const savedNearest=nearestOperatingBranch(branchLocations,savedDelivery?.latitude,savedDelivery?.longitude,branches.map(b=>b.id));
  const router=useRouter(),[category,setCategory]=useState(""),[branch,setBranch]=useState(savedNearest??branches[0]?.id??""),[cart,setCart]=useState<Record<string,CartLine>>({}),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const [checkoutAuthenticated,setCheckoutAuthenticated]=useState(false);
  const [locationCoords,setLocationCoords]=useState<{latitude:number;longitude:number}|null>(savedDelivery&&savedDelivery.latitude!==null&&savedDelivery.longitude!==null?{latitude:savedDelivery.latitude,longitude:savedDelivery.longitude}:null);
@@ -54,7 +54,7 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
   navigator.geolocation.getCurrentPosition(position=>{
    const point={latitude:position.coords.latitude,longitude:position.coords.longitude};
    setLocationCoords(point);
-   const nearest=nearestDeliveryBranch(branchLocations,point.latitude,point.longitude,branches.map(b=>b.id));
+   const nearest=nearestOperatingBranch(branchLocations,point.latitude,point.longitude,branches.map(b=>b.id));
    if(!nearest){setMessage(language==="ar"?"لم يسجّل النشاط إحداثيات فروعه بعد؛ اختر الفرع يدويًا.":"Branch coordinates are not configured; choose manually.");return;}
    const chosen=branchLocations.find(b=>b.id===nearest);
    const inside=chosen?.latitude!=null&&chosen?.longitude!=null&&greatCircleKm(point.latitude,point.longitude,chosen.latitude,chosen.longitude)<=0.15;
