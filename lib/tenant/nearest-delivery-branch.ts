@@ -1,4 +1,4 @@
-import type {RowDataPacket} from "mysql2/promise";
+import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {greatCircleKm,validPoint} from "./free-location";
 
 export type DeliveryBranchLocation={id:string;name:string;latitude:number|null;longitude:number|null;acceptsDelivery:boolean};
@@ -13,8 +13,8 @@ export function nearestDeliveryBranch(branches:DeliveryBranchLocation[], latitud
 }
 
 /** Tenant-scoped configuration of branch coordinates and enabled delivery channels. */
-export async function deliveryBranchLocations(db:{execute:(query:string,params:unknown[])=>Promise<[RowDataPacket[],unknown]>},tenantId:string):Promise<DeliveryBranchLocation[]>{
- const [rows]=await db.execute(
+export async function deliveryBranchLocations(db:Pick<PoolConnection,"execute">,tenantId:string):Promise<DeliveryBranchLocation[]>{
+ const [rows]=await db.execute<RowDataPacket[]>(
   "SELECT b.id,b.name,c.data FROM branches b LEFT JOIN restaurant_resources c ON c.id=(SELECT r.id FROM restaurant_resources r WHERE r.tenant_id=b.tenant_id AND r.branch_id=b.id AND r.kind='branch_config' AND r.status='active' AND r.archived=FALSE ORDER BY r.updated_at DESC,r.created_at DESC LIMIT 1) WHERE b.tenant_id=? AND b.enabled=TRUE ORDER BY b.created_at,b.id",
   [tenantId]);
  return rows.map(row=>{
