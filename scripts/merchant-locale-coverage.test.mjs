@@ -28,7 +28,7 @@ test("merchant action headings and source-literal translated UI text have comple
  const actions=[...actionBlock.matchAll(/(?:add|name|help):"([^"]+)"/g)].map(match=>match[1]);
  const missingActions=actions.filter(value=>!translated(value));
  assert.deepEqual(missingActions,[]);
- for(const [path,source] of [["resource-manager.tsx",merchant],["service-workspace.tsx",workspace]]){
+ for(const [path,source] of [["resource-manager.tsx",merchant],["service-workspace.tsx",workspace],["order-workspace.tsx",sourceFile("app/restaurant/order-workspace.tsx")],["plan-prices.tsx",sourceFile("app/admin/plans/plan-prices.tsx")],["billing-manager.tsx",sourceFile("app/admin/billing/billing-manager.tsx")],["market-page.tsx",sourceFile("app/market/page.tsx")],["market-country-picker.tsx",sourceFile("app/market/country-picker.tsx")],["public-menu.tsx",sourceFile("app/[slug]/public-menu.tsx")]]){
   const values=[...source.matchAll(/\b(?:translateUi|uiText)\s*\(\s*"([^"]+)"/g)].map(match=>match[1]);
   const missing=[...new Set(values.filter(value=>!translated(value)))];
   assert.deepEqual(missing,[],path+" has missing English/French translations");
@@ -56,4 +56,21 @@ test("editing a partial merchant form retains previously saved translations",()=
  assert.match(sections,/untranslated=sections\.filter/);
  assert.match(sections,/nameEn:nameEn\.trim\(\)/);
  assert.match(sections,/nameFr:nameFr\.trim\(\)/);
+});
+
+
+test("customer storefront renders saved Arabic, English and French branding",()=>{
+ const fields=new Set(resourceModules.storefront.fields.map(field=>field.key));
+ for(const key of ["brandName","brandNameEn","brandNameFr","address","addressEn","addressFr","description","descriptionEn","descriptionFr"])assert.ok(fields.has(key),key);
+ const restaurant=sourceFile("app/[slug]/public-menu.tsx");
+ const activity=sourceFile("app/[slug]/activity-storefront.tsx");
+ const info=sourceFile("app/[slug]/storefront-info.tsx");
+ assert.match(restaurant,/branding\.brandNameEn/);
+ assert.match(restaurant,/branding\.brandNameFr/);
+ assert.match(activity,/brandingText\("brandNameEn"\)/);
+ assert.match(activity,/brandingText\("addressFr"\)/);
+ assert.match(info,/branding\.descriptionEn/);
+ assert.match(info,/branding\.descriptionFr/);
+ assert.match(info,/branding\.addressEn/);
+ assert.match(info,/branding\.addressFr/);
 });
