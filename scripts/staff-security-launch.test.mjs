@@ -77,7 +77,8 @@ test("tenant-wide mutating APIs require all branch PIN unlocks",()=>{
   "app/api/restaurant/international-shipping/route.ts",
   "app/api/restaurant/mail-settings/route.ts",
   "app/api/restaurant/payments/settings/route.ts",
-  "app/api/restaurant/public-controls/route.ts"
+  "app/api/restaurant/public-controls/route.ts",
+  "app/api/restaurant/location-settings/route.ts"
  ];
  for(const path of paths)assert.match(read(path),/requireAllAdditionalBranchesUnlocked/,path);
 });
