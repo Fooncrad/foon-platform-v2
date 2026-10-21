@@ -10,7 +10,6 @@ export default function TranslationEditor({canEdit}:{canEdit:boolean}){
  useEffect(()=>{
   let live=true;
   const controller=new AbortController();
-  setLoading(true);setError("");
   fetch("/api/admin/translations?q="+encodeURIComponent(search)+"&page="+page,{signal:controller.signal,cache:"no-store"})
    .then(async response=>{
     const body=await response.json().catch(()=>null);
@@ -37,7 +36,8 @@ export default function TranslationEditor({canEdit}:{canEdit:boolean}){
   }catch(e){setMessage(t("تعذر الحفظ: ","Save failed: ","Enregistrement impossible : ")+String(e))}
   finally{setBusy("")}
  }
- function applySearch(event:FormEvent<HTMLFormElement>){event.preventDefault();setPage(1);setSearch(query);setRetry(value=>value+1)}
+ function prepareLoad(){setLoading(true);setError("")}
+ function applySearch(event:FormEvent<HTMLFormElement>){event.preventDefault();prepareLoad();setPage(1);setSearch(query);setRetry(value=>value+1)}
  return <section className="adminPanel adminOperationsPanel">
   <form className="adminOpsSearch" onSubmit={applySearch}>
    <label>{t("بحث بالمفتاح أو النص","Search by key or text","Rechercher par clé ou texte")} <input value={query} onChange={event=>setQuery(event.target.value)} placeholder={t("بحث في جميع اللغات","Search in all languages","Rechercher dans toutes les langues")}/></label>
@@ -45,11 +45,11 @@ export default function TranslationEditor({canEdit}:{canEdit:boolean}){
   </form>
   {message&&<p className="adminOpsMessage" role="status">{message}</p>}
   {loading?<p role="status">{t("جارٍ تحميل الترجمات…","Loading translations…","Chargement des traductions…")}</p>:error?
-   <div role="alert" className="adminOpsMessage"><p>{loadError}</p><button type="button" onClick={()=>setRetry(value=>value+1)}>{t("إعادة المحاولة","Retry","Réessayer")}</button></div>:
+   <div role="alert" className="adminOpsMessage"><p>{loadError}</p><button type="button" onClick={()=>{prepareLoad();setRetry(value=>value+1)}}>{t("إعادة المحاولة","Retry","Réessayer")}</button></div>:
    rows.length===0?<p>{t("لا توجد مفاتيح مسجلة مطابقة. يجب استيراد مفاتيح المشروع الفعلية أولًا.","No matching translation keys. Import the project's keys first.","Aucune clé correspondante. Importez d’abord les clés du projet.")}</p>:
    <div className="adminOpsTableWrap"><table className="adminTranslationTable"><thead><tr><th>{t("المفتاح","Key","Clé")}</th><th>العربية</th><th>English</th><th>Français</th><th>{t("الحفظ","Save","Enregistrer")}</th></tr></thead><tbody>
     {rows.map(row=><tr key={row.translation_key}><td><code dir="ltr">{row.translation_key}</code></td>{(["text_ar","text_en","text_fr"] as const).map(field=><td key={field}><textarea dir={field==="text_ar"?"rtl":"ltr"} aria-label={field+" "+row.translation_key} value={row[field]} onChange={event=>edit(row.translation_key,field,event.target.value)} readOnly={!canEdit} rows={3}/></td>)}<td>{canEdit&&<button type="button" disabled={busy===row.translation_key} onClick={()=>void save(row)}>{busy===row.translation_key?t("جارٍ الحفظ…","Saving…","Enregistrement…"):t("حفظ","Save","Enregistrer")}</button>}</td></tr>)}
    </tbody></table></div>}
-  {!loading&&!error&&<div className="adminOpsPager"><button type="button" disabled={page===1} onClick={()=>setPage(value=>Math.max(1,value-1))}>{t("السابق","Previous","Précédent")}</button><span>{t("صفحة","Page","Page")} {page}</span><button type="button" disabled={rows.length<50} onClick={()=>setPage(value=>value+1)}>{t("التالي","Next","Suivant")}</button></div>}
+  {!loading&&!error&&<div className="adminOpsPager"><button type="button" disabled={page===1} onClick={()=>{prepareLoad();setPage(value=>Math.max(1,value-1))}}>{t("السابق","Previous","Précédent")}</button><span>{t("صفحة","Page","Page")} {page}</span><button type="button" disabled={rows.length<50} onClick={()=>{prepareLoad();setPage(value=>value+1)}}>{t("التالي","Next","Suivant")}</button></div>}
  </section>;
 }
