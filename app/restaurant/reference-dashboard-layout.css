@@ -212,7 +212,7 @@
  box-shadow:0 2px 8px #151e2e0a;
  font-size:13px;font-weight:700;line-height:1.6;
  text-decoration:none;overflow-wrap:anywhere;
- transition:border-color .16s ease,background .16s ease,transform .16s ease;
+ transition:border-color .16s ease,transform .16s ease; /* No background transition: avoids white-on-white contrast flash during theme change. */
 }
 .restaurantApp .foonActivityToolLink:hover{
  border-color:var(--rc-accent,#d92483);
