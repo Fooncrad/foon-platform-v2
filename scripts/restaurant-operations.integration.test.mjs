@@ -373,7 +373,8 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal(replayConversion.body.existing,true);
   await db.execute("UPDATE tenant_subscriptions SET plan_id=? WHERE tenant_id=?",["operations-enterprise",b.tenant]);
   const foreignConversion=await resource(b,"serviceOrders",conversionPayload);
-  assert.equal(foreignConversion.body.code,"REFERENCE_NOT_FOUND",JSON.stringify(foreignConversion.body));
+   assert.equal(foreignConversion.status,403,JSON.stringify(foreignConversion.body));
+   assert.equal(foreignConversion.body.code,"BRANCH_PIN_REQUIRED","foreign tenant branch access must fail before resource lookup");
   const directDuplicate=await resource(a,"serviceOrders",{name:"Manual duplicate",status:"new",branchId:a.branch,data:{quotationId:conversionId,customerName:"Converted customer",customerPhone:"0551234567",serviceDescription:"Fixed-price service",amount:47.5}});
   assert.equal(directDuplicate.body.code,"SERVICE_ORDER_ALREADY_CREATED");
 
