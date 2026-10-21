@@ -27,7 +27,7 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
  const special=["overview","orders","pos","kds","customers","security","health","reports"];
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
- const allowed=config?config.roles as TenantRole[]:module==="reports"?allRoles:module==="customers"||module==="health"?allRoles:module==="pos"?allRoles:module==="kds"?allRoles:allRoles;
+ const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:allRoles;
  const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
  let authorizedBranch:string|null=null;
  // Existing role checks remain mandatory. Explicit employee grants narrow them further.
