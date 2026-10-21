@@ -3,7 +3,7 @@ import {useState} from 'react';
 import {useUiLanguage} from '@/lib/i18n/ui-language';
 import {importHeaders,parseImportCsv,type ImportKind,type ImportRow} from '@/lib/catalog/import-csv';
 import {formatImportError} from '@/lib/catalog/import-errors';
-export default function BulkImport({tenantId,kind,onChanged,canonical=false}:{tenantId:string;kind:ImportKind;onChanged?:()=>void;canonical?:boolean}){
+export default function BulkImport({tenantId,kind,onChanged,canonical=false,categoryHint='',productHint='',groupHint='',optionsHint='}:{tenantId:string;kind:ImportKind;onChanged?:()=>void;canonical?:boolean;categoryHint?:string;productHint?:string;groupHint?:string;optionsHint?:string}){
  const language=useUiLanguage(),t=(ar:string,en:string,fr:string)=>language==='ar'?ar:language==='en'?en:fr;
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[progress,setProgress]=useState({done:0,total:0});
  const [availableCategories,setAvailableCategories]=useState<string[]>([]),[selectedCategory,setSelectedCategory]=useState('');
@@ -19,7 +19,7 @@ export default function BulkImport({tenantId,kind,onChanged,canonical=false}:{te
     .filter(category=>Boolean(category.enabled))
     .map(category=>String(category.name_ar??category.name??'').trim()).filter(Boolean))];
    setAvailableCategories(names);
-   setSelectedCategory(previous=>names.includes(previous)?previous:names.length===1?names[0]:'');
+   setSelectedCategory(previous=>names.includes(previous)?previous:categoryHint&&names.includes(categoryHint)?categoryHint:names.length===1?names[0]:'');
   }catch{setMessage(t('تعذر تحميل الأقسام الحالية. يمكنك استخدام عمود category في الملف وإعادة المحاولة.','Could not load categories. You can still enter category names in the CSV and retry.','Impossible de charger les catégories. Renseignez category dans le CSV.'));}
  }
  const labels={categories:t('الأقسام','Categories','Catégories'),items:t('الأصناف والمنتجات','Items and products','Articles et produits'),groups:t('مجموعات الخيارات','Option groups','Groupes d’options'),values:t('الإضافات وقيم المتغيرات','Add-ons and option values','Suppléments et valeurs'),variants:t('تركيبات المتغيرات ومخزونها','Variant combinations and stock','Combinaisons et stocks')};
@@ -35,7 +35,7 @@ export default function BulkImport({tenantId,kind,onChanged,canonical=false}:{te
  const examples:Record<ImportKind,Record<string,string>>={categories:{name:'قسم تجريبي',name_en:'Sample category',name_fr:'Catégorie exemple'},items:{category:'قسم تجريبي',name:'منتج تجريبي',price:'12.50',unit:'piece'},groups:{category:'قسم تجريبي',product:'منتج تجريبي',name:'اللون',selection:'single',required:'yes',max:'1'},values:{category:'قسم تجريبي',product:'منتج تجريبي',group:'اللون',name:'أحمر',price:'0',stock:'10'},variants:{category:'قسم تجريبي',product:'منتج تجريبي',options:'اللون=أحمر',sku:'RED-001',stock:'10'}};
  const headers=importHeaders[kind].filter(k=>!canonical||!(kind==="items"?["sku","unit","quantity_mode","weight_kg","length_cm","width_cm","height_cm"]:kind==="values"?["stock"]:[]).includes(k));
  const quoteCsv=(value:string)=>/[",\r\n]/.test(value)?'"'+value.replace(/"/g,'""')+'"':value;
- const example=[headers.join(','),headers.map(k=>quoteCsv(k==='category'?selectedCategory:examples[kind][k]??'')).join(',')].join('\r\n');
+ const example=[headers.join(','),headers.map(k=>quoteCsv(k==='category'?selectedCategory:k==='product'?productHint:k==='group'?groupHint:k==='options'?optionsHint:examples[kind][k]??'')).join(',')].join('\r\n');
  function downloadTemplate(){
   const blob=new Blob(['\uFEFF',example],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
