@@ -39,8 +39,14 @@ test("restricted waiter and driver overview returns before global SQL queries",(
  const src=readFileSync(new URL("../app/api/restaurant/operations/[module]/route.ts",import.meta.url),"utf8");
  const start=src.indexOf("async function overview(");
  const global=src.indexOf("const [[summary]]=await db.execute",start);
- const restricted=src.indexOf('if(role==="waiter"||role==="driver")return scopedStaffOverview(await ordersRows(db,tenantId,role,branch,actorUserId));',start);
+ const restricted=src.indexOf('if(role==="waiter"||role==="driver"){',start);
  assert.ok(start>=0 && restricted>start && restricted<global);
+ const scopedCalls=src.slice(restricted,global);
+ assert.match(scopedCalls,/assignedOrders=await ordersRows\(db,tenantId,role,branch,actorUserId\)/);
+ assert.match(scopedCalls,/assignedWaiterTableIds\(db,tenantId,branch,actorUserId\)/);
+ assert.match(scopedCalls,/kind='waiter_call'/);
+ assert.match(scopedCalls,/JSON_UNQUOTE\(JSON_EXTRACT\(data,'\$\.tableId'\)\)/);
+ assert.match(scopedCalls,/return scopedStaffOverview\(assignedOrders,Number\(calls\?\.n\?\?0\)\)/);
  assert.match(src.slice(0,start),/import \{scopedStaffOverview\} from "@\/lib\/restaurant\/scoped-staff-overview"/);
 });
 
@@ -50,4 +56,15 @@ test("kitchen and managerial overview retains existing global branch summary log
  const fn=src.slice(i,j);
  assert.match(fn,/const financial=\["owner","manager","cashier","accountant"\]\.includes\(role\)/);
  assert.match(fn,/return \{attention,summary:/);
+});
+
+test("only assigned waiter calls show in notifications, never for drivers",()=>{
+ const own=[{status:"ready",table_id:"table-a"}];
+ const waiter=scopedStaffOverview(own,3);
+ assert.equal(waiter.summary.waiterCalls,3);
+ assert.deepEqual(waiter.attention,{tables:3});
+ const driver=scopedStaffOverview(own);
+ assert.equal(driver.summary.waiterCalls,0);
+ assert.deepEqual(driver.attention,{});
+ assert.equal(scopedStaffOverview([],NaN).summary.waiterCalls,0);
 });
