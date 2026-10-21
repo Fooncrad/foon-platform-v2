@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Independent local validation for FOON V2 PR #183; never deploys, merges or runs migrations.
 import {execFileSync,spawnSync} from 'node:child_process';
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {existsSync,readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname,resolve,join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -23,6 +23,14 @@ try{
  commit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 }catch{block('NOT_A_GIT_CHECKOUT');}
 if(branch!==expectedBranch)block('CHECK_OUT_REVIEW_BRANCH_FIRST: '+expectedBranch);
+// Next.js can load DATABASE_URL from .env.local/.env.production after this runner starts.
+// Refuse these files rather than silently using a live database during build/tests.
+for(const name of ['.env','.env.local','.env.production','.env.production.local','.env.test','.env.test.local']){
+ const file=join(root,name);
+ if(!existsSync(file))continue;
+ const vars=readFileSync(file,'utf8');
+ if(/^\s*(?:export\s+)?(?:DATABASE_URL|MYSQL_HOST|DB_HOST|MYSQL_URL)\s*=/mi.test(vars))block('MOVE_DATABASE_SETTINGS_OUT_OF_'+name+'_BEFORE_TESTING');
+}
 // Validate any configured database before running *any* step, since some build scripts
 // can import DB modules at build time. A production URL must never be inherited.
 if(process.env.DATABASE_URL){
