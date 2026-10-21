@@ -330,3 +330,24 @@
  .restaurantApp .foonActivityToolIcon{width:31px;height:31px;flex-basis:31px}
  .restaurantApp .foonActivityToolIcon svg{width:17px;height:17px}
 }
+
+/* Browser-verified regression: the workspace resolves to dark (#242832)
+ * but another presentation rule can still paint shortcut <a> backgrounds
+ * white. This scoped fallback keeps card foreground/background inseparable
+ * regardless of cross-route stylesheet ordering. */
+.restaurantApp[data-theme="light"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink{
+ background-color:#fff!important;
+ color:#182230!important;
+ border-color:#e7e8ef;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink{
+ background-color:#242832!important;
+ color:#f8f3e9!important;
+ border-color:#424c5b;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink:hover{
+ background-color:#3a2b3a!important;
+}
+.restaurantApp[data-theme="light"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink:hover{
+ background-color:#fdf0f7!important;
+}
