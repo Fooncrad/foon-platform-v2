@@ -2,16 +2,17 @@
 import {useEffect,useState,type FormEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 type Price={plan_id:string;name_ar:string;name_en:string;name_fr:string;billing_cycle:"monthly"|"yearly";currency:string;price:string};
+type Receipt={payment_request_id:string;receipt_number:string;amount:string;currency:string;issued_at:string;billing_cycle:string;name_ar:string;name_en:string;name_fr:string};
 type Request={id:string;amount:string;currency:string;billing_cycle:string;status:string;transfer_reference:string;review_note:string|null};
 export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}){
  const lang=useUiLanguage();const t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
- const [prices,setPrices]=useState<Price[]>([]),[requests,setRequests]=useState<Request[]>([]),[chosen,setChosen]=useState(""),[reference,setReference]=useState("");
+ const [prices,setPrices]=useState<Price[]>([]),[requests,setRequests]=useState<Request[]>([]),[receipts,setReceipts]=useState<Receipt[]>([]),[chosen,setChosen]=useState(""),[reference,setReference]=useState("");
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(""),[done,setDone]=useState("");
  const [evidence,setEvidence]=useState<File|null>(null);
  const reload=async()=>{
   const r=await fetch("/api/tenant/subscription-requests?tenantId="+encodeURIComponent(tenantId),{cache:"no-store"});
   const data=await r.json();if(!r.ok)throw Error(data.code??"REQUEST_FAILED");
-  setPrices(data.prices??[]);setRequests(data.requests??[]);
+  setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);
  };
  useEffect(()=>{let active=true;fetch("/api/tenant/subscription-requests?tenantId="+encodeURIComponent(tenantId),{cache:"no-store"})
   .then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.code??"LOAD_FAILED");if(active){setPrices(data.prices??[]);setRequests(data.requests??[]);}})
@@ -66,6 +67,14 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
     <button type="button" disabled={busy||!evidence} onClick={()=>void retryEvidence()}>{t("رفع إثبات للطلب المعلق","Upload evidence to pending request","Ajouter une preuve")}</button>
    </div>}
   {requests.length>0&&<div style={{display:"grid",gap:8,marginTop:16}}>{requests.slice(0,8).map(r=><p key={r.id} style={{margin:0,padding:8,border:"1px solid #8885",borderRadius:8}}>{r.amount} {r.currency} · {r.billing_cycle==="yearly"?t("سنوي","Yearly","Annuel"):t("شهري","Monthly","Mensuel")} · {r.status==="approved"?t("معتمد","Approved","Approuvé"):r.status==="rejected"?t("مرفوض","Rejected","Rejeté"):t("قيد المراجعة","Pending","En attente")}{r.review_note&&" · "+r.review_note}</p>)}</div>}
+  <section aria-label={t("إيصالات الاشتراك","Subscription receipts","Reçus d'abonnement")} style={{marginTop:20}}>
+   <h3>{t("إيصالات اشتراكات FOON","FOON subscription receipts","Reçus des abonnements FOON")}</h3>
+   {receipts.length?<div style={{display:"grid",gap:8}}>{receipts.map(receipt=><p key={receipt.payment_request_id} style={{margin:0,padding:10,border:"1px solid #8885",borderRadius:8}}>
+    <b dir="ltr">{receipt.receipt_number}</b> · {lang==="en"?receipt.name_en:lang==="fr"?receipt.name_fr:receipt.name_ar} ·
+    <span dir="ltr"> {receipt.amount} {receipt.currency}</span> ·
+    <a href={"/tenant/subscription-receipts/"+encodeURIComponent(receipt.payment_request_id)}>{t("عرض الإيصال","View receipt","Voir le reçu")}</a>
+   </p>)}</div>:<p>{t("لا توجد إيصالات اشتراك مدفوعة حتى الآن.","No paid subscription receipts yet.","Aucun reçu d'abonnement payé.")}</p>}
+  </section>
   {done&&<p role="status">{done}</p>}{error&&<p role="alert">{error}</p>}
   </>}
  </section>;
