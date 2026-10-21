@@ -2,7 +2,7 @@ import {runMeasuredCatalogChecks} from "./catalog-measured.integration.mjs";
 import {runCustomerCartChecks} from "./customer-cart.integration.mjs";
 import {runCatalogImageChecks} from "./catalog-images.integration.mjs";
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
+import {randomUUID,randomBytes,scryptSync} from "node:crypto";
 
 export async function runActivityPosChecks({db,call,register}){
  // Explicitly select each activity's authorized branch, including after an extra
@@ -57,6 +57,14 @@ export async function runActivityPosChecks({db,call,register}){
  assert.equal((await resource(owner,"pos",request())).body.code,"ITEM_UNAVAILABLE");
  ok(await catalog("PATCH",{kind:"product",id:product,enabled:true}),200);
  const foreignBranch=randomUUID();await db.execute("INSERT INTO branches(id,tenant_id,name,slug,enabled) VALUES (?,?,?,'catalog-second',TRUE)",[foreignBranch,owner.tenant,"Second branch"]);
+  // Tenant-wide catalog writes must remain blocked until the newly added
+  // branch is explicitly unlocked in this owner's authenticated session.
+  const lockedCatalog=await catalog("PATCH",{kind:"product",id:product,price:99});
+  assert.equal(lockedCatalog.status,403,"an additional locked branch blocks tenant-wide catalog mutations");
+  const pin="682945",salt=randomBytes(16).toString("hex");
+  await db.execute("UPDATE branches SET pin_salt=?,pin_hash=? WHERE id=? AND tenant_id=?",[salt,scryptSync(pin,salt,32).toString("hex"),foreignBranch,owner.tenant]);
+  const unlocked=await call("/api/restaurant/branches/unlock","POST",{tenantId:owner.tenant,branchId:foreignBranch,pin},owner.cookie,owner.tenant);
+  assert.equal(unlocked.status,200,JSON.stringify(unlocked.body));
  for(const [table,id] of [["catalog_products",product],["catalog_categories",category]]){
   await db.execute("UPDATE "+table+" SET branch_id=? WHERE id=?",[foreignBranch,id]);
   const pos=ok(await call("/api/restaurant/operations/pos?branch="+owner.branch,"GET",undefined,owner.cookie,owner.tenant),200);
