@@ -6,6 +6,7 @@ import {database} from '@/lib/db/mysql';
 import {currentUserId} from '@/lib/auth/session';
 import {requireTenantMembership} from '@/lib/auth/authorization';
 import {assertSameOrigin} from '@/lib/security/origin';
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {tenantEntitlement} from '@/lib/plans/entitlements';
 import {importKinds,validateImportRows,type ImportKind,type ImportRow} from '@/lib/catalog/import-csv';
 import {importBatch} from '@/lib/catalog/import-batch';
@@ -16,7 +17,7 @@ export const runtime='nodejs';
 const fail=(code:string,status=400)=>NextResponse.json({ok:false,code},{status});
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return fail('FORBIDDEN',403);}const user=await currentUserId();if(!user)return fail('UNAUTHENTICATED',401);
- const tenant=request.headers.get('x-foon-tenant')??'';try{await requireTenantMembership(user,tenant,['owner','manager']);}catch{return fail('FORBIDDEN',403);}
+ const tenant=request.headers.get('x-foon-tenant')??'';try{await requireTenantMembership(user,tenant,['owner','manager']);await requireAllAdditionalBranchesUnlocked(tenant,user);}catch{return fail('FORBIDDEN',403);}
  if(Number(request.headers.get('content-length')??0)>200000)return fail('BATCH_TOO_LARGE',413);
  const body=await request.json().catch(()=>null);if(!body||!importKinds.includes(body.kind)||!Array.isArray(body.rows)||body.rows.length<1||body.rows.length>5||typeof body.requestKey!=='string'||!/^[a-z0-9-]{36,100}$/i.test(body.requestKey))return fail('INVALID_INPUT');
  const kind=body.kind as ImportKind,rows=body.rows as ImportRow[];try{validateImportRows(kind,rows);}catch(e){return fail(e instanceof Error?e.message:'INVALID_ROW');}

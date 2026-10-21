@@ -4,6 +4,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {internationalEligible,internationalShipping} from "@/lib/tenant/international-shipping";
 async function scope(request:Request){const user=await currentUserId();if(!user)return null;try{const {tenantId}=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",["owner","manager"]);return {user,tenantId}}catch{return null}}
 export async function GET(request:Request){
@@ -14,6 +15,7 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const ctx=await scope(request);if(!ctx)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});
+ try{await requireAllAdditionalBranchesUnlocked(ctx.tenantId,ctx.user);}catch{return NextResponse.json({ok:false,code:"BRANCH_PIN_REQUIRED"},{status:403});}
  const body=await request.json().catch(()=>null);
  const countries=body?.countries;
  if(!Array.isArray(countries)||countries.length<1||countries.length>80||countries.some((c:unknown)=>typeof c!=="string"||!/^[A-Z]{2}$/.test(c)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});

@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {BranchPinError,requireAllAdditionalBranchesUnlocked,onlyUnlockedBranchRows} from "@/lib/restaurant/branch-pin";
 import {isPaymentProvider,paymentMissingFields,validatePaymentKeys} from "@/lib/payments/provider-catalog";
 import {decryptPaymentCredentials,encryptPaymentCredentials,paymentVaultReady} from "@/lib/payments/credential-vault.mjs";
 
@@ -15,14 +16,19 @@ const failure=(code:string,status:number)=>NextResponse.json({ok:false,code},{st
 async function access(req:Request,write:boolean){
  const user=await currentUserId();if(!user)return {error:failure("UNAUTHENTICATED",401)};
  const tenant=req.headers.get("x-foon-tenant");if(!tenant)return {error:failure("TENANT_CONTEXT_REQUIRED",400)};
- try{const ctx=await requireTenantMembership(user,tenant,write?["owner","manager"]:["owner","manager","accountant"]);return {tenantId:ctx.tenantId,userId:user};}catch{return {error:failure("FORBIDDEN",403)};}
+ let ctx;
+ try{ctx=await requireTenantMembership(user,tenant,write?["owner","manager"]:["owner","manager","accountant"]);}catch{return {error:failure("FORBIDDEN",403)};}
+ if(write){try{await requireAllAdditionalBranchesUnlocked(ctx.tenantId,user);}catch(error){if(error instanceof BranchPinError)return {error:failure(error.code,403)};console.error("[FOON payment settings PIN]",error);return {error:failure("BRANCH_PIN_UNAVAILABLE",503)};}}
+ return {tenantId:ctx.tenantId,userId:user};
 }
 export async function GET(req:Request){
  const a=await access(req,false);if(a.error)return a.error;
  try{
   // No read API returns secrets or their encrypted envelope.
   const [rows]=await database().execute<RowDataPacket[]>("SELECT s.branch_id,s.provider,s.enabled,s.currency,s.merchant_reference,s.public_key,g.mode,g.version,g.secret_key_set,g.webhook_secret_set,e.endpoint_id,(SELECT r.received_at FROM tenant_payment_webhook_receipts r WHERE r.endpoint_id=e.endpoint_id ORDER BY r.sequence_id DESC LIMIT 1) AS last_webhook_at,(SELECT r.status FROM tenant_payment_webhook_receipts r WHERE r.endpoint_id=e.endpoint_id ORDER BY r.sequence_id DESC LIMIT 1) AS last_webhook_status FROM tenant_payment_settings s LEFT JOIN tenant_payment_gateway_credentials g ON g.tenant_id=s.tenant_id AND g.scope_key=s.scope_key LEFT JOIN tenant_payment_webhook_endpoints e ON e.tenant_id=s.tenant_id AND e.scope_key=s.scope_key AND e.provider=s.provider AND e.mode=g.mode WHERE s.tenant_id=? ORDER BY s.scope_key",[a.tenantId]);
-  const settings=rows.map(row=>{
+  const unlocked=await onlyUnlockedBranchRows(a.tenantId!,a.userId!,rows.filter(row=>row.branch_id!==null));
+  const visible=[...rows.filter(row=>row.branch_id===null),...unlocked];
+  const settings=visible.map(row=>{
    const secrets={secret_key:Boolean(row.secret_key_set),webhook_secret:Boolean(row.webhook_secret_set)};
    const missing=isPaymentProvider(row.provider)?paymentMissingFields(row.provider,row.public_key,row.merchant_reference,secrets):["provider"];
    return {branch_id:row.branch_id,provider:row.provider,enabled:Boolean(row.enabled),currency:row.currency,merchant_reference:row.merchant_reference,public_key:row.public_key,webhook:{supported:["moyasar","tap","stripe","hyperpay"].includes(row.provider),url:row.endpoint_id?webhookUrl(String(row.endpoint_id)):null,ready:row.provider==="tap"?secrets.secret_key:secrets.webhook_secret,last_received_at:row.last_webhook_at?new Date(row.last_webhook_at).toISOString():null,last_status:row.last_webhook_status??null},mode:row.mode??"test",version:row.version??null,secrets,missing_fields:missing,checkout_supported:row.provider==="tap"&&row.mode==="test",status:row.provider==="manual"?(row.enabled?"cash_enabled":"disabled"):missing.length?"incomplete":row.provider==="tap"&&row.mode==="test"?(row.enabled?"test_checkout_enabled":"test_checkout_available"):"configured_pending_integration"};

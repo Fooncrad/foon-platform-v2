@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 
-export async function runActivityEntitlementGateChecks({db,call,resource,restaurant,staff,fixtures}){
+export async function runActivityEntitlementGateChecks({db,call,restaurant,staff,fixtures}){
+ // Select the current branch explicitly so the activity entitlement check is
+ // reached without weakening the multi-branch PIN guard.
+ const resource=(owner,module,body,method="POST")=>call("/api/restaurant/operations/"+module+"?branch="+encodeURIComponent(owner.branch),method,body,owner.cookie,owner.tenant);
  // Called only by the operations suite after its disposable-DB safety checks.
  const plan="activity-entitlement-guard-plan";
  await db.execute("INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,'Activity guard','Activity guard')",[plan,plan,"اختبار قيود النشاط"]);
@@ -45,7 +48,8 @@ export async function runActivityEntitlementGateChecks({db,call,resource,restaur
  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,'cashier',TRUE)",[randomUUID(),grocery.tenant,staff.user,grocery.branch]);
  for(const key of ["kitchen.view","pos.view","pos.manage"])await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),grocery.tenant,staff.user,grocery.branch,key]);
  const employee={...grocery,cookie:staff.cookie};
- const blockedKitchen=await resource(employee,"kds",undefined,"GET");assert.equal(blockedKitchen.status,403);assert.equal(blockedKitchen.body.code,"ACTIVITY_MODULE_UNAVAILABLE");
+  // Role rejection takes precedence: cashier never becomes kitchen staff merely through a grant.
+  const blockedKitchen=await resource(employee,"kds",undefined,"GET");assert.equal(blockedKitchen.status,403);assert.equal(blockedKitchen.body.code,"FORBIDDEN");
  assert.equal((await resource(employee,"pos",undefined,"GET")).status,200);
  assert.equal((await call("/api/restaurant/operations/pos?branch="+restaurant.branch,"GET",undefined,staff.cookie,grocery.tenant)).status,403);
  assert.equal((await call("/api/restaurant/operations/pos","GET",undefined,cafe.cookie,grocery.tenant)).status,403);

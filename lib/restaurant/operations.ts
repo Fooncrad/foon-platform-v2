@@ -222,19 +222,33 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  }
  if(previous&&["waiterCalls","reservations"].includes(module)){const old=parseData(previous.data);for(const key of ["requestFingerprint","customerUserId"])if(old[key])input.data[key]=old[key];lookup=previous.lookup_key??null;}
  if(module==="team"){
-  const email=String(input.data.email).toLowerCase(),memberRole=String(input.data.role),membershipRole=memberRole==="supervisor"?"waiter":memberRole;
-  if(role!=="owner"&&memberRole==="manager")throw new ResourceError("FORBIDDEN");
-  const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE email=? AND status='active' LIMIT 1 LOCK IN SHARE MODE",[email]);
-  const userId=users.length?String(users[0].id):null;
-  const [members]=userId?await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? FOR UPDATE",[tenantId,userId]):[[] as RowDataPacket[]];
+  const email=String(input.data.email).trim().toLowerCase(),memberRole=String(input.data.role);
+  const membershipRole=memberRole==="supervisor"?"waiter":memberRole;
+  // Managers are administrative accounts; ordinary employee creation must never confer that role.
+  if(memberRole==="manager")throw new ResourceError("EMPLOYEE_MANAGER_ROLE_PROTECTED");
+  if(!input.branchId)throw new ResourceError("REQUIRED_BRANCH");
+  const [validBranch]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[input.branchId,tenantId]);
+  if(!validBranch.length)throw new ResourceError("BRANCH_NOT_FOUND");
+  const prior=previous?parseData(previous.data):null;
+  if(prior&&String(prior.email??"").toLowerCase()!==email)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
+  const userId=prior?.userId?String(prior.userId):null;
   if(userId===actor)throw new ResourceError("EMPLOYEE_SELF_ASSIGNMENT_NOT_ALLOWED");
-  if(members.some(m=>m.role==="owner"))throw new ResourceError("EMPLOYEE_OWNER_ROLE_PROTECTED");
-  if(role!=="owner"&&members.some(m=>m.role==="manager"))throw new ResourceError("EMPLOYEE_MANAGER_ROLE_PROTECTED");
-  if(previous&&String(parseData(previous.data).email??"").toLowerCase()!==email)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
-  if(previous&&parseData(previous.data).userId&&parseData(previous.data).userId!==userId)throw new ResourceError("EMPLOYEE_ACCOUNT_IMMUTABLE");
-  if(userId){await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status)",[randomUUID(),tenantId,userId,membershipRole,input.status]);input.data.userId=userId;}
-  else {input.data.invitationStatus="pending";input.status="suspended";}
-  if(userId)input.data.invitationStatus="linked";
+  if(userId){
+   const [members]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' FOR UPDATE",[tenantId,userId]);
+   if(!members.length||["owner","manager"].includes(String(members[0].role)))throw new ResourceError("EMPLOYEE_OWNER_ROLE_PROTECTED");
+   await db.execute("UPDATE memberships SET role=? WHERE tenant_id=? AND user_id=? AND role NOT IN ('owner','manager')",[membershipRole,tenantId,userId]);
+   if(previous?.branch_id!==input.branchId){
+    await db.execute("DELETE FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[tenantId,userId]);
+    await db.execute("DELETE FROM employee_branch_assignments WHERE tenant_id=? AND user_id=?",[tenantId,userId]);
+   }
+   await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,?,TRUE) ON DUPLICATE KEY UPDATE role=VALUES(role),enabled=TRUE",[randomUUID(),tenantId,userId,input.branchId,membershipRole]);
+   input.data.userId=userId;input.data.invitationStatus="accepted";
+  }else{
+   const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE email=? LIMIT 1",[email]);
+   if(existing.length)throw new ResourceError("ACCOUNT_ALREADY_EXISTS");
+   // A profile alone never creates membership; the separate password endpoint does so atomically.
+   input.data.invitationStatus="pending";input.status="suspended";
+  }
   input.data.email=email;lookup=email;
  }
  if(module==="purchases"){

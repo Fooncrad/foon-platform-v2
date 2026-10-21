@@ -24,6 +24,8 @@ const COMMON_FEATURES=new Set([
 ]);
 /** Creator account privileges are not merchant subscription features. */
 const CREATOR_ONLY=new Set(["creator_profile","content_marketplace","content_pricing","media_library","watermark"]);
+/** Merchant plans never manage creator-account privileges. */
+export function isCreatorOnlyFeature(key:string):boolean{return CREATOR_ONLY.has(key);}
 const knownCapabilities=new Set<string>(Object.values(ACTIVITY_PRESETS).flatMap(modules=>[...modules]));
 const exciseActivities=new Set(["restaurant","cafe","sweets","grocery","perfume"]);
 /** Classification does not grant access; exact subscription keys remain independent. */
@@ -85,9 +87,13 @@ const SERVER_RESTRICTED_FEATURES=new Set([
  "tables","reservations","waitlist","kds","waiter_call","digital_menu","nfc_menu",
  "service_catalog","appointments","queue","room_service","split_bills","split_bill_requests",
  "table_qr","table_minimum_charge","reservation_fees","waitlist_fees","service_fees",
- "takeaway","variants","excise_tax"
+ "takeaway","variants","excise_tax",
+ "creator_profile","content_marketplace","media_library","watermark","content_pricing"
 ]);
 export function passesServerActivityRestriction(activity:unknown,featureKey:string):boolean{
+ // Creator entitlements are account-scoped, never inherited from a merchant
+ // plan, even when a legacy tenant has no recognized activity profile.
+ if(CREATOR_ONLY.has(featureKey))return false;
  if(!SERVER_RESTRICTED_FEATURES.has(featureKey)||typeof activity!=="string"||!isActivityType(activity))return true;
  return activityFeatureSupport(activity,featureKey)==="supported";
 }
