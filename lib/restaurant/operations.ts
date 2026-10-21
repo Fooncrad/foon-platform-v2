@@ -379,7 +379,9 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  if(role==="waiter"){
   if(!actorUserId||!branchId)return [];
   const tableIds=await assignedWaiterTableIds(db,tenantId,branchId,actorUserId);
-  filter+=" AND (channel='room_service'"+(tableIds.length?" OR (channel='dine_in' AND table_id IN ("+tableIds.map(()=>"?").join(",")+"))":"")+")";
+  // Room-service orders have no verified waiter/room binding: fail closed.
+  if(!tableIds.length)return [];
+  filter+=" AND channel='dine_in' AND table_id IN ("+tableIds.map(()=>"?").join(",")+")";
   values.push(...tableIds);
  }
  if(role==="driver"){
@@ -538,7 +540,9 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,payment_status,version,channel,table_id,branch_id,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,tenantId]);const order=rows[0];
  if(!order)throw new ResourceError("ORDER_NOT_FOUND");
  if(!Number.isInteger(body.version)||Number(body.version)!==Number(order.version))throw new ResourceError("CONFLICT");
- if(role==="waiter"&&order.channel==="dine_in"){
+ if(role==="waiter"){
+  // Do not authorize room-service or delivery actions without explicit assignment.
+  if(order.channel!=="dine_in")throw new ResourceError("FORBIDDEN");
   const tableIds=await assignedWaiterTableIds(db,tenantId,String(order.branch_id),actor);
   if(!order.table_id||!tableIds.includes(String(order.table_id)))throw new ResourceError("FORBIDDEN");
  }
