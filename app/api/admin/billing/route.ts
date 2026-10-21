@@ -1,3 +1,4 @@
+import {creditApprovedSubscription} from "@/lib/creator/subscription-commission";
 import {notificationCopy} from "@/scripts/customer-notification-copy.mjs";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {randomUUID} from "node:crypto";
@@ -10,7 +11,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 async function auth(write:boolean){const user=await currentActiveAdminUserId();if(!user)return {status:401,user:null};try{await requirePlatformRole(user,write?["super_admin","admin"]:["super_admin","admin","support"]);return {status:200,user};}catch{return {status:403,user:null};}}
 export async function GET(){
  const a=await auth(false);if(a.status!==200)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:a.status});
- try{const [requests]=await database().execute<RowDataPacket[]>("SELECT p.id,p.tenant_id,t.name AS tenant_name,p.plan_id,pl.name_ar AS plan_name,p.amount,p.currency,p.billing_cycle,p.transfer_reference,p.status,p.review_note,p.created_at FROM platform_payment_requests p JOIN tenants t ON t.id=p.tenant_id JOIN package_plans pl ON pl.id=p.plan_id ORDER BY p.created_at DESC LIMIT 200");return NextResponse.json({ok:true,requests});}
+ try{const [requests]=await database().execute<RowDataPacket[]>("SELECT p.id,p.tenant_id,t.name AS tenant_name,p.plan_id,pl.name_ar AS plan_name,p.amount,p.currency,p.billing_cycle,p.transfer_reference,p.status,p.review_note,p.created_at,EXISTS(SELECT 1 FROM platform_payment_transfer_evidence e WHERE e.payment_request_id=p.id) AS has_evidence FROM platform_payment_requests p JOIN tenants t ON t.id=p.tenant_id JOIN package_plans pl ON pl.id=p.plan_id ORDER BY p.created_at DESC LIMIT 200");return NextResponse.json({ok:true,requests});}
  catch{return NextResponse.json({ok:false,code:"BILLING_UNAVAILABLE"},{status:503});}
 }
 export async function PATCH(request:Request){
@@ -19,13 +20,20 @@ export async function PATCH(request:Request){
  const b=await request.json().catch(()=>null);
  if(!b||typeof b.id!=="string"||!/^[a-f0-9-]{36}$/i.test(b.id)||!["approved","rejected"].includes(b.status)||typeof b.note!=="string"||b.note.length>500||(b.status==="rejected"&&!b.note.trim()))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
- try{await db.beginTransaction();const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,tenant_id,plan_id,billing_cycle,amount,currency FROM platform_payment_requests WHERE id=? FOR UPDATE",[b.id]);if(!rows.length||rows[0].status!=="pending"){await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_NOT_PENDING"},{status:409});}
+ try{await db.beginTransaction();const [rows]=await db.execute<RowDataPacket[]>("SELECT id,status,tenant_id,plan_id,billing_cycle,CAST(amount AS CHAR) AS amount,currency,transfer_reference FROM platform_payment_requests WHERE id=? FOR UPDATE",[b.id]);if(!rows.length||rows[0].status!=="pending"){await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_NOT_PENDING"},{status:409});}
  if(b.status==="approved"){
  const payment=rows[0];
+ // The same bank transfer must not activate more than one paid subscription.
+ const [duplicates]=await db.execute<RowDataPacket[]>(
+  "SELECT id FROM platform_payment_requests WHERE id<>? AND currency=? AND transfer_reference=? AND status='approved' LIMIT 1 FOR UPDATE",
+  [payment.id,payment.currency,payment.transfer_reference]);
+ if(duplicates.length){await db.rollback();return NextResponse.json({ok:false,code:"TRANSFER_REFERENCE_ALREADY_APPROVED"},{status:409});}
+ await db.execute("INSERT INTO platform_approved_transfer_claims(currency,transfer_reference,payment_request_id) VALUES (?,?,?)",
+  [payment.currency,payment.transfer_reference,payment.id]);
  const [prices]=await db.execute<RowDataPacket[]>("SELECT price FROM package_plan_prices WHERE plan_id=? AND billing_cycle=? AND currency=? AND enabled=TRUE LIMIT 1",[payment.plan_id,payment.billing_cycle,payment.currency]);
  if(!prices.length||Math.round(Number(prices[0].price)*100)!==Math.round(Number(payment.amount)*100)){await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_PRICE_MISMATCH"},{status:409});}
- const [plans]=await db.execute<RowDataPacket[]>("SELECT id FROM package_plans WHERE id=? AND enabled=TRUE",[payment.plan_id]);
- if(!plans.length){await db.rollback();return NextResponse.json({ok:false,code:"PLAN_NOT_AVAILABLE"},{status:409});}
+ const [plans]=await db.execute<RowDataPacket[]>("SELECT id,code FROM package_plans WHERE id=? AND enabled=TRUE",[payment.plan_id]);
+ if(!plans.length||plans[0].code==="free"||Number(payment.amount)<=0){await db.rollback();return NextResponse.json({ok:false,code:"PAID_PLAN_REQUIRED"},{status:409});}
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[payment.tenant_id]);
  const period=payment.billing_cycle==="yearly"?"INTERVAL 1 YEAR":"INTERVAL 1 MONTH";
  if(existing.length)await db.execute("UPDATE tenant_subscriptions SET plan_id=?,status='active',starts_at=IF(status='active' AND ends_at>NOW(),starts_at,NOW()),ends_at=DATE_ADD(GREATEST(COALESCE(ends_at,NOW()),NOW()),"+period+") WHERE tenant_id=?",[payment.plan_id,payment.tenant_id]);
@@ -33,6 +41,7 @@ export async function PATCH(request:Request){
  }
  if(b.status==="approved")await db.execute("INSERT INTO platform_payment_receipts(id,payment_request_id,tenant_id,receipt_number,amount,currency) VALUES (?,?,?,?,?,?)",[randomUUID(),rows[0].id,rows[0].tenant_id,"FOON-"+rows[0].id,rows[0].amount,rows[0].currency]);
  await db.execute("UPDATE platform_payment_requests SET status=?,review_note=?,reviewed_by=?,reviewed_at=NOW() WHERE id=?",[b.status,b.note.trim(),a.user,b.id]);
+ if(b.status==="approved")await creditApprovedSubscription(db,rows[0] as {id:string;tenant_id:string;plan_id:string;billing_cycle:string;amount:string;currency:string});
  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,?,?,?)",[a.user,"platform.payment."+b.status,"payment_request",b.id]);
  if(b.status==="approved"){
  const [rule]=await db.execute<RowDataPacket[]>("SELECT enabled,email_enabled FROM platform_notification_rules WHERE event_key='subscription_renewal' LIMIT 1");
@@ -42,5 +51,5 @@ export async function PATCH(request:Request){
  }
  }
  await db.commit();dispatchNotifications();return NextResponse.json({ok:true});}
- catch{await db.rollback();return NextResponse.json({ok:false,code:"PAYMENT_REVIEW_FAILED"},{status:503});}finally{db.release();}
+ catch(error){await db.rollback();return NextResponse.json({ok:false,code:(error as {code?:string}).code==="ER_DUP_ENTRY"?"TRANSFER_REFERENCE_ALREADY_APPROVED":"PAYMENT_REVIEW_FAILED"},{status:(error as {code?:string}).code==="ER_DUP_ENTRY"?409:503});}finally{db.release();}
 }

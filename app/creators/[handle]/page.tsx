@@ -70,6 +70,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
    </div>
    <img src={"/api/creators/"+encodeURIComponent(handle)+"/qr"} alt={"QR لملف "+String(profile.display_name)} width={200} height={200}/>
   </section>
+  <section className="creatorPublicSocial"><h2>أنشئ متجرك أو مطعمك عبر هذا المبدع</h2><p>سجل نشاطًا جديدًا ثم اختر باقة مدفوعة بعد التسجيل. لا تُحتسب أي عمولة إلا بعد تأكيد المنصة للدفع.</p><Link href={"/register?ref="+encodeURIComponent(handle)}>إنشاء متجر أو مطعم برابط صانع المحتوى</Link></section>
   <section><h2>معرض الأعمال المنشورة</h2>
    {images.length?<div className="creatorPublicGallery">{images.map(item=><figure key={String(item.id)}>
     <img src={"/api/creators/"+encodeURIComponent(handle)+"/media/"+encodeURIComponent(String(item.id))} alt={String(item.caption||"عمل منشور")} loading="lazy" width={320} height={320}/>
