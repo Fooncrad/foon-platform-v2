@@ -16,7 +16,7 @@ async function requireSecurePosReauth(){
  await new Promise(resolve=>{
   const open=indexedDB.open("foon-pos-secure-v1",1);
   open.onupgradeneeded=()=>{
-   if(!open.result.objectStoreNames.contains("profiles"))open.result.createObjectStore("profiles",{keyPath:"id"});
+   for(const store of ["profiles","orders"])if(!open.result.objectStoreNames.contains(store))open.result.createObjectStore(store,{keyPath:"id"});
   };
   open.onerror=()=>resolve();
   open.onsuccess=()=>{
