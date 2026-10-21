@@ -53,7 +53,9 @@ footer{font-size:.88rem;color:#c9c4ba;margin:20px 0}
 <section id="legacy-recovery" aria-label="استرداد الطلبات القديمة"><h2>استرداد الطلبات المحلية القديمة</h2>
 <p>التخزين القديم غير مشفر ولم يسجل هوية الموظف. الاسترداد متاح فقط لمالك النشاط أو مدير الفرع المخوّل، أثناء اتصال الإنترنت. لن تُعرض بيانات أو تنقل طلبات من متجر أو فرع آخر، ولن يُحذف أي طلب إلا بعد إثبات حفظه مشفرًا.</p>
 <label><input id="legacy-confirm" type="checkbox" style="width:auto"> أؤكد أنني مسؤول عن طلبات هذا الفرع وأنني راجعت سجل الطلبات لتجنب الإرسال المكرر.</label>
-<button id="legacy-recover" class="secondary">تحويل الطلبات القديمة لهذا الفرع إلى التخزين المشفّر</button></section>
+<button id="legacy-recover" class="secondary">تحويل الطلبات القديمة لهذا الفرع إلى التخزين المشفّر</button>
+<label>استيراد ملف طوارئ قديم غير مشفّر (JSON) <input id="legacy-import-file" type="file" accept=".json,application/json"></label>
+<p class="muted">يتطلب الاستيراد إنترنتًا وصلاحية المالك أو المدير وتأكيد المسؤولية أعلاه. سيُشفّر محتوى الملف داخل الجهاز فور التحقق دون تخزين نسخته المكشوفة. يبقى ملف المصدر عندك؛ احذفه من الجهاز بعد التأكد من نجاح الاسترداد والمزامنة.</p></section>
 <h2>طلبات تنتظر المزامنة</h2><div id="queue"></div>
 <div class="row"><button id="sync-btn">تحقق من الدخول وزامن الآن</button><button id="export-btn" class="secondary">تصدير نسخة مشفرة للطوارئ</button><label>استعادة نسخة مشفرة <input id="import-file" type="file" accept=".json,application/json"></label></div>
 </section>
