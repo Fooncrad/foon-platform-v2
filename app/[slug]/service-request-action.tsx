@@ -1,5 +1,6 @@
 "use client";
 import InlineCustomerAuth from "./inline-customer-auth";
+import {useRouter} from "next/navigation";
 import {useRef,useState,type FormEvent} from "react";
 type Language="ar"|"en"|"fr";
 type RequestType="appointment"|"quote"|"inquiry";
@@ -9,6 +10,7 @@ const labels={
  fr:{appointment:"Demander un rendez-vous",quote:"Demander un devis",inquiry:"Se renseigner",phone:"Téléphone",notes:"Détails de la demande",date:"Rendez-vous souhaité",send:"Envoyer",close:"Fermer",working:"Envoi…",success:"Demande reçue. La réservation n’est pas confirmée.",login:"Connectez-vous pour envoyer",register:"Créer un compte",disabled:"La connexion client est temporairement désactivée pour cette entreprise.",fail:"Échec de l’envoi. Vérifiez vos informations.",limit:"Limite temporaire de demandes atteinte.",pending:"Statut : à vérifier",reference:"Référence",track:"Suivre depuis mon compte"}
 };
 export default function ServiceRequestAction({slug,serviceId,serviceName,mode,language,signedIn,linked,defaultPhone="",customerLoginEnabled=true}:{slug:string;serviceId:string;serviceName:string;mode:RequestType;language:Language;signedIn:boolean;linked:boolean;defaultPhone?:string;customerLoginEnabled?:boolean}){
+ const router=useRouter();
  const t=labels[language],requestRef=useRef<{key:string;payload:string}|null>(null);
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[success,setSuccess]=useState(""),[error,setError]=useState("");
  const [joined,setJoined]=useState(linked),[authenticated,setAuthenticated]=useState(signedIn);
@@ -49,7 +51,7 @@ export default function ServiceRequestAction({slug,serviceId,serviceName,mode,la
     {!authenticated&&<p role="status">{t.login}</p>}
     <div className="foonServiceRequestButtons"><button type="submit" disabled={busy||!authenticated}>{busy?t.working:t.send}</button><button type="button" disabled={busy} onClick={()=>setOpen(false)}>{t.close}</button></div>
    </form>
-   {!authenticated&&(customerLoginEnabled?<InlineCustomerAuth slug={slug} language={language} purpose="service" onSuccess={()=>{setAuthenticated(true);setJoined(true);setError("");window.dispatchEvent(new CustomEvent("foon:customer-authenticated",{detail:{slug}}));}}/>:<p role="status">{t.disabled}</p>)}
+   {!authenticated&&(customerLoginEnabled?<InlineCustomerAuth slug={slug} language={language} purpose="service" onSuccess={()=>{setAuthenticated(true);setJoined(true);setError("");window.dispatchEvent(new CustomEvent("foon:customer-authenticated",{detail:{slug}}));router.refresh();}}/>:<p role="status">{t.disabled}</p>)}
    </div>}
   </div>}
  </div>;
