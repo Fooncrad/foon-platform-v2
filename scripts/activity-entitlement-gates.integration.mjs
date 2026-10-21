@@ -48,7 +48,8 @@ export async function runActivityEntitlementGateChecks({db,call,restaurant,staff
  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,'cashier',TRUE)",[randomUUID(),grocery.tenant,staff.user,grocery.branch]);
  for(const key of ["kitchen.view","pos.view","pos.manage"])await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),grocery.tenant,staff.user,grocery.branch,key]);
  const employee={...grocery,cookie:staff.cookie};
- const blockedKitchen=await resource(employee,"kds",undefined,"GET");assert.equal(blockedKitchen.status,403);assert.equal(blockedKitchen.body.code,"ACTIVITY_MODULE_UNAVAILABLE");
+  // Role rejection takes precedence: cashier never becomes kitchen staff merely through a grant.
+  const blockedKitchen=await resource(employee,"kds",undefined,"GET");assert.equal(blockedKitchen.status,403);assert.equal(blockedKitchen.body.code,"FORBIDDEN");
  assert.equal((await resource(employee,"pos",undefined,"GET")).status,200);
  assert.equal((await call("/api/restaurant/operations/pos?branch="+restaurant.branch,"GET",undefined,staff.cookie,grocery.tenant)).status,403);
  assert.equal((await call("/api/restaurant/operations/pos","GET",undefined,cafe.cookie,grocery.tenant)).status,403);
