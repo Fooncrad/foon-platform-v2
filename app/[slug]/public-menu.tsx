@@ -47,7 +47,7 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
  const router=useRouter(),[category,setCategory]=useState(""),[branch,setBranch]=useState(savedNearest??branches[0]?.id??""),[cart,setCart]=useState<Record<string,CartLine>>({}),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
  const [checkoutAuthenticated,setCheckoutAuthenticated]=useState(false);
  const [locationCoords,setLocationCoords]=useState<{latitude:number;longitude:number}|null>(savedDelivery&&savedDelivery.latitude!==null&&savedDelivery.longitude!==null?{latitude:savedDelivery.latitude,longitude:savedDelivery.longitude}:null);
- const [orderChannel,setOrderChannel]=useState("takeaway");
+ const [orderChannel,setOrderChannel]=useState(controls.takeaway?"takeaway":controls.dineIn?"dine_in":controls.delivery?"delivery":controls.roomService&&services.roomService?"room_service":"takeaway");
  const [reservations,setReservations]=useState<CustomerReservation[]>([]),[reservationId,setReservationId]=useState(""),[roomNumber,setRoomNumber]=useState("");
  function locateBranch(){
   if(!navigator.geolocation){setMessage(language==="ar"?"الموقع غير متاح؛ اختر الفرع ونوع الطلب يدويًا.":language==="en"?"Location unavailable; choose a branch and order type.":"Localisation indisponible ; choisissez une succursale.");return;}
