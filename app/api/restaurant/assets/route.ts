@@ -4,6 +4,7 @@ import {NextResponse} from 'next/server';
 import type {RowDataPacket} from 'mysql2/promise';
 import {currentUserId} from '@/lib/auth/session';
 import {requireTenantMembership} from '@/lib/auth/authorization';
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {tenantEntitlement} from '@/lib/plans/entitlements';
 import {database} from '@/lib/db/mysql';
 import {assertSameOrigin} from '@/lib/security/origin';
@@ -13,7 +14,7 @@ export const runtime='nodejs';
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:'FORBIDDEN'},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false},{status:401});let tenant:string;
- try{tenant=(await requireTenantMembership(user,request.headers.get('x-foon-tenant')??'',['owner','manager'])).tenantId;}catch{return NextResponse.json({ok:false},{status:403});}
+ try{tenant=(await requireTenantMembership(user,request.headers.get('x-foon-tenant')??'',['owner','manager'])).tenantId;await requireAllAdditionalBranchesUnlocked(tenant,user);}catch{return NextResponse.json({ok:false},{status:403});}
  const [menu,logo]=await Promise.all([tenantEntitlement(tenant,'digital_menu'),tenantEntitlement(tenant,'branding.logo')]);if(!menu.enabled&&!logo.enabled)return NextResponse.json({ok:false,code:'PLAN_FEATURE_REQUIRED'},{status:403});
  if(Number(request.headers.get('content-length')??0)>11*1048576)return NextResponse.json({ok:false,code:'IMAGE_TOO_LARGE'},{status:413});
  try{
