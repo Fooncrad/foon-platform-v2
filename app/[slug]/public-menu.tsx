@@ -49,6 +49,22 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
  const [locationCoords,setLocationCoords]=useState<{latitude:number;longitude:number}|null>(savedDelivery&&savedDelivery.latitude!==null&&savedDelivery.longitude!==null?{latitude:savedDelivery.latitude,longitude:savedDelivery.longitude}:null);
  const [orderChannel,setOrderChannel]=useState("takeaway");
  const [reservations,setReservations]=useState<CustomerReservation[]>([]),[reservationId,setReservationId]=useState(""),[roomNumber,setRoomNumber]=useState("");
+ function locateBranch(){
+  if(!navigator.geolocation){setMessage(language==="ar"?"الموقع غير متاح؛ اختر الفرع ونوع الطلب يدويًا.":language==="en"?"Location unavailable; choose a branch and order type.":"Localisation indisponible ; choisissez une succursale.");return;}
+  navigator.geolocation.getCurrentPosition(position=>{
+   const point={latitude:position.coords.latitude,longitude:position.coords.longitude};
+   setLocationCoords(point);
+   const nearest=nearestDeliveryBranch(branchLocations,point.latitude,point.longitude,branches.map(b=>b.id));
+   if(!nearest){setMessage(language==="ar"?"لم يسجّل النشاط إحداثيات فروعه بعد؛ اختر الفرع يدويًا.":"Branch coordinates are not configured; choose manually.");return;}
+   const chosen=branchLocations.find(b=>b.id===nearest);
+   const inside=chosen?.latitude!=null&&chosen?.longitude!=null&&greatCircleKm(point.latitude,point.longitude,chosen.latitude,chosen.longitude)<=0.15;
+   if(Object.values(cart).some(line=>line.quantity>0)&&nearest!==branch){setMessage(language==="ar"?"الفرع الأقرب هو "+(chosen?.name??"")+"؛ راجع السلة قبل تغيير الفرع.":"Nearest branch: "+(chosen?.name??"")+". Review the cart before switching.");return;}
+   if(nearest!==branch){setBranch(nearest);setReservationId("");setVisibleLimit(24);}
+   if(inside&&controls.dineIn&&tables.some(table=>table.branchId===nearest))setOrderChannel("dine_in");
+   else if(controls.takeaway)setOrderChannel("takeaway");
+   setMessage(inside?(language==="ar"?"أنت بالقرب من الفرع؛ اختر طاولة شاغرة للطلب المحلي.":"You appear nearby. Choose an available dine-in table."):(language==="ar"?"تم اقتراح أقرب فرع؛ الموقع لا يثبت وجودك داخل المطعم.":"Nearest branch suggested; GPS does not prove you are inside."));
+  },()=>setMessage(language==="ar"?"تعذّر استخدام الموقع. اختر الفرع يدويًا.":"Location unavailable; select a branch manually."),{enableHighAccuracy:false,timeout:12000});
+ }
  const isLinked=linked||checkoutAuthenticated;
  const allowCart=controls.sales&&controls.cart&&controls.catalog&&(controls.takeaway||controls.delivery||controls.dineIn||(controls.roomService&&services.roomService));
  const enabledChannels=[controls.takeaway&&"takeaway",controls.dineIn&&"dine_in",controls.delivery&&"delivery",controls.roomService&&services.roomService&&"room_service",controls.reservations&&controls.dineIn&&services.reservations&&"reservation"].filter(Boolean) as string[];
