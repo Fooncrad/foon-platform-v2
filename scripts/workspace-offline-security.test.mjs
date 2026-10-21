@@ -21,7 +21,7 @@ function fakeWorker(online=false){
   async match(url){for(const name of buckets.keys()){const b=await this.open(name),found=await b.match(url);if(found)return found;}return undefined;},
   async has(name){return buckets.has(name);}
  };
- const self={location:{origin},navigator:{onLine:online},clients:{claim:async()=>{},get:async()=>null},skipWaiting:async()=>{},addEventListener(name,handler){handlers[name]=handler;}};
+ const self={location:{origin},navigator:{onLine:online},clients:{claim:async()=>{},get:async()=>null,matchAll:async()=>[]},skipWaiting:async()=>{},addEventListener(name,handler){handlers[name]=handler;}};
  const fetch=async(request,options)=>{fetches.push({url:request.url||request,options});if(!online)throw Error('offline');return new Response('<h1>PRIVATE ALICE</h1>',{headers:{'content-type':'text/html'}});};
  vm.runInNewContext(source,{self,caches,fetch,URL,Response,Date,Set,Promise,console});
  async function fire(type,request){const pending=[];let response;const event={request,waitUntil(promise){pending.push(promise);},respondWith(promise){response=Promise.resolve(promise);}};handlers[type](event);const value=response?await response:undefined;await Promise.all(pending);return value;}
