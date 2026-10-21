@@ -15,9 +15,9 @@ export default async function VerifyEmailPage({searchParams}:{searchParams:Promi
   try{const [rows]=await database().execute<RowDataPacket[]>("SELECT email_verified_at FROM users WHERE id=? AND status='active' LIMIT 1",[user]);verified=Boolean(rows[0]?.email_verified_at);}catch{}
  }
  const labels={
-  ar:{title:"تأكيد البريد الإلكتروني",message:"أرسلنا رابط التأكيد إلى بريدك عند التسجيل. افتح الرسالة لتأكيد عنوانك. يمكنك مواصلة استخدام حسابك أثناء انتظار وصولها.",back:"الانتقال إلى حسابي",login:"تسجيل الدخول"},
-  en:{title:"Verify your email",message:"A verification link was queued when you registered. Open the email to confirm your address. You can continue using your account while waiting.",back:"Continue to my account",login:"Sign in"},
-  fr:{title:"Vérifier votre adresse e-mail",message:"Un lien de vérification a été mis en file d’attente lors de l’inscription. Ouvrez le message pour confirmer votre adresse. Vous pouvez continuer à utiliser votre compte pendant ce temps.",back:"Continuer vers mon compte",login:"Se connecter"}
+  ar:{title:"تأكيد البريد الإلكتروني",message:"إذا وصلتك رسالة تأكيد فافتح رابطها لتوثيق بريدك. وإذا لم تصلك، اضغط «إعادة إرسال رابط التأكيد» أدناه. يمكنك استخدام حسابك أثناء الانتظار.",back:"الانتقال إلى حسابي",login:"تسجيل الدخول"},
+  en:{title:"Verify your email",message:"Open a verification link if you received one. Otherwise, select “Resend verification email” below. You can continue using your account while waiting.",back:"Continue to my account",login:"Sign in"},
+  fr:{title:"Vérifier votre adresse e-mail",message:"Ouvrez le lien reçu pour vérifier votre adresse. Sinon, cliquez sur « Renvoyer le lien de vérification » ci-dessous. Vous pouvez continuer à utiliser votre compte pendant l’attente.",back:"Continuer vers mon compte",login:"Se connecter"}
  }[language];
  return <main className="auth-shell" lang={language} dir={language==="ar"?"rtl":"ltr"}><section className="auth-card">
   <Link className="auth-brand" href="/">FOON</Link>

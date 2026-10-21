@@ -1,0 +1,33 @@
+.restaurantApp .merchantEmailVerificationNotice{
+ display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 18px;
+ padding:14px 16px;margin-block-end:14px;border:1px solid #f5c47d;
+ background:#fff8eb;color:#38260d;border-radius:14px;
+}
+.restaurantApp .merchantEmailVerificationNotice>p:first-child{margin:0;flex:1 1 280px;line-height:1.7}
+.restaurantApp .merchantEmailVerificationActions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.restaurantApp .merchantEmailVerificationSend,
+.restaurantApp .merchantEmailVerificationOpen{
+ display:inline-flex;justify-content:center;align-items:center;min-height:44px;
+ padding:9px 16px;border-radius:10px;font-weight:700;text-align:center;text-decoration:none;
+}
+.restaurantApp .merchantEmailVerificationSend{
+ color:#fff;background:#a92363;border:1px solid #a92363;
+}
+.restaurantApp .merchantEmailVerificationSend:hover:not(:disabled){background:#831849}
+.restaurantApp .merchantEmailVerificationOpen{
+ color:#662045;background:#fff;border:1px solid #af7592;
+}
+.restaurantApp .merchantEmailVerificationOpen:hover{background:#fce7f2}
+.restaurantApp .merchantEmailVerificationFeedback{
+ flex-basis:100%;margin:0;font-weight:600;line-height:1.6;
+ overflow-wrap:anywhere;
+}
+.restaurantApp .merchantEmailVerificationNotice button:focus-visible,
+.restaurantApp .merchantEmailVerificationNotice a:focus-visible{
+ outline:3px solid #a92363;outline-offset:3px
+}
+@media(max-width:600px){
+ .restaurantApp .merchantEmailVerificationActions{width:100%}
+ .restaurantApp .merchantEmailVerificationSend,
+ .restaurantApp .merchantEmailVerificationOpen{flex:1 1 210px;min-width:0}
+}
