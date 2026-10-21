@@ -201,29 +201,25 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
  await expect(page.locator(".restaurantOrderCards .restaurantPaymentBadge").getByText("مدفوع",{exact:true})).toBeVisible();
- // Exercise the real browser queue, reconnect, and replay the same request key.
+ // Plaintext POS storage is retired; offline sales use the separate encrypted
+ // offline shell, tested in workspace-offline-pos.browser.test.mjs.
  const queuedOrders=()=>page.evaluate(()=>new Promise((resolve,reject)=>{
   const open=indexedDB.open('foon-pos-offline-v1',2);
   open.onerror=()=>reject(open.error);
   open.onsuccess=()=>{const db=open.result,tx=db.transaction('orders','readonly'),read=tx.objectStore('orders').getAll();read.onsuccess=()=>resolve(read.result);read.onerror=()=>reject(read.error);tx.oncomplete=()=>db.close();};
  }));
+ const legacyCount=(await queuedOrders()).length;
  await page.locator('.restaurantPosMenu article').filter({hasText:'قهوة المعاينة'}).getByRole('button').click();
  await page.context().setOffline(true);
- let offlinePayload;
  try{
   await expect.poll(()=>page.evaluate(()=>navigator.onLine)).toBe(false);
   await page.getByRole('button',{name:'إنشاء الطلب',exact:true}).click();
-  await expect(page.getByText('حُفظ الطلب على هذا الجهاز، ولم يصل للخادم بعد. ستتم محاولة مزامنته عند عودة الإنترنت.',{exact:true})).toBeVisible();
-  await expect.poll(async()=>(await queuedOrders()).length).toBe(1);
-  offlinePayload=(await queuedOrders())[0].payload;
+  await expect(page.getByText(/الطلب لم يُحفظ.*نقطة البيع المحلية المشفرة/)).toBeVisible();
+  expect((await queuedOrders()).length).toBe(legacyCount);
  }finally{await page.context().setOffline(false);}
- await expect.poll(async()=>(await queuedOrders()).length,{timeout:15000}).toBe(0);
  const posHeaders={origin,'x-foon-tenant':visualTenant.tenant};
- const synced=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});
- const syncedOrders=(await synced.json()).orders;expect(syncedOrders).toHaveLength(2);
- const offlineOrder=syncedOrders.find(order=>order.payment_status==='unpaid');expect(offlineOrder.total).toBe(10);
- const replay=await page.request.post(origin+'/api/restaurant/operations/pos',{headers:posHeaders,data:offlinePayload});expect(replay.status()).toBe(201);expect((await replay.json()).id).toBe(offlineOrder.id);
- const afterReplay=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});expect((await afterReplay.json()).orders).toHaveLength(2);
+ const afterOffline=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});
+ expect((await afterOffline.json()).orders).toHaveLength(1);
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 SAR",{exact:true})).toBeVisible();
  await captureScreenshot(page,{path:"work/merchant-desktop.png",fullPage:true});
