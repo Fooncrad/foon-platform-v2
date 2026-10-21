@@ -7,6 +7,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {isActivityType} from "@/lib/platform/activity-presets";
 import {parseCatalogMeasurements,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 export const runtime="nodejs";
@@ -15,6 +16,7 @@ async function scope(request:Request){
  const tenant=request.headers.get("x-foon-tenant");if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
   const ctx=await requireTenantMembership(user,tenant,["owner","manager"],request.method!=="GET");
+  if(request.method!=="GET")await requireAllAdditionalBranchesUnlocked(ctx.tenantId,user);
   const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);
   const activity=String(rows[0]?.activity_code??"");
   if(!isActivityType(activity)||activity==="restaurant")return {error:NextResponse.json({ok:false,code:"ACTIVITY_NOT_SUPPORTED"},{status:409})};
