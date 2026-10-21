@@ -1,4 +1,4 @@
-const CACHE="foon-pos-shell-v4";
+const CACHE="foon-pos-shell-v5";
 const SHELL=["/offline","/foon-offline-pos.html","/foon-offline-pos.js"];
 const MENU_CACHE="foon-public-menu-v1",MAX_AGE=7*86400000;
 // These roots belong to authenticated dashboards, never to public cached menus.
