@@ -45,6 +45,8 @@ export async function runCustomerCartChecks({db,call,fixtures}){
    assert.equal(String(record.customer_user_id),String(customer.body.user.id),'delivery belongs to the signed-in customer account');
    const snapshot=typeof record.checkout_snapshot==='string'?JSON.parse(record.checkout_snapshot):record.checkout_snapshot;
    assert.equal(snapshot.assignedDriverId,driverResource,'delivery is accepted only with a real available branch driver');
+   // Restore the synthetic stock fixture so the shared idempotency assertions remain isolated.
+   await db.execute('UPDATE catalog_products SET stock_quantity=5 WHERE id=?',[product]);
   }
   if(activity==='cafe'){const reads=await Promise.all(Array.from({length:20},()=>call(path,'GET')));assert.ok(reads.every(r=>r.status===200));}
   const attempts=await Promise.all(Array.from({length:12},()=>call('/api/customer/orders','POST',payload,customer.cookie)));
