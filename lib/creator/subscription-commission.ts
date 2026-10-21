@@ -1,3 +1,4 @@
+import {queueCommissionNotice} from "./commission-notices.ts";
 import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {validCreatorHandle} from "./profile-policy.ts";
@@ -46,8 +47,10 @@ export async function creditApprovedSubscription(db:PoolConnection,payment:{id:s
  const base=String(payment.amount);
  const amount=commissionAmount(base,rate);
  if(amount==="0.00")return;
+ const commissionId=randomUUID();
  await db.execute(
   "INSERT INTO customer_creator_commissions(id,payment_request_id,tenant_id,creator_user_id,plan_id,billing_cycle,currency,base_amount,commission_basis_points,amount,status) "+
   "VALUES (?,?,?,?,?,?,?,?,?,?,'earned')",
-  [randomUUID(),payment.id,payment.tenant_id,cfg.creator_user_id,payment.plan_id,payment.billing_cycle,payment.currency,base,rate,amount]);
+  [commissionId,payment.id,payment.tenant_id,cfg.creator_user_id,payment.plan_id,payment.billing_cycle,payment.currency,base,rate,amount]);
+ await queueCommissionNotice(db,commissionId,"earned");
 }
