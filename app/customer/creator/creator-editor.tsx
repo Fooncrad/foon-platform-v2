@@ -1,6 +1,8 @@
 "use client";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
+import CreatorSocialLinksEditor from "./social-links-editor";
+import CreatorQr from "./creator-qr";
 type Profile={handle:string;display_name:string;bio:string;visibility:"public"|"private"};
 type Portfolio={id:string;media_id:string;caption:string;file_name:string};
 type LibraryImage={id:string;name:string};
@@ -62,6 +64,8 @@ export default function CreatorEditor(){
     <button type="submit" disabled={busy}>{busy?t("جارٍ الحفظ...","Saving...","Enregistrement..."):t("حفظ الملف والخصوصية","Save profile and visibility","Enregistrer le profil")}</button>
    </form>
    {publicUrl&&<p className="creatorPublicLink"><a href={publicUrl} target="_blank" rel="noopener noreferrer">{t("عرض ملفي العام","Open my public profile","Voir mon profil public")}</a></p>}
+   <CreatorSocialLinksEditor ready={Boolean(saved)}/>
+   {saved?.visibility==="public"&&<CreatorQr handle={saved.handle}/>}
    {saved&&<section className="creatorPortfolio">
     <h2>{t("معرض أعمالي","My portfolio","Mon portfolio")}</h2>
     <p>{t("اختر صورًا من مكتبتك لإظهارها في ملفك العام، بحد أقصى 24 صورة.","Select up to 24 images from your library for your public profile.","Choisissez jusqu’à 24 images de votre bibliothèque.")}</p>
