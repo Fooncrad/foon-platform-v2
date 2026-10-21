@@ -6867,5 +6867,10 @@ export const uiCopy:Record<string,readonly [string,string]>={
  "خدمة تحديد موقع العميل": ["Customer location service", "Service de géolocalisation du client"],
  "إضافة طابعة": ["Add printer", "Ajouter une imprimante"],
  "اسم الطابعة": ["Printer name", "Nom de l’imprimante"],
+ "لا يمكن طباعة الإيصال النهائي إلا بعد اكتمال الطلب وتسجيل الدفع.": ["The final receipt can be printed only after the order is completed and paid.", "Le reçu final ne peut être imprimé qu’après la fin de la commande et l’enregistrement du paiement."],
+ "تهيئة / فتح نقطة البيع المحلية المشفرة": ["Set up / open encrypted local POS", "Configurer / ouvrir le point de vente local chiffré"],
+ "نقطة الاستلام": ["Pickup point", "Point de retrait"],
+ "طلب مسبق مرتبط بحجز": ["Preorder linked to a reservation", "Précommande liée à une réservation"],
+ "مرتبط بالحجز": ["Linked to reservation", "Lié à la réservation"],
 };
 export function uiText(value:string,language:UiLanguage):string{return language==="ar"?value:uiCopy[value]?.[language==="en"?0:1]??value;}
