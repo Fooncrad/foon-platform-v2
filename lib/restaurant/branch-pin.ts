@@ -57,3 +57,12 @@ export async function onlyUnlockedBranchRows<T extends {branch_id:unknown}>(tena
  }
  return visible;
 }
+
+/** Mutations to tenant-wide catalogs or settings affect *every* branch.
+ * With additional branches, all of them must be unlocked in this session.
+ * This intentionally fails closed until the owner initializes legacy PINs.
+ */
+export async function requireAllAdditionalBranchesUnlocked(tenantId:string,userId:string){
+ const [branches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? ORDER BY created_at,id",[tenantId]);
+ for(const branch of branches.slice(1))await requireAdditionalBranchUnlock(tenantId,String(branch.id),userId);
+}
