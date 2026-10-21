@@ -2,6 +2,7 @@
 import {useEffect,useState} from "react";
 import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-controls-core";
 import InternationalShippingEditor from "./international-shipping-editor";
+import FreeLocationSettings from "./free-location-settings";
 const groups:{title:string;entries:{key:keyof PublicControls;ar:string;en:string}[]}[]=[
  {title:"الواجهة وحسابات العملاء",entries:[{key:"customerLogin",ar:"دخول وتسجيل حسابات العملاء",en:"Customer login and sign-up"},{key:"sales",ar:"استقبال الطلبات والبيع",en:"Accepting sales and orders"},{key:"cart",ar:"سلة العميل",en:"Customer cart"}]},
  {title:"الحجز والخدمة",entries:[{key:"reservations",ar:"الحجوزات",en:"Reservations"},{key:"waiter",ar:"نداء النادل",en:"Call waiter"},{key:"serviceRequests",ar:"طلبات الخدمات وعروض الأسعار",en:"Service requests and quotations"}]},
@@ -48,6 +49,7 @@ export default function PublicControlsEditor({tenantId,activity}:{tenantId:strin
    <button type="button" disabled={!ready||busy||deliveryCity.trim()===savedDeliveryCity} onClick={()=>void saveDeliveryCity()}>حفظ المدينة</button>
   </div>
   <p style={{fontSize:12,opacity:.75}}>إيقاف البيع أو الكتالوج يمنع طلبات العملاء من الخادم. تفعيل الخاصية هنا لا يتجاوز صلاحيات الباقة أو الوظائف غير المدعومة لنشاطك.</p>
+ <FreeLocationSettings key={tenantId} tenantId={tenantId}/>
  <InternationalShippingEditor tenantId={tenantId} activity={activity}/>
  </section>
 }
