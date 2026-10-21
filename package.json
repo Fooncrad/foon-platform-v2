@@ -52,8 +52,8 @@
     "test:public-content-locale": "node --experimental-strip-types --test scripts/public-content-locale.test.mjs",
     "test:security-launch": "node --experimental-strip-types --test scripts/staff-security-launch.test.mjs scripts/employee-permissions.test.mjs",
     "test:creator-commissions:integration": "node --experimental-strip-types --test scripts/creator-subscription-commission.integration.test.mjs",
-    "test:delivery-branch": "node --test scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs",
-    "test:merge-bundle": "node --experimental-strip-types --test scripts/employee-permissions.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/waiter-room-service-scope.test.mjs scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs"
+    "test:delivery-branch": "node --test scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/delivery-branch-hint.test.mjs",
+    "test:merge-bundle": "node --experimental-strip-types --test scripts/employee-permissions.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/waiter-room-service-scope.test.mjs scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs scripts/delivery-branch-hint.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
