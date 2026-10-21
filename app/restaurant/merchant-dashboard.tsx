@@ -24,6 +24,7 @@ import ReportsWorkspace from "./reports-workspace";
 import "./merchant-experience.css";
 import "./shared-dashboard-legibility.css";
 import "./reference-dashboard-layout.css";
+import "./sidebar-clarity.css";
 import StaffHelpPanel from "./staff-help-panel";
 import {groupVisibleMerchantSections,merchantNavGroupFor,MERCHANT_NAV_LABELS,type MerchantNavGroup} from "@/lib/ux/merchant-navigation";
 
