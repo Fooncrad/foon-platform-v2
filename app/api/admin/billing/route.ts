@@ -45,7 +45,7 @@ export async function PATCH(request:Request){
  if(b.status==="approved"){
   const [owners]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email,u.email_verified_at,u.default_locale FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=? AND m.role='owner' AND m.status='active' AND u.status='active'",[rows[0].tenant_id]);
   const ref="FOON-"+String(b.id),path="/tenant/subscription-receipts/"+encodeURIComponent(String(b.id));
-  const origin=String(process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\\/$/,"");
+  const origin=String(process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\/$/,"");
   for(const owner of owners){
    if(!owner.email_verified_at)continue;
    const locale=String(owner.default_locale),subject=locale==="fr"?"Reçu d'abonnement FOON "+ref:locale==="en"?"FOON subscription receipt "+ref:"إيصال اشتراك FOON "+ref;
