@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {EMAIL_VERIFICATION_MINUTES,EMAIL_RESEND_COOLDOWN_MINUTES,queueVerificationMail,validVerificationToken,verificationTokenHash,verificationEmailCopy,verificationUrl,verificationCooldownActive} from "../lib/auth/email-verification.ts";
 
 test("verification tokens are 256-bit random, hashed and single-use by DB policy",async()=>{
@@ -39,4 +40,19 @@ test("resend uses a user-scoped five minute database window",async()=>{
  assert.equal(await verificationCooldownActive(db,"u1"),true);
  assert.deepEqual(sql[0].args,["u1",5]);
  assert.match(sql[0].statement,/created_at>DATE_SUB\(NOW\(\),INTERVAL \? MINUTE\)/);
+});
+
+
+test("merchant workspace displays an actionable verification request and honest delivery feedback",()=>{
+ const component=readFileSync(new URL("../app/restaurant/merchant-email-verification-notice.tsx",import.meta.url),"utf8");
+ const dashboard=readFileSync(new URL("../app/restaurant/merchant-dashboard.tsx",import.meta.url),"utf8");
+ const css=readFileSync(new URL("../app/restaurant/merchant-email-verification-notice.css",import.meta.url),"utf8");
+ assert.match(dashboard,/!data\.emailVerified&&<MerchantEmailVerificationNotice language=\{uiLanguage\}/);
+ assert.match(component,/href="\/verify-email"/);
+ assert.match(component,/fetch\("\/api\/auth\/resend-verification",\{method:"POST"/);
+ assert.match(component,/disabled=\{busy\} onClick=\{\(\)=>void requestLink\(\)\}/);
+ assert.match(component,/result\?\.verified\?"verified":result\?\.queued\?"queued":"cooldown"/);
+ assert.match(component,/هذا لا يعني أنها وصلت بالفعل/);
+ assert.match(component,/role=\{status==="error"\?"alert":"status"\}/);
+ assert.match(css,/@media\(max-width:600px\)/);
 });
