@@ -31,6 +31,7 @@
     "test:payment-webhooks": "node --experimental-strip-types --test scripts/payment-webhook.test.mjs",
     "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs scripts/media-oauth-state.test.mjs scripts/media-token-crypto.test.mjs scripts/media-account-access.test.mjs",
     "test:i18n": "node --experimental-strip-types --test scripts/ui-copy.test.mjs scripts/responsive-language-ui.test.mjs scripts/translation-leaks.test.mjs",
+    "test:system-errors": "node --experimental-strip-types --test scripts/system-errors.test.mjs",
     "test:catalog-import": "node --experimental-strip-types --test scripts/catalog-import.test.mjs",
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
