@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>FOON — نقطة البيع الآمنة دون اتصال</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;background:#171613;color:#f8f3e9;color-scheme:dark}
+*{box-sizing:border-box}
+body{max-width:1050px;margin:0 auto;padding:18px;min-width:0}
+h1{font-size:1.45rem;margin:8px 0}
+h2{font-size:1.12rem}
+p{line-height:1.65}
+small,.muted{color:#c9c4ba}
+section{background:#24221e;border:1px solid #514637;padding:15px;border-radius:12px;margin:15px 0;min-width:0}
+button,input,select{font:inherit;border-radius:8px;padding:10px;border:1px solid #a18d65;max-width:100%}
+input,select{background:#171613;color:#fff;width:100%}
+button{background:#e2a93b;color:#181410;font-weight:700;cursor:pointer}
+button:disabled{opacity:.48;cursor:not-allowed}
+button.secondary{background:#36332d;color:#fff}
+label{display:block;margin:10px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#notice{white-space:pre-wrap;padding:10px;min-height:42px;border-radius:8px;background:#34302a}
+#notice[data-error=true]{border:1px solid #e39385}
+.item{border:1px solid #564a35;padding:10px;border-radius:8px}
+.item button{padding:6px 12px}
+.item strong{display:block}
+[hidden]{display:none!important}
+code{overflow-wrap:anywhere}
+footer{font-size:.88rem;color:#c9c4ba;margin:20px 0}
+</style>
+<script src="/foon-offline-pos.js" defer></script>
+</head>
+<body>
+<header><h1>FOON POS — تشغيل محلي آمن</h1><p class="muted">هذه صفحة عامة خالية من بيانات العملاء. بعد الإعداد أثناء الاتصال، يمكن فتح الأصناف والطلبات المحلية باستخدام عبارة مرور الجهاز.</p></header>
+<p id="notice" role="status" aria-live="polite">جاري فحص النسخ المحلية...</p>
+<section id="setup"><h2>إعداد النسخة المحلية — يتطلب الإنترنت وتسجيل دخول POS</h2><p>افتح هذا الرابط من داخل نقطة البيع لربطه بالمتجر والفرع المسموح بهما. لا تستخدم كلمة مرور حسابك هنا؛ أنشئ عبارة مرور مختلفة لا تقل عن 12 حرفًا.</p>
+<label>عبارة المرور المحلية <input id="setup-pass" type="password" autocomplete="new-password" minlength="12" maxlength="128"></label>
+<button id="setup-btn">إعداد أو تحديث نسخة هذا الفرع</button></section>
+<section id="locked"><h2>فتح نسخة محفوظة</h2><label>النسخة المحفوظة <select id="profiles"><option value="">اختر النسخة</option></select></label>
+<label>عبارة المرور المحلية <input id="unlock-pass" type="password" autocomplete="off" minlength="12"></label>
+<button id="unlock-btn">فتح بصورة مؤقتة</button></section>
+<section id="workspace" hidden>
+<div class="row"><strong id="scope"></strong><button id="lock-btn" class="secondary">قفل الآن</button><button id="refresh-btn" class="secondary">تحديث الأصناف (يتطلب الإنترنت)</button></div>
+<p class="muted">الأسعار المعروضة تقديرية، والأسعار والضرائب وصلاحية الطاولة والصلاحيات يُعاد التحقق منها على الخادم عند المزامنة.</p>
+<h2>المنتجات</h2><div id="catalog" class="grid"></div>
+<h2>الطلب الحالي</h2><div id="cart"></div>
+<label>نوع الطلب <select id="channel"><option value="takeaway">سفري / استلام</option><option value="dine_in">داخل المطعم</option></select></label>
+<div id="table-group" hidden><label>الطاولة <select id="table"><option value="">اختر الطاولة</option></select></label><label>عدد الضيوف <input id="party" type="number" min="1" step="1" value="1"></label></div>
+<button id="save-order">حفظ الطلب مشفرًا على الجهاز</button>
+<h2>طلبات تنتظر المزامنة</h2><div id="queue"></div>
+<div class="row"><button id="sync-btn">تحقق من الدخول وزامن الآن</button><button id="export-btn" class="secondary">تصدير نسخة مشفرة للطوارئ</button></div>
+</section>
+<footer>لا تغلق أو تمسح بيانات المتصفح قبل مزامنة الطلبات. عند فقدان عبارة المرور لا يمكن فتح البيانات المشفرة. إلغاء صلاحية المستخدم أثناء الانقطاع لا يمكن التحقق منه إلا بعد عودة الاتصال. هذا الوضع لا يدعم الخصومات أو الأصناف المعقدة أو دفع البطاقات دون اتصال.</footer>
+</body>
+</html>
