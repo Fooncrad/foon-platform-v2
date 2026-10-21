@@ -35,10 +35,10 @@
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
     "test:checkout:integration": "node --test scripts/checkout-orders.integration.mjs",
-    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs",
+    "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs",
     "test:offline-workspace-security": "node --test scripts/workspace-offline-security.test.mjs",
     "test:browser-receipt": "node --experimental-strip-types --test scripts/browser-receipt-width.test.mjs",
-    "test:order-roles": "node --experimental-strip-types --test scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs",
+    "test:order-roles": "node --experimental-strip-types --test scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/waiter-room-service-scope.test.mjs",
     "test:final-receipt": "node --experimental-strip-types --test scripts/final-receipt-policy.test.mjs",
     "test:storefront-media": "node --experimental-strip-types --test scripts/storefront-media.test.mjs",
     "test:variant-selection": "node --experimental-strip-types --test scripts/variant-selection.test.mjs",
@@ -50,8 +50,10 @@
     "test:free-location": "node --experimental-strip-types --test scripts/free-location-integrations.test.mjs",
     "test:public-site-links": "node --experimental-strip-types --test scripts/public-site-links.test.mjs",
     "test:public-content-locale": "node --experimental-strip-types --test scripts/public-content-locale.test.mjs",
-    "test:security-launch": "node --test scripts/staff-security-launch.test.mjs",
-    "test:creator-commissions:integration": "node --experimental-strip-types --test scripts/creator-subscription-commission.integration.test.mjs"
+    "test:security-launch": "node --experimental-strip-types --test scripts/staff-security-launch.test.mjs scripts/employee-permissions.test.mjs",
+    "test:creator-commissions:integration": "node --experimental-strip-types --test scripts/creator-subscription-commission.integration.test.mjs",
+    "test:delivery-branch": "node --test scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs",
+    "test:merge-bundle": "node --experimental-strip-types --test scripts/employee-permissions.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/waiter-room-service-scope.test.mjs scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
