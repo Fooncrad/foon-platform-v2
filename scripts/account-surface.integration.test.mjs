@@ -14,6 +14,14 @@ test('employees stay in their employer workspace and platform admins never inher
  try{
   let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+'/login',{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}assert.ok(ready,serverOutput);
   const owner=await register(),other=await register(),admin=await register();
+  // Corrupt JPEG bytes with a plausible header must fail cleanly, not crash
+  // the personal-media route or write a bogus profile image.
+  const damagedMedia=new FormData();
+  damagedMedia.set('type','avatar');
+  damagedMedia.set('file',new File([Uint8Array.from([255,216,255,0,0])],'damaged.jpg',{type:'image/jpeg'}));
+  const damagedResponse=await fetch(origin+'/api/account/media',{method:'POST',headers:{origin,cookie:owner.cookie},body:damagedMedia});
+  assert.equal(damagedResponse.status,400,'corrupt image must be a client error');
+  assert.equal((await damagedResponse.json()).code,'INVALID_IMAGE');
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user.id]);
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,admin.cookie,owner.tenant.id)).status,403);
   const supportAccess=await request('/api/admin/tenants/'+owner.tenant.id+'/access','POST',{},admin.cookie);assert.equal(supportAccess.status,200,await supportAccess.clone().text());
