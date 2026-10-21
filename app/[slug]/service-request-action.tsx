@@ -1,6 +1,7 @@
 "use client";
 import InlineCustomerAuth from "./inline-customer-auth";
 import {useRouter} from "next/navigation";
+import Link from "next/link";
 import {useRef,useState,type FormEvent} from "react";
 type Language="ar"|"en"|"fr";
 type RequestType="appointment"|"quote"|"inquiry";
@@ -40,7 +41,7 @@ export default function ServiceRequestAction({slug,serviceId,serviceName,mode,la
  return <div className="foonServiceRequestAction">
   {!open&&<button type="button" className="foonActivityServiceContact" onClick={()=>{setSuccess("");setError("");setOpen(true);}}>{t[mode]}</button>}
   {open&&<div className="foonServiceRequestForm" dir={language==="ar"?"rtl":"ltr"}>
-   {success?<div role="status"><p>{t.success}</p><small>{t.reference}: <b dir="ltr">{success.slice(0,8)}</b></small><p>{t.pending}</p><a href="/customer#customer-service-requests">{t.track}</a><button type="button" onClick={()=>setOpen(false)}>{t.close}</button></div>:
+   {success?<div role="status"><p>{t.success}</p><small>{t.reference}: <b dir="ltr">{success.slice(0,8)}</b></small><p>{t.pending}</p><Link href="/customer#customer-service-requests">{t.track}</Link><button type="button" onClick={()=>setOpen(false)}>{t.close}</button></div>:
    <div className="foonServiceRequestJourney">
    <form onSubmit={submit}>
     <strong>{serviceName}</strong>
