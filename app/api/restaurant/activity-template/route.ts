@@ -4,6 +4,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {defaultTemplateForActivity,isTemplateForActivity,templatesForActivity} from "@/lib/platform/activity-templates";
 export const runtime="nodejs";
 async function context(request:Request,write:boolean){
@@ -13,6 +14,7 @@ async function context(request:Request,write:boolean){
  if(!tenant)return {error:NextResponse.json({ok:false,code:"TENANT_CONTEXT_REQUIRED"},{status:400})};
  try{
   const member=await requireTenantMembership(userId,tenant,["owner","manager"],write);
+  if(write)await requireAllAdditionalBranchesUnlocked(member.tenantId,userId);
   const [rows]=await database().execute<RowDataPacket[]>("SELECT activity_code FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[member.tenantId]);
   const activity=String(rows[0]?.activity_code??"");
   if(!templatesForActivity(activity).length)return {error:NextResponse.json({ok:false,code:"ACTIVITY_NOT_CONFIGURED"},{status:409})};
