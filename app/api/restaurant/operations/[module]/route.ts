@@ -18,6 +18,7 @@ import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
 import {reconcileLateIssuedInvoice} from "@/lib/payments/webhook-settlement";
 import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
+import {scopedStaffOverview} from "@/lib/restaurant/scoped-staff-overview";
 
 export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
@@ -85,6 +86,8 @@ function failure(error:unknown,request:Request,module:string){
 }
 async function connection(){const db=await database().getConnection();try{await db.query("SET time_zone='+00:00'");return db;}catch(error){db.release();throw error;}}
 async function overview(db:PoolConnection,tenantId:string,role:string,branch:string|null,actorUserId:string){
+ // Never return all-branch metrics to staff restricted by assigned tables/driver.
+ if(role==="waiter"||role==="driver")return scopedStaffOverview(await ordersRows(db,tenantId,role,branch,actorUserId));
  const filter=branch?" AND branch_id=?":"",params=branch?[tenantId,branch]:[tenantId];
  const [[summary]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS orders,COALESCE(SUM(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total ELSE 0 END),0) AS sales,COALESCE(AVG(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total END),0) AS average,SUM(status='new') AS newOrders,SUM(status='preparing') AS preparing,SUM(status='ready') AS ready FROM restaurant_orders WHERE tenant_id=?"+filter+" AND created_at>=TIMESTAMP(DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR))-INTERVAL 3 HOUR",params);
  const [[outstanding]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
