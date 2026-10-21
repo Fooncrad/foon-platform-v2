@@ -50,7 +50,7 @@
     "test:free-location": "node --experimental-strip-types --test scripts/free-location-integrations.test.mjs",
     "test:public-site-links": "node --experimental-strip-types --test scripts/public-site-links.test.mjs",
     "test:public-content-locale": "node --experimental-strip-types --test scripts/public-content-locale.test.mjs",
-    "test:security-launch": "node --test scripts/staff-security-launch.test.mjs",
+    "test:security-launch": "node --experimental-strip-types --test scripts/staff-security-launch.test.mjs scripts/employee-permissions.test.mjs",
     "test:creator-commissions:integration": "node --experimental-strip-types --test scripts/creator-subscription-commission.integration.test.mjs"
   },
   "dependencies": {
