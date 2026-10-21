@@ -22,7 +22,7 @@ export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
 const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const allRoles:TenantRole[]=[...orderRoles];
-async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit"){
+async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit",requestedBranch?:string|null){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
@@ -63,7 +63,7 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
   if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
  }
- const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch");
+ const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch")??requestedBranch??null;
  if(module!=="security"&&module!=="health")await requireAdditionalBranchUnlock(access.tenantId,selectedBranch,user);
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
@@ -183,11 +183,13 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
 async function mutate(request:Request,module:string,method:string){
  let db:PoolConnection|undefined;
  try{
-  const ctx=await authorize(request,module,true),body=await request.json().catch(()=>null);
+  const body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   // Recording payment during POS create is also a financial edit. A cashier
   // who can create orders but lacks pos.edit must never mark them paid.
-  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit");
+  const requestedBranch=typeof body.branchId==="string"?body.branchId:null;
+  const ctx=await authorize(request,module,true,undefined,requestedBranch);
+  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit",requestedBranch);
   
   db=await connection();await db.beginTransaction();
   if(!["owner","manager"].includes(ctx.role)&&method==="POST"){
