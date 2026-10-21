@@ -63,10 +63,10 @@ export async function POST(request:Request){
   if(!(await tenantEntitlement(ctx.tenantId,"catalog",db)).enabled) {await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
   if(type==="appointment"&&!(await tenantEntitlement(ctx.tenantId,"appointments",db)).enabled){await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
   const [services]=await db.execute<RowDataPacket[]>(
-   "SELECT p.name_ar FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id AND c.enabled=TRUE WHERE p.tenant_id=? AND p.id=? AND p.product_type='service' AND p.enabled=TRUE LIMIT 1 LOCK IN SHARE MODE",
+   "SELECT p.name_ar,p.branch_id AS product_branch_id,c.branch_id AS category_branch_id FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id AND c.enabled=TRUE WHERE p.tenant_id=? AND p.id=? AND p.product_type='service' AND p.enabled=TRUE LIMIT 1 LOCK IN SHARE MODE",
    [ctx.tenantId,body.serviceId]);
   if(!services.length){await db.rollback();return fail("SERVICE_NOT_FOUND",404)}
-  const [branches]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND enabled=TRUE ORDER BY created_at,id LIMIT 1",[ctx.tenantId]);
+  const [branches]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND enabled=TRUE AND (? IS NULL OR id=?) AND (? IS NULL OR id=?) ORDER BY created_at,id LIMIT 1",[ctx.tenantId,services[0].product_branch_id,services[0].product_branch_id,services[0].category_branch_id,services[0].category_branch_id]);
   if(!branches.length){await db.rollback();return fail("NO_ACTIVE_BRANCH",409)}
   const branchId=String(branches[0].id);
   const data={customerUserId:user,serviceId:body.serviceId,serviceName:String(services[0].name_ar),customerName:String(users[0].display_name||"عميل"),customerPhone:phone.trim(),requestType:type,scheduledAt:type==="appointment"?new Date(scheduled!).toISOString():null,notes:note.trim()};
