@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useEffect,useState,type FormEvent} from "react";
 type Integrations={recaptchaSiteKey:string;recaptchaRequested:boolean;aiProvider:"off"|"openai"|"other";aiModel:string;trackingConsentRequired:boolean};
 const initial:Integrations={recaptchaSiteKey:"",recaptchaRequested:false,aiProvider:"off",aiModel:"",trackingConsentRequired:true};
 type Environment={recaptchaSecretPresent:boolean;aiKeyPresent:boolean};
@@ -16,7 +16,7 @@ export default function IntegrationSettings({canEdit}:{canEdit:boolean}){
    .finally(()=>{if(active)setLoading(false)});
   return()=>{active=false};
  },[]);
- async function save(e:React.FormEvent<HTMLFormElement>){
+ async function save(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!canEdit)return;setError("");setMessage("");setSaving(true);
   try{
    const r=await fetch("/api/admin/integrations",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(settings)});
