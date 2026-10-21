@@ -7,6 +7,7 @@ import {defaultPublicControls,type PublicControls} from "@/lib/tenant/public-con
 import {useEffect,useRef,useState,useSyncExternalStore} from "react";
 import {useRouter} from "next/navigation";
 import InlineCustomerAuth from "./inline-customer-auth";
+import {customerOrderLink} from "@/lib/platform/customer-order-journey.mjs";
 import {nearestDeliveryBranch} from "@/lib/tenant/nearest-delivery-branch.mjs";
 import {cartKey,choicePrice,choicesValid} from "../restaurant/menu-choices";
 import {validPreselectedOptions,selectedCatalogStockLimit,remainingCatalogStock,defaultCatalogAddQuantity,canAddCatalogUnit} from "@/lib/catalog/variant-selection";
@@ -40,7 +41,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  const title=service?tr("سلة الخدمات","Service basket","Panier de services"):tr("سلة المشتريات","Shopping cart","Panier");
  const storage="foon-public-cart:"+slug;
  const mounted=useSyncExternalStore(subscribeHydration,()=>true,()=>false);
- const [lines,setLines]=useState<Line[]>(()=>storedLines(storage)),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[ready,setReady]=useState(linked),[branch,setBranch]=useState(""),[channel,setChannel]=useState(controls.takeaway?"takeaway":controls.delivery?"delivery":""),[pickupPointId,setPickupPointId]=useState(""),[pickupResult,setPickupResult]=useState<{branchId:string;points:PickupPoint[];error:boolean}>({branchId:"",points:[],error:false});
+ const [lines,setLines]=useState<Line[]>(()=>storedLines(storage)),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[completedOrderId,setCompletedOrderId]=useState<string|null>(null),[ready,setReady]=useState(linked),[branch,setBranch]=useState(""),[channel,setChannel]=useState(controls.takeaway?"takeaway":controls.delivery?"delivery":""),[pickupPointId,setPickupPointId]=useState(""),[pickupResult,setPickupResult]=useState<{branchId:string;points:PickupPoint[];error:boolean}>({branchId:"",points:[],error:false});
  const router=useRouter();
  const channelAvailable=Boolean((channel==="takeaway"&&controls.takeaway)||(channel==="delivery"&&controls.delivery));
  const [enteredPhone,setPhone]=useState<string|null>(null),[enteredAddress,setAddress]=useState<string|null>(null),[deliveryCountryCode,setDeliveryCountryCode]=useState("");
@@ -150,7 +151,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  async function submit(){if(!channelAvailable){setMessage(tr("قناة الطلب متوقفة مؤقتًا.","This order channel is unavailable.","Ce mode de commande est indisponible."));return;}
   if(busy||geoBusy||!ready||!chosenBranch||!lines.length||!deliveryReady||!validDrafts||channel==="takeaway"&&(pickupPointsLoading||pickupPointsError||pickupPoints.length>0&&!effectivePickupPointId))return;
   const payload={storeSlug:slug,branchId:chosenBranch,channel,currency,...(channel==="takeaway"&&effectivePickupPointId?{pickupPointId:effectivePickupPointId}:{}),...(channel==="delivery"?{customerPhone:phone,deliveryCountryCode:country,deliveryCity:city.trim(),deliveryAddress:address.trim(),...(locationCoords??{})}:{}),items:lines.map(l=>({id:l.item.id,quantity:l.quantity,options:l.options}))},encoded=JSON.stringify(payload);
-  setWorking(true);setMessage("");
+  setWorking(true);setMessage("");setCompletedOrderId(null);
   try{
    const signature=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(encoded)))).map(b=>b.toString(16).padStart(2,"0")).join("");
    let key=requestRef.current?.payload===signature?requestRef.current.key:crypto.randomUUID();
@@ -158,8 +159,9 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
    requestRef.current={payload:signature,key};
    const r=await fetch("/api/customer/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...payload,requestKey:key})}),body=await r.json();
    if(!r.ok||!body.ok){if(body.code==="STORE_CUSTOMER_REQUIRED"||body.code==="UNAUTHENTICATED")setReady(false);if(body.code==="DELIVERY_OUT_OF_RANGE"&&typeof body.message==="string"&&body.message.length<=240){setMessage(body.message);return;}throw Error(body.code??"ORDER_UNAVAILABLE");}
-   if(!Number.isFinite(Number(body.total))||Number(body.total)<0||!/^[A-Z]{3}$/.test(String(body.currency)))throw Error("ORDER_UNAVAILABLE");
+   if(!customerOrderLink(body.id)||!Number.isFinite(Number(body.total))||Number(body.total)<0||!/^[A-Z]{3}$/.test(String(body.currency)))throw Error("ORDER_UNAVAILABLE");
    requestRef.current=null;setLines([]);setQuantityDrafts({});try{sessionStorage.removeItem(storage+":request");}catch{}
+   setCompletedOrderId(String(body.id));
    setMessage(tr("تم تسجيل الطلب. الإجمالي: ","Order placed. Total: ","Commande enregistrée. Total : ")+Number(body.total).toFixed(2)+" "+body.currency);
   }catch(e){setMessage(error(e instanceof Error?e.message:""));}finally{setWorking(false);}
  }
@@ -167,6 +169,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  return <aside ref={panel} className="foonStorefrontCart" aria-label={title} aria-busy={busy}>
   <h2>{title} <span dir="ltr">({count})</span></h2>
   {message&&<p role="status">{message}</p>}
+  {completedOrderId&&customerOrderLink(completedOrderId)&&<p className="foonCartOrderConfirmation" role="status"><span>{tr("رقم الطلب: ","Order reference: ","Référence de commande : ")}<b dir="ltr">{completedOrderId.slice(0,8)}</b></span>{" · "}<a href={customerOrderLink(completedOrderId)!}>{tr("متابعة الطلب من حسابي","Track order in my account","Suivre la commande dans mon compte")}</a></p>}
   {busy&&<p role="status">{tr("جارٍ التنفيذ…","Working…","En cours…")}</p>}
   {pending&&<section className="foonCartOptions" aria-label={tr("خيارات الصنف","Item options","Options de l’article")}><h3>{localized(pending.item)}</h3>{pending.groups.map(g=><fieldset key={g.id}><legend>{localized(g)} ({g.min}–{g.max})</legend>{g.values.map(v=><label key={v.id}><input type={g.type==="single"?"radio":"checkbox"} name={g.id} disabled={v.stock!==undefined&&v.stock!==null&&v.stock<=0&&!selected.includes(v.id)} checked={selected.includes(v.id)} onChange={e=>setSelected(old=>g.type==="single"?[...old.filter(id=>!g.values.some(option=>option.id===id)),v.id]:e.target.checked?[...old,v.id]:old.filter(id=>id!==v.id))}/>{localized(v)} <span dir="ltr">{v.price.toFixed(2)} {pending.item.currency}</span></label>)}</fieldset>)}<button type="button" disabled={busy||!choicesValid(pending.groups,selected)||!variantAvailable(pending.item,pending.groups,selected)||!canAddCatalogUnit(pending.groups,pending.item.variants??[],selected,pending.item.stock??null,lines.filter(l=>l.item.id===pending.item.id).map(l=>({options:l.options,quantity:l.quantity})),defaultCatalogAddQuantity(Boolean(pending.item.measured),remainingCatalogStock(pending.groups,pending.item.variants??[],selected,pending.item.stock??null,lines.filter(l=>l.item.id===pending.item.id).map(l=>({options:l.options,quantity:l.quantity})))))} onClick={add}>{tr("تأكيد الإضافة","Confirm addition","Confirmer l’ajout")}</button><button type="button" onClick={()=>setPending(null)}>{tr("إلغاء","Cancel","Annuler")}</button></section>}
   {!lines.length&&!pending&&<p>{tr("اختر من القائمة لإضافة ما تحتاجه.","Choose items from the catalog.","Choisissez des articles dans le catalogue.")}</p>}
