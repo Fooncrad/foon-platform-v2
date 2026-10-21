@@ -93,7 +93,7 @@
  font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
 }
 .restaurantApp[data-activity] .restaurantReferenceOverview>.restaurantHero{
- grid-column:2;grid-row:2;margin:0;min-width:0;
+ grid-column:1;grid-row:2;margin:0;min-width:0;
  padding:18px 20px;border-radius:14px;
  background:linear-gradient(120deg,#d92284,#ae6899);color:#fff;
  box-shadow:0 4px 15px #bf40832a;
@@ -122,17 +122,17 @@
 }
 .restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid{display:contents}
 .restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid>.restaurantPanel:first-child{
- grid-column:1;grid-row:2/4;min-width:0;margin:0;
+ grid-column:2;grid-row:2/4;min-width:0;margin:0;
 }
 .restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid>.restaurantPanel:nth-child(2){
- grid-column:2;grid-row:3;min-width:0;margin:0;
+ grid-column:1;grid-row:3;min-width:0;margin:0;
 }
 .restaurantApp .restaurantReferenceOverview .restaurantSalesChart svg{color:var(--rc-accent)}
 .restaurantApp .restaurantReferenceOverview>.restaurantOrders{
- grid-column:1/-1;grid-row:4;min-width:0;margin:0;
+ grid-column:1;grid-row:4;min-width:0;margin:0;
 }
 .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
- grid-column:1/-1;grid-row:5;gap:12px;
+ grid-column:2;grid-row:4;gap:12px;
  grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));
 }
 .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>button,
@@ -242,4 +242,91 @@
 @media(prefers-reduced-motion:reduce){
  .restaurantApp .foonActivityToolLink{transition:none}
  .restaurantApp .foonActivityToolLink:hover{transform:none}
+}
+
+
+/* The supplied visual reference places profile and recent orders on the
+ * right in RTL, analytics and quick actions in the left column. LTR mirrors
+ * naturally. The mobile layout remains single-column in task priority. */
+.restaurantApp .restaurantReferenceOverview>.restaurantOrders{align-self:stretch}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+ align-self:start;align-content:start;min-width:0;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>button,
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>a{
+ min-height:78px;min-width:0;padding:12px;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions b{
+ color:var(--rc-text);line-height:1.5;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions small{color:var(--rc-muted)}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart{
+ color:var(--rc-accent);min-width:0;overflow-x:auto;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart>div{color:var(--rc-text)}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart svg{max-width:100%;height:auto}
+/* Improve desktop usability without changing or hiding any authorized task. */
+.restaurantApp .restaurantReferenceOverview .restaurantPanel header{flex-wrap:wrap}
+.restaurantApp .restaurantSidebar nav button{min-width:0}
+.restaurantApp .restaurantNavGroupItems{min-width:0}
+.restaurantApp .restaurantPageFooter{color:var(--rc-muted)}
+.restaurantApp[data-theme="dark"] .restaurantSideBrand b,
+.restaurantApp[data-theme="dark"] .restaurantNavGroupToggle,
+.restaurantApp[data-theme="dark"] .restaurantNavGroupItems>button{
+ color:var(--rc-text);
+}
+.restaurantApp[data-theme="dark"] .restaurantSidebar{
+ background:var(--rc-surface,#242832);
+ color:var(--rc-text);
+ border-color:var(--rc-border,#424c5b);
+}
+.restaurantApp[data-theme="dark"] .restaurantSidebar :is(.restaurantSideBrand small,.restaurantNavContext,.restaurantNavLabel){
+ color:var(--rc-muted);
+}
+.restaurantApp[data-theme="dark"] .restaurantSidebar nav .restaurantNavGroupItems>button[aria-current="page"]{
+ color:#ffc0df;background:#55233e;box-shadow:inset 3px 0 0 #ff65b0;
+}
+.restaurantApp[data-theme="dark"] .restaurantSideFooter :is(a,.restaurantPlanShortcut){
+ background:var(--rc-surface,#242832);color:var(--rc-text)!important;border-color:var(--rc-border,#424c5b);
+}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantHeroTop h2,
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantHeroStats strong{
+ color:#fff;
+}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantSalesChart svg{color:#f080ba}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantOrders .restaurantEmpty{
+ background:var(--rc-surface,#242832);
+}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantOrders .restaurantEmpty :is(h3,p){
+ color:var(--rc-text);
+}
+.restaurantApp .foonActivityToolIcon{
+ width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;
+ background:color-mix(in srgb,var(--rc-accent,#d92483) 12%,var(--rc-surface,#fff));
+ border-radius:11px;color:var(--rc-accent,#d92483);
+}
+.restaurantApp .foonActivityToolIcon svg{width:19px;height:19px}
+.restaurantApp .foonActivityToolLabel{min-width:0;flex:1;text-align:start}
+.restaurantApp .foonActivityToolArrow{font-size:16px;color:var(--rc-accent,#d92483);flex:0 0 auto}
+.restaurantApp[data-theme="dark"] .foonActivityToolIcon{
+ color:#ff95cc;background:#512b44;
+}
+.restaurantApp[data-theme="dark"] .foonActivityToolArrow{color:#ff95cc}
+@media(max-width:1200px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+  grid-template-columns:1fr;
+ }
+}
+@media(max-width:850px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+}
+@media(max-width:600px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+  grid-template-columns:1fr;
+ }
+ .restaurantApp .foonActivityToolIcon{width:31px;height:31px;flex-basis:31px}
+ .restaurantApp .foonActivityToolIcon svg{width:17px;height:17px}
 }
