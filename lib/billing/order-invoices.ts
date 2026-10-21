@@ -39,10 +39,15 @@ export async function issuePaidOrderInvoice(db:PoolConnection,tenantId:string,or
   "Votre paiement a été confirmé. Reçu "+number+". Total : "+order.total+" "+order.currency+". Connectez-vous pour consulter le reçu : "+view+" (ce n'est pas une facture fiscale certifiée).":
   lang==="en"?"Your payment was confirmed. Receipt "+number+". Total: "+order.total+" "+order.currency+". Sign in to view: "+view+" (not a certified tax invoice).":
   "تم تأكيد سداد طلبك. رقم الإيصال "+number+". الإجمالي: "+order.total+" "+order.currency+". عرض الإيصال بعد تسجيل الدخول: "+view+" (إيصال دفع وليس فاتورة ضريبية معتمدة).";
+ const itemLines=items.slice(0,80).map(item=>"• "+String(item.item_name).replace(/[\\r\\n]+/g," ").slice(0,120)+" × "+Number(item.quantity)+" — "+String(item.line_total)+" "+String(order.currency)).join("\n");
+ const emailBody=message+"\n\n"+(lang==="en"?"Items:":lang==="fr"?"Articles :":"الأصناف:")+"\n"+itemLines+
+  (items.length>80?"\n…":"")+"\n"+(lang==="en"?"Subtotal: ":lang==="fr"?"Sous-total : ":"المجموع: ")+String(order.subtotal)+" "+String(order.currency)+
+  "\n"+(lang==="en"?"Discount: ":lang==="fr"?"Remise : ":"الخصم: ")+String(order.discount)+" "+String(order.currency)+
+  (checkout.tax!==undefined&&checkout.tax!==null?"\n"+(lang==="en"?"Tax: ":lang==="fr"?"Taxe : ":"الضريبة: ")+String(checkout.tax)+" "+String(order.currency):"");
  await db.execute("INSERT INTO customer_notifications(id,user_id,tenant_id,event_key,subject,body_text,resource_id) VALUES (?,?,?,?,?,?,?)",
   [randomUUID(),order.customer_user_id,tenantId,"order_invoice",subject,message,orderId]);
  if(canEmail)await db.execute(
   "INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'order_invoice',?,?,?,?)",
-  [invoiceId,tenantId,String(order.email),subject,message]);
+  [invoiceId,tenantId,String(order.email),subject,emailBody]);
  return {id:invoiceId,number,emailQueued:canEmail};
 }
