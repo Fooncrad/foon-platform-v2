@@ -10,7 +10,7 @@ export default function SystemStatusScreen({status,httpStatus,error,reset,source
  const [language,setLanguage]=useState<SystemLocale>("ar");
  const [reference,setReference]=useState(error?.digest??(status==="NOT_FOUND"?"HTTP-404":status==="MAINTENANCE"?"MAINT-503":"SYSTEM-ERROR"));
  useEffect(()=>{
-  const documentLocale=systemLocale(document.cookie.match(/(?:^|;\\s*)foon_language=(ar|en|fr)/)?.[1]??document.documentElement.lang);
+  const documentLocale=systemLocale(document.cookie.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1]??document.documentElement.lang);
   setLanguage(documentLocale);
  },[]);
  useEffect(()=>{
