@@ -131,7 +131,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
    try{const previous=JSON.parse(sessionStorage.getItem(storage+":request")??"null");if(previous?.payload===signature&&uuid.test(previous.key))key=previous.key;sessionStorage.setItem(storage+":request",JSON.stringify({payload:signature,key}));}catch{}
    requestRef.current={payload:signature,key};
    const r=await fetch("/api/customer/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...payload,requestKey:key})}),body=await r.json();
-   if(!r.ok||!body.ok)throw Error(body.code??"ORDER_UNAVAILABLE");
+   if(!r.ok||!body.ok){if(body.code==="DELIVERY_OUT_OF_RANGE"&&typeof body.message==="string"&&body.message.length<=240){setMessage(body.message);return;}throw Error(body.code??"ORDER_UNAVAILABLE");}
    if(!Number.isFinite(Number(body.total))||Number(body.total)<0||!/^[A-Z]{3}$/.test(String(body.currency)))throw Error("ORDER_UNAVAILABLE");
    requestRef.current=null;setLines([]);setQuantityDrafts({});try{sessionStorage.removeItem(storage+":request");}catch{}
    setMessage(tr("تم تسجيل الطلب. الإجمالي: ","Order placed. Total: ","Commande enregistrée. Total : ")+Number(body.total).toFixed(2)+" "+body.currency);
