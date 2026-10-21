@@ -34,7 +34,7 @@ export default function OfflineMenuSave({menu,preview,language}:{menu:OfflineMen
   return()=>{cancelled=true;};
  },[name,slug,items,categories,branches,options,branding,preview,language]);
  if(!saved)return null;
- const full=language==="ar"?"المنيو محفوظ بكل تفاصيله للتصفح دون اتصال":language==="fr"?"Menu enregistré pour consultation hors connexion":"Menu saved for offline browsing";
+ const full=language==="ar"?"المنيو محفوظ للتصفح دون اتصال — جميع تفاصيل الأصناف متاحة":language==="fr"?"Menu enregistré pour consultation hors connexion":"Menu saved for offline browsing";
  const partial=language==="ar"?"بعض الصور لم تُحفظ؛ ستظل تفاصيل الأصناف متاحة.":language==="fr"?"Certaines images n'ont pas été enregistrées ; les détails restent consultables.":"Some images were not saved; menu details remain available.";
  return <p className="publicMenuOfflineSaved" role="status" aria-live="polite"><span aria-hidden="true">✓</span>{full}{saved.missing>0?" — "+partial:""}</p>;
 }
