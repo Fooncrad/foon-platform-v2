@@ -218,14 +218,24 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   assert.equal((await resource(a,"reservations",{name:"Wrong section",status:"confirmed",branchId:a.branch,data:{partySize:2,scheduledAt:bookingTime,sectionId:terrace,tableId:diningTable}})).body.code,"SECTION_TABLE_MISMATCH");
   await save(a,"reservations","Next guest",{partySize:2,scheduledAt:new Date(Date.parse(bookingTime)+90*60000).toISOString(),tableId:diningTable},"confirmed");
   const ranged=await call("/api/restaurant/operations/reservations?from="+encodeURIComponent(bookingTime)+"&to="+encodeURIComponent(new Date(Date.parse(bookingTime)+86400000).toISOString()),"GET",undefined,a.cookie,a.tenant);assert.equal(ranged.status,200);assert.equal(ranged.body.resources.length,2);
-  const waiterAccount=await register("operations-floor-waiter"),supervisorAccount=await register("operations-floor-supervisor");
-  const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterAccount.email,role:"waiter"}),supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorAccount.email,role:"manager"});
+  // Employees are created with fresh, non-customer identities and real
+  // passwords rather than taking over accounts registered for another store.
+  const waiterEmail="operations-floor-waiter-"+randomUUID().slice(0,8)+"@test.example";
+  const supervisorEmail="operations-floor-supervisor-"+randomUUID().slice(0,8)+"@test.example";
+  const waiterEmployee=await save(a,"team","Floor waiter",{email:waiterEmail,role:"waiter"});
+  const supervisorEmployee=await save(a,"team","Floor supervisor",{email:supervisorEmail,role:"supervisor"});
+  const waiterCreated=await call("/api/restaurant/employee-provision","POST",
+   {tenantId:a.tenant,resourceId:waiterEmployee,password,permissions:["orders.view","orders.edit"]},a.cookie,a.tenant);
+  assert.equal(waiterCreated.status,200,JSON.stringify(waiterCreated.body));
+  const supervisorCreated=await call("/api/restaurant/employee-provision","POST",
+   {tenantId:a.tenant,resourceId:supervisorEmployee,password,permissions:[]},a.cookie,a.tenant);
+  assert.equal(supervisorCreated.status,200,JSON.stringify(supervisorCreated.body));
+  const waiterLogin=await call("/api/auth/login","POST",{email:waiterEmail,password});
+  assert.equal(waiterLogin.status,200,JSON.stringify(waiterLogin.body));
+  const [[waiterUser]]=await db.execute("SELECT id FROM users WHERE email=?",[waiterEmail]);
+  const waiterAccount={user:String(waiterUser.id),cookie:waiterLogin.cookie,email:waiterEmail};
   // A linked waiter may manage only authorized branch order types, never
   // claim the assigned delivery driver's fulfillment transition.
-  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?, 'waiter',TRUE)",[randomUUID(),a.tenant,waiterAccount.user,a.branch]);
-  for(const permission of ["orders.view","orders.edit"]){
-   await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),a.tenant,waiterAccount.user,a.branch,permission]);
-  }
   assert.equal((await resource(a,"orders",{id:deliveryOne.body.id,version:1,status:"preparing"},"PATCH")).status,200);
   assert.equal((await resource(a,"orders",{id:deliveryOne.body.id,version:2,status:"ready"},"PATCH")).status,200);
   const waiterOrders=await call("/api/restaurant/operations/orders?branch="+a.branch,"GET",undefined,waiterAccount.cookie,a.tenant);
