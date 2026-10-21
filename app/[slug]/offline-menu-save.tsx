@@ -9,7 +9,6 @@ export default function OfflineMenuSave({menu,preview,language}:{menu:OfflineMen
  useEffect(()=>{
   if(preview||!navigator.onLine||!("serviceWorker" in navigator))return;
   let cancelled=false;
-  setSaved(null);
   void(async()=>{
    const registration=await navigator.serviceWorker.register("/foon-offline-sw.js",{scope:"/"});
    const worker=registration.installing??registration.waiting??registration.active;
