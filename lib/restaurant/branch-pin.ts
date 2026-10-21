@@ -38,3 +38,22 @@ export async function requireAdditionalBranchUnlock(tenantId:string,branchId:str
   [userId,session,tenantId,branchId]);
  if(!authorized.length)throw new BranchPinError("BRANCH_PIN_REQUIRED");
 }
+
+/** A route returning multiple branch rows must not expose a protected branch
+ * merely because no branch filter was supplied. Skip only expected PIN denials;
+ * propagate database failures, rather than returning a misleading empty list.
+ */
+export async function onlyUnlockedBranchRows<T extends {branch_id:unknown}>(tenantId:string,userId:string,rows:T[]):Promise<T[]>{
+ const allowed=new Map<string,boolean>();
+ const visible:T[]=[];
+ for(const row of rows){
+  const branchId=typeof row.branch_id==="string"?row.branch_id:null;
+  const key=branchId??"";
+  if(!allowed.has(key)){
+   try{await requireAdditionalBranchUnlock(tenantId,branchId,userId);allowed.set(key,true);}
+   catch(error){if(!(error instanceof BranchPinError))throw error;allowed.set(key,false);}
+  }
+  if(allowed.get(key))visible.push(row);
+ }
+ return visible;
+}
