@@ -35,6 +35,8 @@ export async function GET(){
  const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  const userId=await currentUserId();if(!userId)return fail("UNAUTHENTICATED",401);
  try{
+  const [account]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status=\'active\' LIMIT 1",[userId]);
+  if(!account.length)return fail("UNAUTHENTICATED",401);
   const [addresses]=await database().execute<RowDataPacket[]>("SELECT id,label,recipient_name,phone,country_code,city,district,street_address,building,apartment,delivery_notes,latitude,longitude,is_default,created_at,updated_at FROM customer_delivery_addresses WHERE user_id=? ORDER BY is_default DESC,created_at DESC,id",[userId]);
   return NextResponse.json({ok:true,addresses},{...noStore});
  }catch{return fail("ADDRESSES_UNAVAILABLE",503);}
