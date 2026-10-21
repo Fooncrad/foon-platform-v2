@@ -99,11 +99,11 @@ test('employees stay in their employer workspace and platform admins never inher
   assert.equal(languageResponse.status,200,'active owner can change default language');
   const [[localeSaved]]=await db.execute('SELECT default_locale FROM users WHERE id=?',[owner.user.id]);
   assert.equal(localeSaved.default_locale,'fr');
-  const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerCookie=customer.headers.get('set-cookie').split(';')[0];
+  const customerSlug='customer-'+randomUUID().slice(0,8);const customer=await request('/api/customer/register','POST',{name:'Customer',email:customerSlug+'@test.example',password,storeSlug:owner.slug});assert.equal(customer.status,201);const customerData=await customer.json();const customerCookie=customer.headers.get('set-cookie').split(';')[0];
   assert.equal((await request('/api/customer/order-revision','GET',undefined,customerCookie)).status,200);
   assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,200,'customer addresses remain available');
   assert.equal((await request('/api/restaurant/operations/orders','GET',undefined,customerCookie,owner.tenant.id)).status,403);
-  await db.execute("UPDATE users SET status=\'suspended\' WHERE id=?",[customer.user.id]);
+  await db.execute("UPDATE users SET status=\'suspended\' WHERE id=?",[customerData.user.id]);
   assert.equal((await request('/api/account/addresses','GET',undefined,customerCookie)).status,401,'suspended customer cannot read address book');
   assert.equal((await request('/api/account/media?type=avatar','GET',undefined,customerCookie)).status,401,'suspended customer cannot read account media');
   assert.equal((await request('/api/account/media','POST',{},customerCookie)).status,401,'suspended customer cannot upload account media');
