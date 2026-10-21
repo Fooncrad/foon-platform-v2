@@ -28,7 +28,11 @@ export async function deliverNotifications(db,{providerFor=tenant=>queuedMailPro
    provider=await providerFor(row.tenant_id);
    await provider.send({id:row.id,to:row.recipient_email,...renderQueuedEmail(row,templates)});
    await db.execute("UPDATE platform_notification_outbox SET status='sent',sent_at=NOW(),last_error=NULL WHERE id=? AND status='processing' AND attempts=?",[row.id,attempt]);
-   if(row.event_key==='order_invoice')await db.execute("UPDATE restaurant_customer_invoices SET email_status='sent',email_attempts=?,emailed_at=NOW(),email_last_error=NULL WHERE id=? AND tenant_id=?",[attempt,row.id,row.tenant_id]);
+   if(row.event_key==='order_invoice'){
+    // An invoice status-sync error must NEVER retry an already accepted email.
+    try{await db.execute("UPDATE restaurant_customer_invoices SET email_status='sent',email_attempts=?,emailed_at=NOW(),email_last_error=NULL WHERE id=? AND tenant_id=?",[attempt,row.id,row.tenant_id]);}
+    catch{console.error('INVOICE_MAIL_STATUS_SYNC_FAILED');}
+   }
    result.sent++;
   }catch(error){
    const code=String(error.code??error.message??'MAIL_DELIVERY_FAILED');
