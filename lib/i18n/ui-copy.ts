@@ -6875,5 +6875,10 @@ export const uiCopy:Record<string,readonly [string,string]>={
  "تحميل إثبات التحويل للمراجعة": ["Download bank transfer proof for review", "Télécharger le justificatif de virement pour examen"],
  "سعر الباقة المجانية يجب أن يساوي صفرًا.": ["The free plan price must be zero.", "Le prix du forfait gratuit doit être égal à zéro."],
  "الباقة المجانية سعرها صفر دائمًا، ويمكن تخصيص حدودها حسب النشاط.": ["The free plan always costs zero, and its limits can be customized for each business activity.", "Le forfait gratuit coûte toujours zéro et ses limites peuvent être personnalisées selon l’activité."],
+ "اختر دولة": ["Choose a country", "Choisir un pays"],
+ "اسم المتجر أو المطعم": ["Store or restaurant name", "Nom du magasin ou du restaurant"],
+ "تخصص النشاط": ["Business category", "Catégorie d’activité"],
+ "كل التخصصات": ["All categories", "Toutes les catégories"],
+ "صفحات النتائج": ["Result pages", "Pages de résultats"],
 };
 export function uiText(value:string,language:UiLanguage):string{return language==="ar"?value:uiCopy[value]?.[language==="en"?0:1]??value;}
