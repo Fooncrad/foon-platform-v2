@@ -518,7 +518,11 @@ test("all 15 activities expose their own tools; service orders work in three lan
      await expect(page.locator('.restaurantHero h2')).not.toHaveText('لوحة التشغيل المباشر');
     }
     if(!dining){
-     if(services.has(activity))await expect(page.locator('.restaurantMetrics')).toHaveCount(0);
+     if(services.has(activity)){
+      await expect(page.locator('.restaurantMetrics')).toBeVisible();
+      await expect(page.locator('.restaurantMetrics')).toContainText('الفروع النشطة');
+      await expect(page.locator('.restaurantMetrics')).not.toContainText('الطاولات');
+     }
      else await expect(page.locator('.restaurantMetrics')).not.toContainText('الطاولات');
      await expect(navigation.getByRole('button',{name:'الطاولات',exact:true})).toHaveCount(0);
      expect(assignedRequests).toHaveLength(0);
