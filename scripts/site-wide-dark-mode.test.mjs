@@ -69,6 +69,18 @@ test("all operational screens have a dark counterpart, not only overview",()=>{
  }
 });
 
+test("utility and printed receipt routes also follow theme without tinting paper",()=>{
+ const standalone=read("app/components/standalone-theme-shell.tsx");
+ assert.match(standalone,/useWorkspaceTheme/);
+ assert.match(standalone,/data-theme=\{resolved\}/);
+ for(const path of ["app/offline/page.tsx","app/business/page.tsx","app/receipts/[id]/page.tsx"]){
+  assert.match(read(path),/StandaloneThemeShell/);
+ }
+ assert.match(rules,/\.foonStandaloneTheme\[data-theme="dark"\]/);
+ assert.match(rules,/@media print/);
+ assert.match(rules,/background:#fff!important;color:#111!important/);
+});
+
 test("styles preserve activity-specific branding, status colors and routing",()=>{
  assert.doesNotMatch(rules,/\.foonActivityStorefront\s*\{[^}]*--activity-accent:/s);
  assert.doesNotMatch(rules,/\.publicMenu\s*\{[^}]*--public-brand:/s);
