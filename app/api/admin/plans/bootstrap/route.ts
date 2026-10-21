@@ -18,6 +18,7 @@ const tiers=[
 const basic=new Set(["digital_menu","qr_menu","branding.logo","branding.colors","storefront","catalog","orders"]);
 const starter=new Set([...basic,"menu_templates","branding.dark_mode","branding.menu_theme","tables","waiter_call","reservations","waitlist","takeaway","delivery","employees","reviews","coupons","analytics","variants","pickup","customers","service_catalog","appointments","queue","payments"]);
 const professional=new Set([...starter,"pos","kds","inventory","purchases","suppliers","quotes","loyalty","campaigns","multi_branch","content_library","storage","branding.qr","room_service","nfc_menu","media_library","creator_profile","content_pricing","sales"]);
+const merchantExcluded=new Set(["creator_profile","content_marketplace","media_library","watermark","content_pricing"]);
 const freeActivityCodes=Object.keys(ACTIVITY_PRESETS);
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
@@ -49,7 +50,7 @@ export async function POST(request:Request){
    const id=String(rows[0].id);
    if(tier.code==="free")freePlanId=id;
    for(const [key] of referenceFeatures){
-    const enabled=tier.rank===3||tier.rank===2&&professional.has(key)||tier.rank===1&&starter.has(key)||tier.rank===0&&basic.has(key);
+    const enabled=!merchantExcluded.has(key)&&(tier.rank===3||tier.rank===2&&professional.has(key)||tier.rank===1&&starter.has(key)||tier.rank===0&&basic.has(key));
     // Initialize only new shared grants; never rewrite saved settings.
     const limit=initialPlanFeatureLimit(tier.code,key);
     await db.execute("INSERT IGNORE INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,?,?,?)",[id,key,enabled,limit]);
