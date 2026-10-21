@@ -5,7 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
-import {requireAllAdditionalBranchesUnlocked,onlyUnlockedBranchRows} from "@/lib/restaurant/branch-pin";
+import {BranchPinError,requireAllAdditionalBranchesUnlocked,onlyUnlockedBranchRows} from "@/lib/restaurant/branch-pin";
 import {isPaymentProvider,paymentMissingFields,validatePaymentKeys} from "@/lib/payments/provider-catalog";
 import {decryptPaymentCredentials,encryptPaymentCredentials,paymentVaultReady} from "@/lib/payments/credential-vault.mjs";
 
@@ -16,7 +16,10 @@ const failure=(code:string,status:number)=>NextResponse.json({ok:false,code},{st
 async function access(req:Request,write:boolean){
  const user=await currentUserId();if(!user)return {error:failure("UNAUTHENTICATED",401)};
  const tenant=req.headers.get("x-foon-tenant");if(!tenant)return {error:failure("TENANT_CONTEXT_REQUIRED",400)};
- try{const ctx=await requireTenantMembership(user,tenant,write?["owner","manager"]:["owner","manager","accountant"]);if(write)await requireAllAdditionalBranchesUnlocked(ctx.tenantId,user);return {tenantId:ctx.tenantId,userId:user};}catch{return {error:failure("FORBIDDEN",403)};}
+ let ctx;
+ try{ctx=await requireTenantMembership(user,tenant,write?["owner","manager"]:["owner","manager","accountant"]);}catch{return {error:failure("FORBIDDEN",403)};}
+ if(write){try{await requireAllAdditionalBranchesUnlocked(ctx.tenantId,user);}catch(error){if(error instanceof BranchPinError)return {error:failure(error.code,403)};console.error("[FOON payment settings PIN]",error);return {error:failure("BRANCH_PIN_UNAVAILABLE",503)};}}
+ return {tenantId:ctx.tenantId,userId:user};
 }
 export async function GET(req:Request){
  const a=await access(req,false);if(a.error)return a.error;
