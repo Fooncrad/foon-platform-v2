@@ -5,8 +5,23 @@ import {WORKSPACE_THEME_KEY,WORKSPACE_THEME_MODES,resolveWorkspaceTheme,type Wor
 const query="(prefers-color-scheme: dark)";
 function subscribeSystem(callback:()=>void){
  const media=window.matchMedia(query);
- media.addEventListener("change",callback);
- return()=>media.removeEventListener("change",callback);
+ let last=media.matches;
+ const reconcile=()=>{
+  const current=window.matchMedia(query).matches;
+  if(current===last)return;
+  last=current;
+  callback();
+ };
+ media.addEventListener("change",reconcile);
+ window.addEventListener("focus",reconcile);
+ // Some embedded/headless browsers miss the native dark-to-light event.
+ // Reconcile the actual media value without causing a React update if unchanged.
+ const poll=window.setInterval(reconcile,1000);
+ return()=>{
+  media.removeEventListener("change",reconcile);
+  window.removeEventListener("focus",reconcile);
+  window.clearInterval(poll);
+ };
 }
 const systemSnapshot=()=>window.matchMedia(query).matches;
 export function useWorkspaceTheme(){
