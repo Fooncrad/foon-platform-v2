@@ -7,15 +7,15 @@ const branch="11111111-1111-4111-8111-111111111111";
 const sourceFile=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 test("customer-facing merchant resources have English and French name fields",()=>{
- for(const module of ["departments","sections","inventory","suppliers","coupons","marketing","remote","remoteWorkers","hotelRooms","pickupPoints"]){
-  const keys=resourceModules[module].fields.map(field=>field.key);
-  assert.ok(keys.includes("nameEn"),module+" English");
-  assert.ok(keys.includes("nameFr"),module+" French");
+ for(const resourceKey of ["departments","sections","inventory","suppliers","coupons","marketing","remote","remoteWorkers","hotelRooms","pickupPoints"]){
+  const keys=resourceModules[resourceKey].fields.map(field=>field.key);
+  assert.ok(keys.includes("nameEn"),resourceKey+" English");
+  assert.ok(keys.includes("nameFr"),resourceKey+" French");
  }
- for(const module of ["categories","menu","menuGroups","menuValues"]){
-  const keys=resourceModules[module].fields.map(field=>field.key);
-  assert.ok(keys.includes("nameEn"),module+" existing English name remains");
-  assert.ok(keys.includes("nameFr"),module+" existing French name remains");
+ for(const resourceKey of ["categories","menu","menuGroups","menuValues"]){
+  const keys=resourceModules[resourceKey].fields.map(field=>field.key);
+  assert.ok(keys.includes("nameEn"),resourceKey+" existing English name remains");
+  assert.ok(keys.includes("nameFr"),resourceKey+" existing French name remains");
  }
 });
 
@@ -69,7 +69,7 @@ test("merchant forms and public selectors use the translations with Arabic fallb
 
 test("all merchant resource labels have actual English and French UI translations",async()=>{
  const {uiCopy}=await import("../lib/i18n/ui-copy.ts");
- const labels=new Set(Object.values(resourceModules).flatMap(module=>[module.label,...module.fields.map(field=>field.label)]));
+ const labels=new Set(Object.values(resourceModules).flatMap(resource=>[resource.label,...resource.fields.map(field=>field.label)]));
  const missing=[...labels].filter(label=>/[\u0600-\u06ff]/u.test(label)&&(!uiCopy[label]||uiCopy[label].length!==2||uiCopy[label].some(text=>!text.trim()||/[\u0600-\u06ff]/u.test(text))));
  assert.deepEqual(missing,[],`Untranslated resource labels: ${missing.join(", ")}`);
 });
