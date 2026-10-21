@@ -265,7 +265,7 @@
  .admin-operations,.admin-operation-grid>a,.admin-operation-grid>article,
  .adminOpsCard,.adminOpsForm,.adminOpsMessage,.adminBillingCard,
  .adminPlanCatalogCard,.adminPlanCreateDetails,.adminCmsLocale,
- .adminNotificationRule,.adminBillingReview,.adminStage .provision-form,
+ .adminNotificationRule,.adminBillingReview,.provision-form,
  .tenant-list article,.adminEventRow,.adminPageRow,.adminAuditRow,
  .admin-empty-state,.adminBillingEmpty,.adminUsersEmpty,.adminAuditEmpty,
  .adminOverviewSecondary article,.adminChannelBadges
@@ -278,9 +278,7 @@
  .adminTranslationHead,.adminDataTable tbody tr:hover
 ){background:#303846;color:#f8f3e9;border-color:#525c6e}
 .adminShell[data-theme="dark"] .adminStage :is(
- .adminStatusPill,.adminTranslationStatus,
- .adminOperationBadge,.adminCurrentLanguage,
- .adminModuleIcon,.adminOperationIcon
+ .adminCurrentLanguage,.adminModuleIcon,.adminOperationIcon
 ){background:#393528;color:#ffe0a4;border-color:#736348}
 .adminShell[data-theme="dark"] .adminStage :is(
  .adminPagePick,.adminModuleCard,.adminPagePick:hover,.adminModuleCard:hover
