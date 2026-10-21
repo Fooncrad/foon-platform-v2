@@ -21,6 +21,7 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
   if(uri.pathname==="/foon-offline-pos.js")return send(200,js,"application/javascript;charset=utf-8");
   if(uri.pathname==="/foon-offline-sw.js")return send(200,worker,"application/javascript;charset=utf-8");
   if(uri.pathname==="/offline")return send(200,"<h1>DATA-FREE OFFLINE SHELL</h1>","text/html;charset=utf-8");
+  if(req.method==="POST"&&uri.pathname==="/api/auth/logout"){currentUser=userB;return send(200,JSON.stringify({ok:true}));}
   if(uri.pathname==="/api/auth/me")return send(200,JSON.stringify({ok:true,user:{id:currentUser,email:"private-user@example.test"}}));
   if(uri.pathname===orderApi){
    if(currentUser!==userA)return send(403,JSON.stringify({ok:false,code:"ACCESS_DENIED"}));
@@ -81,6 +82,23 @@ test("real offline browser: encrypted scoped catalog and order, reload, wrong pa
  assert.equal(posts[0].requestKey.length,36);
  assert.equal(posts[0].paymentStatus,undefined);
  assert.equal(posts[0].customerName,"");
+ // Service worker must invalidate the local grant at logout even when the
+ // ciphertext remains available for eventual account-scoped recovery.
+ await page.evaluate(()=>fetch("/api/auth/logout",{method:"POST"}));
+ await page.waitForFunction(async()=>{
+  const open=indexedDB.open("foon-pos-secure-v1");const db=await new Promise(resolve=>open.onsuccess=()=>resolve(open.result));
+  const tx=db.transaction("profiles","readonly"),req=tx.objectStore("profiles").getAll();
+  const rows=await new Promise(resolve=>req.onsuccess=()=>resolve(req.result));db.close();return rows[0]?.reauthRequired===true;
+ });
+ await context.setOffline(true);await page.reload();
+ await page.waitForFunction(()=>document.querySelector("#locked")?.hidden===false);
+ await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
+ await page.waitForFunction(()=>document.querySelector("#notice")?.dataset.error==="true");
+ assert.equal(await page.locator("#workspace").isHidden(),true);
+ await context.setOffline(false);currentUser=userA;
+ await page.fill("#unlock-pass",passphrase);await page.click("#unlock-btn");
+ await page.waitForFunction(()=>document.querySelector("#workspace")?.hidden===false);
+ assert.equal(await page.locator("#catalog .item").count(),1);
  }finally{await context.close();await browser.close();await new Promise(resolve=>server.close(resolve));}
 });
 test("static shell cannot contain server/customer data or auth tokens",()=>{
