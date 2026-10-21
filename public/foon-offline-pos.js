@@ -399,13 +399,19 @@ async function importLegacyBackup(event){
    for(const item of prepared){
     const req=store.get(item.id);
     req.onsuccess=()=>{
-     const current=req.result;
-     if(item.prior){
-      // Reject a simultaneous edit/removal of the prior encrypted order.
-      if(JSON.stringify(current)!==JSON.stringify(item.prior)){tx.abort();return;}
-     }else{
-      if(current!==undefined){tx.abort();return;}
-      store.add(item.newRecord);inserted++;
+     try{
+      const current=req.result;
+      if(item.prior){
+       // Reject a simultaneous edit/removal of the prior encrypted order.
+       if(JSON.stringify(current)!==JSON.stringify(item.prior)){tx.abort();return;}
+      }else{
+       if(current!==undefined){tx.abort();return;}
+       store.add(item.newRecord);inserted++;
+      }
+     }catch{
+      // A synchronous IndexedDB exception inside an onsuccess callback must
+      // abort the WHOLE batch; never let it silently leave a pending Promise.
+      try{tx.abort();}catch{/* Already aborted by the storage layer. */}
      }
     };
    }
