@@ -3,6 +3,7 @@ import https from "node:https";
 import {readFile} from "node:fs/promises";
 import {randomBytes,scrypt as scryptCallback,timingSafeEqual} from "node:crypto";
 import {promisify} from "node:util";
+import {cloudUiInventory,cloudCssPaths} from "./foon-desktop-cloud-ui-inventory.mjs";
 const scrypt=promisify(scryptCallback);
 export async function hashOperatorPassword(password,salt=randomBytes(16).toString("hex")){
  if(typeof password!=="string"||password.length<8||password.length>128)throw Error("INVALID_OPERATOR_PASSWORD");
@@ -32,10 +33,18 @@ export function createEdgeConsoleServer({tls,users,origin,gatewayUrl,gatewayToke
   try{
    const url=new URL(req.url||"/",configuredOrigin);
    if(req.headers.host!==configuredOrigin.host)return reply(res,421,{error:"INVALID_HOST"});
-   if(req.method==="GET"&&["/","/console.js","/translations.js","/console.css"].includes(url.pathname)){
-    const file={"/":"index.html","/console.js":"console.js","/translations.js":"translations.js","/console.css":"console.css"}[url.pathname];
+   if(req.method==="GET"&&["/","/console.js","/translations.js","/console.css","/w28-shell.css"].includes(url.pathname)){
+    const file={"/":"index.html","/console.js":"console.js","/translations.js":"translations.js","/console.css":"console.css","/w28-shell.css":"w28-shell.css"}[url.pathname];
     const body=await readFile(new URL("./edge-console/"+file,import.meta.url));
     res.writeHead(200,{"content-type":file.endsWith(".html")?"text/html; charset=utf-8":file.endsWith(".js")?"text/javascript; charset=utf-8":"text/css; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","content-security-policy":"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self'; connect-src 'self'"});res.end(body);return;
+   }
+   if(req.method==="GET"&&url.pathname.startsWith("/cloud-ui-css/")){
+    const file=url.pathname.slice("/cloud-ui-css/".length);
+    if(!Object.hasOwn(cloudCssPaths,file))return reply(res,404,{error:"NOT_FOUND"});
+    const css=await readFile(cloudCssPaths[file]);
+    res.writeHead(200,{"content-type":"text/css; charset=utf-8","cache-control":"no-store",
+      "x-content-type-options":"nosniff","content-security-policy":"default-src 'none'"});
+    res.end(css);return;
    }
    const now=Date.now();
    for(const [key,value] of sessions)if(value.expires<=now)sessions.delete(key);
@@ -58,6 +67,14 @@ export function createEdgeConsoleServer({tls,users,origin,gatewayUrl,gatewayToke
    const token=(req.headers.cookie||"").match(/(?:^|;\s*)foon_local_session=([a-f0-9]{64})(?:;|$)/)?.[1],session=sessions.get(token);
    if(!session)return reply(res,401,{error:"UNAUTHORIZED"});
    const user=session.user;
+   if(req.method==="GET"&&url.pathname==="/api/cloud-ui-inventory"){
+    const inventory=await cloudUiInventory();
+    return reply(res,200,{ok:true,source:inventory.source,
+      modules:inventory.modules.filter(section=>section.roles.includes(user.role)),
+      activities:inventory.activities,channels:inventory.channels,
+      originalCssFiles:inventory.originalCssFiles,
+      activityCode:inventory.activities.includes(process.env.FOON_W28_DEMO_ACTIVITY)?process.env.FOON_W28_DEMO_ACTIVITY:"restaurant"});
+   }
    if(req.method==="GET"&&url.pathname==="/api/state"){
     const catalog=await grant(user),[ordersResponse,healthResponse]=await Promise.all([gateway("/orders",user),gateway("/health",user)]);
     if(!ordersResponse.ok||!healthResponse.ok)throw Error("LOCAL_GATEWAY_UNAVAILABLE");

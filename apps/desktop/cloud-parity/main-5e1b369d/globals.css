@@ -1,0 +1,820 @@
+:root{font-family:Arial,sans-serif;color:#152033;background:#f7f9fc}*{box-sizing:border-box}html,body{margin:0;max-width:100%;overflow-x:hidden}a{color:inherit;text-decoration:none}.nav{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 max(20px,calc((100vw - 1180px)/2));background:#fff;border-bottom:1px solid #e7ebf0;position:sticky;top:0}.nav strong{font-size:24px;color:#f58220}.nav nav{display:flex;gap:20px}.hero{max-width:1180px;margin:auto;padding:96px 20px 70px;text-align:center}.badge{display:inline-block;padding:8px 13px;border-radius:999px;background:#fff3e8;color:#c85c00;font-weight:700}.hero h1{font-size:clamp(38px,6vw,72px);line-height:1.05;max-width:900px;margin:24px auto}.hero p{font-size:18px;color:#667085;max-width:720px;margin:auto;line-height:1.8}.actions{display:flex;gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap}.actions a{padding:14px 22px;border-radius:12px;font-weight:700}.primary{background:#f58220;color:white}.secondary{background:white;border:1px solid #dde3ea}.grid{max-width:1180px;margin:auto;padding:20px 20px 80px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.grid article{background:white;border:1px solid #e7ebf0;border-radius:18px;padding:24px}.grid p{color:#667085;line-height:1.7}@media(max-width:700px){.nav{padding:0 16px}.hero{padding-top:64px}.grid{grid-template-columns:1fr}.hero h1{font-size:42px}}
+
+
+.auth-shell{min-height:100svh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top,#22201b 0,#171613 48%,#111 100%)}
+.auth-card{width:min(100%,440px);color:#f8f3e9;color-scheme:dark;background:#24221e;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.3)}
+.auth-brand{display:inline-block;color:#e2a93b;font-weight:900;letter-spacing:.08em;text-decoration:none;margin-bottom:20px}
+.auth-card h1{margin:0 0 8px;font-size:clamp(1.7rem,6vw,2.3rem)}.auth-card>p{color:#aaa59b;margin:0 0 24px}
+.auth-form{display:grid;gap:16px}.auth-form label{display:grid;gap:8px;font-weight:700}.auth-form input,.auth-form select{width:100%;min-width:0;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#171613;color:#f8f3e9;padding:0 14px;font:inherit;outline:none}.auth-form input:focus,.auth-form select:focus{border-color:#e2a93b;box-shadow:0 0 0 3px rgba(226,169,59,.14)}.auth-form small{color:#aaa59b;font-weight:400}.auth-form button,.secondary-button{min-height:48px;border:0;border-radius:12px;background:#e2a93b;color:#171613;font:inherit;font-weight:900;cursor:pointer}.auth-form button:disabled{opacity:.65;cursor:wait}.form-error{padding:12px;border-radius:12px;background:rgba(210,70,70,.12);border:1px solid rgba(255,120,120,.25);color:#ffd0d0}.auth-switch{margin-top:20px!important;text-align:center}.auth-switch a{color:#e2a93b}.account-email{direction:ltr;text-align:center}.secondary-button{width:100%;background:transparent;color:#f8f3e9;border:1px solid rgba(255,255,255,.14)}
+@media(max-width:480px){.auth-shell{padding:14px}.auth-card{padding:22px;border-radius:18px}}
+
+.workspace{min-height:100svh;padding:clamp(18px,4vw,48px);max-width:1440px;margin:auto}.workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:28px}.workspace-head h1{margin:0 0 8px}.workspace-head p{margin:0;color:#aaa59b}.workspace-head>a{color:#e2a93b}.workspace-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.workspace-grid article{min-width:0;padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#24221e;display:grid;gap:8px}.workspace-grid article span{color:#aaa59b}@media(max-width:720px){.workspace-head{align-items:center}.workspace-grid{grid-template-columns:1fr}.workspace{padding:16px}}
+
+.provision-form{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px}.provision-form input,.provision-form select,.provision-form button{min-width:0;min-height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.12);padding:0 12px;background:#24221e;color:#f8f3e9;font:inherit}.provision-form button{background:#e2a93b;color:#171613;font-weight:800}.form-note{padding:12px 14px;margin-bottom:16px;border:1px solid rgba(255,255,255,.1);border-radius:12px}.tenant-list{display:grid;gap:10px}.tenant-list article{display:flex;justify-content:space-between;gap:16px;padding:16px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:#24221e}.tenant-list article>div{display:flex;align-items:center;gap:12px;min-width:0}.tenant-list span{color:#aaa59b}.tenant-list b{font-size:.8rem;color:#e2a93b}@media(max-width:1000px){.provision-form{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.provision-form{grid-template-columns:1fr}.tenant-list article,.tenant-list article>div{align-items:flex-start;flex-direction:column}}
+
+.workspace-card{min-width:0;padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#24221e;display:grid;gap:8px;color:#f8f3e9;text-decoration:none}.workspace-card span{color:#aaa59b}.tenant-list select{min-height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#171613;color:#f8f3e9;padding:0 10px}.empty-state{padding:28px;text-align:center;color:#aaa59b;border:1px dashed rgba(255,255,255,.14);border-radius:14px}
+
+.account-card h1{color:#f8f3e9}.account-card>p{color:#aaa59b}.account-actions{display:grid;gap:10px;margin:20px 0}.primary-link,.secondary-link{display:grid;place-items:center;min-height:48px;border-radius:12px;text-decoration:none;font-weight:800}.primary-link{background:#e2a93b;color:#171613}.secondary-link{border:1px solid rgba(255,255,255,.14);color:#f8f3e9}
+
+/* Landing refinement */
+.brand{font-size:24px;font-weight:900;letter-spacing:.08em;color:#d99a24}
+.navCta{background:#d99a24;color:#171713!important;padding:10px 14px;border-radius:11px}
+.cardNo{display:block;color:#d99a24;font-weight:900;font-size:.8rem;margin-bottom:24px}
+.hero{padding-top:110px;padding-bottom:78px}
+.hero h1{letter-spacing:-.035em}
+.grid article{transition:transform .18s ease,border-color .18s ease}
+.grid article:hover{transform:translateY(-2px);border-color:#d6b16c}
+@media(max-width:700px){.nav nav{gap:10px;font-size:.88rem}.nav nav>a:first-child{display:none}.navCta{padding:9px 11px}.hero{padding:72px 16px 52px}.hero h1{font-size:clamp(42px,13vw,64px)}.actions{flex-direction:column}.actions a{text-align:center;width:100%}}
+
+/* Admin shell presentation */
+.adminShell{min-height:100svh;display:grid;grid-template-columns:260px minmax(0,1fr);background:#f6f7f9;color:#172033}
+.adminSide{height:100svh;position:sticky;top:0;background:#201f1b;color:#f8f3e9;padding:24px 16px;overflow:auto}
+.adminLogo{display:block;color:#e2a93b;font-size:1.3rem;font-weight:900;letter-spacing:.08em;padding:4px 10px 22px;border-bottom:1px solid #3b3933}
+.adminLogo small{display:block;color:#928d82;font-size:.68rem;letter-spacing:0;margin-top:5px}
+.adminSide nav{display:grid;gap:5px;padding-top:18px}
+.adminSide nav a,.adminSide nav span{display:block;padding:11px 12px;border-radius:10px;font-size:.91rem;white-space:nowrap}
+.adminSide nav a{color:#f8f3e9}.adminSide nav a:hover{background:#302e29}.adminSide nav span{color:#8d887e}
+.adminStage{min-width:0}
+.adminTop{height:68px;padding:0 26px;background:#fff;border-bottom:1px solid #e2e5e9;display:flex;align-items:center;justify-content:space-between}
+.adminTop>div{display:grid;gap:2px}.adminTop small{color:#747b86}.adminTop button{border:1px solid #dfe2e6;background:#fff;color:#303641;border-radius:10px;padding:9px 13px;cursor:pointer}
+.adminStage>.workspace{max-width:none;margin:0;padding:32px}
+.adminStage .workspace-head{margin-bottom:24px}.adminStage .workspace-head .auth-brand{display:none}
+.adminStage .workspace-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.adminStage .workspace-card,.adminStage .workspace-grid article{background:#fff;color:#172033;border-color:#e0e3e7;box-shadow:0 4px 18px rgba(25,31,40,.04)}
+.adminStage .workspace-card span,.adminStage .workspace-grid article span,.adminStage .workspace-head p{color:#737b86}
+@media(max-width:850px){.adminShell{grid-template-columns:1fr}.adminSide{position:static;height:auto;padding:12px}.adminLogo{padding:4px 8px 12px}.adminSide nav{display:flex;gap:5px;overflow-x:auto;padding-top:10px}.adminSide nav a,.adminSide nav span{flex:0 0 auto}.adminTop{height:60px;padding:0 16px}.adminStage>.workspace{padding:18px 16px}.adminStage .workspace-grid{grid-template-columns:1fr}}
+
+/* Admin mobile navigation containment */
+@media(max-width:850px){
+ .adminSide{padding:14px 16px 10px}
+ .adminLogo{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3b3933;padding:2px 4px 12px}
+ .adminLogo small{margin:0}
+ .adminSide nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible;padding-top:10px}
+ .adminSide nav a,.adminSide nav span{min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:center;padding:9px 7px;border:1px solid #34322d;border-radius:9px;font-size:.78rem}
+ .adminSide nav span{display:none}
+ .adminTop{position:sticky;top:0;z-index:10}
+}
+@media(max-width:430px){
+ .adminSide nav{grid-template-columns:1fr 1fr}
+ .adminLogo{font-size:1.15rem}
+ .adminTop small{display:none}
+}
+
+/* Mobile admin drawer */
+.adminBrandRow{display:block}.adminMobileMenu{display:none}
+@media(max-width:850px){
+ .adminBrandRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+ .adminBrandRow .adminLogo{flex:1}
+ .adminSide>nav{display:none}
+ .adminMobileMenu{display:block;position:relative}
+ .adminMobileMenu summary{list-style:none;cursor:pointer;width:44px;height:44px;display:grid;place-items:center;border:1px solid #3b3933;border-radius:10px;color:#f8f3e9;font-size:1.35rem}
+ .adminMobileMenu summary::-webkit-details-marker{display:none}
+ .adminDrawer{position:absolute;z-index:50;top:52px;left:0;width:min(330px,calc(100vw - 32px));max-height:70svh;overflow:auto;padding:10px;background:#201f1b;border:1px solid #3b3933;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.35);display:grid;gap:5px}
+ .adminDrawer a,.adminDrawer span{display:block;padding:12px;border-radius:9px;white-space:normal;line-height:1.35}
+ .adminDrawer a{color:#fff;background:#292823}
+ .adminDrawer span{color:#aaa59b;border:1px solid #34322d}
+}
+
+/* Keep mobile admin drawer above the workspace */
+@media(max-width:850px){
+ .adminSide{position:relative;z-index:100}
+ .adminBrandRow{position:relative;z-index:102}
+ .adminMobileMenu{z-index:110}
+ .adminMobileMenu[open]{z-index:120}
+ .adminDrawer{z-index:9999}
+ .adminStage{position:relative;z-index:1}
+ .adminTop{z-index:5}
+}
+
+/* Fix drawer stacking context: render dropdown below admin bar but above page */
+@media(max-width:850px){
+ .adminSide{overflow:visible!important;isolation:isolate}
+ .adminBrandRow{overflow:visible}
+ .adminMobileMenu{position:static}
+ .adminMobileMenu[open]::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:9000}
+ .adminDrawer{position:fixed!important;top:126px!important;right:16px!important;left:16px!important;width:auto!important;max-height:calc(100svh - 142px)!important;z-index:9001!important}
+}
+
+/* Tenant management inside unified admin */
+.tenant-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.tenant-summary article{background:#fff;border:1px solid #e0e3e7;border-radius:14px;padding:16px;display:grid;gap:6px}
+.tenant-summary strong{font-size:1.5rem;color:#172033}.tenant-summary span{color:#737b86;font-size:.88rem}
+.adminStage .provision-form{background:#fff;border:1px solid #e0e3e7;border-radius:14px;padding:14px}
+.adminStage .provision-form input,.adminStage .provision-form select{background:#fff;color:#172033;border-color:#dce0e5}
+.adminStage .tenant-list article{background:#fff;color:#172033;border-color:#e0e3e7}
+.adminStage .tenant-list span{color:#737b86}.adminStage .tenant-list select{background:#fff;color:#172033;border-color:#dce0e5}
+.adminStage .tenant-list article>div:last-child{flex-wrap:wrap}.tenantListingSettings{flex-basis:100%;padding-top:10px;border-top:1px solid #e5e7eb}.tenantListingSettings summary{cursor:pointer;font-weight:700;color:#344054}.tenantListingSettings form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;padding-top:12px}.tenantListingSettings label{display:grid;gap:5px;color:#4b5563;font-size:13px}.tenantListingSettings label:first-child{display:flex;align-items:center;gap:8px}.tenantListingSettings input{min-width:0;min-height:38px;border:1px solid #d0d5dd;border-radius:8px;padding:6px 8px;background:#fff;color:#172033}.tenantListingSettings input[type=checkbox]{min-height:auto}.tenantListingSettings button{min-height:38px;border:0;border-radius:8px;padding:0 14px;background:#173b69;color:#fff;font-weight:700;cursor:pointer}
+.adminStage .form-note{background:#fff;border-color:#e0e3e7;color:#172033}
+@media(max-width:560px){.tenant-summary{grid-template-columns:repeat(3,1fr)}.tenant-summary article{padding:12px}.tenant-summary strong{font-size:1.25rem}.tenant-summary span{font-size:.75rem}}
+
+/* Platform tools overview */
+.admin-operations{margin-top:18px;background:#fff;border:1px solid #e0e3e7;border-radius:16px;padding:22px}
+.admin-operations-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.admin-operations-head h2{margin:0 0 5px;font-size:1.2rem}.admin-operations-head p{margin:0;color:#737b86}
+.admin-operation-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.admin-operation-grid>a,.admin-operation-grid>article{position:relative;min-width:0;min-height:112px;padding:17px;border:1px solid #e5e7ea;border-radius:12px;display:grid;align-content:start;gap:7px;background:#fff;color:#172033}
+.admin-operation-grid>a:hover{border-color:#d7a74d;box-shadow:0 5px 18px rgba(25,31,40,.05)}
+.admin-operation-grid b{font-size:.96rem}.admin-operation-grid span{color:#737b86;font-size:.85rem;line-height:1.5}
+.admin-operation-grid em{position:absolute;left:12px;top:12px;font-style:normal;font-size:.68rem;color:#9a6c18;background:#fff7e6;padding:4px 7px;border-radius:999px}
+@media(max-width:900px){.admin-operation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.admin-operations{padding:15px}.admin-operation-grid{grid-template-columns:1fr}.admin-operation-grid>a,.admin-operation-grid>article{min-height:92px}}
+
+/* Admin visual clarity */
+.adminShell{font-family:Arial,"Noto Sans Arabic",sans-serif}
+.adminSide{background:#171613;color:#fff}
+.adminLogo{color:#f2b63f}.adminLogo small{color:#d0cbc0}
+.adminSide nav a{color:#fff;font-weight:700}.adminSide nav span{color:#d2cdc3}
+.adminNavGroup{display:grid;gap:5px;margin-top:10px}.adminNavGroup small{color:#8f8a80;padding:8px 12px 3px;font-size:.72rem;font-weight:800}
+.adminTop{background:#fff;color:#111827;border-color:#d8dde4}.adminTop b{font-size:1rem}.adminTop small{color:#596273}
+.adminStage>.workspace{color:#111827}.adminStage .workspace-head h1{color:#111827}.adminStage .workspace-head p{color:#5f6877}
+.adminStage .workspace-card,.adminStage .workspace-grid article,.tenant-summary article,.admin-operations,.admin-operation-grid>a,.admin-operation-grid>article{border-color:#d6dbe2;box-shadow:0 3px 12px rgba(17,24,39,.06)}
+.adminStage .workspace-card strong,.adminStage .workspace-grid article strong,.tenant-summary strong,.admin-operation-grid b{color:#111827}
+.adminDrawer{background:#171613!important;border-color:#3f3b34!important}
+.adminDrawer a{background:#292720!important;color:#fff!important;font-weight:800;border:1px solid #3b3933}
+.adminDrawer span{color:#ddd7cc!important;border-color:#3f3b34!important;font-weight:650}
+.adminMenuButton{appearance:none;border:1px solid #4a463e;background:#24221e;color:#fff;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:1.45rem;line-height:1;cursor:pointer;padding:0}
+.adminMenuButton span{display:block;line-height:1}
+@media(max-width:850px){.adminTop{box-shadow:0 2px 8px rgba(17,24,39,.08)}.adminDrawer{box-shadow:0 20px 60px rgba(0,0,0,.55)!important}}
+
+/* Admin top controls */
+.adminTopActions{display:flex;align-items:center;gap:8px}
+.adminLanguageMenu{position:relative}
+.adminLanguageMenu summary{list-style:none;cursor:pointer;border:1px solid #d8dde4;background:#fff;color:#172033;border-radius:10px;min-width:72px;height:38px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800}
+.adminLanguageMenu summary::-webkit-details-marker{display:none}
+.adminLanguageMenu>div{position:absolute;top:44px;left:0;z-index:80;width:150px;background:#fff;border:1px solid #d8dde4;border-radius:12px;padding:6px;box-shadow:0 14px 35px rgba(17,24,39,.14);display:grid;gap:4px}
+.adminLanguageMenu>div button{border:0;background:transparent;color:#172033;text-align:start;padding:9px 10px;border-radius:8px;cursor:pointer}.adminLanguageMenu>div button:hover{background:#f3f4f6}
+.adminIconButton{position:relative;width:38px;height:38px;padding:0!important;display:grid;place-items:center;border:1px solid #d8dde4!important;border-radius:10px!important;background:#fff!important;color:#172033!important;font-size:1.05rem}
+.adminNotificationButton span{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#b42318;color:#fff;font-size:.62rem;display:grid;place-items:center;border:2px solid #fff}
+@media(max-width:650px){
+ .adminTop{height:auto;min-height:62px;gap:10px;padding:10px 12px}
+ .adminTop>div:first-child small{display:none}
+ .adminTopActions{gap:5px}
+ .adminTopActions form button{font-size:.72rem;padding:8px 9px}
+ .adminLanguageMenu summary{min-width:58px;height:36px}
+ .adminIconButton{width:36px;height:36px}
+ .adminLanguageMenu>div{position:fixed;top:116px;left:12px;right:12px;width:auto}
+}
+
+/* Keep admin utilities centered in one mobile top bar */
+@media(max-width:650px){
+ .adminTop{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;padding:9px 12px!important;min-height:58px!important}
+ .adminTop>div:first-child{min-width:0}
+ .adminTop>div:first-child b{display:block;white-space:nowrap;font-size:.9rem}
+ .adminTopActions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important;flex-wrap:nowrap!important}
+ .adminLanguageMenu,.adminIconButton,.adminTopActions form{flex:0 0 auto!important}
+ .adminLanguageMenu summary{min-width:54px!important;width:54px!important;height:36px!important}
+ .adminTopActions form button{height:36px!important;white-space:nowrap!important;margin:0!important}
+}
+
+/* Compact admin language popover on mobile */
+@media(max-width:650px){
+ .adminLanguageMenu{position:relative!important}
+ .adminLanguageMenu>div{position:absolute!important;top:42px!important;right:auto!important;left:0!important;width:170px!important;min-width:170px!important;padding:6px!important;border-radius:12px!important}
+ .adminLanguageMenu>div button{min-height:38px!important;padding:8px 10px!important}
+ .adminTop{overflow:visible!important}
+ .adminTopActions{position:relative;z-index:30}
+}
+
+/* Refine admin utility icons and tap targets */
+.adminIconButton{transition:border-color .15s ease,background .15s ease,transform .15s ease}
+.adminIconButton:hover{background:#f7f8fa!important;border-color:#bfc6cf!important}
+.adminIconButton:active{transform:scale(.96)}
+.adminNotificationButton{font-size:0!important}
+.adminNotificationButton::before{content:"🔔";font-size:1rem;line-height:1}
+.adminTopActions form button{min-height:38px;font-weight:700}
+@media(max-width:650px){
+ .adminTopActions{direction:ltr}
+ .adminTopActions form{order:1}
+ .adminNotificationButton{order:2}
+ .adminTopActions>.adminIconButton:not(.adminNotificationButton){order:3}
+ .adminLanguageMenu{order:4}
+ .adminTop>div:first-child{direction:rtl;text-align:right}
+}
+
+/* Admin mobile drawer UX */
+@media(max-width:850px){
+ .adminDrawer{padding:12px!important;display:block!important}
+ .adminDrawer>a{display:flex!important;align-items:center;min-height:46px;margin-bottom:8px;padding:11px 13px!important}
+ .adminDrawerGroup{display:grid;gap:5px;margin-top:12px;padding-top:10px;border-top:1px solid #34322d}
+ .adminDrawerGroup small{display:block;color:#e2a93b;font-size:.7rem;font-weight:900;padding:0 8px 4px}
+ .adminDrawerGroup span{display:flex!important;align-items:center;min-height:44px;padding:10px 12px!important;border-radius:9px}
+ .adminMenuButton{touch-action:manipulation}
+ .adminDrawer{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+}
+
+/* Active admin navigation */
+.adminSide nav>a.active{background:#343129;color:#f2b63f;border:1px solid #4a453a;font-weight:900}
+.adminDrawer>a.active{background:#3a352a!important;color:#f2b63f!important;border-color:#665b42!important}
+@media(max-width:850px){
+ .adminDrawer>a.active::before{content:"";width:4px;height:22px;border-radius:999px;background:#e2a93b;margin-left:8px;flex:0 0 auto}
+}
+
+/* Admin management workspaces */
+.workspace{padding:24px;min-width:0}.workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}.workspace-head h1,.adminPanel h2{margin:0;color:#171613}.workspace-head p,.adminPanelHead p,.adminToolCard p,.adminAuditRow p{margin:5px 0 0;color:#68645c;line-height:1.6}.adminPrimaryButton{border:1px solid #c88e1f;background:#e2a93b;color:#171613;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;white-space:nowrap}.adminPanel{background:#fff;border:1px solid #dedbd4;border-radius:14px;padding:18px;box-shadow:0 5px 18px rgba(23,22,19,.06);margin-bottom:18px}.adminPanelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}.adminPanelHead input,.adminAuditFilters input,.adminAuditFilters select,.adminSettingsFields input{min-height:42px;border:1px solid #cfcac0;border-radius:9px;background:#fff;color:#171613;padding:9px 11px;outline:none}.adminPanelHead input:focus,.adminAuditFilters input:focus,.adminAuditFilters select:focus,.adminSettingsFields input:focus{border-color:#e2a93b;box-shadow:0 0 0 3px rgba(226,169,59,.15)}.adminStatusPill{display:inline-flex;align-items:center;width:max-content;border:1px solid #d9d3c7;background:#f7f5f0;border-radius:999px;padding:5px 9px;color:#575249;font-size:.76rem;font-weight:800}.adminToolCard{background:#fff;border:1px solid #dedbd4;border-radius:13px;padding:16px;display:flex;justify-content:space-between;gap:12px;box-shadow:0 4px 14px rgba(23,22,19,.05)}.adminToolCard>b,.adminToolCard div>b{color:#171613}.adminToolCard>span{color:#8b651d;font-size:.78rem;font-weight:900}.adminEventGrid,.adminPageList,.adminAuditList{display:grid;gap:8px}.adminEventRow,.adminPageRow,.adminAuditRow{display:grid;align-items:center;gap:12px;border:1px solid #e2ded6;border-radius:10px;padding:12px;background:#fcfbf8}.adminEventRow{grid-template-columns:minmax(130px,1fr) minmax(190px,2fr) auto}.adminEventRow span{color:#716b61;font-size:.85rem}.adminEventRow button,.adminRowActions button,.adminAuditRow button{border:1px solid #d5d0c7;background:#fff;color:#302e29;border-radius:8px;padding:7px 10px;font-weight:800;cursor:pointer}.adminTranslationTable{border:1px solid #dedbd4;border-radius:11px;overflow:hidden}.adminTranslationRow{display:grid;grid-template-columns:minmax(150px,1fr) repeat(3,minmax(150px,1.35fr));border-bottom:1px solid #e8e4dc}.adminTranslationRow:last-child{border-bottom:0}.adminTranslationRow>*{padding:11px 12px;border-inline-start:1px solid #eeeae2;min-width:0}.adminTranslationRow>*:first-child{border-inline-start:0}.adminTranslationHead{background:#f3efe6;color:#403b32}.adminTranslationRow code{direction:ltr;text-align:left;color:#795c24;font-size:.8rem}.adminSettingsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.adminSettingsFields{display:grid;gap:12px}.adminSettingsFields label{display:grid;gap:6px;color:#3f3b34;font-weight:800;font-size:.86rem}.adminPanelActions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid #ebe7df}.adminPanelActions small{color:#777168}.adminPageRow{grid-template-columns:minmax(180px,1.5fr) minmax(120px,.8fr) auto auto}.adminPageRow>div:first-child{display:grid;gap:4px}.adminPageRow code{direction:ltr;text-align:left;color:#76613a}.adminRowActions{display:flex;gap:6px}.adminAuditFilters{display:flex;gap:8px}.adminAuditRow{grid-template-columns:auto minmax(170px,1fr) auto auto auto}.adminAuditDot{width:9px;height:9px;border-radius:50%;background:#e2a93b;box-shadow:0 0 0 4px rgba(226,169,59,.14)}.adminAuditRow time{color:#756f65;font-size:.82rem;white-space:nowrap}.admin-empty-state{background:#fff;border:1px dashed #cfc8bb;border-radius:14px;padding:28px;text-align:center}.admin-empty-state b{font-size:1.05rem;color:#171613}.admin-empty-state p{color:#716b61}
+@media(max-width:850px){.workspace{padding:16px}.adminSettingsGrid{grid-template-columns:1fr}.adminTranslationTable{overflow-x:auto}.adminTranslationRow{min-width:720px}.adminPageRow{grid-template-columns:1fr auto}.adminPageRow>span:first-of-type{grid-column:1/-1}.adminAuditRow{grid-template-columns:auto 1fr auto}.adminAuditRow time{grid-column:2}.adminAuditRow button{grid-column:3;grid-row:1/3}.adminEventRow{grid-template-columns:1fr auto}.adminEventRow span{grid-column:1/-1}.adminPanelHead{flex-wrap:wrap}.adminPanelHead input{width:100%}}
+@media(max-width:520px){.workspace{padding:12px}.workspace-head{align-items:stretch;flex-direction:column}.workspace-head .adminPrimaryButton{width:100%}.adminPanel{padding:13px;border-radius:11px}.adminPanelActions{align-items:stretch;flex-direction:column}.adminPanelActions .adminPrimaryButton{width:100%}.adminPageRow{grid-template-columns:1fr}.adminPageRow>*{grid-column:1!important}.adminRowActions{width:100%}.adminRowActions button{flex:1}.adminAuditFilters{width:100%;flex-direction:column}.adminAuditFilters>*{width:100%}.adminAuditRow{grid-template-columns:auto 1fr}.adminAuditRow>*{grid-column:2}.adminAuditRow .adminAuditDot{grid-column:1;grid-row:1}.adminAuditRow button{grid-column:2;grid-row:auto;width:max-content}.adminEventRow{grid-template-columns:1fr}.adminEventRow>*{grid-column:1!important}.adminEventRow button{width:100%}}
+
+/* Plans and subscriptions */
+.adminPlanGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.adminPlanCard{display:grid;gap:16px;background:#fff;border:1px solid #dedbd4;border-radius:14px;padding:17px;box-shadow:0 5px 18px rgba(23,22,19,.06)}
+.adminPlanCardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.adminPlanCardHead b{font-size:1.05rem;color:#171613}.adminPlanCardHead p{margin:5px 0 0;color:#716b61;font-size:.84rem}
+.adminPlanPrice{display:flex;align-items:baseline;gap:7px;padding:13px 0;border-block:1px solid #eee9df}
+.adminPlanPrice strong{font-size:1.8rem;color:#171613}.adminPlanPrice span{color:#746e64;font-size:.78rem}
+.adminPlanMeta{display:grid;gap:7px}.adminPlanMeta span{position:relative;padding-inline-start:17px;color:#555047;font-size:.82rem}
+.adminPlanMeta span::before{content:"✓";position:absolute;inset-inline-start:0;color:#a97516;font-weight:900}
+.adminPlanCard .adminRowActions{margin-top:auto}.adminPlanCard .adminRowActions button{flex:1}
+.adminSubscriptionStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.adminSubscriptionStats article{display:grid;gap:7px;border:1px solid #e2ded6;background:#fcfbf8;border-radius:10px;padding:13px}
+.adminSubscriptionStats b{color:#686259;font-size:.8rem}.adminSubscriptionStats strong{font-size:1.35rem;color:#171613}
+@media(max-width:1100px){.adminPlanGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.adminPlanGrid,.adminSubscriptionStats{grid-template-columns:1fr}.adminPlanCard{padding:14px}.adminPlanCard .adminRowActions{display:grid;grid-template-columns:repeat(3,1fr)}}
+
+/* Billing and invoices */
+.adminBillingStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.adminBillingStats article{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #dedbd4;border-radius:12px;padding:15px;box-shadow:0 4px 14px rgba(23,22,19,.05)}.adminBillingStats span{color:#686259;font-size:.84rem;font-weight:800}.adminBillingStats strong{font-size:1.3rem;color:#171613}.adminPaymentMethods{display:grid;gap:9px}.adminPaymentMethods article{display:grid;grid-template-columns:minmax(200px,1fr) auto auto;align-items:center;gap:12px;border:1px solid #e2ded6;border-radius:10px;padding:13px;background:#fcfbf8}.adminPaymentMethods p,.adminBillingEmpty p{margin:4px 0 0;color:#716b61;line-height:1.55}.adminPaymentMethods button{border:1px solid #d5d0c7;background:#fff;color:#302e29;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.adminBillingEmpty{text-align:center;border:1px dashed #d3cdc2;border-radius:11px;padding:25px;background:#faf8f4}.adminBillingEmpty b{color:#171613}
+@media(max-width:850px){.adminBillingStats{grid-template-columns:repeat(2,minmax(0,1fr))}.adminPaymentMethods article{grid-template-columns:1fr auto}.adminPaymentMethods article button{grid-column:1/-1}}
+@media(max-width:520px){.adminBillingStats{grid-template-columns:1fr}.adminPaymentMethods article{grid-template-columns:1fr}.adminPaymentMethods article>*{grid-column:1}.adminPaymentMethods article button{width:100%}}
+
+/* Users and permissions */
+.adminAccessStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}.adminAccessStats article{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #dedbd4;border-radius:12px;padding:15px;box-shadow:0 4px 14px rgba(23,22,19,.05)}.adminAccessStats span{color:#686259;font-size:.84rem;font-weight:800}.adminAccessStats strong{font-size:1.3rem;color:#171613}.adminRoleGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.adminRoleGrid article{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e2ded6;border-radius:10px;padding:14px;background:#fcfbf8}.adminRoleGrid p,.adminUsersEmpty p{margin:4px 0 0;color:#716b61;line-height:1.55}.adminRoleGrid button{border:1px solid #d5d0c7;background:#fff;color:#302e29;border-radius:8px;padding:8px 11px;font-weight:800;cursor:pointer}.adminUserFilters{display:flex;gap:8px}.adminUserFilters input,.adminUserFilters select{min-height:42px;border:1px solid #cfcac0;border-radius:9px;background:#fff;color:#171613;padding:9px 11px}.adminUsersEmpty{text-align:center;border:1px dashed #d3cdc2;border-radius:11px;padding:25px;background:#faf8f4}.adminUsersEmpty b{color:#171613}
+@media(max-width:700px){.adminAccessStats{grid-template-columns:1fr}.adminRoleGrid{grid-template-columns:1fr}.adminUserFilters{width:100%;flex-direction:column}.adminUserFilters>*{width:100%}}
+@media(max-width:480px){.adminRoleGrid article{align-items:stretch;flex-direction:column}.adminRoleGrid button{width:100%}}
+
+/* Notification operations */
+.adminNotificationStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}.adminNotificationStats article{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #dedbd4;border-radius:12px;padding:14px;box-shadow:0 4px 14px rgba(23,22,19,.05)}.adminNotificationStats span{color:#686259;font-size:.84rem;font-weight:800}.adminNotificationStats strong{color:#171613;font-size:1.3rem}.adminNotificationEvents{margin-top:18px}.adminEventRow>div:first-child{display:grid;gap:3px}.adminEventRow small{color:#817a70;font-size:.72rem}.adminChannelBadges{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.adminChannelBadges span{border:1px solid #ded7c8;background:#f7f2e7;color:#6b5324;border-radius:999px;padding:5px 8px;font-size:.72rem;font-weight:800}
+@media(max-width:650px){.adminNotificationStats{grid-template-columns:1fr}.adminChannelBadges{grid-column:1!important}.adminEventRow .adminChannelBadges span{width:auto}}
+
+/* Translation management */
+.adminTranslationStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.adminTranslationStats article{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid #dedbd4;border-radius:12px;padding:14px;box-shadow:0 4px 14px rgba(23,22,19,.05)}.adminTranslationStats span{color:#686259;font-size:.82rem;font-weight:800}.adminTranslationStats strong{color:#171613;font-size:1.15rem}.adminTranslationFilters{display:flex;gap:8px}.adminTranslationFilters input,.adminTranslationFilters select{min-height:42px;border:1px solid #cfcac0;border-radius:9px;background:#fff;color:#171613;padding:9px 11px}.adminTranslationRow{grid-template-columns:minmax(145px,1fr) repeat(3,minmax(145px,1.3fr)) minmax(90px,.6fr)}.adminTranslationStatus{align-self:center;justify-self:start;border:1px solid #ded7c8;background:#f7f2e7;color:#6b5324;border-radius:999px!important;padding:5px 9px!important;font-size:.72rem;font-weight:900}
+@media(max-width:850px){.adminTranslationStats{grid-template-columns:repeat(2,minmax(0,1fr))}.adminTranslationFilters{width:100%}.adminTranslationFilters input{flex:1}.adminTranslationRow{min-width:860px}}
+@media(max-width:520px){.adminTranslationStats{grid-template-columns:1fr}.adminTranslationFilters{flex-direction:column}.adminTranslationFilters>*{width:100%}}
+
+/* Public pages management */
+.adminPageStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}.adminPageStats article{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid #dedbd4;border-radius:12px;padding:14px;box-shadow:0 4px 14px rgba(23,22,19,.05)}.adminPageStats span{color:#686259;font-size:.82rem;font-weight:800}.adminPageStats strong{font-size:1.25rem;color:#171613}.adminPageFilters{display:flex;gap:8px}.adminPageFilters input,.adminPageFilters select{min-height:42px;border:1px solid #cfcac0;border-radius:9px;background:#fff;color:#171613;padding:9px 11px}.adminPageRow{grid-template-columns:minmax(180px,1.5fr) minmax(110px,.7fr) auto auto auto}.adminPageRow time{color:#777168;font-size:.78rem;white-space:nowrap}.adminStatusPill.isPublished{background:#f0f6ed;border-color:#cbdcc2;color:#416235}.adminStatusPill.isDraft{background:#f8f2e8;border-color:#e5d2ae;color:#7c5b1c}
+@media(max-width:850px){.adminPageRow{grid-template-columns:1fr auto auto}.adminPageRow>span:first-of-type{grid-column:1/-1}.adminPageFilters{width:100%}.adminPageFilters input{flex:1}}
+@media(max-width:520px){.adminPageStats{grid-template-columns:1fr}.adminPageFilters{flex-direction:column}.adminPageFilters>*{width:100%}.adminPageRow{grid-template-columns:1fr}.adminPageRow>*{grid-column:1!important}.adminPageRow time{white-space:normal}}
+
+/* Admin toolbar: truthful language indicator and accessible notification link */
+.adminCurrentLanguage{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 10px;border:1px solid #d9d4ca;border-radius:9px;font-size:13px;font-weight:700;white-space:nowrap}
+.adminTopActions a.adminIconButton{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.adminTopActions a.adminIconButton:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:520px){.adminCurrentLanguage{min-height:32px;padding:0 7px;font-size:12px}}
+
+
+/* FOON V2 shared operational editors: subscription management and translations */
+.adminOperationsPanel{display:grid;gap:18px;min-width:0}
+.adminOperationsPanel h2{margin:0;color:#171613;font-size:1.15rem}
+.adminOperationsPanel .adminOpsLead{margin:0;color:#716b61;font-size:.88rem;line-height:1.6}
+.adminOpsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.adminOpsCard{display:grid;gap:8px;min-width:0;padding:15px;border:1px solid #e3ddd2;border-radius:12px;background:#fcfbf8}
+.adminOpsCard strong{font-size:.98rem;color:#171613;overflow-wrap:anywhere}
+.adminOpsCard span{font-size:.85rem;color:#5c564c}
+.adminOpsCard small{font-size:.78rem;color:#8a6c35}
+.adminOpsForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:800px}
+.adminOpsForm label,.adminOpsSearch label{display:grid;gap:6px;min-width:0;font-weight:700;color:#39352d;font-size:.85rem}
+.adminOpsForm input,.adminOpsForm select,.adminOpsSearch input{width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #cec7bb;border-radius:9px;background:#fff;color:#171613;font:inherit;font-weight:400}
+.adminOpsForm input:focus-visible,.adminOpsForm select:focus-visible,.adminOpsSearch input:focus-visible,.adminTranslationTable textarea:focus-visible{outline:2px solid #c99432;outline-offset:2px}
+.adminOpsForm button,.adminOpsSearch button,.adminOpsPager button,.adminTranslationTable button{min-height:42px;padding:9px 15px;border:1px solid #b78529;border-radius:9px;background:#e2a93b;color:#171613;font:inherit;font-weight:800;cursor:pointer}
+.adminOpsForm button:disabled,.adminOpsPager button:disabled,.adminTranslationTable button:disabled{opacity:.55;cursor:not-allowed}
+.adminOpsForm .adminOpsSubmit{grid-column:1/-1;justify-self:start;min-width:180px}
+.adminOpsMessage{margin:0;padding:12px;border:1px solid #e5d2ae;border-radius:9px;background:#fffaf0;color:#60481e;overflow-wrap:anywhere}
+.translationLeakAlert{position:sticky;top:8px;z-index:30;margin:10px 18px;padding:12px 14px;border:1px solid var(--foon-accent);border-radius:12px;background:color-mix(in srgb,var(--foon-accent) 13%,var(--foon-surface));color:var(--foon-text);box-shadow:0 6px 24px rgba(23,22,19,.12)}
+.translationLeakTop{display:flex;justify-content:space-between;align-items:center;gap:12px}.translationLeakTop>div{display:grid;gap:4px}.translationLeakTop small{color:var(--foon-muted)}.translationLeakAlert button{border:1px solid var(--foon-accent);border-radius:8px;background:var(--foon-accent);color:var(--foon-bg);padding:8px 13px;font-weight:800;cursor:pointer}.translationLeakList{display:grid;gap:10px;margin-top:12px;max-height:42vh;overflow:auto}.translationLeakRow{display:grid;grid-template-columns:minmax(150px,1fr) repeat(2,minmax(170px,1.2fr)) auto;align-items:end;gap:10px;padding:10px;border:1px solid var(--foon-line);border-radius:9px;background:var(--foon-surface)}.translationLeakRow>div p{margin:5px 0 0;overflow-wrap:anywhere}.translationLeakRow label{display:grid;gap:5px;font-size:.82rem;font-weight:800}.translationLeakRow textarea{min-height:62px;resize:vertical;border:1px solid var(--foon-line);border-radius:7px;padding:7px;background:var(--foon-surface);color:var(--foon-text)}.translationLeakRow button:disabled{opacity:.55;cursor:not-allowed}.translationLeakAlert>p{margin:9px 0 0}
+@media(max-width:800px){.translationLeakAlert{margin:8px;padding:10px}.translationLeakRow{grid-template-columns:1fr}.translationLeakRow button{width:100%}}
+.adminOpsSearch{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.adminOpsSearch label{flex:1 1 240px}
+.adminOpsTableWrap{width:100%;max-width:100%;overflow-x:auto;border:1px solid #e3ddd2;border-radius:12px;overscroll-behavior-inline:contain}
+.adminTranslationTable{width:100%;min-width:850px;border-collapse:collapse;table-layout:fixed;text-align:start}
+.adminTranslationTable th,.adminTranslationTable td{padding:12px;border-bottom:1px solid #ece7de;vertical-align:top;text-align:start}
+.adminTranslationTable th{background:#f6f2eb;color:#3d382f;font-size:.83rem;white-space:nowrap}
+.adminTranslationTable td code{font-size:.76rem;overflow-wrap:anywhere;white-space:normal}
+.adminTranslationTable textarea{display:block;box-sizing:border-box;width:100%;min-height:90px;resize:vertical;padding:10px;border:1px solid #d8d1c6;border-radius:8px;background:#fff;color:#171613;font:inherit;line-height:1.55}
+.adminOpsPager{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.adminOpsPager span{font-weight:700;font-size:.85rem}
+@media(max-width:650px){.adminOpsForm{grid-template-columns:minmax(0,1fr)}.adminOpsForm .adminOpsSubmit{width:100%}.adminOpsSearch{align-items:stretch}.adminOpsSearch button{width:100%}.adminOperationsPanel{gap:14px}.adminOpsCard{padding:12px}}
+
+/* FOON branded confirmation dialogs */
+.foonConfirmArea{display:grid;gap:12px;justify-items:start;min-width:0}
+.foonActionButton,.foonCancelButton{border-radius:10px;min-height:44px;padding:10px 18px;font:inherit;font-weight:800;cursor:pointer}
+.foonActionButton{background:#e2a93b;color:#171613;border:1px solid #c18a2c}
+.foonCancelButton{background:transparent;color:#f8f3e9;border:1px solid #756b59}
+.foonActionButton:disabled,.foonCancelButton:disabled{opacity:.55;cursor:not-allowed}
+.foonModalOverlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:16px;background:rgba(13,12,10,.7);backdrop-filter:blur(3px)}
+.foonConfirmDialog{box-sizing:border-box;width:min(100%,450px);max-height:calc(100dvh - 32px);overflow-y:auto;padding:26px;background:#24221e;color:#f8f3e9;border:1px solid rgba(226,169,59,.35);border-radius:16px;box-shadow:0 24px 75px rgba(0,0,0,.35);text-align:right}
+.foonConfirmMark{font-size:.85rem;letter-spacing:.16em;color:#e2a93b;font-weight:900;margin-bottom:12px}
+.foonConfirmDialog h3{margin:0 0 12px;color:#f8f3e9;font-size:1.22rem;line-height:1.5}
+.foonConfirmDialog p{margin:0;color:#d4cdc0;line-height:1.85;font-size:.94rem}
+.foonConfirmActions{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.foonConfirmDialog button:focus-visible{outline:3px solid #f8f3e9;outline-offset:3px}
+@media(max-width:480px){.foonConfirmDialog{padding:20px;border-radius:14px}.foonConfirmActions{display:grid;grid-template-columns:1fr 1fr}.foonConfirmActions button{min-width:0;padding:10px 8px}}
+
+
+/* FOON admin unified design system — shared by every /admin section */
+.adminShell{--foon-gold:#e2a93b;--foon-ink:#171613;--foon-muted:#746e64;--foon-border:#e6e0d6;--foon-paper:#fff;--foon-surface:#f7f5f1;grid-template-columns:244px minmax(0,1fr);background:var(--foon-surface);color:var(--foon-ink);font-family:Arial,Tahoma,sans-serif}
+.adminShell .adminSide{background:#171613;padding:22px 13px;border-inline-end:1px solid #3b352a;scrollbar-width:thin}
+.adminShell .adminLogo{color:var(--foon-gold);font-size:1.45rem;letter-spacing:.12em;padding:10px 12px 20px;border-color:#38342d}
+.adminShell .adminLogo small{color:#aaa59b;font-size:.72rem;letter-spacing:0}
+.adminShell .adminSide nav{gap:3px;padding-top:14px}
+.adminShell .adminNavGroup{display:grid;gap:3px;padding-top:12px;margin-top:8px;border-top:1px solid #333029}
+.adminShell .adminNavGroup>small{padding:6px 12px;color:#9b9487;font-size:.7rem;font-weight:800}
+.adminShell .adminSide nav a{color:#d9d4c9;border:1px solid transparent;padding:11px 12px;border-radius:10px;font-size:.86rem;font-weight:700;transition:background .15s,color .15s}
+.adminShell .adminSide nav a:hover{background:#292720;color:#fff}
+.adminShell .adminSide nav a.active{background:#302c24;color:#e2a93b;border-color:#51422a}
+.adminShell .adminStage{min-width:0;max-width:100%;background:var(--foon-surface)}
+.adminShell .adminTop{height:68px;padding-inline:clamp(16px,2.5vw,32px);background:#fff;border-bottom:1px solid var(--foon-border);gap:16px}
+.adminShell .adminTop b{color:#201c16;font-size:.9rem}
+.adminShell .adminTop small{color:#81796d;font-size:.73rem}
+.adminShell .adminTopActions{display:flex;align-items:center;gap:9px;flex-wrap:nowrap}
+.adminShell .adminTopActions form{margin:0}
+.adminShell .adminTop button,.adminShell .adminTopActions a.adminIconButton{min-height:38px;border:1px solid var(--foon-border);background:#fff;color:#302a20;border-radius:9px;padding:8px 12px;font-weight:700;white-space:nowrap}
+.adminShell .adminTopActions a.adminIconButton{min-width:38px;padding:7px;display:grid;place-items:center}
+.adminShell .adminCurrentLanguage{border-color:var(--foon-border);color:#5f4a24;background:#fffaf0}
+.adminShell .adminStage>.workspace{padding:clamp(16px,2.6vw,32px);min-height:calc(100svh - 68px);max-width:1600px;margin-inline:auto}
+.adminShell .workspace-head{align-items:center;gap:12px;margin-bottom:20px}
+.adminShell .workspace-head h1{color:#171613;font-size:clamp(1.35rem,2.3vw,1.85rem);line-height:1.4}
+.adminShell .workspace-head p{color:var(--foon-muted);font-size:.86rem}
+.adminShell .adminPanel,.adminShell .admin-operations{background:#fff;border:1px solid var(--foon-border);border-radius:14px;box-shadow:0 4px 16px rgba(23,22,19,.035);padding:clamp(14px,2vw,22px);min-width:0}
+.adminShell .adminPanel h2,.adminShell .admin-operations h2{color:#201c16}
+.adminShell .workspace-grid{gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.adminShell .workspace-grid article,.adminShell .workspace-card{border:1px solid var(--foon-border);border-radius:12px;background:#fff;color:#201c16;box-shadow:0 3px 12px rgba(23,22,19,.035);padding:16px;min-width:0}
+.adminShell .workspace-grid article span,.adminShell .workspace-card span{color:var(--foon-muted)}
+.adminShell input:not([type="checkbox"]):not([type="radio"]),.adminShell select,.adminShell textarea{max-width:100%;min-width:0;color:#171613;background:#fff;border:1px solid #d5cec2;border-radius:9px}
+.adminShell input:focus-visible,.adminShell select:focus-visible,.adminShell textarea:focus-visible,.adminShell button:focus-visible,.adminShell a:focus-visible{outline:2px solid #c99432;outline-offset:2px}
+.adminShell button{font-family:inherit}
+.adminDashboard{display:grid;align-content:start;gap:18px}
+.adminDashboard .adminDashboardHead{margin-bottom:0}
+.adminEyebrow{display:block;color:#a77723;font-size:.75rem;font-weight:800;margin-bottom:6px}
+.adminPrimaryLink{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 16px;background:#e2a93b;color:#171613!important;border-radius:9px;font-size:.85rem;font-weight:800;white-space:nowrap}
+.adminMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.adminMetric{min-width:0;display:grid;gap:8px;align-content:center;padding:19px;background:#fff;border:1px solid var(--foon-border);border-radius:13px;box-shadow:0 3px 14px rgba(23,22,19,.035)}
+.adminMetric span{font-size:.82rem;font-weight:800;color:#595247}
+.adminMetric strong{font-size:clamp(1.7rem,2.8vw,2.3rem);line-height:1.1;color:#171613;font-variant-numeric:tabular-nums}
+.adminMetric small{font-size:.73rem;color:#857d72}
+.adminModules{background:#fff;border:1px solid var(--foon-border);border-radius:14px;padding:clamp(14px,2vw,22px)}
+.adminSectionHeading{margin-bottom:17px}
+.adminSectionHeading h2{font-size:1.13rem;color:#171613;margin:0 0 6px}
+.adminSectionHeading p{color:#777065;font-size:.82rem;margin:0}
+.adminModulesGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.adminModuleCard{display:flex;align-items:center;gap:12px;min-width:0;min-height:90px;border:1px solid #e7e0d5;border-radius:12px;padding:14px;background:#fdfcf9;transition:background .15s,border-color .15s}
+.adminModuleCard:hover{background:#fff8e9;border-color:#d8b26d}
+.adminModuleIcon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:10px;background:#f5ecda;color:#8d631d;font-size:1.2rem;font-weight:800}
+.adminModuleContent{display:grid;gap:5px;min-width:0}
+.adminModuleContent b{font-size:.86rem;color:#242019}
+.adminModuleContent small{font-size:.73rem;color:#787064;line-height:1.45}
+.adminModuleArrow{margin-inline-start:auto;color:#a67a2d;font-size:1.3rem}
+@media(max-width:1200px){.adminModulesGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.adminShell{display:block}.adminShell .adminSide{height:auto;position:relative;padding:10px 16px;overflow:visible}.adminShell .adminLogo{border:0;padding:5px 0}.adminShell .adminTop{height:60px;padding-inline:16px}.adminShell .adminStage>.workspace{min-height:calc(100svh - 120px);padding:18px 16px}.adminMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.adminShell .workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.adminShell .adminDrawer{background:#24221e;border:1px solid #51432e;box-shadow:0 18px 55px rgba(0,0,0,.4)}.adminShell .adminDrawer a.active{background:#3a3020;color:#e2a93b}.adminShell .adminDrawerGroup{display:grid;gap:4px;padding-top:8px}.adminShell .adminDrawerGroup small{color:#aaa59b}}
+@media(max-width:600px){.adminModulesGrid{grid-template-columns:1fr}.adminShell .workspace-grid{grid-template-columns:1fr}.adminShell .workspace-head{align-items:flex-start;flex-wrap:wrap}.adminShell .adminTop small{display:none}.adminShell .adminTopActions{gap:6px}.adminShell .adminTop button{padding:8px;font-size:.75rem}.adminShell .adminTop{gap:8px}.adminMetric{padding:14px}.adminModuleCard{min-height:76px}.adminShell .adminStage>.workspace{padding:14px 12px}}
+
+
+/* Compact plans catalog and progressive disclosure */
+.adminPlansCatalog{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.adminPlanCatalogCard{display:grid;align-content:start;gap:10px;min-width:0;padding:18px;border:1px solid #e6e0d6;border-radius:13px;background:#fdfcf9}
+.adminPlanCatalogCard>strong{color:#171613;font-size:1.1rem}
+.adminPlanCatalogCard>span,.adminPlanCatalogCard>small{color:#746e64;font-size:.82rem;overflow-wrap:anywhere}
+.adminPlansSetup{display:grid;gap:12px}
+.adminPlansSetup>p{margin:0;color:#746e64;font-size:.84rem}
+.adminPlanCreateDetails{border:1px solid #e6e0d6;border-radius:11px;background:#fcfbf8;min-width:0}
+.adminPlanCreateDetails>summary{cursor:pointer;padding:14px 16px;font-weight:800;color:#3a3020;list-style-position:inside}
+.adminPlanCreateDetails[open]>summary{border-bottom:1px solid #e6e0d6}
+.adminPlanCreateDetails>.adminPlanCreateForm,.adminPlanCreateDetails>form{padding:16px}
+.adminPlanCatalogCard button{max-width:100%}
+@media(max-width:900px){.adminPlansCatalog{grid-template-columns:1fr}}
+@media(max-width:520px){.adminPlanCatalogCard{padding:13px}.adminPlanCreateDetails>summary{padding:12px}.adminPlanCreateDetails>form{padding:12px}}
+
+
+/* Unified operational data tables for admin */
+.adminDataTableWrap{max-width:100%;overflow-x:auto;border:1px solid #e6e0d6;border-radius:12px;overscroll-behavior-inline:contain}
+.adminDataTable{width:100%;min-width:660px;border-collapse:collapse;text-align:start;background:#fff}
+.adminDataTable th,.adminDataTable td{padding:13px 15px;text-align:start;vertical-align:middle;border-bottom:1px solid #eee8de;line-height:1.6;font-size:.84rem}
+.adminDataTable th{position:sticky;top:0;background:#f7f3eb;color:#534535;font-weight:800;white-space:nowrap}
+.adminDataTable tbody tr:last-child td{border-bottom:0}
+.adminDataTable tbody tr:hover{background:#fffaf0}
+.adminDataTable td[dir="ltr"],.adminDataTable td [dir="ltr"]{overflow-wrap:anywhere}
+.adminDataTable time{white-space:nowrap;font-variant-numeric:tabular-nums}
+.adminShell .adminUsersEmpty,.adminShell .adminAuditEmpty,.adminShell .adminBillingEmpty{padding:24px;border:1px dashed #dfd5c4;border-radius:12px;background:#fdfbf7;color:#5b5449;text-align:center}
+.adminShell .adminUsersEmpty p,.adminShell .adminBillingEmpty p{color:#746e64;line-height:1.7}
+@media(max-width:600px){.adminDataTable th,.adminDataTable td{padding:11px 12px;font-size:.8rem}.adminShell .adminUsersEmpty,.adminShell .adminAuditEmpty,.adminShell .adminBillingEmpty{padding:16px}}
+
+/* FOON content editor */
+.adminPagePick{cursor:pointer;text-align:start;font:inherit;min-height:80px}
+.adminPagePick:hover{border-color:#d4a34e;background:#fff9ec}
+.adminCmsForm{max-width:none}
+.adminCmsLocale{display:grid;gap:12px;min-width:0;grid-column:1/-1;border:1px solid #e6e0d6;border-radius:12px;padding:16px;background:#fdfbf7}
+.adminCmsLocale h3{margin:0;color:#8b641f;font-size:.95rem}
+.adminCmsLocale label{min-width:0}
+.adminCmsLocale textarea{min-height:130px;padding:12px;resize:vertical;line-height:1.7}
+@media(max-width:600px){.adminCmsLocale{padding:12px}}
+
+/* Public published pages */
+.publicContentPage{min-height:100svh;padding:clamp(18px,4vw,50px);background:#171613;color:#f8f3e9}
+.publicContentPage article{width:min(100%,850px);margin:auto;padding:clamp(18px,4vw,42px);background:#24221e;border:1px solid rgba(226,169,59,.2);border-radius:18px;overflow-wrap:anywhere}
+.publicContentBrand{display:inline-block;color:#e2a93b;font-size:1.25rem;font-weight:900;letter-spacing:.12em;margin-bottom:28px}
+.publicContentPage h1{font-size:clamp(1.6rem,4vw,2.5rem);line-height:1.4;margin:0 0 22px}
+.publicContentBody{white-space:pre-wrap;line-height:1.95;color:#e2ded6;font-size:1rem}
+
+/* Notification channel configuration */
+.adminNotificationGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.adminNotificationRule{min-width:0;padding:16px;border:1px solid #e5ddce;border-radius:12px;background:#fffdf9;display:grid;gap:10px}
+.adminNotificationRule>strong{color:#24221e}
+.adminNotificationRule>small{color:#82796b;text-align:start;overflow-wrap:anywhere}
+.adminNotificationToggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.adminNotificationToggles label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.86rem}
+.adminNotificationToggles input{accent-color:#c28c29;width:17px;height:17px}
+.adminNotificationRule button{border:0;border-radius:9px;background:#d6a23b;color:#171613;padding:11px 15px;font-weight:800;cursor:pointer}
+.adminNotificationRule button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:850px){.adminNotificationGrid{grid-template-columns:1fr}}
+@media(max-width:450px){.adminNotificationToggles{grid-template-columns:1fr}.adminNotificationRule{padding:12px}}
+
+/* Customer portal and public CMS navigation */
+.customerDashboard{min-height:100svh;background:#171613;color:#f8f3e9;padding:clamp(16px,3vw,36px);overflow-x:clip}
+.customerHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:auto}
+.customerHeader a{color:#e2a93b;text-decoration:none}
+.customerBrand{font-weight:900;letter-spacing:.12em;font-size:1.35rem}
+.customerWelcome{max-width:1100px;margin:clamp(28px,5vw,64px) auto 24px}
+.customerWelcome>span{color:#e2a93b;font-weight:700}
+.customerWelcome h1{font-size:clamp(1.65rem,4vw,2.8rem);margin:10px 0}
+.customerWelcome p{max-width:680px;line-height:1.8;color:#aaa59b}
+.customerOverview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1100px;margin:auto}
+.customerOverview article{min-width:0;border:1px solid rgba(255,255,255,.1);background:#24221e;border-radius:14px;padding:clamp(16px,3vw,26px)}
+.customerOverview h2{color:#e2a93b;font-size:1.05rem;margin:0 0 12px}
+.customerOverview p{color:#d5cfc4;overflow-wrap:anywhere;line-height:1.7}
+.publicSiteFooter{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;padding:30px clamp(18px,4vw,60px);background:#171613;color:#f8f3e9}
+.publicSiteFooter>div{display:grid;gap:7px}.publicSiteFooter strong{color:#e2a93b}.publicSiteFooter span{color:#aaa59b}
+.publicSiteFooter nav{display:flex;flex-wrap:wrap;gap:12px 20px;max-width:700px}
+.publicSiteFooter a{color:#f8f3e9;text-decoration:none}.publicSiteFooter a:hover{color:#e2a93b}
+@media(max-width:600px){.customerOverview{grid-template-columns:1fr}.publicSiteFooter{flex-direction:column}}
+
+/* Live admin dashboard indicators */
+.adminOverviewSecondary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.adminOverviewSecondary article{display:grid;gap:8px;min-width:0;padding:18px;border-radius:13px;background:#fffdf9;border:1px solid #e6e0d6}
+.adminOverviewSecondary span{font-weight:700;color:#544b40}
+.adminOverviewSecondary strong{font-size:clamp(1.5rem,3vw,2rem);color:#9b6c18;font-variant-numeric:tabular-nums}
+.adminOverviewSecondary small{color:#777064;overflow-wrap:anywhere}
+.adminRecentActivity{margin-top:16px}
+.adminRecentActivity .adminPanelHead a{color:#9b6c18;text-decoration:none;font-weight:700}
+.adminRecentList{display:grid;gap:0}
+.adminRecentList>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #ece5da;font-size:.83rem}
+.adminRecentList>div:last-child{border-bottom:0}
+.adminRecentList span{overflow-wrap:anywhere;color:#6c655b}
+.adminRecentList time{white-space:nowrap;color:#777064;font-variant-numeric:tabular-nums}
+@media(max-width:850px){.adminOverviewSecondary{grid-template-columns:1fr}.adminRecentList>div{grid-template-columns:1fr;gap:4px}.adminRecentList time{white-space:normal}}
+
+/* Payment review workspace */
+.adminBillingGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.adminBillingCard{min-width:0;display:grid;gap:12px;padding:18px;border:1px solid #e5ddce;border-radius:12px;background:#fffdf9;color:#2a2721}
+.adminBillingCard>div:first-child{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.adminBillingCard span,.adminBillingCard small{color:#736b60}
+.adminBillingCard>b{font-size:1.3rem;color:#956a20}
+.adminBillingCard p{margin:0;overflow-wrap:anywhere;font-size:.86rem}
+.adminBillingReview{display:grid;gap:10px;border-top:1px solid #ece4d8;padding-top:12px}
+.adminBillingReview label{display:grid;gap:7px;font-size:.84rem}
+.adminBillingReview input{width:100%;min-width:0;padding:10px;border:1px solid #d7cdbd;border-radius:8px;background:#fff;color:#171613}
+.adminBillingReview>div{display:flex;flex-wrap:wrap;gap:8px}
+.adminBillingReview button{cursor:pointer;padding:10px 12px;border:1px solid #c99436;background:#e2a93b;color:#171613;border-radius:8px;font-weight:700}
+.adminBillingReview button+button{background:transparent;border-color:#a65a4e;color:#9c463c}
+.adminBillingReview button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:850px){.adminBillingGrid{grid-template-columns:1fr}}
+
+.merchantPaymentEditor{display:grid;gap:14px;max-width:800px}
+.merchantPaymentEditor label{display:grid;gap:7px;font-weight:650;min-width:0}
+.merchantPaymentEditor input:not([type="checkbox"]),.merchantPaymentEditor select{width:100%;min-width:0;padding:12px;border:1px solid #cbbfaa;border-radius:9px;background:#fff;color:#171613}
+.merchantPaymentEditor .merchantPaymentCheck{display:flex;align-items:center;gap:10px}
+.merchantPaymentEditor>button{justify-self:start;padding:12px 20px;border:0;border-radius:9px;background:#e2a93b;color:#171613;font-weight:800;cursor:pointer}
+.merchantPaymentEditor>button:disabled{opacity:.6}
+
+.adminUserFilters{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.adminUserFilters label{display:grid;gap:6px;flex:1 1 190px;min-width:0}
+.adminUserFilters input,.adminUserFilters select{width:100%;min-width:0;padding:11px;border:1px solid #cbbfaa;border-radius:9px;background:#fff;color:#171613}
+.adminUserFilters button{padding:11px 18px;background:#e2a93b;color:#171613;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.adminUserFilters a{padding:11px}
+@media(max-width:520px){.adminUserFilters{display:grid;grid-template-columns:minmax(0,1fr)}}
+
+/* Merchant workspace uses a light page and readable dark operation cards. */
+.merchantWorkspace{width:100%;font-size:1rem;line-height:1.6}
+.merchantWorkspace .workspace-head p{color:#68645c}
+.merchantWorkspace .workspace-grid article{color:#f8f3e9;overflow-wrap:anywhere}
+.merchantWorkspace .workspace-grid article strong{font-size:1rem}
+.merchantWorkspace .workspace-grid article small{color:#d4cdc0;font-size:.875rem}
+.merchantWorkspace .adminPanel>p{color:#68645c}
+.merchantWorkspace .merchantFeatureDetails{margin-top:16px}
+.merchantFeatureDetails summary{cursor:pointer;min-height:44px;display:list-item;list-style-position:inside;padding:10px 12px;border:1px solid #dedbd4;border-radius:10px;background:#f7f5f0;color:#39352d;font-weight:700}
+.merchantFeatureDetails summary:focus-visible{outline:2px solid #c99432;outline-offset:3px}
+.merchantFeatureDetails[open] summary{margin-bottom:16px}
+@media(max-width:720px){.merchantWorkspace .workspace-head{align-items:flex-start;flex-wrap:wrap}.merchantWorkspace .adminPanel{padding:16px}}
+
+/* FOON admin unified light/dark design tokens */
+.adminShell{--foon-bg:#f7f6f3;--foon-surface:#fff;--foon-text:#201f1c;--foon-muted:#716e67;--foon-line:#e6e1d7;--foon-accent:#c8912f;background:var(--foon-bg);color:var(--foon-text);min-height:100svh;transition:background .2s,color .2s}
+.adminShell[data-theme="dark"]{--foon-bg:#171613;--foon-surface:#24221e;--foon-text:#f8f3e9;--foon-muted:#bbb4a8;--foon-line:#464137;--foon-accent:#e2a93b;color-scheme:dark}
+.adminShell .adminStage{background:var(--foon-bg);color:var(--foon-text)}
+.adminShell .adminTop,.adminShell .adminPanel,.adminShell .workspace-grid>article,.adminShell .workspace-grid>a,.adminShell .adminPlanCard,.adminShell .adminToolCard,.adminShell .adminRoleGrid article,.adminShell .adminPaymentMethods article,.adminShell .adminBillingStats article,.adminShell .adminAccessStats article,.adminShell .adminSubscriptionStats article,.adminShell .adminPageStats article,.adminShell .adminTranslationStats article{background:var(--foon-surface);color:var(--foon-text);border-color:var(--foon-line)}
+.adminShell .workspace p,.adminShell .adminPanel p,.adminShell .adminTop small{color:var(--foon-muted)}
+.adminShell input,.adminShell select,.adminShell textarea{background:var(--foon-surface);color:var(--foon-text);border-color:var(--foon-line)}
+.adminShell .adminThemeToggle{display:inline-flex;align-items:center;justify-content:center;min-width:38px;min-height:38px;border:1px solid var(--foon-line);border-radius:10px;background:var(--foon-surface);color:var(--foon-text);font-size:20px;cursor:pointer}
+.adminShell .adminThemeToggle:focus-visible{outline:3px solid var(--foon-accent);outline-offset:2px}
+@media(max-width:520px){.adminShell .adminThemeToggle{min-width:34px;min-height:34px}}
+
+/* FOON V2 public experience: scoped, responsive, bilingual direction-aware design */
+.foonPublic{--fp-bg:#f8f7f3;--fp-surface:#fff;--fp-ink:#24221e;--fp-muted:#706c62;--fp-line:#e9e4da;--fp-gold:#c99432;--fp-gold-ink:#211b0f;--fp-panel:#24221e;background:var(--fp-bg);color:var(--fp-ink);min-height:100svh;font-family:Arial,sans-serif;overflow-x:clip;transition:background .2s,color .2s}
+.foonPublic[data-theme="dark"]{--fp-bg:#171613;--fp-surface:#24221e;--fp-ink:#f8f3e9;--fp-muted:#bcb4a6;--fp-line:#413c33;--fp-gold:#e2a93b;--fp-gold-ink:#171613;--fp-panel:#292720;color-scheme:dark}
+.foonPublic *{box-sizing:border-box;min-width:0}
+.foonPublicHeader{max-width:1320px;margin:auto;min-height:82px;padding:12px clamp(16px,4vw,44px);display:flex;align-items:center;gap:clamp(12px,3vw,40px);justify-content:space-between;border-bottom:1px solid var(--fp-line)}
+.foonPublicBrand{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:900;letter-spacing:.07em;white-space:nowrap}
+.foonPublicBrand small{display:block;font-size:9px;letter-spacing:.25em;color:var(--fp-muted)}
+.foonBrandMark{display:grid;place-items:center;width:42px;height:42px;background:var(--fp-gold);color:var(--fp-gold-ink);border-radius:12px;font-size:27px}
+.foonPublicHeader nav,.foonPublicControls{display:flex;align-items:center;gap:clamp(8px,2vw,24px)}
+.foonPublicHeader nav a{font-size:14px;font-weight:700;color:var(--fp-muted)}
+.foonPublicHeader a:hover{color:var(--fp-gold)}
+.foonLanguageControl select,.foonThemeControl{min-height:38px;background:var(--fp-surface);color:var(--fp-ink);border:1px solid var(--fp-line);border-radius:11px;padding:0 9px;font:inherit;cursor:pointer}
+.foonThemeControl{min-width:40px;font-size:20px}
+.foonLogin{font-size:14px;font-weight:700;white-space:nowrap}
+.foonHeaderCta,.foonButtonPrimary{display:inline-flex;justify-content:center;align-items:center;gap:14px;background:var(--fp-gold);color:var(--fp-gold-ink)!important;border-radius:12px;padding:13px 20px;font-size:14px;font-weight:800;white-space:nowrap}
+.foonPublicHero{max-width:1320px;margin:auto;padding:clamp(44px,7vw,96px) clamp(18px,5vw,64px);display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:30px;min-height:560px}
+.foonEyebrow,.foonSectionKicker{display:inline-block;color:var(--fp-gold);font-size:13px;font-weight:900;letter-spacing:.05em}
+.foonHeroCopy h1{font-size:clamp(42px,5.7vw,82px);line-height:1.13;letter-spacing:-.035em;margin:22px 0 24px;max-width:750px}
+.foonHeroCopy>p{font-size:clamp(16px,1.5vw,19px);line-height:1.9;color:var(--fp-muted);max-width:590px}
+.foonHeroActions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.foonButtonOutline{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--fp-line);border-radius:12px;padding:13px 20px;background:var(--fp-surface);font-weight:800;font-size:14px}
+.foonHeroTags{display:flex;align-items:center;gap:16px;color:var(--fp-muted);font-size:11px;letter-spacing:.14em;margin-top:60px}
+.foonHeroArt{position:relative;aspect-ratio:1/1;width:min(100%,470px);margin:auto;border-radius:38px;background:radial-gradient(circle at 50% 42%,#64502a,#292720 58%,#1b1a17);overflow:hidden;display:grid;place-items:center;box-shadow:0 24px 80px #0002}
+.foonArtOrbit{position:absolute;border:1px solid #e2a93b55;border-radius:50%;width:76%;aspect-ratio:1}
+.foonArtOrbitTwo{width:112%;border-style:dashed;transform:rotate(20deg)}
+.foonArtCenter{display:grid;place-items:center;width:43%;aspect-ratio:1;border-radius:32px;background:linear-gradient(145deg,#f5ca69,#b67d20);box-shadow:0 20px 60px #0008;color:#211b0f;transform:rotate(-9deg)}
+.foonArtCenter span{font-size:clamp(70px,12vw,140px);font-weight:900;line-height:.8}.foonArtCenter small{font-weight:900;letter-spacing:.3em;font-size:11px}
+.foonArtChip{position:absolute;display:grid;place-items:center;width:62px;height:62px;border:1px solid #ffffff35;border-radius:20px;background:#ffffff16;color:#e2a93b;font-size:34px;backdrop-filter:blur(10px)}
+.foonArtChipTop{top:13%;inset-inline-start:13%}.foonArtChipBottom{bottom:13%;inset-inline-end:12%}
+.foonPublicSection{max-width:1320px;margin:auto;padding:76px clamp(18px,5vw,64px)}
+.foonSectionIntro{max-width:730px;margin-bottom:34px}.foonSectionIntro h2{font-size:clamp(30px,3.5vw,48px);margin:12px 0}.foonSectionIntro p{color:var(--fp-muted);line-height:1.8}
+.foonFeatureGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.foonFeatureCard{position:relative;padding:32px;min-height:265px;border-radius:22px;background:var(--fp-surface);border:1px solid var(--fp-line);box-shadow:0 12px 30px #00000005}
+.foonFeatureNumber{font-size:12px;color:var(--fp-muted)}.foonFeatureIcon{display:block;color:var(--fp-gold);font-size:40px;margin:20px 0 10px}
+.foonFeatureCard h3,.foonSteps h3{font-size:21px;margin:12px 0}.foonFeatureCard p,.foonSteps p{line-height:1.8;color:var(--fp-muted)}
+.foonHowSection{border-top:1px solid var(--fp-line)}.foonSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.foonSteps article{padding:25px;border-inline-start:2px solid var(--fp-gold)}.foonSteps strong{font-size:29px;color:var(--fp-gold)}
+.foonPublicFooter{padding:42px clamp(18px,5vw,64px);background:var(--fp-panel);color:#f8f3e9;display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.foonPublicFooter strong{font-size:24px;letter-spacing:.1em}.foonPublicFooter p{color:#c4bcae}.foonPublicFooter nav{display:flex;gap:16px;flex-wrap:wrap}.foonPublicFooter nav a{font-size:13px;color:#e5ded0}
+.foonPublic :is(a,button,select):focus-visible{outline:3px solid var(--fp-gold);outline-offset:3px}
+@media(max-width:900px){.foonPublicHeader nav{display:none}.foonPublicHero{grid-template-columns:1fr}.foonHeroArt{width:min(100%,380px)}.foonHeroTags{margin-top:30px}}
+@media(max-width:640px){.foonPublicHeader{min-height:70px;gap:8px;flex-wrap:wrap}.foonPublicBrand{font-size:18px}.foonBrandMark{width:34px;height:34px;font-size:23px}.foonPublicControls{gap:6px}.foonLanguageControl select{max-width:98px;font-size:12px}.foonLogin{display:none}.foonHeaderCta{padding:10px 12px;font-size:12px}.foonPublicHero{padding-top:45px;min-height:0}.foonHeroCopy h1{font-size:clamp(35px,10vw,50px)}.foonHeroArt{border-radius:25px;width:min(100%,320px)}.foonFeatureGrid,.foonSteps{grid-template-columns:1fr}.foonPublicSection{padding-top:45px;padding-bottom:45px}.foonFeatureCard{min-height:0;padding:24px}.foonPublicFooter{align-items:flex-start;flex-direction:column}}
+@media(max-width:370px){.foonPublicHeader{padding:10px}.foonPublicControls{margin-inline-start:auto}.foonHeaderCta{font-size:11px;padding:10px 8px}.foonLanguageControl select{max-width:80px}.foonPublicBrand small{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.foonPublic *{transition:none!important;animation:none!important}}
+
+/* FOON unified authentication surfaces */
+.foonAuthPage{position:relative;isolation:isolate;background:radial-gradient(ellipse at 12% 14%,#544025 0,transparent 42%),radial-gradient(ellipse at 85% 82%,#30281c 0,transparent 48%),#171613;overflow-x:clip}
+.foonAuthPage::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(to bottom,#000,transparent)}
+.foonAuthPage .auth-card{width:min(100%,490px);background:#24221eea;border:1px solid #e2a93b33;box-shadow:0 28px 90px #0008;border-radius:24px;padding:clamp(22px,4vw,38px);backdrop-filter:blur(18px)}
+.foonAuthPage .auth-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+.foonAuthPage .auth-heading .auth-brand{margin:0;font-size:24px;letter-spacing:.1em}
+.foonAuthTag{border:1px solid #e2a93b55;background:#e2a93b13;color:#e2a93b;border-radius:99px;padding:7px 11px;font-size:12px;font-weight:800}
+.foonAuthPage .auth-card h1{font-size:clamp(27px,5vw,36px);letter-spacing:-.02em}
+.foonAuthPage .auth-card>p{line-height:1.8}
+.foonAuthPage .auth-form{gap:15px}.foonAuthPage .auth-form label{gap:8px;font-size:14px}
+.foonAuthPage .auth-form input,.foonAuthPage .auth-form select{min-height:48px;background:#171613;border-color:#ffffff25;transition:border-color .15s,box-shadow .15s}
+.foonAuthPage .auth-form button{font-weight:900;box-shadow:0 8px 22px #e2a93b20}
+.foonAuthPage .auth-form a,.foonAuthPage .auth-home{color:#e2a93b;font-weight:700}
+.foonAuthPage .auth-home{display:block;text-align:center;margin-top:16px;font-size:13px}
+.foonAuthPage :is(a,button,input,select):focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:480px){.foonAuthPage{padding:12px}.foonAuthPage .auth-card{border-radius:18px;padding:22px 18px}}
+
+/* FOON authentication locale selector */
+.foonAuthTopControls{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.foonAuthLanguage{max-width:110px;min-height:35px;padding:0 8px;border-radius:10px;border:1px solid #ffffff30;background:#171613;color:#f8f3e9;font:inherit;font-size:12px;cursor:pointer}
+.foonAuthPage[dir="ltr"] .auth-card{text-align:left}
+.foonAuthPage[dir="rtl"] .auth-card{text-align:right}
+.foonAuthPage .auth-form input[dir="ltr"]{text-align:left}
+@media(max-width:390px){.foonAuthPage .auth-heading{align-items:flex-start;flex-wrap:wrap}.foonAuthTopControls{width:100%;justify-content:space-between}.foonAuthLanguage{max-width:130px}}
+
+/* Persisted public appearance shared with login; only user action overrides saved preference */
+.foonAuthPage[data-theme="light"]{background:radial-gradient(ellipse at 12% 14%,#f4e5c7 0,transparent 42%),radial-gradient(ellipse at 85% 82%,#eee8dd 0,transparent 48%),#f8f7f3;color-scheme:light}
+.foonAuthPage[data-theme="light"]::before{background-image:linear-gradient(#6b532409 1px,transparent 1px),linear-gradient(90deg,#6b532409 1px,transparent 1px)}
+.foonAuthPage[data-theme="light"] .auth-card{background:#ffffffed;color:#24221e;border-color:#e9e4da;box-shadow:0 24px 65px #4637191a;color-scheme:light}
+.foonAuthPage[data-theme="light"] .auth-card>p,.foonAuthPage[data-theme="light"] .auth-form small{color:#706c62}
+.foonAuthPage[data-theme="light"] .auth-form input,.foonAuthPage[data-theme="light"] .auth-form select{background:#fff;color:#24221e;border-color:#dcd5c8}
+.foonAuthPage[data-theme="light"] .foonAuthTag{color:#906519;border-color:#c9943260;background:#c9943210}
+.foonAuthPage[data-theme="light"] .foonAuthLanguage,.foonAuthPage[data-theme="light"] .foonAuthThemeToggle{background:#fff;color:#24221e;border-color:#dcd5c8}
+.foonAuthPage[data-theme="light"] .form-error{background:#fff0ee;color:#9c2828;border-color:#f2b4ae}
+.foonAuthPage[data-theme="light"] .auth-form a,.foonAuthPage[data-theme="light"] .auth-switch a,.foonAuthPage[data-theme="light"] .auth-home{color:#956516}
+.foonAuthThemeToggle{min-width:35px;min-height:35px;display:grid;place-items:center;border:1px solid #ffffff30;border-radius:10px;background:#171613;color:#f8f3e9;font-size:19px;cursor:pointer}
+.foonAuthPage .foonAuthThemeToggle:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+
+
+/* Public FOON marketplace: responsive, no horizontal viewport movement */
+.foonMarket{min-height:100svh;max-width:100%;overflow-x:clip;background:#f8f7f3;color:#24221e}
+.foonMarket *{box-sizing:border-box;min-width:0}
+.foonMarketHeader{max-width:1200px;margin:auto;padding:18px clamp(16px,4vw,38px);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.foonMarketHeader a{text-decoration:none;color:inherit;font-weight:700}
+.foonMarketBrand{font-size:25px;font-weight:900!important;color:#a77519!important;letter-spacing:.07em}
+.foonMarketHeader nav{display:flex;flex-wrap:wrap;align-items:center;gap:clamp(10px,2vw,26px);font-size:14px}
+.foonMarketHero{padding:clamp(32px,6vw,78px) clamp(16px,4vw,38px);background:radial-gradient(circle at 12% 15%,#534022,#171613 60%);color:#f8f3e9;text-align:center}
+.foonMarketHero>span{color:#e2a93b;font-size:12px;letter-spacing:.15em;font-weight:800}
+.foonMarketHero h1{font-size:clamp(28px,5vw,54px);margin:16px 0}
+.foonMarketHero p{color:#d1c8b9;line-height:1.8}
+.foonMarketSearch{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:12px;max-width:830px;margin:28px auto 0;text-align:start;align-items:end}
+.foonMarketSearch label{display:grid;gap:7px;font-size:13px;font-weight:700}
+.foonMarketSearch input,.foonMarketSearch select{width:100%;min-width:0;height:46px;padding:0 12px;border:1px solid #b7a78a;border-radius:12px;background:white;color:#24221e;font:inherit}
+.foonMarketSearch button{height:46px;border:0;border-radius:12px;background:#e2a93b;color:#171613;font:inherit;font-weight:800;padding:0 22px;cursor:pointer}
+.foonMarketResults{max-width:1200px;margin:auto;padding:38px clamp(16px,4vw,38px) 70px}
+.foonMarketResults h2{font-size:clamp(20px,3vw,28px);margin:0 0 22px}
+.foonMarketGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.foonMarketCard{display:flex;gap:16px;align-items:center;padding:22px;border:1px solid #e8e0d3;border-radius:18px;background:#fff;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}
+.foonMarketCard:hover{border-color:#d4a441;transform:translateY(-2px)}
+.foonMarketCardIcon{display:grid;place-items:center;flex:0 0 64px;width:64px;height:64px;border-radius:15px;background:#f8eedc;color:#94681b;font-size:30px}
+.foonMarketType{font-size:12px;color:#82725a}.foonMarketCard h3{margin:6px 0 10px;font-size:18px;overflow-wrap:anywhere}.foonMarketVisit{color:#916517;font-weight:800;font-size:13px}
+@media(max-width:800px){.foonMarketGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.foonMarketSearch{grid-template-columns:minmax(0,1fr)}.foonMarketGrid{grid-template-columns:minmax(0,1fr)}.foonMarketHeader{align-items:flex-start}.foonMarketCard{padding:16px}}
+
+
+/* Public store profile: scoped, responsive and stable at 320px */
+.publicTenantProfile{min-height:100svh;max-width:100%;overflow-x:clip;background:#f8f7f3;color:#24221e}
+.publicTenantProfile *{box-sizing:border-box;min-width:0}
+.publicTenantTop{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;padding:18px clamp(16px,4vw,40px);max-width:1120px;margin:auto}
+.publicTenantTop>a{font-size:26px;font-weight:900;color:#a77519;text-decoration:none}
+.publicTenantTop nav{display:flex;gap:20px;flex-wrap:wrap}
+.publicTenantTop nav a,.publicTenantFooter a{color:inherit;text-decoration:none;font-weight:700}
+.publicTenantProfile .publicTenantHero{max-width:1120px;margin:16px auto 0;padding:clamp(32px,6vw,70px) clamp(18px,5vw,64px);border-radius:24px;background:radial-gradient(circle at 15% 10%,#544024,#171613 65%);color:#f8f3e9}
+.publicTenantProfile .publicTenantHero>span{font-size:13px;color:#e2a93b;font-weight:800}
+.publicTenantProfile .publicTenantHero h1{font-size:clamp(30px,5vw,58px);line-height:1.3;overflow-wrap:anywhere;margin:16px 0}
+.publicTenantProfile .publicTenantHero p{max-width:640px;color:#d6cec1;line-height:1.9}
+.publicTenantActions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.publicTenantActions a{padding:13px 22px;border:1px solid #e2a93b;border-radius:12px;text-decoration:none;color:#e2a93b;font-weight:800}
+.publicTenantActions a:first-child{background:#e2a93b;color:#171613}
+.publicTenantDetails{max-width:1120px;margin:24px auto;padding:0 12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.publicTenantDetails article{background:white;border:1px solid #e9e2d7;border-radius:16px;padding:22px;display:grid;gap:12px}
+.publicTenantDetails span{font-size:13px;color:#7b715f}
+.publicTenantDetails strong{overflow-wrap:anywhere}
+.publicTenantFooter{max-width:1120px;margin:38px auto 0;padding:24px 16px 40px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid #e9e2d7}
+@media(max-width:700px){.publicTenantProfile .publicTenantHero{margin:8px 12px;border-radius:18px}.publicTenantDetails{grid-template-columns:1fr}.publicTenantTop{padding:16px}.publicTenantActions a{max-width:100%}}
+
+
+/* Store customer auth: matching login and registration tabs */
+.customerAuthTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:5px;margin:18px 0 22px;border-radius:14px;background:rgba(140,125,98,.12);max-width:100%}
+.customerAuthTabs>a,.customerAuthTabs>span{display:flex;justify-content:center;align-items:center;min-height:44px;padding:9px 10px;text-align:center;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;color:inherit}
+.customerAuthTabs>[aria-current="page"]{background:#e2a93b;color:#171613;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+
+/* Restaurant and cafe menu only; other store kinds are unchanged. */
+.foonRestaurantMenu{max-width:1120px;width:calc(100% - 32px);margin:32px auto;padding:clamp(18px,4vw,36px);background:#171613;color:#f8f3e9;border:1px solid rgba(226,169,59,.2);border-radius:24px;scroll-margin-top:80px;overflow:hidden}
+.foonRestaurantMenuHeading>span{color:#e2a93b;font-size:12px;letter-spacing:.14em;font-weight:800}
+.foonRestaurantMenuHeading h2{font-size:clamp(24px,5vw,38px);margin:8px 0}
+.foonRestaurantMenuHeading p{color:#aaa59b;line-height:1.7}
+.foonRestaurantMenuEmpty{display:flex;flex-direction:column;align-items:center;text-align:center;justify-content:center;gap:10px;margin-top:22px;padding:40px 16px;background:#24221e;border:1px dashed rgba(255,255,255,.18);border-radius:18px;min-height:210px}
+.foonRestaurantMenuEmpty>span{font-size:34px}.foonRestaurantMenuEmpty strong{font-size:18px}.foonRestaurantMenuEmpty p{color:#aaa59b;margin:0}
+@media(max-width:480px){.foonRestaurantMenu{width:calc(100% - 20px);margin:20px auto;padding:16px;border-radius:16px}}
+
+
+.foonMenuCatalog{display:grid;gap:26px;margin-top:24px}.foonMenuCategory h3{font-size:21px;margin:0 0 14px;color:#e2a93b}.foonMenuItems{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.foonMenuItem{display:flex;gap:12px;min-width:0;padding:12px;background:#24221e;border:1px solid rgba(255,255,255,.1);border-radius:14px}.foonMenuItemImage{display:grid;place-items:center;flex:0 0 76px;height:76px;background:#343029;border-radius:10px;font-size:25px}.foonMenuItemInfo{min-width:0;display:grid;align-content:start;gap:6px}.foonMenuItemInfo strong{overflow-wrap:anywhere}.foonMenuItemInfo p{margin:0;color:#aaa59b;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.foonMenuItemInfo span{font-weight:800;color:#e2a93b;text-align:start;font-size:13px}@media(max-width:600px){.foonMenuItems{gap:8px}.foonMenuItem{flex-direction:column;padding:9px;gap:8px}.foonMenuItemImage{flex-basis:auto;width:100%;height:90px}.foonMenuItemInfo strong{font-size:14px}}
+
+
+.foonMenuCategoryForm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin:20px 0}.foonMenuCategoryForm label{grid-column:1/-1;font-weight:700}.foonMenuCategoryForm input{width:100%;min-width:0;padding:12px;border:1px solid #d4d4d4;border-radius:10px;font:inherit}.foonMenuCategoryForm button{padding:12px 20px;border:0;border-radius:10px;background:#e2a93b;color:#171613;font:inherit;font-weight:700;cursor:pointer}.foonMenuCategoryForm button:disabled{opacity:.6}.foonMenuCategoryList{display:grid;gap:8px}.foonMenuCategoryList article{display:flex;justify-content:space-between;gap:12px;padding:14px;border:1px solid #ddd;border-radius:10px;overflow-wrap:anywhere}@media(max-width:480px){.foonMenuCategoryForm{grid-template-columns:minmax(0,1fr)}}
+
+
+.foonItemForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}.foonItemForm label{display:grid;gap:6px;min-width:0;font-weight:700}.foonItemForm input,.foonItemForm select,.foonItemForm textarea{width:100%;min-width:0;padding:12px;border:1px solid #d4d4d4;border-radius:10px;font:inherit}.foonItemForm label:has(textarea){grid-column:1/-1}.foonItemForm button{border:0;border-radius:10px;padding:12px 20px;background:#e2a93b;color:#171613;font:inherit;font-weight:700;cursor:pointer}.foonItemForm button:disabled{opacity:.6}@media(max-width:600px){.foonItemForm{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Restaurant-only template families inspired by reference theme1-4. */
+.foonRestaurantPage{min-height:100svh;background:#171613;color:#f8f3e9}
+.foonRestaurantPage .publicTenantTop{background:transparent;color:inherit}
+.foonRestaurantPage .publicTenantHero{min-height:0;padding:clamp(18px,4vw,34px);margin-top:12px}
+.foonRestaurantPage .publicTenantHero h1{font-size:clamp(26px,5vw,42px);margin:8px 0}
+.foonRestaurantPage .publicTenantHero p{margin:8px 0}
+.foonRestaurantPage .foonRestaurantMenu{margin-top:12px}
+.foonRestaurantPage .publicTenantFooter{color:inherit}
+.foonTheme-classic{background:#fffaf2;color:#39291b}
+.foonTheme-classic .publicTenantHero{background:#efe0c7;color:#39291b}
+.foonTheme-classic .foonRestaurantMenu{background:#fff;color:#39291b;border-color:#e3cfaa}
+.foonTheme-classic .foonMenuItem{background:#faf3e8;color:#39291b;border-color:#e8d9bf}
+.foonTheme-modern{background:#f4f7f9;color:#152735}
+.foonTheme-modern .publicTenantHero{background:#183e50;color:#fff}
+.foonTheme-modern .foonRestaurantMenu{background:#fff;color:#152735;border-color:#dae4e9}
+.foonTheme-modern .foonMenuItem{background:#edf5f8;color:#152735;border-color:#dae4e9}
+.foonTheme-minimal{background:#fff;color:#1c1c1c}
+.foonTheme-minimal .publicTenantHero{background:#f1f1f1;color:#1c1c1c;box-shadow:none}
+.foonTheme-minimal .foonRestaurantMenu{background:#fff;color:#1c1c1c;border-color:#ddd}
+.foonTheme-minimal .foonMenuItem{background:#fafafa;color:#1c1c1c;border-color:#eee}
+.foonRestaurantPage .foonMenuItems{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.foonRestaurantPage .publicTenantHero{padding:18px}.foonRestaurantPage .foonRestaurantMenu{width:calc(100% - 20px)}}
+
+
+.foonTemplateChoices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.foonTemplateChoice{display:grid;align-content:start;gap:10px;min-width:0;min-height:120px;padding:16px;border:2px solid #ddd;border-radius:16px;cursor:pointer}.foonTemplateChoice:has(input:checked){border-color:#d99e29;box-shadow:0 0 0 2px rgba(226,169,59,.16)}.foonTemplateChoice input{accent-color:#d99e29}.foonTemplateChoice span{font-size:13px;opacity:.8}.foonTemplateChoice-sufra{background:#24221e;color:#f8f3e9}.foonTemplateChoice-classic{background:#efe0c7;color:#39291b}.foonTemplateChoice-modern{background:#183e50;color:#fff}.foonTemplateChoice-minimal{background:#fafafa;color:#1c1c1c}.foonTemplateSave{padding:12px 22px;border:0;border-radius:10px;background:#e2a93b;color:#171613;font:inherit;font-weight:700;cursor:pointer}.foonTemplateSave:disabled{opacity:.55;cursor:not-allowed}@media(max-width:800px){.foonTemplateChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:360px){.foonTemplateChoice{padding:10px}}
+
+
+/* Reference-inspired functional restaurant menu layout; scoped to restaurant pages. */
+.foonRestaurantPage .publicTenantHero{padding:16px 24px;margin:10px auto;min-height:0}.foonRestaurantPage .publicTenantHero>p{display:none}.foonRestaurantPage .publicTenantHero .publicTenantActions{margin-top:12px}
+.foonReferenceMenu{min-width:0;margin-top:18px}.foonReferenceMenuBar{display:flex;align-items:center;gap:12px;margin-bottom:18px;min-width:0}.foonReferenceCategories{display:flex;flex:1;min-width:0;gap:8px;overflow-x:auto;scrollbar-width:thin;padding:4px 0}.foonReferenceCategories button{white-space:nowrap;flex:0 0 auto;border:1px solid #e2a93b;border-radius:99px;background:transparent;color:inherit;padding:10px 16px;font:inherit;cursor:pointer}.foonReferenceCategories button.active{background:#e2a93b;color:#171613;font-weight:800}.foonReferenceLayout{display:flex;gap:5px;flex:0 0 auto}.foonReferenceLayout button{border:1px solid #aaa59b;border-radius:8px;background:transparent;color:inherit;padding:9px 13px;cursor:pointer}.foonReferenceLayout button[aria-pressed="true"]{background:#e2a93b;color:#171613;border-color:#e2a93b}.foonReferenceCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.foonReferenceCard{position:relative;min-width:0;min-height:175px;border:1px solid rgba(255,255,255,.13);background:#24221e;color:#f8f3e9;border-radius:15px;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}.foonReferenceCardImage{height:70px;background:rgba(255,255,255,.05);border-radius:9px}.foonReferenceCardContent{display:grid;gap:7px;min-width:0}.foonReferenceCardContent h3{font-size:15px;line-height:1.5;margin:0;overflow-wrap:anywhere}.foonReferenceCardContent p{font-size:12px;color:#aaa59b;line-height:1.5;margin:0;overflow-wrap:anywhere}.foonReferenceCardContent strong{font-size:14px;color:#e2a93b;text-align:start}.foonReferenceCards.is-list{grid-template-columns:minmax(0,1fr)}.foonReferenceCards.is-list .foonReferenceCard{flex-direction:row;min-height:100px}.foonReferenceCards.is-list .foonReferenceCardImage{width:90px;height:75px;flex:0 0 90px}.foonReferenceEmpty{text-align:center;padding:28px;color:#aaa59b}
+.foonTheme-classic .foonReferenceCard{background:#faf3e8;color:#39291b;border-color:#e8d9bf}.foonTheme-modern .foonReferenceCard{background:#edf5f8;color:#152735;border-color:#dae4e9}.foonTheme-minimal .foonReferenceCard{background:#fafafa;color:#1c1c1c;border-color:#eee}
+@media(max-width:520px){.foonReferenceMenuBar{flex-wrap:wrap}.foonReferenceCategories{flex-basis:100%;order:2}.foonReferenceLayout{margin-inline-start:auto}.foonReferenceCards{gap:8px}.foonReferenceCard{padding:10px;min-height:160px}.foonReferenceCardImage{height:54px}.foonReferenceCardContent h3{font-size:13px}}
+
+
+/* Clean restaurant-only menu shell. Storefronts are unaffected. */
+.foonCleanMenu{min-height:100svh;width:100%;max-width:100%;overflow-x:clip;background:#fff;color:#182437;direction:rtl}
+.foonCleanMenuHeader{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;margin:0 auto;padding:10px clamp(10px,2vw,22px);max-width:1200px;min-height:76px;background:#fff;border-radius:0 0 18px 18px;box-shadow:0 6px 24px rgba(24,36,55,.09)}
+.foonCleanMenuBrand{grid-column:2;grid-row:1;max-width:36vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d5a337;text-decoration:none;font-size:clamp(19px,3.5vw,32px);font-weight:800;letter-spacing:-.03em}
+.foonCleanMenuNav{grid-column:3;grid-row:1;justify-self:end;position:relative}
+.foonCleanMenuTools{grid-column:1;grid-row:1;justify-self:start;display:flex;align-items:center;gap:clamp(4px,1vw,12px);min-width:0}
+.foonCleanMenuHeader svg{display:block;width:24px;height:24px}
+.foonCleanMenuNav>summary,.foonCleanMenuLang>summary,.foonCleanMenuAccount,.foonCleanMenuCart{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#f5f6f8;color:#182437;list-style:none;text-decoration:none}
+.foonCleanMenuNav>summary,.foonCleanMenuLang>summary{cursor:pointer}
+.foonCleanMenuNav>summary::-webkit-details-marker,.foonCleanMenuLang>summary::-webkit-details-marker{display:none}
+.foonCleanMenuNav nav,.foonCleanMenuLang>div{position:absolute;top:calc(100% + 12px);padding:14px;min-width:180px;background:#fff;box-shadow:0 12px 30px rgba(0,0,0,.12);border-radius:12px;z-index:40}
+.foonCleanMenuNav nav{right:0;display:grid;gap:14px}.foonCleanMenuNav nav a{color:#182437;text-decoration:none}
+.foonCleanMenuLang{position:relative}.foonCleanMenuLang>div{left:0;white-space:nowrap;font-size:13px}
+.foonCleanMenuCart{opacity:.65;cursor:not-allowed}.foonCleanMenuCart>span{position:absolute;top:-5px;right:-5px;display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#d5a337;color:#fff;font-size:11px;font-weight:700}
+@media(max-width:420px){.foonCleanMenuHeader{gap:5px;padding:8px 9px;min-height:66px}.foonCleanMenuHeader svg{width:21px;height:21px}.foonCleanMenuNav>summary,.foonCleanMenuLang>summary,.foonCleanMenuAccount,.foonCleanMenuCart{width:34px;height:36px;border-radius:11px}.foonCleanMenuBrand{max-width:30vw;font-size:20px}.foonCleanMenuTools{gap:3px}}
+
+/* Mobile public header: keep sign-in visible at all supported widths. */
+@media(max-width:640px){.foonPublicHeader .foonLogin{display:inline-flex!important;align-items:center;min-height:38px;padding:7px 9px;border:1px solid var(--fp-line);border-radius:10px;font-size:12px}.foonPublicHeader .foonPublicControls{flex-wrap:wrap;justify-content:flex-end;max-width:100%}.foonPublicHeader .foonHeaderCta{display:none}.foonPublicHeader{flex-wrap:wrap}.foonPublicHeader .foonPublicBrand{flex-shrink:0}}
+@media(max-width:370px){.foonPublicHeader .foonLogin{padding:6px 8px}.foonPublicHeader .foonPublicControls{gap:4px}}
+
+/* Keep public language controls compact and on a predictable mobile header row. */
+.foonPublic .foonLanguageSelector select{min-width:96px;max-width:125px}
+@media(max-width:640px){
+ .foonPublicHeader{align-items:center;row-gap:8px}
+ .foonPublicHeader .foonPublicControls{width:auto;flex-wrap:nowrap;align-items:center;gap:5px}
+ .foonPublic .foonLanguageSelector select{width:100px;min-width:0;max-width:100px;min-height:38px;padding-inline:7px;font-size:12px}
+ .foonPublic .foonThemeControl{min-width:38px;min-height:38px}
+ .foonPublicHeader .foonLogin{min-height:38px;padding:6px 8px;font-size:11px}
+}
+@media(max-width:390px){.foonPublicHeader{padding-inline:10px}.foonPublicBrand{gap:7px}.foonPublicBrand small{font-size:7px}.foonPublic .foonLanguageSelector select{width:88px;max-width:88px;font-size:11px}.foonPublicHeader .foonLogin{font-size:10px;padding-inline:6px}}
+
+/* Activity storefront header: controls wrap without creating a tall label row. */
+.foonActivityHeader{min-width:0}
+.foonActivityHeaderNav{min-width:0;justify-content:flex-end}
+.foonActivityLanguageSelector select{min-width:96px;max-width:125px}
+@media(max-width:680px){
+ .foonActivityHeader{display:grid!important;grid-template-columns:minmax(0,1fr);gap:8px!important;padding:10px 14px!important}
+ .foonActivityHeader>a{max-width:100%;overflow-wrap:anywhere}
+ .foonActivityHeaderNav{width:100%;justify-content:flex-start;gap:6px!important}
+ .foonActivityHeaderNav>a,.foonActivityHeaderNav>button{min-height:40px;padding:7px 10px;border:1px solid var(--activity-border,#e6e9ef);border-radius:999px;background:#fff;font-size:12px;white-space:nowrap}
+ .foonActivityLanguageSelector select{min-width:96px;max-width:112px;min-height:40px;font-size:12px}
+}
+@media(max-width:360px){.foonActivityHeaderNav{gap:4px!important}.foonActivityHeaderNav>a,.foonActivityHeaderNav>button{padding-inline:7px;font-size:11px}}
+
+/* Admin navigation: one desktop sidebar and one mobile drawer, with contained scrolling. */
+@media(min-width:851px){.adminShell .adminSide{height:100dvh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminSide>nav{display:grid}.adminShell .adminMobileMenu{display:none}}
+@media(max-width:850px){.adminShell .adminSide>nav{display:none!important}.adminShell .adminMobileMenu{display:block}.adminShell .adminDrawer{max-height:calc(100dvh - 110px)!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin}.adminShell .adminStage{min-width:0}.adminShell .adminStage>.workspace{max-width:100%;overflow-wrap:anywhere}}
+
+/* FOON dashboard interaction system: charcoal + gold identity */
+:root{--foon-ui-gold:#e2a93b;--foon-ui-ink:#171613;--foon-ui-line:#ded9cf;--foon-ui-radius:12px}
+.adminShell :is(button,a,input,select,textarea),.restaurantShell :is(button,a,input,select,textarea),.foonMenuWorkspace :is(button,a,input,select,textarea){transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.adminShell :is(button,a,input,select,textarea):focus-visible,.restaurantShell :is(button,a,input,select,textarea):focus-visible,.foonMenuWorkspace :is(button,a,input,select,textarea):focus-visible{outline:3px solid var(--foon-ui-gold);outline-offset:3px}
+.adminShell button:disabled,.restaurantShell button:disabled,.foonMenuWorkspace button:disabled{opacity:.58;cursor:not-allowed}
+.foonMenuWorkspace{width:100%;min-width:0;color:var(--foon-ui-ink)}
+.foonMenuWorkspace>h1{font-size:clamp(1.45rem,3vw,2rem);letter-spacing:-.02em}
+.foonMenuWorkspace>p{line-height:1.8;max-width:780px;color:#615c52}
+.foonMenuTabs{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 26px;padding:8px;background:#f5f1e9;border:1px solid #e5ddcf;border-radius:16px}
+.foonMenuTabs a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border:1px solid #e2d8c5;border-radius:11px;background:#fff;color:#332b1e;font-size:.9rem;font-weight:800}
+.foonMenuTabs a:hover{border-color:var(--foon-ui-gold);background:#fff8e9;transform:translateY(-1px)}
+.foonMenuStep{min-width:0;scroll-margin-top:90px;margin-bottom:26px}
+.foonMenuWorkspace :is(.adminPanel,.restaurantPanel){border-radius:18px}
+.foonMenuWorkspace :is(input,select,textarea){max-width:100%;min-width:0}
+.foonMenuWorkspace :is(button,.restaurantPrimary){min-height:44px;border-radius:11px;font-weight:800}
+.foonMenuWorkspace details{margin:12px 0 24px;border:1px solid #e2d8c5;border-radius:14px;background:#fff;overflow:hidden}
+.foonMenuWorkspace details>summary{padding:16px 18px;cursor:pointer;font-weight:800;color:#43341d}
+.foonMenuWorkspace details[open]>summary{border-bottom:1px solid #e9e1d5;background:#fff8ec}
+@media(max-width:600px){.foonMenuTabs{display:grid;grid-template-columns:1fr;padding:7px}.foonMenuTabs a{width:100%;justify-content:flex-start}.foonMenuWorkspace{padding-inline:14px}.foonMenuWorkspace .foonMenuStep{max-width:100%}}
+
+.customerProfileEditor{padding:22px;margin:20px 0;border:1px solid #ded8ca;border-radius:18px;background:#fff;color:#211d17;min-width:0}
+.customerProfileEditor h2{margin:0 0 8px}.customerProfileEditor>p{line-height:1.8;color:#625d54}
+.customerProfileMedia{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}
+.customerProfileMedia>div{min-width:0;display:grid;align-content:start;gap:10px;padding:14px;background:#faf8f4;border:1px solid #e6dfd1;border-radius:14px}
+.customerProfileMedia img{display:block;max-width:100%;object-fit:cover;border-radius:12px;background:#eee9df}
+.customerUploadLabel{display:grid;gap:8px;font-weight:700;color:#48381e}.customerUploadLabel input{width:100%;min-width:0;font:inherit;font-size:12px}
+.customerProfileForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.customerProfileForm label{display:grid;gap:8px;font-weight:700}.customerProfileForm input{width:100%;min-width:0;min-height:46px;padding:10px 12px;border:1px solid #d6ccbc;border-radius:11px;font:inherit}
+.customerProfileForm button,.customerLogout{min-height:46px;padding:10px 18px;border-radius:11px;font:inherit;font-weight:800;cursor:pointer}
+.customerProfileForm button{background:#e2a93b;border:1px solid #e2a93b;color:#171613}.customerLogout{margin-top:18px;border:1px solid #a95a50;color:#853c33;background:transparent}
+.customerProfileEditor :is(input,button):focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
+.customerHeader nav{display:flex;gap:12px;flex-wrap:wrap}
+@media(max-width:650px){.customerProfileEditor{padding:15px}.customerProfileMedia,.customerProfileForm{grid-template-columns:1fr}}
+
+
+/* FOON shared UX baseline: resilient RTL/LTR, small screens, keyboard navigation. */
+html{scroll-padding-top:76px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-width:0;overflow-x:clip}
+:where(main,section,article,aside,header,footer,nav,form){min-width:0}
+:where(img,video,canvas,svg){max-width:100%}
+:where(img,video){height:auto}
+:where(input,textarea,select){max-width:100%;min-width:0}
+:where(button,input,select,textarea){font-family:inherit}
+:where(button,a,input,select,textarea,[role="button"]):focus-visible{outline:3px solid #b45309;outline-offset:3px}
+:where(button,[role="button"]):disabled{cursor:not-allowed}
+:where(p,h1,h2,h3,h4,h5,h6,li,td,th){overflow-wrap:break-word}
+:where([dir="rtl"]){text-align:start}
+:where(input[type="tel"],input[type="email"],input[type="url"],input[type="number"]){direction:ltr;text-align:start}
+@media(max-width:600px){
+ :where(input,select,textarea){font-size:16px}
+ :where(button,a,[role="button"]){touch-action:manipulation}
+}
+@media(prefers-reduced-motion:reduce){
+ html:focus-within{scroll-behavior:auto}
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+/* Keep order action touch targets accessible on narrow merchant dashboards. */
+@media (max-width: 600px) {
+  .restaurantOrderActions button { min-height: 44px; }
+}
+/* Shared visually-hidden text used by accessible controls across every surface. */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.foonLanguageSelector{display:inline-flex;align-items:center;min-width:0;max-width:100%}
+.foonLanguageSelector select{min-width:96px;max-width:125px;min-height:40px;padding:7px 8px;border:1px solid var(--border,#d9e2ee);border-radius:10px;background:var(--surface,#fff);color:var(--text,#172033);font:inherit;cursor:pointer}

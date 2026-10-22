@@ -1,0 +1,109 @@
+/* W28 is an adapter, not a replacement design system. All colors, fonts,
+ * menu, cards and breakpoints originate in cloud merchant-dashboard.css,
+ * merchant-operations.css and merchant-experience.css served verbatim. */
+body { margin:0; }
+.restaurantApp #navigation-shell[hidden] { display:none!important; }
+.restaurantApp:has(#navigation-shell[hidden]) .restaurantMain { margin-inline-start:0; }
+.restaurantApp .restaurantTopbar { gap:12px; }
+.restaurantApp .restaurantTopActions select {
+  font:inherit;min-height:44px;max-width:155px;padding:7px 12px;
+  border:1px solid var(--rc-border);border-radius:10px;background:#fff;
+}
+.restaurantApp .restaurantSideBrand>span{font-size:23px;color:#fff}
+.restaurantApp .restaurantSidebar nav button[disabled] {
+  opacity:.55;cursor:not-allowed;pointer-events:none;
+}
+.restaurantApp .restaurantSidebar nav button small {
+  margin-inline-start:auto;font-size:10px;white-space:nowrap;
+}
+.restaurantApp .restaurantSideFooter>p{font-size:11px;line-height:1.6;color:#a3b0c3}
+.restaurantApp .restaurantContent{width:100%;max-width:none;min-width:0}
+.restaurantApp #message:not(:empty){margin-bottom:16px}
+.restaurantApp #workspace>.restaurantNotice{margin-block:16px;padding:14px}
+.restaurantApp .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}
+.restaurantApp .stats article{display:grid;gap:8px;border:1px solid var(--rc-border);border-radius:16px;padding:20px;background:#fff}
+.restaurantApp .stats strong{font-size:22px;overflow-wrap:anywhere}
+.restaurantApp .restaurantPos{grid-template-columns:minmax(0,1.25fr) minmax(270px,.8fr)}
+.restaurantApp .restaurantPanel{background:#fff}
+.restaurantApp .restaurantPosMenu{min-width:0}
+.restaurantApp .restaurantOrderCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.restaurantApp .restaurantOrderCards article{display:block;margin:0;min-width:0}
+.restaurantApp .restaurantOrderCards article header{display:flex}
+.restaurantApp .restaurantOrderCards article footer{margin-top:10px}
+.restaurantApp .restaurantOrderCards article li{overflow-wrap:anywhere}
+.restaurantApp .restaurantPos .product{background:#fff;border:1px solid var(--rc-border);text-align:start}
+.restaurantApp .restaurantPos .product:hover{border-color:var(--rc-accent);box-shadow:0 3px 12px #00000008}
+.restaurantApp .restaurantPos .product span{color:var(--rc-accent)}
+.restaurantApp .primary{background:var(--rc-accent);border-color:var(--rc-accent);color:#fff}
+.restaurantApp .tabs button[aria-pressed=true]{background:var(--rc-navy);border-color:var(--rc-navy);color:#fff}
+.restaurantApp .w28-parity-note{border-inline-start:4px solid #e9a23b;padding:10px 14px;font-size:12px}
+.restaurantApp .w28-language-label{font-size:12px}
+.restaurantApp .panel.orders{margin-top:22px}
+.restaurantApp .login{margin:55px auto;max-width:440px}
+.restaurantApp .login button{width:100%}
+@media(max-width:1100px){
+ .restaurantApp .restaurantSidebar{width:230px}
+ .restaurantApp .restaurantMain{margin-inline-start:230px}
+ .restaurantApp .restaurantPos{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+ .restaurantApp .restaurantSidebar{
+   position:static;width:100%;height:auto;padding-bottom:8px;overflow:visible;
+ }
+ .restaurantApp .restaurantSidebar nav{display:flex;overflow-x:auto;gap:4px;padding:10px}
+ .restaurantApp .restaurantSidebar nav button{flex:0 0 auto;width:auto;min-height:44px}
+ .restaurantApp .restaurantSideBrand{min-height:52px;padding:10px}
+ .restaurantApp .restaurantNavLabel,.restaurantApp .restaurantSideFooter{display:none}
+ .restaurantApp .restaurantMain{margin-inline-start:0}
+ .restaurantApp .restaurantTopbar{min-height:62px;padding:12px 16px;flex-wrap:wrap}
+ .restaurantApp .restaurantContent{padding:16px}
+ .restaurantApp .stats{grid-template-columns:1fr;gap:10px}
+ .restaurantApp .stats article{display:flex;align-items:center;justify-content:space-between}
+ .restaurantApp .restaurantOrderCards{grid-template-columns:1fr}
+ .restaurantApp .restaurantTopActions{max-width:100%;flex-wrap:wrap}
+}
+
+/* W29: same original FOON public login structure/CSS, with a local-username
+ * adapter. Keep login distinct from the merchant dashboard until auth. */
+.restaurantApp main.restaurantMain{max-width:none;width:auto;margin-inline-start:272px;padding:0}
+.restaurantApp:has(#navigation-shell[hidden]) main.restaurantMain{margin-inline-start:0}
+.restaurantApp:has(#login-panel:not([hidden])){background:#f8f7f3;min-height:100svh}
+.restaurantApp:has(#login-panel:not([hidden])) .restaurantTopbar{display:none}
+.restaurantApp:has(#login-panel:not([hidden])) .restaurantContent{padding:0}
+.restaurantApp #login-panel.auth-shell{
+  margin:0;max-width:none;width:100%;padding:24px;
+  min-height:100svh;display:grid;place-items:center
+}
+.restaurantApp #login-panel.auth-shell .auth-card{
+  color:#24221e;max-width:490px;
+}
+.restaurantApp #login-panel.auth-shell .auth-card h1{margin:0 0 8px}
+.restaurantApp #login-panel.auth-shell .auth-card>p{line-height:1.8;margin:0 0 24px}
+.restaurantApp #login-panel.auth-shell .auth-form{
+  display:grid;gap:15px;margin:0;
+}
+.restaurantApp #login-panel.auth-shell .auth-form label{display:grid;gap:8px;font-weight:700}
+.restaurantApp #login-panel.auth-shell .auth-form input{
+  min-height:48px;max-width:100%;width:100%;font:inherit;
+}
+.restaurantApp #login-panel.auth-shell .auth-form button{
+  min-height:48px;width:100%;background:#e2a93b;color:#171613;
+  border:0;border-radius:12px;font-weight:900;
+}
+.restaurantApp #login-panel.auth-shell .auth-form button:hover:not(:disabled){filter:brightness(.95)}
+.restaurantApp #login-panel.auth-shell .auth-card>p.w29-local-login-note{
+  margin:18px 0 0;color:#706c62;font-size:12px;line-height:1.7;
+}
+.restaurantApp:has(#login-panel:not([hidden])) #message:not(:empty){
+  position:fixed;z-index:2;inset-inline:16px;bottom:10px;
+  max-width:490px;margin-inline:auto;
+}
+/* Preserve source responsive dashboard behavior; no horizontal scrollbar. */
+@media(max-width:1100px){
+ .restaurantApp main.restaurantMain{margin-inline-start:230px}
+ .restaurantApp:has(#navigation-shell[hidden]) main.restaurantMain{margin-inline-start:0}
+}
+@media(max-width:760px){
+ .restaurantApp main.restaurantMain{margin-inline-start:0}
+ .restaurantApp #login-panel.auth-shell{padding:12px}
+}

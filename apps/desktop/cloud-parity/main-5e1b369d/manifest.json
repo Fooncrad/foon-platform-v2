@@ -1,0 +1,414 @@
+{
+  "type": "FOON_DESKTOP_UI_PARITY_SNAPSHOT",
+  "snapshotRef": "5e1b369d660b197bf645cc52dc7de7f01d07443a",
+  "capturedOn": "2026-10-22",
+  "source": "app/restaurant/merchant-dashboard.tsx",
+  "sourceBlobSha": "079ba12ea75003f31f1d2f6a181d8bb25cb4d992",
+  "orderSourceBlobSha": "9f40bd9426d77be741d9317ce1d13ddb95d1d1f2",
+  "modules": [
+    {
+      "key": "assigned",
+      "label": "طاولاتي ونداءاتي",
+      "icon": "table",
+      "feature": null,
+      "roles": [
+        "waiter"
+      ],
+      "en": "My tables and calls",
+      "fr": "Mes tables et appels",
+      "offlineWorking": false
+    },
+    {
+      "key": "overview",
+      "label": "نظرة عامة",
+      "icon": "dashboard",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter",
+        "kitchen",
+        "driver",
+        "accountant"
+      ],
+      "en": "Overview",
+      "fr": "Vue d’ensemble",
+      "offlineWorking": false
+    },
+    {
+      "key": "branches",
+      "label": "الفروع والإعدادات",
+      "icon": "store",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Branches and settings",
+      "fr": "Succursales et paramètres",
+      "offlineWorking": false
+    },
+    {
+      "key": "orders",
+      "label": "الطلبات",
+      "icon": "bag",
+      "feature": "orders",
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter",
+        "kitchen",
+        "driver"
+      ],
+      "en": "Orders",
+      "fr": "Commandes",
+      "offlineWorking": true
+    },
+    {
+      "key": "pos",
+      "label": "نقطة البيع",
+      "icon": "wallet",
+      "feature": "pos",
+      "roles": [
+        "owner",
+        "manager",
+        "cashier"
+      ],
+      "en": "Point of sale",
+      "fr": "Point de vente",
+      "offlineWorking": true
+    },
+    {
+      "key": "kds",
+      "label": "شاشة المطبخ",
+      "icon": "chef",
+      "feature": "kds",
+      "roles": [
+        "owner",
+        "manager",
+        "kitchen"
+      ],
+      "en": "Kitchen display",
+      "fr": "Écran de cuisine",
+      "offlineWorking": true
+    },
+    {
+      "key": "menu",
+      "label": "المنيو والأصناف",
+      "icon": "menu",
+      "feature": "digital_menu",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Products and categories",
+      "fr": "Produits et catégories",
+      "offlineWorking": false
+    },
+    {
+      "key": "tables",
+      "label": "الطاولات",
+      "icon": "table",
+      "feature": "tables",
+      "roles": [
+        "owner",
+        "manager",
+        "waiter"
+      ],
+      "en": "Tables",
+      "fr": "Tables",
+      "offlineWorking": false
+    },
+    {
+      "key": "roomService",
+      "label": "خدمة الغرف",
+      "icon": "store",
+      "feature": "room_service",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Room service",
+      "fr": "Service en chambre",
+      "offlineWorking": false
+    },
+    {
+      "key": "inventory",
+      "label": "المخزون والمشتريات",
+      "icon": "box",
+      "feature": "inventory",
+      "roles": [
+        "owner",
+        "manager",
+        "accountant"
+      ],
+      "en": "Inventory and purchasing",
+      "fr": "Stocks et achats",
+      "offlineWorking": false
+    },
+    {
+      "key": "pickupPoints",
+      "label": "نقاط الاستلام",
+      "icon": "store",
+      "feature": "pickup",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Pickup points",
+      "fr": "Points de retrait",
+      "offlineWorking": false
+    },
+    {
+      "key": "serviceOrders",
+      "label": "أوامر الخدمة",
+      "icon": "bag",
+      "feature": "quotes",
+      "roles": [
+        "owner",
+        "manager",
+        "accountant"
+      ],
+      "en": "Service orders",
+      "fr": "Ordres de service",
+      "offlineWorking": false
+    },
+    {
+      "key": "quotes",
+      "label": "عروض الأسعار",
+      "icon": "wallet",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager",
+        "accountant"
+      ],
+      "en": "Quotations",
+      "fr": "Devis",
+      "offlineWorking": false
+    },
+    {
+      "key": "printers",
+      "label": "الطابعات والفواتير",
+      "icon": "wallet",
+      "feature": "departments",
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter",
+        "kitchen",
+        "driver",
+        "accountant"
+      ],
+      "en": "Printers and invoices",
+      "fr": "Imprimantes et factures",
+      "offlineWorking": false
+    },
+    {
+      "key": "team",
+      "label": "إدارة الموظفين والصلاحيات",
+      "icon": "users",
+      "feature": "employees",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Staff and permissions",
+      "fr": "Équipe et autorisations",
+      "offlineWorking": false
+    },
+    {
+      "key": "marketing",
+      "label": "التسويق والحملات",
+      "icon": "trend",
+      "feature": "campaigns",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Marketing and campaigns",
+      "fr": "Marketing et campagnes",
+      "offlineWorking": false
+    },
+    {
+      "key": "reservations",
+      "label": "الحجوزات والانتظار",
+      "icon": "clock",
+      "feature": "reservations",
+      "roles": [
+        "owner",
+        "manager",
+        "waiter"
+      ],
+      "en": "Reservations and waitlist",
+      "fr": "Réservations et attente",
+      "offlineWorking": false
+    },
+    {
+      "key": "reports",
+      "label": "التقارير",
+      "icon": "trend",
+      "feature": "analytics",
+      "roles": [
+        "owner",
+        "manager",
+        "accountant"
+      ],
+      "en": "Reports",
+      "fr": "Rapports",
+      "offlineWorking": false
+    },
+    {
+      "key": "customers",
+      "label": "العملاء",
+      "icon": "users",
+      "feature": "customers",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Customers",
+      "fr": "Clients",
+      "offlineWorking": false
+    },
+    {
+      "key": "storefront",
+      "label": "هوية واجهة النشاط",
+      "icon": "store",
+      "feature": "branding.colors",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Storefront appearance",
+      "fr": "Apparence de la boutique",
+      "offlineWorking": false
+    },
+    {
+      "key": "publicControls",
+      "label": "تشغيل واجهة العملاء",
+      "icon": "shield",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Customer storefront controls",
+      "fr": "Contrôle de la vitrine client",
+      "offlineWorking": false
+    },
+    {
+      "key": "remote",
+      "label": "التوظيف عن بُعد",
+      "icon": "users",
+      "feature": "employees",
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Remote hiring",
+      "fr": "Recrutement à distance",
+      "offlineWorking": false
+    },
+    {
+      "key": "payments",
+      "label": "إعدادات الدفع",
+      "icon": "wallet",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager",
+        "accountant"
+      ],
+      "en": "Payment settings",
+      "fr": "Paramètres de paiement",
+      "offlineWorking": false
+    },
+    {
+      "key": "security",
+      "label": "أمان الحساب والجلسات",
+      "icon": "shield",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter",
+        "kitchen",
+        "driver",
+        "accountant"
+      ],
+      "en": "Account security",
+      "fr": "Sécurité du compte",
+      "offlineWorking": false
+    },
+    {
+      "key": "health",
+      "label": "صحة النظام",
+      "icon": "dashboard",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "System health",
+      "fr": "État du système",
+      "offlineWorking": false
+    },
+    {
+      "key": "subscription",
+      "label": "الباقة والمميزات",
+      "icon": "shield",
+      "feature": null,
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "en": "Subscription and features",
+      "fr": "Abonnement et fonctionnalités",
+      "offlineWorking": false
+    }
+  ],
+  "activities": [
+    "restaurant",
+    "cafe",
+    "sweets",
+    "grocery",
+    "clothing",
+    "perfume",
+    "accessories",
+    "watches",
+    "gifts",
+    "ecommerce",
+    "carwash",
+    "laundry",
+    "automotive",
+    "salon",
+    "publicworks"
+  ],
+  "channels": [
+    "dine_in",
+    "takeaway",
+    "delivery",
+    "pickup",
+    "room_service",
+    "hotel_service",
+    "reservation",
+    "preorder"
+  ],
+  "originalCssFiles": [
+    "app/globals.css",
+    "app/restaurant/merchant-dashboard.css",
+    "app/restaurant/merchant-operations.css",
+    "app/restaurant/merchant-experience.css"
+  ],
+  "offlineModuleCapabilities": {
+    "orders": "local W27 only",
+    "pos": "local W27 only",
+    "kds": "local W27 only"
+  },
+  "notice": "Inventory and design parity only: all other original merchant modules still need offline backends."
+}
