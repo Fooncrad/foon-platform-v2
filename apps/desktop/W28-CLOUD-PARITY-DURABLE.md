@@ -35,6 +35,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\apps\desktop\run-w28-devel
 - Initial synthetic cache has a **7-hour** lease. On expiry startup is deliberately blocked. Do not work around by editing timestamps; a trusted, pinned, device-bound signed long-outage grant is still required for real operations.
 - Password hashes are scrypt, but Windows filesystem ACL hardening and protected native key storage are not completed for this demo.
 
+### Development password rotation
+
+If the one-time password was copied into chat or a shared log, **stop W28** using Ctrl+C, then run the following from the downloaded W28 source root after refreshing the source to the current branch:
+
+```powershell
+node .\scripts\foon-edge-w28-rotate-synthetic-passwords.mjs --development-only
+```
+
+The command changes only each synthetic user's password hash in `users.json`, prints **four newly generated distinct passwords once locally**, and keeps device identities, signing keys, cached catalogs, SQLite orders and Outbox unchanged. It refuses to run while `station.lock` exists. Do not upload console passwords. This is *not* production credential provisioning or Windows ACL hardening.
+
 ### SQLite WAL-consistent backups
 
 In a separate PowerShell window, while the station is running or stopped:
