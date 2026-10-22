@@ -1,52 +1,24 @@
-// Source-of-truth inventory for Windows UI parity. Never silently drop an
-// existing cloud module, activity or order channel from W28's coverage report.
-// This is visibility tracking; NOT an authorization or commercial entitlement.
+// W28 pinned snapshot from the actual cloud production source at main 5e1b369d.
+// The original CSS is vendored byte-for-byte. This is UI inventory, NOT an
+// authorization or a claim that all 26 backend modules run offline.
 import {readFile} from "node:fs/promises";
-import {fileURLToPath} from "node:url";
-const cloudDashboard=new URL("../app/restaurant/merchant-dashboard.tsx",import.meta.url);
-const cloudOrders=new URL("../app/restaurant/order-workspace.tsx",import.meta.url);
-const cloudAssets=[
-  "merchant-dashboard.css","merchant-operations.css","merchant-experience.css"
-];
-export const cloudCssPaths=Object.freeze({
- "globals.css":new URL("../app/globals.css",import.meta.url),
- ...Object.fromEntries(cloudAssets.map(name=>
-  [name,new URL("../app/restaurant/"+name,import.meta.url)]))
-});
+const snapshotRoot=new URL("../apps/desktop/cloud-parity/main-5e1b369d/",import.meta.url);
+const css=["globals.css","merchant-dashboard.css","merchant-operations.css","merchant-experience.css"];
+export const cloudCssPaths=Object.freeze(Object.fromEntries(css.map(name=>
+ [name,new URL(name,snapshotRoot)])));
 
-export async function cloudUiInventory() {
- const [dashboard,orders]=await Promise.all([
-   readFile(cloudDashboard,"utf8"),readFile(cloudOrders,"utf8")
- ]);
- const section=dashboard.match(/type Section=([^;]+);/);
- const definitions=dashboard.match(/const modules:[\s\S]*?=\[([\s\S]*?)\];/);
- if(!section||!definitions)throw Error("W28_CLOUD_NAV_NOT_FOUND");
- const keys=[...section[1].matchAll(/"([^"]+)"/g)].map(m=>m[1]);
- const modules=[...definitions[1].matchAll(/\{key:"([^"]+)",label:"([^"]+)",icon:"([^"]+)"(?:,feature:"([^"]+)")?,roles:\[([^\]]+)\]\}/g)]
-   .map(m=>({key:m[1],label:m[2],icon:m[3],feature:m[4]||null,
-     roles:[...m[5].matchAll(/"([^"]+)"/g)].map(r=>r[1]),
-     offlineWorking:["orders","pos","kds"].includes(m[1])}));
- const sourceLabels=dashboard.match(/const sectionTranslations:[\s\S]*?=\{([\s\S]*?)\};/);
- if(!sourceLabels)throw Error("W28_SOURCE_TRANSLATIONS_MISSING");
- const labelTranslations=Object.fromEntries(
-   [...sourceLabels[1].matchAll(/([a-zA-Z]+):\{en:"([^"]+)",fr:"([^"]+)"\}/g)]
-     .map(x=>[x[1],{en:x[2],fr:x[3]}])
- );
- for(const item of modules){
-   item.en=labelTranslations[item.key]?.en||item.label;
-   item.fr=labelTranslations[item.key]?.fr||item.label;
+export async function cloudUiInventory(){
+ const snapshot=JSON.parse(await readFile(new URL("manifest.json",snapshotRoot),"utf8"));
+ if(snapshot.type!=="FOON_DESKTOP_UI_PARITY_SNAPSHOT"||
+    snapshot.snapshotRef!=="5e1b369d660b197bf645cc52dc7de7f01d07443a"||
+    !Array.isArray(snapshot.modules)||snapshot.modules.length!==26||
+    !Array.isArray(snapshot.activities)||snapshot.activities.length!==15||
+    !Array.isArray(snapshot.channels)||snapshot.channels.length!==8||
+    !Array.isArray(snapshot.originalCssFiles)||snapshot.originalCssFiles.length!==4||
+    new Set(snapshot.modules.map(m=>m.key)).size!==26||
+    snapshot.modules.some(m=>!Array.isArray(m.roles)||!m.roles.length||
+      !["pos","orders","kds"].includes(m.key)&&m.offlineWorking)){
+   throw Error("W28_CLOUD_PARITY_SNAPSHOT_INVALID");
  }
- const found=modules.map(x=>x.key);
- if(new Set(keys).size!==keys.length||new Set(found).size!==found.length||
-    keys.length!==found.length||keys.some(k=>!found.includes(k)))
-   throw Error("W28_CLOUD_NAV_COVERAGE_INCOMPLETE");
- const activitiesText=dashboard.match(/const activityNames:[\s\S]*?=\{([\s\S]*?)\};/);
- const activities=activitiesText?[...activitiesText[1].matchAll(/\b([a-z][a-z0-9_]+):\[/g)].map(x=>x[1]):[];
- if(activities.length<10)throw Error("W28_ACTIVITY_COVERAGE_INCOMPLETE");
- const channelsText=orders.match(/const channels:Record<string,string>=\{([^}]+)\}/);
- if(!channelsText)throw Error("W28_ORDER_CHANNELS_MISSING");
- const channels=[...channelsText[1].matchAll(/([a-z_]+):"/g)].map(x=>x[1]);
- if(channels.length<6)throw Error("W28_ORDER_CHANNELS_INCOMPLETE");
- return {source:"app/restaurant/merchant-dashboard.tsx",modules,activities,channels,
-   originalCssFiles:["app/globals.css",...cloudAssets.map(x=>"app/restaurant/"+x)]};
+ return snapshot;
 }
