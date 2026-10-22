@@ -8,6 +8,7 @@ import {homedir} from "node:os";
 import {join,resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {hashOperatorPassword} from "./foon-edge-console-server.mjs";
+import {cloudUiInventory} from "./foon-desktop-cloud-ui-inventory.mjs";
 
 if (process.argv.length!==3 || process.argv[2]!=="--development-only") {
   throw Error("W28_EXPLICIT_DEVELOPMENT_ONLY_REQUIRED");
@@ -24,6 +25,15 @@ const appdata=process.env.LOCALAPPDATA;
 if(!appdata||!resolve(appdata).toLowerCase().startsWith(resolve(homedir()).toLowerCase()))
   throw Error("W28_LOCAL_APPDATA_REQUIRED");
 const home=join(appdata,"FOON","W28-DEVELOPMENT-ONLY");
+const coverage=await cloudUiInventory();
+const selectedActivity=process.env.FOON_W28_DEMO_ACTIVITY||"restaurant";
+if(!coverage.activities.includes(selectedActivity))throw Error("W28_ACTIVITY_NOT_IN_CLOUD_SOURCE");
+process.stdout.write("ORIGINAL CLOUD UI: "+coverage.modules.length+" modules, "+
+ coverage.activities.length+" activities, "+coverage.channels.length+" order channels.\\n");
+process.stdout.write("Local working modules: "+
+ coverage.modules.filter(item=>item.offlineWorking).map(item=>item.key).join(", ")+
+ "; other modules visible but NOT YET IMPLEMENTED OFFLINE.\\n");
+
 const meta=join(home,"W28-SYNTHETIC-ONLY.json");
 const usersFile=join(home,"users.json");
 const cacheFile=join(home,"catalog.json");
@@ -100,7 +110,7 @@ try{
     FOON_LAN_TOKEN:secrets.token,FOON_EDGE_ACK_SECRET:secrets.ackSecret,
     FOON_LAN_PORT:String(gatewayPort),FOON_EDGE_CONSOLE_PORT:String(port),
     FOON_EDGE_CONSOLE_HOST:"127.0.0.1",FOON_EDGE_CONSOLE_ORIGIN:origin,
-    FOON_EDGE_CONSOLE_CERT_FILE:"",FOON_EDGE_CONSOLE_KEY_FILE:""};
+    FOON_EDGE_CONSOLE_CERT_FILE:"",FOON_EDGE_CONSOLE_KEY_FILE:"",FOON_W28_DEMO_ACTIVITY:selectedActivity};
   process.stdout.write("\nFOON W28 LOCAL DEVELOPMENT: "+origin+"\n");
   process.stdout.write("SQLite and pending Outbox PERSIST after shutdown: "+dbFile+"\n");
   process.stdout.write("This development profile is NOT commercial POS. Offline lease is NOT extended.\n");
