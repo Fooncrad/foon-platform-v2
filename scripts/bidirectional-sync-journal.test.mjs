@@ -17,7 +17,7 @@ test("repeated same event reports duplicate; tampered payload fails",async()=>{
  let digest;
  const first={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))digest=args.at(-1);return [[]]}};
  await appendScopedChange(first,{change,sourceDeviceId:ids[3]});
- const db={async execute(){return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3]}]]}};
+ const db={async execute(){return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3],next_version:1}]]}};
  assert.equal((await appendScopedChange(db,{change,sourceDeviceId:ids[3]})).status,"duplicate");
  await assert.rejects(()=>appendScopedChange(db,{change:{...change,payload:{price:99}},sourceDeviceId:ids[3]}),/SYNC_IDEMPOTENCY_CONFLICT/);
 });
@@ -76,4 +76,26 @@ test("updated entity version can record only after one version row changed",asyn
  const outcome=await appendScopedChange(db,{change:{...change,baseVersion:1},sourceDeviceId:ids[3]});
  assert.equal(outcome.nextVersion,2);
  assert.ok(queries.some(sql=>sql.includes("UPDATE foon_sync_versions")));
+});
+
+test("same event replay returns persisted version without reapplying",async()=>{
+ const digest=(await import("../lib/platform/bidirectional-sync-contract.mjs")).digestChange(change);
+ let calls=0;
+ const db={async execute(sql){
+  calls++;
+  if(sql.includes("SELECT payload_digest"))return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3],next_version:4}]];
+  return [{affectedRows:1}];
+ }};
+ const result=await appendScopedChange(db,{change,sourceDeviceId:ids[3]});
+ assert.deepEqual(result,{status:"duplicate",eventId:change.eventId,nextVersion:4});
+ assert.equal(calls,2,"replay must not mutate entity or journal");
+});
+test("unsafe persisted version never advances or appends an event",async()=>{
+ const db={async execute(sql){
+  if(sql.includes("SELECT payload_digest"))return [[]];
+  if(sql.includes("SELECT version"))return [[{version:"9007199254740992"}]];
+  if(sql.includes("INSERT INTO foon_sync_changes"))throw Error("must not append");
+  return [{affectedRows:1}];
+ }};
+ await assert.rejects(()=>appendScopedChange(db,{change:{...change,baseVersion:1},sourceDeviceId:ids[3]}),/SYNC_INVALID_STORED_VERSION/);
 });
