@@ -30,7 +30,14 @@
    <button id="w30-mobile-trigger" type="button" class="restaurantMobileTrigger restaurantIconButton" aria-label="فتح قائمة النشاط" aria-expanded="false"><span aria-hidden="true">☰</span></button>
    <div class="restaurantBreadcrumb"><small>مساحة العمل</small><h1 class="sr-only" id="desktop-heading">نقطة البيع</h1></div>
    <div class="restaurantTopActions">
-    <div class="tabs restaurantPosTopbarSlot" aria-label="وحدات التشغيل المحلية"><button id="pos-tab" aria-pressed="true">نقطة البيع</button><button id="kds-tab" aria-pressed="false">المطبخ والطلبات</button></div>
+    <div class="restaurantPosTopbarSlot" aria-label="أدوات نقطة البيع">
+      <div class="restaurantPosQuickBar">
+       <span class="restaurantPosConnection" data-online="false" id="w31-pos-connection">● تشغيل محلي</span>
+       <span id="w31-pending-top">معلّقة: 0</span>
+       <button id="w31-tools-toggle" type="button" aria-expanded="false" aria-controls="w31-pos-tools">أدوات المحطة</button>
+      </div>
+      <div class="tabs w31-local-tabs" aria-label="وحدات التشغيل المحلية"><button id="pos-tab" aria-pressed="true">نقطة البيع</button><button id="kds-tab" aria-pressed="false">المطبخ والطلبات</button></div>
+     </div>
     <label class="foonWorkspaceThemeControl restaurantWorkspaceTheme"><span id="w30-theme-label">المظهر</span><select id="w30-theme" aria-label="المظهر"><option value="system">حسب الجهاز</option><option value="light">فاتح</option><option value="dark">داكن</option></select></label>
     <label for="language" class="w28-language-label">اللغة</label>
     <select id="language" aria-label="Language"><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option></select>
@@ -57,15 +64,34 @@
    <section id="workspace" hidden>
     <div class="restaurantPageHeading restaurantPageHeadingPos"><div><p>التشغيل المحلي</p><h2 id="title">نقطة البيع</h2></div><span id="w30-role-badge" class="restaurantRoleBadge">مالك النشاط</span></div>
     <div class="restaurantNotice w28-local-note">محطة تشغيل تجريبية محلية فقط. لا توجد مزامنة سحابية في هذا الإصدار، والطلبات المعلّقة محفوظة على هذا الجهاز.</div>
-    <div class="stats restaurantStats">
-     <article><small>طلبات تنتظر السحابة</small><strong id="pending-count">0</strong></article>
-     <article><small>حالة المزامنة</small><strong id="sync-state">—</strong></article>
-     <article><small>المنيو المحفوظ</small><strong id="catalog-time">—</strong></article>
+    <div id="w31-pos-tools" class="restaurantPosToolsWrap" hidden>
+      <div class="stats restaurantStats restaurantPosSyncStats">
+       <article><small>طلبات محفوظة محليًا ولم تُرسل</small><strong id="pending-count">0</strong></article>
+       <article><small>حالة المزامنة</small><strong id="sync-state">—</strong></article>
+       <article><small>آخر حفظ للمنيو التجريبي</small><strong id="catalog-time">—</strong></article>
+      </div>
     </div>
-    <div id="pos-layout" class="pos-layout restaurantPos restaurantPosModern">
-      <section class="panel restaurantPanel restaurantPosCatalog"><header class="section-head"><h2>المنيو</h2><input id="search" type="search" aria-label="البحث عن صنف" placeholder="ابحث عن صنف…"></header><div id="menu" class="menu-grid restaurantPosMenu"></div></section>
-      <aside class="panel cart restaurantPanel restaurantPosCheckout"><h2>طلب سفري جديد</h2><p class="muted">هذه محطة تطوير بسعر محلي تقديري، دون معالجة دفع أو تحقق ضريبي نهائي.</p><div id="cart-lines" class="restaurantCart"></div><div class="total"><span>التقدير المحلي</span><strong id="cart-total">0.00 SAR</strong></div><button id="checkout" class="primary restaurantPrimary" disabled>حفظ الطلب</button><p class="muted">الدفع الإلكتروني والطاولات والخصومات والخيارات غير مفعّلة في هذه النسخة المحلية.</p></aside>
-    </div>
+    <section id="w31-pos-workspace" class="restaurantPanel restaurantPosWorkspace" aria-label="FOON POS المحلي">
+     <div id="pos-layout" class="restaurantPos restaurantPosModern">
+       <div class="restaurantPosCatalog">
+        <div class="restaurantPosSectionHeading"><div><small>FOON POS</small><h3>اختيار الأصناف</h3></div><span class="restaurantPosItemCount" id="w31-item-count" aria-live="polite">0 / 0</span></div>
+        <div class="restaurantPosBrowse">
+         <input id="search" type="search" aria-label="البحث عن صنف" placeholder="ابحث باسم الصنف…" autocomplete="off">
+         <nav id="w31-pos-categories" class="restaurantPosCategories" aria-label="أقسام المنيو"></nav>
+        </div>
+        <div id="menu" class="restaurantPosMenu" aria-live="polite"></div>
+       </div>
+       <aside class="restaurantResourceForm restaurantPosCheckout cart" aria-label="الطلب الحالي">
+        <div class="restaurantPosSectionHeading"><div><small>CHECKOUT</small><h3>الطلب الحالي</h3></div><span class="restaurantPosCartCount" id="w31-cart-count" aria-label="عدد الأصناف">0</span></div>
+        <div class="restaurantPosFullField w31-takeaway-channel"><span>نوع الطلب</span><strong>سفري — استلام من المحطة</strong></div>
+        <p class="muted restaurantPosFullField">إجمالي محلي تقديري من منيو الاختبار. لا يوجد دفع أو فاتورة ضريبية نهائية.</p>
+        <div id="cart-lines" class="restaurantCart restaurantPosFullField"></div>
+        <div class="total restaurantPosFullField"><span>التقدير المحلي</span><strong id="cart-total" dir="ltr">0.00 SAR</strong></div>
+        <button id="checkout" type="button" class="primary restaurantPrimary restaurantPosFullField" disabled>حفظ الطلب على المحطة</button>
+        <p class="muted restaurantPosFullField">الطلبات الداخلية والتوصيل والحجوزات والخصومات والدفع غير مفعّلة في W31. لا توجد مزامنة سحابية.</p>
+       </aside>
+     </div>
+    </section>
     <section class="panel orders restaurantPanel"><header class="section-head"><h2>الطلبات</h2><button id="refresh" class="restaurantOutline">تحديث</button></header><div id="orders" class="order-grid restaurantOrderCards"></div></section>
     <p id="desktop-parity-note" class="w28-parity-note" role="note">الأقسام المعروضة في القائمة مأخوذة من الموقع الأصلي؛ المعطّل منها لم يُنقل للتشغيل المحلي بعد.</p>
    </section>
