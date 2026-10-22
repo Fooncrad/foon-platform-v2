@@ -403,7 +403,9 @@
     "app/globals.css",
     "app/restaurant/merchant-dashboard.css",
     "app/restaurant/merchant-operations.css",
-    "app/restaurant/merchant-experience.css"
+    "app/restaurant/merchant-experience.css",
+    "app/restaurant/shared-dashboard-legibility.css",
+    "app/restaurant/reference-dashboard-layout.css"
   ],
   "offlineModuleCapabilities": {
     "orders": "local W27 only",
