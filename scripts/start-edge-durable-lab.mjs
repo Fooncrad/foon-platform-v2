@@ -68,10 +68,14 @@ try{
     if([meta,usersFile,cacheFile,secretFile,dbFile].some(existsSync))
       throw Error("W28_PARTIAL_PROFILE_REQUIRES_MANUAL_RECOVERY");
     const tenantId=randomUUID(),branchId=randomUUID(),
-      deviceCashier=randomUUID(),deviceKitchen=randomUUID(),itemId=randomUUID();
+      deviceCashier=randomUUID(),deviceKitchen=randomUUID(),deviceOwner=randomUUID(),deviceManager=randomUUID(),itemId=randomUUID();
     const password=hex(14);
     const passwd=await hashOperatorPassword(password);
     const users=[
+      {username:"owner",role:"owner",tenantId,branchId,deviceId:deviceOwner,
+        signingSecret:hex(48),passwordHash:passwd},
+      {username:"manager",role:"manager",tenantId,branchId,deviceId:deviceManager,
+        signingSecret:hex(48),passwordHash:passwd},
       {username:"cashier",role:"cashier",tenantId,branchId,deviceId:deviceCashier,
         signingSecret:hex(48),passwordHash:passwd},
       {username:"kitchen",role:"kitchen",tenantId,branchId,deviceId:deviceKitchen,
@@ -88,7 +92,7 @@ try{
     for(const [file,value] of files)await writeFile(file,JSON.stringify(value,null,2),{flag:"wx",mode:0o600});
     created=true;
     process.stdout.write("\nW28 DEVELOPMENT PROFILE CREATED. SAVE THIS PASSWORD SECURELY NOW.\n");
-    process.stdout.write("Accounts: cashier / kitchen\nTemporary password (shown ONCE): "+password+"\n");
+    process.stdout.write("Accounts: owner / manager / cashier / kitchen\nTemporary password (shown ONCE): "+password+"\n");
     process.stdout.write("Authorization expires at: "+validUntil+"\n");
   }
   if(typeof secrets.token!=="string"||secrets.token.length<32||
