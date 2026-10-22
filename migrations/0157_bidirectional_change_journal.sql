@@ -54,3 +54,17 @@ CREATE TABLE IF NOT EXISTS foon_sync_inventory_projection (
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  PRIMARY KEY (tenant_id,branch_id,item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Staging-only local receipt ledger. Never treats a raw HTTP success as an ACK.
+CREATE TABLE IF NOT EXISTS foon_sync_push_acknowledgments (
+ device_id CHAR(36) NOT NULL,
+ event_id CHAR(36) NOT NULL,
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ payload_digest CHAR(64) NOT NULL,
+ next_version BIGINT UNSIGNED NOT NULL,
+ signature VARCHAR(128) NOT NULL,
+ acknowledged_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(device_id,event_id),
+ KEY idx_foon_sync_ack_scope(tenant_id,branch_id,acknowledged_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
