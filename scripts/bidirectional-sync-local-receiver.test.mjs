@@ -61,3 +61,12 @@ test("tampered signed batch fails before the database transaction",async()=>{
  await assert.rejects(()=>applyVerifiedPullBatch({db,batch:modified,scope,...signed(),applyEvent:async()=>true}),/SYNC_SIGNATURE_INVALID/);
  assert.deepEqual(db.calls,[]);
 });
+
+test("empty signed pull with unchanged cursor commits without a pointless UPDATE",async()=>{
+ const empty={...batch,events:[],nextCursor:scope.after};
+ const db=fixture();
+ const result=await applyVerifiedPullBatch({db,batch:empty,scope,...signed(empty),applyEvent:async()=>{throw Error("no events expected");}});
+ assert.deepEqual(result,{status:"applied",nextCursor:scope.after,count:0});
+ assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
+ assert.equal(db.calls.at(-1),"commit");
+});
