@@ -26,7 +26,7 @@ export async function cloudUiInventory() {
  const sourceLabels=dashboard.match(/const sectionTranslations:[\s\S]*?=\{([\s\S]*?)\};/);
  if(!sourceLabels)throw Error("W28_SOURCE_TRANSLATIONS_MISSING");
  const labelTranslations=Object.fromEntries(
-   [...sourceLabels[1].matchAll(/([a-zA-Z]+):\\{en:"([^"]+)",fr:"([^"]+)"\}/g)]
+   [...sourceLabels[1].matchAll(/([a-zA-Z]+):\{en:"([^"]+)",fr:"([^"]+)"\}/g)]
      .map(x=>[x[1],{en:x[2],fr:x[3]}])
  );
  for(const item of modules){
