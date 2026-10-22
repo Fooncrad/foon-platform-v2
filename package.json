@@ -58,7 +58,8 @@
     "test:merge-bundle": "node --experimental-strip-types --test scripts/employee-permissions.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/waiter-room-service-scope.test.mjs scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs scripts/delivery-branch-hint.test.mjs scripts/employee-link-scope.test.mjs scripts/scoped-staff-overview.test.mjs",
     "test:staff-overview": "node --experimental-strip-types --test scripts/scoped-staff-overview.test.mjs",
     "test:invoices": "node --experimental-strip-types --test scripts/transactional-invoice-logic.test.mjs scripts/customer-invoice-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/notification-delivery.test.mjs scripts/creator-paid-subscriptions.test.mjs",
-    "test:admin-provision": "node --test scripts/admin-provision-profile.test.mjs"
+    "test:admin-provision": "node --test scripts/admin-provision-profile.test.mjs",
+    "test:bidirectional-sync": "node --test scripts/bidirectional-sync-contract.test.mjs scripts/bidirectional-sync-journal.test.mjs scripts/bidirectional-sync-authorization.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
