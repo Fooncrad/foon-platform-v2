@@ -20,3 +20,7 @@ test("rejects non-JSON payload values and prototype pollution keys",()=>{
   assert.throws(()=>validateChangeEnvelope({...c,payload}),/SYNC_INVALID_PAYLOAD/);
  }
 });
+
+test("event digest binds the actor identity against replay across users",()=>{
+ assert.notEqual(digestChange(c),digestChange({...c,actorId:ids[4]}));
+});
