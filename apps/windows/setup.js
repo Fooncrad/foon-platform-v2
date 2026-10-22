@@ -1,6 +1,13 @@
+window.foonSetup.current().then(current=>{
+  if(current){document.querySelector('#cloud').value=current.cloudUrl;document.querySelector('#device').textContent='الجهاز المحدد / Current device: '+current.deviceId;}
+});
+document.querySelector('#enroll').addEventListener('click',async()=>{
+  const result=await window.foonSetup.enroll(document.querySelector('#cloud').value);
+  document.querySelector('#device').textContent=result.ok?'تم اختيار الجهاز / Device selected: '+result.deviceId:'لم يتم تغيير الجهاز. تحقق من الرابط وملف التفعيل / Device unchanged. Check endpoint and file.';
+});
 document.querySelector('#setup').addEventListener('submit', async event => {
   event.preventDefault();
-  const button = document.querySelector('button');
+  const button = document.querySelector('button[type="submit"]');
   button.disabled = true;
   document.querySelector('#status').textContent = 'جارٍ التحقق والتشغيل… / Checking local service…';
   try {

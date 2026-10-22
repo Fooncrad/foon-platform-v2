@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const {pathToFileURL} = require('node:url');
 const {createServer} = require('node:net');
-const {validateConfiguration, isSiteNavigation, serverEnvironment} = require('./policy.cjs');
+const {validateConfiguration, parseEnrollment, isSiteNavigation, serverEnvironment} = require('./policy.cjs');
 let window, child, quitting = false;
 app.setName('FOON Windows Preview');
 if (!app.isPackaged && process.env.FOON_WINDOWS_TEST_PROFILE) app.setPath('userData', process.env.FOON_WINDOWS_TEST_PROFILE);
@@ -19,11 +19,36 @@ const setupUrl = pathToFileURL(path.join(__dirname, 'setup.html')).href;
 const vault = () => path.join(app.getPath('userData'), 'connection.dpapi');
 async function start() {
   if (process.platform !== 'win32' || !safeStorage.isEncryptionAvailable()) throw Error('WINDOWS_ENCRYPTION_REQUIRED');
-  Menu.setApplicationMenu(null);
+  let selectedEnrollment;
+  const trustedSetup = event => event.sender === window?.webContents && event.senderFrame === window.webContents.mainFrame && event.senderFrame.url === setupUrl;
+  Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'FOON',submenu:[{
+    label:'إعداد الاتصال / Connection settings',accelerator:'CmdOrCtrl+,',click:async()=>{
+      try{
+        window.webContents.removeAllListeners('will-navigate');window.webContents.removeAllListeners('will-redirect');
+        await window.loadURL(setupUrl);
+        const previous=child;child=undefined;previous?.kill();
+      }catch{fail();}
+    }
+  },{type:'separator'},{role:'quit'}]}]));
+  ipcMain.handle('foon:enrollment-status',event=>{
+    if(!trustedSetup(event))throw Error('UNAUTHORIZED');
+    return selectedEnrollment?{deviceId:selectedEnrollment.deviceId,cloudUrl:selectedEnrollment.cloudUrl}:null;
+  });
+  ipcMain.handle('foon:enroll', async (event, cloudUrl) => {
+    if(!trustedSetup(event))throw Error('UNAUTHORIZED');
+    try{
+      const choice=await dialog.showOpenDialog(window,{title:'Select cloud-issued test device enrollment',properties:['openFile'],filters:[{name:'Device enrollment',extensions:['env','txt']}]});
+      if(choice.canceled||choice.filePaths.length!==1)return {ok:false};
+      const file=choice.filePaths[0];
+      if((await fs.stat(file)).size>16384)throw Error('INVALID_DEVICE_ENROLLMENT');
+      selectedEnrollment=parseEnrollment(await fs.readFile(file,'utf8'),cloudUrl);
+      return {ok:true,deviceId:selectedEnrollment.deviceId,tenantId:selectedEnrollment.tenantId,branchId:selectedEnrollment.branchId};
+    }catch{return {ok:false};}
+  });
   ipcMain.handle('foon:configure', async (event, input) => {
-    if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== setupUrl) throw Error('UNAUTHORIZED');
+    if (!trustedSetup(event)) throw Error('UNAUTHORIZED');
     try {
-      const config = validateConfiguration(input);
+      const config = validateConfiguration({...input,...(selectedEnrollment?{sync:selectedEnrollment}:{})});
       await launch(config, true);
       return {ok: true};
     } catch {
@@ -45,6 +70,7 @@ async function start() {
     if (error.code !== 'ENOENT') await dialog.showMessageBox(window, {type: 'warning', message: 'تعذر فتح إعداد الاتصال المحمي. أعد إعداد قاعدة البيانات المحلية. / Local configuration could not be opened.'});
     return window.loadURL(setupUrl);
   }
+  selectedEnrollment=config.sync;
   await launch(config);
 }
 async function assertPortFree(port) {

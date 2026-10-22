@@ -1,6 +1,14 @@
 import type {Instrumentation} from "next";
 import {incidentId,logIncident} from "@/lib/platform/incidents";
 
+export async function register(){
+ if(process.env.NEXT_RUNTIME!=="nodejs"||!process.env.FOON_DESKTOP_SYNC_CONFIG)return;
+ const state=globalThis as typeof globalThis&{foonDesktopSyncStop?:()=>void};
+ if(state.foonDesktopSyncStop)return;
+ const [{database},{startDesktopSync}]=await Promise.all([import("@/lib/db/mysql"),import("@/lib/platform/desktop-sync-worker.mjs")]);
+ state.foonDesktopSyncStop=startDesktopSync(database());
+}
+
 /** Next's generated error digest is the reference shown by app/error.tsx.
  * Never log raw request headers, cookies, URL search parameters or user data.
  */

@@ -14,7 +14,8 @@ import {_electron} from '@playwright/test';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
 assert.equal(process.platform, 'win32');
-assert.deepEqual(process.argv.slice(2), ['--run']);
+const syncRequested=process.argv.includes('--sync');
+assert.deepEqual(process.argv.slice(2), syncRequested?['--run','--sync']:['--run']);
 assert(!process.env.DATABASE_URL, 'Refusing inherited database context');
 const bin = process.env.FOON_TEST_MARIADB_BIN || 'C:/Program Files/MariaDB 11.8/bin';
 const scratch = await mkdtemp(path.join(tmpdir(), 'foon-windows-shell-'));
@@ -31,6 +32,7 @@ async function command(executable, args, extra) {
   p.stdout.on('data', data => {log += data;}); p.stderr.on('data', data => {log += data;});
   const [code] = await once(p, 'exit');
   if (code !== 0) {await writeFile(path.join(scratch, 'private-command-error.log'), log); throw Error('FIXTURE_COMMAND_FAILED');}
+  return log;
 }
 try {
   const probe = net.createServer(); probe.listen(0, '127.0.0.1'); await once(probe, 'listening');
@@ -57,7 +59,7 @@ try {
   await page.waitForSelector('#database');
   await electron.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows().forEach(window => window.hide()));
   await page.locator('#database').fill(url);
-  await page.locator('button').click();
+  await page.locator('#setup button[type="submit"]').click();
   await page.waitForURL('http://127.0.0.1:43871/login', {timeout: 75000});
   assert.equal(await page.evaluate(() => typeof window.foonSetup), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
@@ -83,6 +85,11 @@ try {
   const restored = await electron.firstWindow();
   await restored.waitForURL(origin + '/login', {timeout: 75000});
   console.log('PASS encrypted configuration survives application restart');
+  if(syncRequested){
+    const result=await command(process.execPath,['scripts/desktop-sync.integration.mjs'],{DESKTOP_SYNC_TEST_DATABASE_URL:url,DESKTOP_SYNC_TEST_WORK_DIR:scratch});
+    console.log(result.trim());
+    console.log('PASS original POS API → durable MySQL outbox → authenticated TLS API → separate cloud MySQL, replay/revocation/status/tax conflict');
+  }
 } finally {
   await electron?.close().catch(() => {});
   await database?.end().catch(() => {});

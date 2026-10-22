@@ -1,7 +1,7 @@
 {
   "name": "foon-windows",
   "productName": "FOON Windows Preview",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Original FOON website in an isolated Windows desktop shell",
   "author": "FOON",
@@ -11,7 +11,8 @@
     "test": "node --test policy.test.cjs",
     "test:smoke": "node smoke.mjs --run",
     "stage": "node stage.mjs",
-    "dist": "npm run stage && electron-builder --win nsis --x64 --publish never"
+    "dist": "npm run stage && electron-builder --win nsis --x64 --publish never",
+    "test:sync": "node smoke.mjs --run --sync"
   },
   "devDependencies": {
     "electron": "45.0.0",

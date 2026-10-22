@@ -2,6 +2,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const {validateConfiguration, isSiteNavigation, serverEnvironment} = require('./policy.cjs');
+const {parseEnrollment}=require('./policy.cjs');
+test('device enrollment never executes shell input and secrets only enter the trusted child environment',()=>{
+  const id='11111111-1111-4111-8111-111111111111';
+  const contents=`FOON_EDGE_DEVICE_ID=${id}\nFOON_EDGE_TENANT_ID=${id}\nFOON_EDGE_BRANCH_ID=${id}\nFOON_EDGE_ACTOR_USER_ID=${id}\nFOON_EDGE_ACTOR_ROLE=owner\nFOON_EDGE_CLOUD_DEVICE_TOKEN=${'a'.repeat(96)}\nFOON_EDGE_RECEIPT_SIGNING_KEY=${'b'.repeat(64)}\n`;
+  const sync=parseEnrollment(contents,'https://cloud.example/api/edge/sync');
+  const config=validateConfiguration({databaseUrl:'mysql://local:secret@localhost/foon',sync});
+  assert.equal(JSON.parse(serverEnvironment(config,'site').FOON_DESKTOP_SYNC_CONFIG).deviceId,id);
+  assert.throws(()=>parseEnrollment(contents+'NODE_OPTIONS=--require attacker\n',sync.cloudUrl));
+  assert.throws(()=>parseEnrollment(contents+'FOON_EDGE_DEVICE_ID='+id,sync.cloudUrl));
+  assert.throws(()=>parseEnrollment(contents,'https://127.1/api/edge/sync'));
+});
 test('only explicit loopback MySQL destinations with credentials are accepted', () => {
   for (const host of ['localhost', '127.0.0.1', '[::1]']) assert.equal(validateConfiguration({databaseUrl: `mysql://local:secret@${host}:3307/foon_local`}).port, 43871);
   for (const value of [

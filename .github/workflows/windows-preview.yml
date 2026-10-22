@@ -2,7 +2,7 @@ name: Windows original-site preview
 on:
   pull_request:
     branches: [main]
-    paths: ['apps/windows/**', '.github/workflows/windows-preview.yml']
+    paths: ['apps/windows/**', 'lib/platform/desktop-sync*', 'lib/platform/edge-*', 'lib/restaurant/operations.ts', 'app/restaurant/order-workspace.tsx', 'app/restaurant/desktop-sync-badge.tsx', 'migrations/**', 'instrumentation.ts', '.github/workflows/windows-preview.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +19,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm --prefix apps/windows ci --no-audit --no-fund
       - run: npm --prefix apps/windows test
+      - run: node --test scripts/desktop-sync.test.mjs
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: '1'

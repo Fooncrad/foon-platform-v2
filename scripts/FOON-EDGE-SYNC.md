@@ -1,5 +1,7 @@
 # FOON Edge sync safety contract
 
+The opt-in Windows original-site MySQL outbox is documented in `apps/windows/README.md`. It shares the signed Edge ingestion protocol but does not use the separate SQLite gateway. `expectedTotalCents` binds desktop checkout totals; `expectedStatus` makes desktop status changes compare-and-set. Their conflicts require review and never acknowledge a changed order. Catalog responses include explicit `createOrders`/`updateOrders` grants; a view-only grant is not offline write authorization.
+
 The SQLite gateway is an experimental component, not a deployed or certified offline POS system.
 
 ## Local event lifecycle

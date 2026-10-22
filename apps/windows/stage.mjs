@@ -27,6 +27,6 @@ await noSecrets(target);
 await writeFile(path.join(target, 'foon-build.json'), JSON.stringify({
   sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim(),
   nextBuildId: (await readFile(path.join(root, '.next/BUILD_ID'), 'utf8')).trim(),
-  mode: 'original-site-local-preview', cloudReplication: false
+  mode: 'original-site-local-connected-preview', cloudReplication: false, orderSync: 'opt-in-plain-takeaway'
 }, null, 2));
 console.log('Staged original Next.js server and assets without environment files.');
