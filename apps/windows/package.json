@@ -13,15 +13,43 @@
     "stage": "node stage.mjs",
     "dist": "npm run stage && electron-builder --win nsis --x64 --publish never"
   },
-  "devDependencies": {"electron": "45.0.0", "electron-builder": "26.0.12"},
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  },
   "build": {
     "appId": "com.foon.windows.preview",
     "asar": true,
-    "files": ["main.cjs", "policy.cjs", "preload.cjs", "setup.html", "setup.js", "setup.css", "package.json"],
-    "extraResources": [{"from": "staged/site", "to": "site"}],
-    "directories": {"output": "dist"},
-    "win": {"target": "nsis", "signAndEditExecutable": false, "artifactName": "FOON-Windows-Preview-${version}-x64-Setup.exe"},
-    "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "deleteAppDataOnUninstall": false, "runAfterFinish": false},
+    "files": [
+      "main.cjs",
+      "policy.cjs",
+      "preload.cjs",
+      "setup.html",
+      "setup.js",
+      "setup.css",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "staged/site",
+        "to": "site"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false,
+      "artifactName": "FOON-Windows-Preview-${version}-x64-Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": false
+    },
     "publish": null
   }
 }
