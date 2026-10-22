@@ -43,3 +43,14 @@ CREATE TABLE IF NOT EXISTS foon_sync_device_cursors (
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  PRIMARY KEY (device_id,tenant_id,branch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Isolated sync inventory projection for transaction and replay tests.
+-- NOT wired to FOON merchant stock; requires explicit provisioning per branch/item.
+CREATE TABLE IF NOT EXISTS foon_sync_inventory_projection (
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ item_id CHAR(36) NOT NULL,
+ quantity BIGINT UNSIGNED NOT NULL,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY (tenant_id,branch_id,item_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
