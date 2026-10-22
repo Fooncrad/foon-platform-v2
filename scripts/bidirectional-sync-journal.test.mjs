@@ -99,3 +99,23 @@ test("unsafe persisted version never advances or appends an event",async()=>{
  }};
  await assert.rejects(()=>appendScopedChange(db,{change:{...change,baseVersion:1},sourceDeviceId:ids[3]}),/SYNC_INVALID_STORED_VERSION/);
 });
+
+test("silent missing version insert blocks journal and requires transaction rollback",async()=>{
+ let journalAttempted=false;
+ const db={async execute(sql){
+  if(sql.includes("SELECT payload_digest")||sql.includes("SELECT version"))return [[]];
+  if(sql.includes("INSERT INTO foon_sync_versions"))return [{affectedRows:0}];
+  if(sql.includes("INSERT INTO foon_sync_changes"))journalAttempted=true;
+  return [{affectedRows:1}];
+ }};
+ await assert.rejects(()=>appendScopedChange(db,{change,sourceDeviceId:ids[3]}),/SYNC_VERSION_INSERT_FAILED/);
+ assert.equal(journalAttempted,false);
+});
+test("silent missing journal insert never reports a successful change",async()=>{
+ const db={async execute(sql){
+  if(sql.includes("SELECT payload_digest")||sql.includes("SELECT version"))return [[]];
+  if(sql.includes("INSERT INTO foon_sync_changes"))return [{affectedRows:0}];
+  return [{affectedRows:1}];
+ }};
+ await assert.rejects(()=>appendScopedChange(db,{change,sourceDeviceId:ids[3]}),/SYNC_JOURNAL_INSERT_FAILED/);
+});
