@@ -23,6 +23,16 @@ export async function cloudUiInventory() {
    .map(m=>({key:m[1],label:m[2],icon:m[3],feature:m[4]||null,
      roles:[...m[5].matchAll(/"([^"]+)"/g)].map(r=>r[1]),
      offlineWorking:["orders","pos","kds"].includes(m[1])}));
+ const sourceLabels=dashboard.match(/const sectionTranslations:[\\s\\S]*?=\\{([\\s\\S]*?)\\};/);
+ if(!sourceLabels)throw Error("W28_SOURCE_TRANSLATIONS_MISSING");
+ const labelTranslations=Object.fromEntries(
+   [...sourceLabels[1].matchAll(/([a-zA-Z]+):\\{en:"([^"]+)",fr:"([^"]+)"\\}/g)]
+     .map(x=>[x[1],{en:x[2],fr:x[3]}])
+ );
+ for(const item of modules){
+   item.en=labelTranslations[item.key]?.en||item.label;
+   item.fr=labelTranslations[item.key]?.fr||item.label;
+ }
  const found=modules.map(x=>x.key);
  if(new Set(keys).size!==keys.length||new Set(found).size!==found.length||
     keys.length!==found.length||keys.some(k=>!found.includes(k)))
