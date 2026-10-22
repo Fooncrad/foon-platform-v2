@@ -78,3 +78,10 @@ test("even correctly signed corrupted digest cannot enter local transaction",asy
  await assert.rejects(()=>applyVerifiedPullBatch({db,batch:corrupt,scope,...signed(corrupt),applyEvent:async()=>true}),/SYNC_CORRUPT_REMOTE_EVENT/);
  assert.deepEqual(db.calls,[]);
 });
+
+test("signed event cannot skip an entity version",async()=>{
+ const db=fixture();
+ const invalid={...batch,events:[{...event(5),next_version:8}]};
+ await assert.rejects(()=>applyVerifiedPullBatch({db,batch:invalid,scope,...signed(invalid),applyEvent:async()=>true}),/SYNC_CORRUPT_REMOTE_VERSION/);
+ assert.deepEqual(db.calls,[]);
+});
