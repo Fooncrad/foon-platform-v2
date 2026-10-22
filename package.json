@@ -20,7 +20,6 @@
     "test:mail": "node --experimental-strip-types --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/email-verification.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
-    "test:admin-provision": "node --test scripts/admin-provision-profile.test.mjs",
     "test:resources": "node --experimental-strip-types --test scripts/restaurant-resource-schema.test.mjs scripts/merchant-resource-translations.test.mjs scripts/hotel-room-number.test.mjs scripts/service-order-policy.test.mjs scripts/reservation-no-show.test.mjs scripts/edge-print-agent.test.mjs scripts/foon-offline-pos.test.mjs scripts/workspace-offline-security.test.mjs scripts/browser-receipt-width.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/final-receipt-policy.test.mjs scripts/catalog-import.test.mjs scripts/storefront-media.test.mjs scripts/variant-selection.test.mjs scripts/customer-navigation.test.mjs scripts/merchant-navigation.test.mjs scripts/staff-security-launch.test.mjs scripts/workspace-theme.test.mjs scripts/site-wide-dark-mode.test.mjs scripts/free-location-integrations.test.mjs scripts/public-site-links.test.mjs scripts/public-content-locale.test.mjs scripts/account-profile-transaction.test.mjs scripts/scoped-staff-overview.test.mjs scripts/customer-order-journey.test.mjs",
     "test:print-agent": "node --test scripts/edge-print-agent.test.mjs scripts/receipt-paper.test.mjs",
     "test:operations": "node --experimental-strip-types --test scripts/restaurant-operations.integration.test.mjs",
@@ -58,7 +57,8 @@
     "test:delivery-branch": "node --test scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/delivery-branch-hint.test.mjs",
     "test:merge-bundle": "node --experimental-strip-types --test scripts/employee-permissions.test.mjs scripts/order-role-channel-policy.test.mjs scripts/waiter-assignments.test.mjs scripts/waiter-room-service-scope.test.mjs scripts/nearest-delivery-branch.test.mjs scripts/saved-delivery-coordinates.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs scripts/delivery-branch-hint.test.mjs scripts/employee-link-scope.test.mjs scripts/scoped-staff-overview.test.mjs",
     "test:staff-overview": "node --experimental-strip-types --test scripts/scoped-staff-overview.test.mjs",
-    "test:invoices": "node --experimental-strip-types --test scripts/transactional-invoice-logic.test.mjs scripts/customer-invoice-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/notification-delivery.test.mjs scripts/creator-paid-subscriptions.test.mjs"
+    "test:invoices": "node --experimental-strip-types --test scripts/transactional-invoice-logic.test.mjs scripts/customer-invoice-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/notification-delivery.test.mjs scripts/creator-paid-subscriptions.test.mjs",
+    "test:admin-provision": "node --test scripts/admin-provision-profile.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
