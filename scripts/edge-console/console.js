@@ -1,5 +1,27 @@
 import {translations} from "./translations.js";
 let language="ar";try{const saved=localStorage.getItem("foon-local-language");if(["ar","en","fr"].includes(saved))language=saved;}catch{}
+const workspaceThemeLabels={
+ ar:{label:"المظهر",system:"حسب الجهاز",light:"فاتح",dark:"داكن"},
+ en:{label:"Appearance",system:"Use device",light:"Light",dark:"Dark"},
+ fr:{label:"Apparence",system:"Selon l’appareil",light:"Clair",dark:"Sombre"}
+};
+let workspaceThemeMode="system";
+try{const saved=localStorage.getItem("foon-workspace-theme");if(["system","light","dark"].includes(saved))workspaceThemeMode=saved;}catch{}
+function applyWorkspaceTheme(){
+ const shell=document.getElementById("original-workspace-shell");
+ if(!shell)return;
+ const systemDark=window.matchMedia?.("(prefers-color-scheme: dark)").matches||false;
+ const resolved=workspaceThemeMode==="system"?(systemDark?"dark":"light"):workspaceThemeMode;
+ shell.dataset.theme=resolved;shell.dataset.themePreference=workspaceThemeMode;
+ const login=document.getElementById("login-panel");if(login)login.dataset.theme=resolved;
+ const select=document.getElementById("w30-theme");
+ if(select){
+  const label=workspaceThemeLabels[language];select.value=workspaceThemeMode;
+  select.setAttribute("aria-label",label.label);
+  document.getElementById("w30-theme-label").textContent=label.label;
+  for(const key of ["system","light","dark"])select.querySelector('option[value="'+key+'"]').textContent=label[key];
+ }
+}
 const originals=new WeakMap();
 function translateUI(){document.documentElement.lang=language;document.documentElement.dir=language==="ar"?"rtl":"ltr";document.getElementById("original-workspace-shell").dir=document.documentElement.dir;const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);while(walker.nextNode()){const current=walker.currentNode;if(current.parentElement.closest("script,style,.product strong,.product small,.cart-line b,.order-card li"))continue;const original=originals.get(current)??current.textContent;originals.set(current,original);const key=original.trim(),value=translations[key];current.textContent=value&&language!=="ar"?original.replace(key,value[language==="en"?0:1]):original;}const search=document.getElementById("search");search.placeholder=language==="ar"?"ابحث عن صنف…":translations["ابحث عن صنف…"][language==="en"?0:1];}
 const $=id=>document.getElementById(id),cart=new Map();
@@ -123,5 +145,9 @@ $("w30-sidebar-overlay").onclick=closeMobileMenu;
 $("w30-expand-workspace").onclick=()=>{const shell=$("original-workspace-shell"),expanded=shell.classList.toggle("restaurantAppWide");$("w30-expand-workspace").setAttribute("aria-pressed",String(expanded));$("w30-expand-workspace").title=expanded?"إظهار الشريط الجانبي":"تكبير مساحة العمل";closeMobileMenu();};
 $("search").oninput=()=>{if(state)renderMenu();};$("pos-tab").onclick=()=>{mode="pos";render();};$("kds-tab").onclick=()=>{mode="kds";render();};$("refresh").onclick=()=>void refresh();
 $("checkout").onclick=async()=>{if(busy||!cart.size)return;busy=true;render();const items=Array.from(cart,([id,quantity])=>({id,quantity}));if(!pendingRequest)pendingRequest={id:crypto.randomUUID(),items};try{await api("/api/orders","POST",pendingRequest);cart.clear();pendingRequest=null;uncertain=false;message("حُفظ الطلب على المحطة. لم يُسجل أي دفع إلكتروني.");await refresh();}catch(error){uncertain=!(error.status>=400&&error.status<500);if(!uncertain)pendingRequest=null;message(error.message);}finally{busy=false;if(state)render();}};
-$("language").value=language;$("language").onchange=()=>{language=$("language").value;try{localStorage.setItem("foon-local-language",language);}catch{}if(state)render();else translateUI();};translateUI();
+$("language").value=language;
+$("language").onchange=()=>{language=$("language").value;try{localStorage.setItem("foon-local-language",language);}catch{}if(state)render();else translateUI();applyWorkspaceTheme();};
+$("w30-theme").onchange=()=>{const v=$("w30-theme").value;if(!["system","light","dark"].includes(v))return;workspaceThemeMode=v;try{localStorage.setItem("foon-workspace-theme",v);}catch{}applyWorkspaceTheme();};
+window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{if(workspaceThemeMode==="system")applyWorkspaceTheme();});
+translateUI();applyWorkspaceTheme();
 setInterval(()=>{if(state&&!busy)void refresh();},3000);void refresh();
