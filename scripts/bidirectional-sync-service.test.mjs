@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {recordAuthorizedChange,readAuthorizedChanges} from "../lib/platform/bidirectional-sync-service.mjs";
+import {recordAuthorizedChange,readAuthorizedChanges,readSignedAuthorizedChanges} from "../lib/platform/bidirectional-sync-service.mjs";
+import {generateKeyPairSync} from "node:crypto";
+import {verifySignedPullBatch} from "../lib/platform/bidirectional-sync-signature.mjs";
 import {digestChange} from "../lib/platform/bidirectional-sync-contract.mjs";
 const ids=["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333","44444444-4444-4444-8444-444444444444","55555555-5555-4555-8555-555555555555"];
 const context={authenticated:true,enabled:true,revoked:false,suspended:false,expiresAt:"2099-01-01T00:00:00Z",deviceId:ids[0],tenantId:ids[1],branchId:ids[2],actorId:ids[3],grants:["catalog.write","catalog.read","sync.read"]};
@@ -90,4 +92,21 @@ test("stale change is rolled back exactly once",async()=>{
  const result=await recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>true});
  assert.equal(result.status,"conflict");
  assert.equal(db.calls.filter(x=>x==="rollback").length,1);
+});
+
+test("authorized filtered feed is signed for the enrolled device",async()=>{
+ const db=dbFixture();
+ const pair=generateKeyPairSync("ed25519");
+ const privateKey=pair.privateKey.export({format:"pem",type:"pkcs8"});
+ const publicKey=pair.publicKey.export({format:"pem",type:"spki"});
+ const request={tenantId:ids[1],branchId:ids[2],after:0,limit:100};
+ const signed=await readSignedAuthorizedChanges({db,verifiedContext:context,request,privateKey});
+ assert.equal(signed.events.length,1);
+ assert.equal(verifySignedPullBatch({batch:signed,scope:{...request,deviceId:context.deviceId},signature:signed.signature,publicKey}),true);
+});
+test("signed read refuses unauthorized branch before signing",async()=>{
+ const db=dbFixture();const pair=generateKeyPairSync("ed25519");
+ const privateKey=pair.privateKey.export({format:"pem",type:"pkcs8"});
+ await assert.rejects(()=>readSignedAuthorizedChanges({db,verifiedContext:context,request:{tenantId:ids[1],branchId:ids[4]},privateKey}),/SYNC_SCOPE_FORBIDDEN/);
+ assert.deepEqual(db.calls,[]);
 });
