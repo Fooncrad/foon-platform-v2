@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/cloud-ui-css/merchant-experience.css">
 <link rel="stylesheet" href="/cloud-ui-css/shared-dashboard-legibility.css">
 <link rel="stylesheet" href="/cloud-ui-css/reference-dashboard-layout.css">
+<link rel="stylesheet" href="/cloud-ui-css/workspace-theme-control.css">
 <link rel="stylesheet" href="/w28-shell.css">
 <script src="/console.js" type="module"></script>
 </head>
@@ -30,6 +31,7 @@
    <div class="restaurantBreadcrumb"><small>مساحة العمل</small><h1 class="sr-only" id="desktop-heading">نقطة البيع</h1></div>
    <div class="restaurantTopActions">
     <div class="tabs restaurantPosTopbarSlot" aria-label="وحدات التشغيل المحلية"><button id="pos-tab" aria-pressed="true">نقطة البيع</button><button id="kds-tab" aria-pressed="false">المطبخ والطلبات</button></div>
+    <label class="foonWorkspaceThemeControl restaurantWorkspaceTheme"><span id="w30-theme-label">المظهر</span><select id="w30-theme" aria-label="المظهر"><option value="system">حسب الجهاز</option><option value="light">فاتح</option><option value="dark">داكن</option></select></label>
     <label for="language" class="w28-language-label">اللغة</label>
     <select id="language" aria-label="Language"><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option></select>
     <span id="connection" class="restaurantRoleBadge">محلي</span>
