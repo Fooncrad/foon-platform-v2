@@ -24,3 +24,8 @@ test("rejects non-JSON payload values and prototype pollution keys",()=>{
 test("event digest binds the actor identity against replay across users",()=>{
  assert.notEqual(digestChange(c),digestChange({...c,actorId:ids[4]}));
 });
+
+test("version counter cannot wrap past JavaScript safe integer range",()=>{
+ const current={tenantId:c.tenantId,branchId:c.branchId,entityId:c.entityId,entityType:c.entityType,version:Number.MAX_SAFE_INTEGER};
+ assert.throws(()=>resolveChange({incoming:{...c,baseVersion:0},current}),/SYNC_INVALID_CURRENT_VERSION/);
+});
