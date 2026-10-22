@@ -59,7 +59,7 @@
     "test:staff-overview": "node --experimental-strip-types --test scripts/scoped-staff-overview.test.mjs",
     "test:invoices": "node --experimental-strip-types --test scripts/transactional-invoice-logic.test.mjs scripts/customer-invoice-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/notification-delivery.test.mjs scripts/creator-paid-subscriptions.test.mjs",
     "test:admin-provision": "node --test scripts/admin-provision-profile.test.mjs",
-    "test:bidirectional-sync": "node --test scripts/bidirectional-sync-contract.test.mjs scripts/bidirectional-sync-journal.test.mjs scripts/bidirectional-sync-authorization.test.mjs scripts/bidirectional-sync-service.test.mjs"
+    "test:bidirectional-sync": "node --test scripts/bidirectional-sync-contract.test.mjs scripts/bidirectional-sync-journal.test.mjs scripts/bidirectional-sync-authorization.test.mjs scripts/bidirectional-sync-service.test.mjs scripts/bidirectional-sync-transport.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
