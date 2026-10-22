@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {applyScopedInventoryMovement,validateInventoryMovement} from "../lib/platform/bidirectional-sync-inventory.mjs";
+import {applyScopedInventoryMovement,validateInventoryMovement,recordAuthorizedInventoryMovement} from "../lib/platform/bidirectional-sync-inventory.mjs";
 import {recordAuthorizedChange} from "../lib/platform/bidirectional-sync-service.mjs";
 const ids=["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333","44444444-4444-4444-8444-444444444444","55555555-5555-4555-8555-555555555555"];
 const change={eventId:ids[0],tenantId:ids[1],branchId:ids[2],actorId:ids[3],entityId:ids[0],entityType:"inventory_movement",operation:"movement",baseVersion:0,timestamp:"2026-10-22T18:00:00Z",payload:{itemId:ids[4],delta:-3}};
@@ -28,4 +28,32 @@ test("journal replay never invokes inventory projection a second time",async()=>
  const result=await recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>{writes++;return true;}});
  assert.equal(result.status,"duplicate");
  assert.equal(writes,0);
+});
+
+test("authorized inventory entrypoint writes journal and stock together only once",async()=>{
+ let quantity=8;let commits=0;let rollbacks=0;const calls=[];
+ const db={
+  async beginTransaction(){calls.push("begin");},
+  async commit(){commits++;calls.push("commit");},
+  async rollback(){rollbacks++;calls.push("rollback");},
+  async execute(sql,args){
+   calls.push(sql);
+   if(sql.includes("SELECT payload_digest"))return [[]];
+   if(sql.includes("SELECT version"))return [[]];
+   if(sql.startsWith("SELECT quantity"))return [[{quantity}]];
+   if(sql.startsWith("UPDATE foon_sync_inventory_projection")){assert.equal(args[0],5);quantity=5;}
+   return [{affectedRows:1}];
+  }
+ };
+ const verifiedContext={authenticated:true,enabled:true,revoked:false,suspended:false,expiresAt:"2099-01-01T00:00:00Z",deviceId:ids[4],tenantId:ids[1],branchId:ids[2],actorId:ids[3],grants:["inventory.write"]};
+ const out=await recordAuthorizedInventoryMovement({db,verifiedContext,change});
+ assert.equal(out.status,"recorded");assert.equal(commits,1);assert.equal(rollbacks,0);assert.equal(quantity,5);
+ assert.ok(calls.findIndex(x=>x.includes("INSERT INTO foon_sync_changes"))<calls.findIndex(x=>x.startsWith("UPDATE foon_sync_inventory_projection")));
+ assert.equal(calls.at(-1),"commit");
+});
+test("wrong branch is denied before any transaction or stock write",async()=>{
+ let started=false;const db={async beginTransaction(){started=true;}};
+ const verifiedContext={authenticated:true,enabled:true,revoked:false,suspended:false,expiresAt:"2099-01-01T00:00:00Z",deviceId:ids[4],tenantId:ids[1],branchId:ids[3],actorId:ids[3],grants:["inventory.write"]};
+ await assert.rejects(()=>recordAuthorizedInventoryMovement({db,verifiedContext,change}),/SYNC_SCOPE_FORBIDDEN/);
+ assert.equal(started,false);
 });
