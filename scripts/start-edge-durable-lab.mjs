@@ -29,10 +29,10 @@ const coverage=await cloudUiInventory();
 const selectedActivity=process.env.FOON_W28_DEMO_ACTIVITY||"restaurant";
 if(!coverage.activities.includes(selectedActivity))throw Error("W28_ACTIVITY_NOT_IN_CLOUD_SOURCE");
 process.stdout.write("ORIGINAL CLOUD UI: "+coverage.modules.length+" modules, "+
- coverage.activities.length+" activities, "+coverage.channels.length+" order channels.\\n");
+ coverage.activities.length+" activities, "+coverage.channels.length+" order channels.\n");
 process.stdout.write("Local working modules: "+
  coverage.modules.filter(item=>item.offlineWorking).map(item=>item.key).join(", ")+
- "; other modules visible but NOT YET IMPLEMENTED OFFLINE.\\n");
+ "; other modules visible but NOT YET IMPLEMENTED OFFLINE.\n");
 
 const meta=join(home,"W28-SYNTHETIC-ONLY.json");
 const usersFile=join(home,"users.json");
