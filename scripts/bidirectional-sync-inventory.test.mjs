@@ -57,3 +57,18 @@ test("wrong branch is denied before any transaction or stock write",async()=>{
  await assert.rejects(()=>recordAuthorizedInventoryMovement({db,verifiedContext,change}),/SYNC_SCOPE_FORBIDDEN/);
  assert.equal(started,false);
 });
+
+test("movement cannot substitute a shared entity ID for unique movement event ID",()=>{
+ assert.throws(()=>validateInventoryMovement({...change,entityId:ids[4]}),/SYNC_INVENTORY_EVENT_ID_MISMATCH/);
+});
+test("malformed projection quantities fail before any stock mutation",async()=>{
+ for(const quantity of ["3.5","-2","1e3","9007199254740993",null]){
+  let updated=false;
+  const db={async execute(sql){
+   if(sql.startsWith("SELECT quantity"))return [[{quantity}]];
+   updated=true;return [{affectedRows:1}];
+  }};
+  await assert.rejects(()=>applyScopedInventoryMovement(db,change),/SYNC_INVENTORY_(INVALID_QUANTITY|INSUFFICIENT)/);
+  assert.equal(updated,false);
+ }
+});
