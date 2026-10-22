@@ -48,3 +48,6 @@ Before enabling any live device: deploy authenticated server endpoints to stagin
 
 ## Transaction cleanup hardening
 `recordAuthorizedChange` now uses a single `finally` cleanup path: successful commit marks the transaction completed; stale or duplicate events and business failures get exactly one rollback; a failed commit also triggers rollback attempt instead of returning a false success. Unit regression cases cover failed commit and single rollback. This is a source-level safety change; it does not establish the database driver's response to network loss during commit. Such a case still requires event-ID reconciliation before retry or ACK.
+
+## Offline pull atomicity tests
+Added `scripts/bidirectional-sync-local-receiver.test.mjs` to the sync suite. It covers one atomic batch commit, rejected server-verification flag, wrong-branch events, stale pull cursors, unconfirmed local writes and failed cursor updates. The receiver stores its cursor only inside the same transaction as typed event application. **The `verifiedServer:true` flag is a trusted-caller contract, not a signature verification implementation.** An authenticated verifier and production-specific event adapters must be wired before accepting network data. These tests are committed but have not been executed in this environment.
