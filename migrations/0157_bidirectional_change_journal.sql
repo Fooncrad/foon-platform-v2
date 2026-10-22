@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS foon_sync_changes (
  operation ENUM('upsert','delete','movement') NOT NULL,
  base_version BIGINT UNSIGNED NOT NULL,
  next_version BIGINT UNSIGNED NOT NULL,
+ event_timestamp VARCHAR(35) NOT NULL,
  payload_json JSON NOT NULL,
  payload_digest CHAR(64) NOT NULL,
  created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
