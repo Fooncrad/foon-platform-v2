@@ -77,9 +77,11 @@ CREATE TABLE IF NOT EXISTS foon_sync_pending_events (
  tenant_id CHAR(36) NOT NULL,
  branch_id CHAR(36) NOT NULL,
  payload_digest CHAR(64) NOT NULL,
+ event_payload JSON NOT NULL,
+ queued_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
  state ENUM('pending','conflict','acknowledged') NOT NULL DEFAULT 'pending',
  acknowledged_version BIGINT UNSIGNED NULL,
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  PRIMARY KEY(device_id,event_id),
- KEY idx_foon_sync_pending_scope(tenant_id,branch_id,state)
+ KEY idx_foon_sync_pending_scope(tenant_id,branch_id,state,queued_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
