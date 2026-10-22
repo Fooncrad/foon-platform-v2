@@ -1,3 +1,10 @@
+-- One row per tenant/branch serializes journal allocation until the transaction commits.
+-- Required to prevent a late-committing low AUTO_INCREMENT id being skipped by pull cursors.
+CREATE TABLE IF NOT EXISTS foon_sync_scope_locks (
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ PRIMARY KEY (tenant_id,branch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- Staging-only schema. Does not enable a sync worker.
 CREATE TABLE IF NOT EXISTS foon_sync_changes (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
