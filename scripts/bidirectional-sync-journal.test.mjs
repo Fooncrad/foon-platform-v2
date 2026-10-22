@@ -55,3 +55,25 @@ test("pull SQL includes scope fields required by strict receiver validation",asy
  assert.equal(batch.events[0].branch_id,ids[2]);
  assert.equal(batch.nextCursor,1);
 });
+
+test("existing entity version update must affect exactly one row",async()=>{
+ const db={async execute(sql){
+  if(sql.includes("SELECT payload_digest"))return [[]];
+  if(sql.includes("SELECT version"))return [[{version:2,last_event_id:ids[4]}]];
+  if(sql.includes("UPDATE foon_sync_versions"))return [{affectedRows:0}];
+  return [{affectedRows:1}];
+ }};
+ await assert.rejects(()=>appendScopedChange(db,{change:{...change,baseVersion:2},sourceDeviceId:ids[3]}),/SYNC_VERSION_UPDATE_FAILED/);
+});
+test("updated entity version can record only after one version row changed",async()=>{
+ const queries=[];
+ const db={async execute(sql){
+  queries.push(sql);
+  if(sql.includes("SELECT payload_digest"))return [[]];
+  if(sql.includes("SELECT version"))return [[{version:1,last_event_id:ids[4]}]];
+  return [{affectedRows:1}];
+ }};
+ const outcome=await appendScopedChange(db,{change:{...change,baseVersion:1},sourceDeviceId:ids[3]});
+ assert.equal(outcome.nextVersion,2);
+ assert.ok(queries.some(sql=>sql.includes("UPDATE foon_sync_versions")));
+});
