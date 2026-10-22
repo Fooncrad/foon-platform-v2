@@ -5,5 +5,6 @@ import nextTypescript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "apps/windows/staged/**", "apps/windows/dist/**"]),
+  {files: ["apps/windows/*.cjs"], rules: {"@typescript-eslint/no-require-imports": "off"}},
 ]);

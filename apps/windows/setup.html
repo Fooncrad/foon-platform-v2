@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"><link rel="stylesheet" href="setup.css"><title>FOON Windows</title></head>
+<body><main><h1>FOON Windows</h1><p>معاينة للموقع الأصلي محلياً · Original website local preview · Aperçu local</p>
+<p>تحتاج قاعدة MySQL محلية مجهزة بمخطط FOON وحساب موجود. لا ينشئ هذا المثبت قاعدة بيانات ولا يزامنها مع السحابة.</p>
+<p lang="en" dir="ltr">Requires a separately provisioned local MySQL database with FOON migrations and an existing account. Cloud database replication is not included.</p>
+<form id="setup"><label for="database">رابط قاعدة البيانات المحلية / Local database URL</label><input id="database" type="password" required autocomplete="off" spellcheck="false" dir="ltr" placeholder="mysql://user:password@127.0.0.1:3307/foon_local"><button>حفظ وتشغيل / Save and start / Enregistrer</button></form><p id="status" role="status"></p>
+<p>يحمي Windows إعداد الاتصال بحسابك. بيانات قاعدة MySQL تحتاج حماية القرص والنسخ الاحتياطي الخاصة بها.</p></main><script src="setup.js"></script></body></html>
