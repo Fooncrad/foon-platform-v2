@@ -1,0 +1,209 @@
+.restaurantResourceForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;background:#f8fafc;border:1px solid var(--rc-border);border-radius:14px;padding:20px;margin:20px 0}
+.restaurantResourceForm h3{grid-column:1/-1}.restaurantResourceForm label{display:grid;align-content:start;gap:7px;font-size:13px;font-weight:700;min-width:0}.restaurantResourceForm input,.restaurantResourceForm select,.restaurantResourceForm textarea,.restaurantListTools input{width:100%;min-width:0;min-height:44px;background:#fff;border:1px solid #cbd5e1;border-radius:9px;padding:10px 12px;font-size:14px!important;font-weight:400}.restaurantResourceForm input[type="color"]{padding:5px;height:44px;cursor:pointer}.restaurantResourceForm textarea{min-height:100px;resize:vertical;line-height:1.7}.restaurantFormActions{display:flex;align-items:center;gap:10px;grid-column:1/-1}.restaurantFormActions .restaurantOutline{width:auto;padding-inline:20px}
+.restaurantListTools{display:flex;justify-content:space-between;align-items:end;gap:14px;margin:20px 0}.restaurantListTools label{display:grid;gap:6px;min-width:0;font-size:12px;color:var(--rc-muted);width:min(320px,100%)}.restaurantListTools>.restaurantOutline,.restaurantPanel>header>.restaurantOutline{width:auto;min-width:86px;padding-inline:16px}
+.restaurantResourceList{display:grid;gap:12px}.restaurantResourceList article{border:1px solid var(--rc-border);border-radius:12px;padding:16px;background:#fff;min-width:0}.restaurantResourceList article>header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}.restaurantResourceList article header>div{display:flex;gap:10px;align-items:center}.restaurantResourceList article b{font-size:14px;overflow-wrap:anywhere}.restaurantResourceList article header span{font-size:11px;background:#f1f5f9;padding:5px 8px;border-radius:7px;color:var(--rc-muted)}.restaurantResourceList button,.restaurantOrderActions button{padding:7px 10px;border:1px solid var(--rc-border);border-radius:8px;background:#fff;color:#475569;font-size:12px!important}.restaurantResourceList dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0}.restaurantResourceList dt{font-size:11px;color:var(--rc-muted);margin-bottom:5px}.restaurantResourceList dd{margin:0;font-size:13px;overflow-wrap:anywhere}.restaurantResourceList article>p{font-size:13px;margin-top:7px;color:var(--rc-muted)}.restaurantResourceList article>small{font-size:11px;color:var(--rc-muted)}
+.restaurantEmptyMessage{padding:38px 20px;text-align:center;border:1px dashed var(--rc-border);background:#f8fafc;border-radius:12px;color:var(--rc-muted);font-size:14px}.restaurantStatusFilters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}.restaurantStatusFilters button{background:#fff;border:1px solid var(--rc-border);border-radius:9px;padding:9px 13px;font-size:12px!important;font-weight:700}.restaurantStatusFilters button[aria-pressed="true"]{background:#fff2e9;color:#b34b20;border-color:#fed7aa}
+.restaurantOrderCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.restaurantOrderCards article{padding:18px;border:1px solid var(--rc-border);border-radius:14px;background:#fff;min-width:0}.restaurantOrderCards header{display:flex;align-items:center;justify-content:space-between;gap:10px}.restaurantOrderCards header b{font-size:15px;direction:ltr}.restaurantOrderCards header span{font-size:11px;padding:5px 8px;border-radius:7px;background:#fff2e9;color:#b34b20}.restaurantOrderCards article>p{color:var(--rc-muted);font-size:12px;margin-top:10px}.restaurantOrderCards ul{padding-inline-start:18px;min-height:48px;font-size:13px;line-height:1.8}.restaurantOrderCards footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--rc-border);padding-top:12px;font-size:12px}.restaurantOrderActions{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.restaurantOrderActions button:first-child{background:#fff2e9;border-color:#fed7aa;color:#b34b20}
+.restaurantPos{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.8fr);gap:22px;margin-bottom:25px}.restaurantPosMenu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.restaurantPosMenu button{padding:16px 12px;display:grid;gap:9px;text-align:start;border:1px solid var(--rc-border);border-radius:12px;background:#fff}.restaurantPosMenu button:hover{border-color:var(--rc-accent);background:#fff7ed}.restaurantPosMenu b{font-size:14px;overflow-wrap:anywhere}.restaurantPosMenu span{color:#b34b20;font-weight:700;font-size:13px}.restaurantPosMenu small{color:var(--rc-muted);font-size:11px}.restaurantPos>.restaurantResourceForm{grid-template-columns:1fr;margin:0;padding:18px}.restaurantCart{display:grid;gap:12px;padding-top:15px;border-top:1px solid var(--rc-border);margin-top:6px}.restaurantCart label{grid-template-columns:minmax(0,1fr) 70px;align-items:center;font-size:12px}.restaurantCart input{padding:7px;min-height:36px}.restaurantCart strong{font-size:14px;padding-top:10px}.restaurantPos .restaurantFinePrint{margin-top:0!important;font-weight:400}
+.restaurantHealthList{display:grid;gap:12px}.restaurantHealthList>div{display:flex;align-items:center;gap:12px;padding:18px;background:#f8fafc;border-radius:12px}.restaurantHealthList svg{color:#0f766e}.restaurantHealthList b{font-size:14px}.restaurantHealthList span{margin-inline-start:auto;color:#0f766e;font-size:13px}
+.restaurantSalesChart{padding:14px 0 24px}.restaurantSalesChart svg{display:block;width:100%;height:180px}.restaurantSalesChart>div{display:flex;justify-content:space-around;gap:8px;direction:ltr;font-size:10px;color:var(--rc-muted)}.restaurantSalesChart b{display:block;margin-top:5px;color:#475569;font-size:11px}.restaurantLiveOrders{display:grid}.restaurantLiveOrders button{display:grid;grid-template-columns:1fr 1.4fr 1.4fr 1fr 1fr;gap:16px;align-items:center;text-align:start;padding:16px;border:0;border-bottom:1px solid #f1f5f9;background:#fff;font-size:12px!important;min-width:0}.restaurantLiveOrders button:hover{background:#fff7ed}.restaurantLiveOrders button>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--rc-muted)}.restaurantLiveOrders button>em{font-style:normal;color:#b34b20}.restaurantPanel>.restaurantPanel{margin-top:24px;box-shadow:none}.restaurantApp .merchantPaymentEditor{max-width:none;margin:0;box-shadow:none;background:#fff;border-color:var(--rc-border)}.restaurantApp .merchantPaymentEditor h2{font-size:18px}.restaurantApp .merchantPaymentEditor p{font-size:13px;color:var(--rc-muted)}
+.restaurantApp .restaurantImageUpload{display:grid;gap:7px;padding:12px;border:1px dashed #cbd5e1;border-radius:9px;background:#fff}.restaurantImageUpload input[type="file"]{border:0;min-height:35px;padding:0}.restaurantImageUpload small{font-size:11px;color:var(--rc-muted);font-weight:400}
+@media(max-width:1200px){.restaurantOrderCards{grid-template-columns:repeat(2,minmax(0,1fr))}.restaurantPos{grid-template-columns:1fr}.restaurantPos>.restaurantResourceForm{grid-template-columns:repeat(2,minmax(0,1fr))}.restaurantCart{grid-column:1/-1}.restaurantResourceList dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.restaurantResourceForm{grid-template-columns:1fr;padding:16px}.restaurantResourceList dl{grid-template-columns:1fr 1fr}.restaurantOrderCards{grid-template-columns:1fr}.restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr))}.restaurantPos>.restaurantResourceForm{grid-template-columns:1fr}.restaurantHealthList>div{flex-wrap:wrap}.restaurantHealthList span{margin-inline-start:32px;width:100%}.restaurantLiveOrders button{grid-template-columns:1fr 1fr;gap:8px}.restaurantLiveOrders button>span:nth-child(3){grid-column:1/-1;white-space:normal}.restaurantListTools{flex-wrap:wrap}.restaurantFormActions{flex-wrap:wrap}}
+.restaurantReportSummary{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:22px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;margin-bottom:24px}.restaurantReportSummary strong{font-size:26px;color:#9a4b20}.restaurantReportSummary span{color:var(--rc-muted);font-size:12px}.restaurantReportSummary b{margin-inline-start:auto;font-size:15px}.restaurantReportHeading{margin-top:26px!important;margin-bottom:15px!important}
+.restaurantTenantSelector select{max-width:145px;background:#fff;color:var(--rc-text);border:1px solid var(--rc-border);border-radius:10px;padding:11px;font-size:12px!important;min-width:0}.restaurantApp .restaurantPrimary,.restaurantApp .restaurantAvatar,.restaurantSidebar nav button[aria-current="page"],.restaurantDrawer nav button[aria-current="page"]{background:#c84f20}.restaurantQuickActions>button:hover,.restaurantQuickActions>a:hover{border-color:var(--rc-accent)}
+@media(max-width:680px){.restaurantTenantSelector{flex:1;min-width:0}.restaurantTenantSelector select{width:100%;max-width:100%}.restaurantTopActions .restaurantBranchSelector{flex:1;min-width:0}.restaurantSearchButton{flex-shrink:0}}
+.restaurantBranchActions{display:flex;flex-wrap:wrap;gap:6px}.restaurantBranchActions button{border:1px solid var(--rc-border);background:#fff;border-radius:7px;padding:6px 9px;font-size:11px!important;color:#475569}.restaurantBranchList>div{flex-wrap:wrap}
+.restaurantPosMenu article{padding:16px;border:1px solid var(--rc-border);border-radius:12px;display:grid;gap:10px;align-content:start;background:#fff}.restaurantPosMenu article>b{font-size:14px}.restaurantPosMenu article>span{color:#b34b20;font-size:13px}.menuChoicePicker{display:grid;gap:10px;margin:12px 0}.menuChoicePicker fieldset{margin:0;padding:10px;border:1px solid #cbd5e180;border-radius:8px;min-width:0}.menuChoicePicker legend{font-size:11px}.menuChoicePicker select{width:100%;min-width:0;padding:7px;background:#fff;border:1px solid #cbd5e1;border-radius:6px;font-size:12px}.menuChoicePicker label{display:flex;align-items:center;gap:8px;font-size:12px;margin:7px 0}.menuChoicePicker input[type="checkbox"]{width:16px;height:16px;min-height:0;margin:0}
+
+/* Compact, modern table cards: section / number / capacity are legible at a glance. */
+.restaurantPanel[data-module="tables"] .restaurantResourceList{grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article{display:flex;flex-direction:column;gap:16px;min-height:190px;padding:18px;border:1px solid #e2e8f0;border-radius:20px;background:linear-gradient(155deg,#fff 55%,#f8fafc);box-shadow:0 5px 18px rgba(15,23,42,.045);transition:box-shadow .2s,border-color .2s,transform .2s}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article:hover{border-color:#cbd5e1;box-shadow:0 12px 30px rgba(15,23,42,.09);transform:translateY(-2px)}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header{align-items:flex-start;margin:0;gap:10px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header>div:first-child{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header b{font-size:21px;font-weight:800;letter-spacing:-.02em;color:#17243b}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article header .restaurantStateBadge{font-size:11px;border-radius:99px;padding:6px 11px;background:#edf8f1;color:#187448;font-weight:700}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header>div:last-child{display:flex;gap:6px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article>header button{padding:7px 11px;border-radius:10px;font-weight:650}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dl>div{min-width:0;border:1px solid #edf1f5;border-radius:12px;background:#f8fafc;padding:11px 9px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dt{font-size:11px;color:#64748b;margin-bottom:6px}
+.restaurantPanel[data-module="tables"] .restaurantResourceList article dd{font-size:16px;font-weight:750;color:#24334a;overflow-wrap:anywhere}
+@media(max-width:420px){.restaurantPanel[data-module="tables"] .restaurantResourceList{grid-template-columns:minmax(0,1fr)}.restaurantPanel[data-module="tables"] .restaurantResourceList article{padding:14px}.restaurantPanel[data-module="tables"] .restaurantResourceList article>header b{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.restaurantPanel[data-module="tables"] .restaurantResourceList article{transition:none}.restaurantPanel[data-module="tables"] .restaurantResourceList article:hover{transform:none}}
+
+.restaurantPanel[data-module="tables"] .restaurantTableQuickActions{display:grid;gap:10px;border-top:1px solid #e9eef4;padding-top:12px}
+.restaurantPanel[data-module="tables"] .restaurantTableQuickActions label{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;font-weight:700;color:#475569}
+.restaurantPanel[data-module="tables"] .restaurantTableQuickActions select{width:auto;max-width:65%;min-width:130px;border:1px solid #dbe4ef;border-radius:10px;padding:9px 12px;background:#fff;color:#17243b;font:inherit}
+.restaurantPanel[data-module="tables"] .restaurantTableLinkedInfo{display:grid;gap:5px;font-size:12px;color:#64748b}
+.restaurantPanel[data-module="tables"] .restaurantTableLinkedInfo span{overflow-wrap:anywhere}
+
+.restaurantOfflineBackup{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 14px;border:1px solid #d7e1eb;border-radius:14px;background:#f8fafc;margin-block:10px}
+.restaurantOfflineBackup p{flex-basis:100%;margin:0;font-size:12px;color:#475569}
+.restaurantOfflineBackup button,.restaurantOfflineBackup label{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:700;color:#24334a;cursor:pointer}
+.restaurantOfflineBackup input{display:block;max-width:100%;font-size:11px;margin-top:6px}
+
+.restaurantPosSyncBar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;min-width:0;padding:14px 16px;border:1px solid #dce5ee;border-radius:16px;background:#f8fafc;color:#334155;font-size:13px;line-height:1.9;overflow-wrap:anywhere}
+.restaurantPosSyncBar strong{color:#0f766e;font-size:14px}
+.restaurantPosSyncBar button{margin-inline-start:auto;flex-shrink:0;padding:9px 16px;border:1px solid #0f766e;border-radius:10px;background:#0f766e;color:#fff;font-weight:700;cursor:pointer}
+.restaurantPosSyncBar button:disabled{opacity:.5;cursor:not-allowed}
+.restaurantOfflineBackup{align-items:center;gap:12px}
+.restaurantOfflineBackup>p{font-size:12px;line-height:1.8}
+@media(max-width:600px){.restaurantPosSyncBar{padding:12px;font-size:12px}.restaurantPosSyncBar button{width:100%;margin-inline-start:0}.restaurantOfflineBackup button,.restaurantOfflineBackup label{width:100%}}
+
+.restaurantPosSyncStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:10px}
+.restaurantPosSyncStats>span{display:flex;flex-direction:column;gap:5px;min-width:0;padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+.restaurantPosSyncStats small{font-size:11px;color:#64748b}
+.restaurantPosSyncStats b{font-size:18px;line-height:1.3;color:#0f172a;font-variant-numeric:tabular-nums}
+@media(max-width:480px){.restaurantPosSyncStats{gap:6px}.restaurantPosSyncStats>span{padding:9px 7px}.restaurantPosSyncStats b{font-size:15px}}
+
+
+/* Compact operational cards: orders, reservations, tables and waitlist. */
+.restaurantOrderCards,.restaurantResourceList{min-width:0}
+.restaurantOrderCards{grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:10px;align-items:start}
+.restaurantOrderCards article,.restaurantResourceList article{min-width:0;overflow-wrap:anywhere;padding:12px;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.restaurantOrderCards article header,.restaurantResourceList article>header{min-width:0;flex-wrap:wrap;gap:8px}
+.restaurantOrderCards article>p{margin:7px 0}
+.restaurantOrderCards ul{min-height:0;max-height:9em;overflow-y:auto;margin:8px 0;padding-inline-start:20px}
+.restaurantOrderCards footer{gap:8px;flex-wrap:wrap;padding-top:9px}
+.restaurantOrderActions{margin-top:9px;gap:6px}
+.restaurantOrderActions button,.restaurantResourceList button{min-height:36px;max-width:100%;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.restaurantOrderActions button:focus-visible,.restaurantResourceList button:focus-visible{outline:3px solid #d97706;outline-offset:2px}
+.restaurantResourceList dl{grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:10px}
+.restaurantResourceList dd{word-break:break-word}
+@media(max-width:640px){
+ .restaurantOrderCards{grid-template-columns:minmax(0,1fr);gap:8px}
+ .restaurantOrderCards article,.restaurantResourceList article{padding:11px}
+ .restaurantOrderActions button{flex:1 1 auto}
+ .restaurantResourceList dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .restaurantResourceList article>header{align-items:flex-start}
+}
+
+/* Expand order contents on demand without enlarging every card. */
+.restaurantOrderDetailsToggle{display:block;width:100%;min-height:36px;text-align:start;margin-top:8px;padding:7px 10px;border:1px solid var(--rc-border);border-radius:8px;background:#f8fafc;color:#334155;font-size:12px;font-weight:700;cursor:pointer}
+.restaurantOrderDetailsToggle:focus-visible{outline:3px solid #d97706;outline-offset:2px}
+.restaurantOrderCards [hidden]{display:none!important}
+
+.restaurantOrderMeta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0;padding:10px;border-radius:9px;background:#f8fafc}
+.restaurantOrderMeta div{min-width:0}.restaurantOrderMeta dt{font-size:11px;color:#64748b}.restaurantOrderMeta dd{margin:3px 0 0;font-size:12px;font-weight:700;overflow-wrap:anywhere}
+@media(max-width:360px){.restaurantOrderMeta{grid-template-columns:minmax(0,1fr)}}
+
+/* Expand operational resource cards without changing existing forms or actions. */
+.restaurantResourceDetailsToggle{width:100%;min-height:36px;margin:4px 0 8px;padding:7px 10px;border:1px solid var(--rc-border);border-radius:8px;background:#f8fafc;color:#334155;text-align:start;font-size:12px;font-weight:700;cursor:pointer}
+.restaurantResourceDetailsToggle:focus-visible{outline:3px solid #d97706;outline-offset:2px}
+.restaurantResourceDetails[hidden]{display:none!important}
+.restaurantResourceDetails{min-width:0;overflow-wrap:anywhere}
+
+/* FOON confirmation dialog, replacing browser-native confirms. */
+.foonConfirmBackdrop{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.68);display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
+.foonConfirmDialog{direction:rtl;width:min(100%,440px);max-height:calc(100dvh - 32px);overflow-y:auto;background:var(--rc-surface,#fff);color:var(--rc-text,#1e293b);border:1px solid var(--rc-border,#e2e8f0);border-radius:20px;padding:26px;box-shadow:0 24px 70px rgba(0,0,0,.28);text-align:start}
+.foonConfirmIcon{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#fff1e6;color:#a34113;font-size:26px;font-weight:800;margin-bottom:14px}
+.foonConfirmDialog h3{margin:0 0 10px;font-size:19px}.foonConfirmDialog p{line-height:1.8;font-size:14px;margin:0 0 24px;color:var(--rc-muted,#64748b)}
+.foonConfirmActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.foonConfirmActions button{min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--rc-border,#cbd5e1);background:transparent;color:inherit;font-weight:700;cursor:pointer}.foonConfirmActions .foonConfirmDanger{background:#a34113;border-color:#a34113;color:#fff}.foonConfirmActions button:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:420px){.foonConfirmDialog{padding:20px}.foonConfirmActions button{flex:1 1 100%}}
+
+
+/* FOON POS: operational catalog and checkout, optimized for cashier touch screens. */
+.restaurantPosModern{grid-template-columns:minmax(0,1.65fr) minmax(320px,.9fr);align-items:start;gap:16px}
+.restaurantPosCatalog,.restaurantPosCheckout{min-width:0;border:1px solid var(--rc-border,#e2e8f0);border-radius:18px;background:#fff;padding:18px}
+.restaurantPosModern>.restaurantPosCheckout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;position:sticky;top:16px;max-height:calc(100dvh - 32px);overflow-y:auto}
+.restaurantPosSectionHeading{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.restaurantPosSectionHeading h3{margin:2px 0 0;font-size:18px}
+.restaurantPosSectionHeading small{font-size:10px;font-weight:800;letter-spacing:1px;color:#9a3412}
+.restaurantPosItemCount,.restaurantPosCartCount{border-radius:999px;background:#fff1e6;color:#9a3412;font-size:12px;font-weight:800;padding:8px 12px;white-space:nowrap}
+.restaurantPosCartCount{min-width:36px;text-align:center}
+.restaurantPosModern .restaurantPosMenu{grid-template-columns:repeat(auto-fill,minmax(min(100%,155px),1fr));gap:10px;margin-top:12px}
+.restaurantPosModern .restaurantPosProduct{min-width:0;min-height:160px;display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:linear-gradient(180deg,#fff 0%,#fffaf5 100%)}
+.restaurantPosProduct b{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.restaurantPosProduct>span{font-size:17px;color:#9a3412;font-weight:800;font-variant-numeric:tabular-nums}
+.restaurantPosProduct>span small{font-size:10px}
+.restaurantPosProduct>button{margin-top:auto;min-height:44px;border:0;border-radius:10px;background:#9a3412;color:white;font-weight:750;cursor:pointer}
+.restaurantPosProduct>button:disabled{opacity:.45;cursor:not-allowed}
+.restaurantPosProduct:focus-within{outline:2px solid #e2a93b;outline-offset:2px}
+.restaurantPosCheckout>.restaurantCart,.restaurantPosCheckout>.restaurantPrimary,.restaurantPosCheckout>.restaurantFinePrint{grid-column:1/-1}
+.restaurantPosCheckout .restaurantCart{border-radius:12px;background:#f8fafc;padding:12px;margin:4px 0 0}
+.restaurantPosCheckout .restaurantCart label{grid-template-columns:minmax(0,1fr) 64px;gap:8px}
+.restaurantPosCheckout>.restaurantPrimary{min-height:50px;font-weight:800}
+@media(max-width:1080px){.restaurantPosModern{grid-template-columns:minmax(0,1fr)}.restaurantPosModern>.restaurantPosCheckout{position:static;max-height:none;overflow:visible}}
+@media(max-width:540px){.restaurantPosCatalog,.restaurantPosCheckout{padding:12px;border-radius:14px}.restaurantPosModern .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.restaurantPosModern .restaurantPosProduct{padding:10px;min-height:145px}.restaurantPosModern>.restaurantPosCheckout{grid-template-columns:minmax(0,1fr)}}
+
+
+/* POS-first visual hierarchy: operational tools are available but do not displace selling. */
+.restaurantPosQuickBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin:0 0 12px;border:1px solid var(--rc-border,#e2e8f0);border-radius:12px;background:#fff;font-size:12px;color:#475569}
+.restaurantPosQuickBar>span,.restaurantPosQuickBar>strong{padding:6px 10px;border-radius:8px;background:#f8fafc;font-size:12px}
+.restaurantPosQuickBar .restaurantPosConnection[data-online="true"]{color:#047857;background:#ecfdf5}
+.restaurantPosQuickBar .restaurantPosConnection[data-online="false"]{color:#b45309;background:#fffbeb}
+.restaurantPosQuickBar button{min-height:36px;padding:7px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#334155;font-size:12px;font-weight:700;cursor:pointer}
+.restaurantPosQuickBar button:last-child{margin-inline-start:auto}
+.restaurantPosToolsWrap[hidden]{display:none!important}
+.restaurantPosToolsWrap{display:grid;gap:10px;margin-bottom:12px}
+.restaurantPosToolsWrap .restaurantPosSyncBar,.restaurantPosToolsWrap .restaurantOfflineBackup{margin:0}
+.restaurantPosModern{margin-top:0}
+@media(max-width:640px){.restaurantPosQuickBar button:last-child{margin-inline-start:0}.restaurantPosQuickBar{gap:6px;padding:8px}}
+
+/* Fast POS item picker: search plus horizontally scrollable category tabs. */
+.restaurantPosBrowse{display:grid;gap:9px;margin:0 0 12px;min-width:0}
+.restaurantPosBrowse>input[type="search"]{width:100%;min-height:46px;padding:10px 14px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#1e293b;font-size:14px;outline-offset:2px}
+.restaurantPosBrowse>input[type="search"]:focus-visible{outline:2px solid #d97706}
+.restaurantPosCategories{display:flex;gap:7px;overflow-x:auto;overscroll-behavior-inline:contain;padding:2px 0 7px;scrollbar-width:thin;min-width:0}
+.restaurantPosCategories button{flex:0 0 auto;min-height:39px;padding:7px 15px;border:1px solid #dbe3ee;border-radius:999px;background:#fff;color:#334155;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.restaurantPosCategories button[aria-pressed="true"]{background:#9a3412;color:#fff;border-color:#9a3412}
+.restaurantPosCategories button:focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
+
+/* POS payment and preparation instructions. */
+.restaurantPosPaymentFields{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;border:1px solid #dbe3ee;border-radius:12px;padding:12px;margin:0}
+.restaurantPosPaymentFields legend{padding:0 8px;font-size:12px;font-weight:800;color:#9a3412}
+.restaurantPosPaymentFields label{min-width:0}.restaurantPosFullField{grid-column:1/-1;min-width:0}
+.restaurantPosFullField textarea{width:100%;min-height:72px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e293b;resize:vertical;font:inherit}
+@media(max-width:540px){.restaurantPosPaymentFields{grid-template-columns:minmax(0,1fr)}}
+
+/* POS invoice breakdown: server-validated totals only. */
+.restaurantPosInvoiceBreakdown{display:grid;gap:9px;margin-top:12px;padding:14px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc;min-width:0}
+.restaurantPosInvoiceBreakdown h4{margin:0 0 3px;font-size:14px;color:#17243b}
+.restaurantPosInvoiceBreakdown>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12px;line-height:1.5}
+.restaurantPosInvoiceBreakdown>div>span:last-child{color:#64748b;text-align:end;overflow-wrap:anywhere}
+.restaurantPosInvoiceBreakdown strong{white-space:nowrap;font-variant-numeric:tabular-nums;color:#9a3412}
+.restaurantPosInvoiceBreakdown>p{margin:5px 0 0;padding-top:9px;border-top:1px solid #dbe3ee;color:#64748b;font-size:11px;line-height:1.7}
+
+/* Clear, compact, accessible live orders on the overview dashboard. */
+.restaurantOrders .restaurantOrderHead{grid-template-columns:.75fr 1.2fr 1.7fr .9fr .8fr;gap:12px;padding:11px 14px;font-size:12px;font-weight:750;color:#475569;margin-bottom:2px}
+.restaurantOrders .restaurantLiveOrders button{grid-template-columns:.75fr 1.2fr 1.7fr .9fr .8fr;gap:12px;min-height:56px;padding:11px 14px;font-size:13px!important;line-height:1.5;border-bottom-color:#e2e8f0;cursor:pointer}
+.restaurantOrders .restaurantLiveOrders button>b{font-size:15px;color:#0f172a;font-variant-numeric:tabular-nums}
+.restaurantOrders .restaurantLiveOrders button>strong{font-size:14px;color:#0f172a;font-variant-numeric:tabular-nums;white-space:nowrap}
+.restaurantOrders .restaurantLiveOrders button>span{color:#334155;font-size:12px}
+.restaurantOrders .restaurantLiveOrders button>em{display:inline-flex;justify-self:start;align-items:center;border-radius:999px;padding:5px 10px;background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800;white-space:nowrap}
+.restaurantOrders .restaurantLiveOrders button>em[data-status="new"]{background:#dbeafe;color:#1d4ed8}
+.restaurantOrders .restaurantLiveOrders button>em[data-status="preparing"]{background:#fff7ed;color:#9a3412}
+.restaurantOrders .restaurantLiveOrders button>em[data-status="ready"]{background:#dcfce7;color:#166534}
+.restaurantOrders .restaurantLiveOrders button:focus-visible{outline:2px solid #d97706;outline-offset:-2px}
+@media(max-width:720px){
+ .restaurantOrders .restaurantOrderHead{display:none}
+ .restaurantOrders .restaurantLiveOrders{gap:8px}
+ .restaurantOrders .restaurantLiveOrders button{grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+ .restaurantOrders .restaurantLiveOrders button>b{grid-column:1;grid-row:1}
+ .restaurantOrders .restaurantLiveOrders button>em{grid-column:2;grid-row:1}
+ .restaurantOrders .restaurantLiveOrders button>span:first-of-type{grid-column:1/-1;white-space:normal}
+ .restaurantOrders .restaurantLiveOrders button>span:nth-of-type(2){grid-column:1/-1;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+ .restaurantOrders .restaurantLiveOrders button>strong{grid-column:1/-1}
+}
+
+/* Operational order cards: readable channel/time and visible instructions. */
+.restaurantOrderCards .restaurantOrderGuest{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.restaurantOrderCards .restaurantOrderGuest strong{font-size:14px;color:#0f172a;font-weight:800}
+.restaurantOrderCards .restaurantOrderGuest>span{display:inline-flex;align-items:center;border:1px solid #cbd5e1;border-radius:8px;padding:5px 9px;background:#f1f5f9;color:#1e293b!important;font-size:12px!important;font-weight:800}
+.restaurantOrderCards .restaurantOrderTime{display:block;color:#334155!important;font-size:12px!important;font-weight:750;margin:6px 0 9px;opacity:1!important;font-variant-numeric:tabular-nums}
+.restaurantOrderNotes{margin:8px 0 10px;padding:10px 12px;border:1px solid #f4c889;border-inline-start:4px solid #d97706;border-radius:9px;background:#fffbeb;color:#78350f;overflow-wrap:anywhere}
+.restaurantOrderNotes strong{font-size:12px;font-weight:850}
+.restaurantOrderNotes p{margin:4px 0 0;font-size:13px;line-height:1.6;white-space:pre-wrap}
+
+/* Order actions remain accessible on compact merchant screens. */
+@media (max-width: 600px) {
+  .restaurantOrderActions button,
+  .restaurantApp .restaurantOrderActions button {
+    box-sizing: border-box;
+    min-height: 48px !important;
+    height: auto;
+    padding-block: 12px;
+  }
+}
