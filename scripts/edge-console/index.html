@@ -31,9 +31,18 @@
    </div>
   </header>
   <div class="restaurantContent">
-   <section id="login-panel" class="login panel" aria-label="تسجيل الدخول المحلي">
-    <h1>أهلاً بك في FOON</h1><p>سجل الدخول إلى محطة المطعم المحلية.</p>
-    <form id="login-form"><label>اسم المستخدم<input name="username" autocomplete="username" required dir="ltr"></label><label>كلمة المرور<input name="password" type="password" autocomplete="current-password" required minlength="8"></label><button class="primary" type="submit">دخول</button></form>
+   <section id="login-panel" class="auth-shell foonAuthPage" data-theme="light" aria-label="تسجيل الدخول المحلي">
+    <div class="auth-card">
+      <div class="auth-heading"><span class="foonAuthTag">✦ دخول آمن — محطة FOON المحلية</span></div>
+      <h1>مرحبًا بعودتك</h1>
+      <p>سجّل الدخول للوصول إلى مساحة العمل الخاصة بك على هذا الجهاز.</p>
+      <form id="login-form" class="auth-form">
+        <label>اسم المستخدم<input name="username" autocomplete="username" required dir="ltr"></label>
+        <label>كلمة المرور<input name="password" type="password" autocomplete="current-password" required minlength="8" dir="ltr"></label>
+        <button type="submit">تسجيل الدخول</button>
+      </form>
+      <p class="w29-local-login-note">تسجيل محلي تجريبي — لا يستخدم حساب الموقع السحابي أو بوابة الدفع.</p>
+    </div>
    </section>
    <p id="message" role="status" aria-live="polite"></p>
    <section id="workspace" hidden>
