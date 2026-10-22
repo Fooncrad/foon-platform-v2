@@ -33,8 +33,8 @@ export function createEdgeConsoleServer({tls,users,origin,gatewayUrl,gatewayToke
   try{
    const url=new URL(req.url||"/",configuredOrigin);
    if(req.headers.host!==configuredOrigin.host)return reply(res,421,{error:"INVALID_HOST"});
-   if(req.method==="GET"&&["/","/console.js","/translations.js","/console.css"].includes(url.pathname)){
-    const file={"/":"index.html","/console.js":"console.js","/translations.js":"translations.js","/console.css":"console.css"}[url.pathname];
+   if(req.method==="GET"&&["/","/console.js","/translations.js","/console.css","/w28-shell.css"].includes(url.pathname)){
+    const file={"/":"index.html","/console.js":"console.js","/translations.js":"translations.js","/console.css":"console.css","/w28-shell.css":"w28-shell.css"}[url.pathname];
     const body=await readFile(new URL("./edge-console/"+file,import.meta.url));
     res.writeHead(200,{"content-type":file.endsWith(".html")?"text/html; charset=utf-8":file.endsWith(".js")?"text/javascript; charset=utf-8":"text/css; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","content-security-policy":"default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self'; connect-src 'self'"});res.end(body);return;
    }
