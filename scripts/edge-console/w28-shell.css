@@ -238,3 +238,121 @@ body { margin:0; }
  .restaurantApp[data-activity] #menu.restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr))}
  .restaurantApp[data-activity] #menu.restaurantPosMenu .product{padding:10px}
 }
+
+/* W31: same POS component hierarchy used in app/restaurant/order-workspace.tsx.
+ * Only local-safe fields are rendered; no dummy payment, reservation or sync. */
+.restaurantApp[data-activity] #w31-pos-workspace{
+  padding:12px 14px;border-radius:14px;min-width:0;margin-block:12px 18px
+}
+.restaurantApp[data-activity] #w31-pos-workspace[hidden]{display:none!important}
+.restaurantApp[data-activity] #w31-pos-tools[hidden]{display:none!important}
+.restaurantApp[data-activity] #w31-pos-tools{margin-bottom:12px;min-width:0}
+.restaurantApp[data-activity] #w31-pos-tools .restaurantStats{margin:0}
+.restaurantApp[data-activity] .restaurantPosTopbarSlot .restaurantPosQuickBar{
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+}
+.restaurantApp[data-activity] .restaurantPosTopbarSlot .restaurantPosQuickBar>span{
+  font-size:11px;white-space:nowrap
+}
+.restaurantApp[data-activity] .restaurantPosTopbarSlot .restaurantPosQuickBar button{
+  min-height:36px;font-size:11px
+}
+.restaurantApp[data-activity] .w31-local-tabs{display:flex;gap:4px;align-items:center}
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosModern{
+  margin:0;min-width:0;gap:14px;align-items:start;
+  grid-template-columns:minmax(0,1.65fr) minmax(310px,.9fr)
+}
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCatalog,
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCheckout{
+  border-radius:18px;padding:18px;min-width:0
+}
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosSectionHeading{
+  margin-bottom:12px
+}
+.restaurantApp[data-activity] #w31-pos-workspace #menu.restaurantPosMenu{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,155px),1fr));
+  gap:10px;margin:12px 0 0;min-width:0
+}
+.restaurantApp[data-activity] #w31-pos-workspace #menu .restaurantPosProduct{
+  min-height:160px;display:flex;flex-direction:column;
+  gap:8px;min-width:0;border-radius:14px;padding:14px
+}
+.restaurantApp[data-activity] #w31-pos-workspace #menu .restaurantPosProduct>button{
+  margin-top:auto;min-height:44px
+}
+.restaurantApp[data-activity] #w31-pos-workspace #search{
+  width:100%;min-width:0
+}
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosBrowse{min-width:0}
+.restaurantApp[data-activity] #w31-pos-workspace #w31-pos-categories{
+  display:flex;min-width:0;max-width:100%;overflow-x:auto
+}
+.restaurantApp[data-activity] #w31-pos-workspace #w31-pos-categories[hidden]{display:none!important}
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCheckout{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  display:grid;position:sticky;top:82px;
+  max-height:calc(100dvh - 100px);overflow-y:auto;
+  gap:12px;align-content:start;
+}
+.restaurantApp[data-activity] #w31-pos-workspace .restaurantPosFullField{
+  grid-column:1/-1;min-width:0
+}
+.restaurantApp[data-activity] #w31-pos-workspace .w31-takeaway-channel{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;padding:12px;
+  background:var(--rc-page);border:1px solid var(--rc-border);
+  border-radius:10px;font-size:12px
+}
+.restaurantApp[data-activity] #w31-pos-workspace .w31-takeaway-channel strong{
+  font-size:13px;color:var(--rc-text)
+}
+.restaurantApp[data-activity] #w31-pos-workspace #cart-lines{
+  margin:0;padding:0;border:0
+}
+.restaurantApp[data-activity] #w31-pos-workspace #cart-lines>.restaurantEmptyMessage{
+  padding:18px 12px;font-size:12px
+}
+.restaurantApp[data-activity] #w31-pos-workspace .total{
+  margin:8px 0 0;align-items:center;font-size:14px;
+  padding:12px;border:1px solid var(--rc-border);border-radius:10px
+}
+.restaurantApp[data-activity] #w31-pos-workspace .total strong{font-size:18px}
+.restaurantApp[data-activity] #w31-pos-workspace #checkout{
+  min-height:46px;width:100%;border-radius:12px
+}
+.restaurantApp[data-activity] #w31-pos-workspace .cart .muted{
+  font-size:12px;color:var(--rc-muted);line-height:1.7
+}
+.restaurantApp[data-activity][data-theme="dark"] #w31-pos-workspace .restaurantPosCatalog,
+.restaurantApp[data-activity][data-theme="dark"] #w31-pos-workspace .restaurantPosCheckout,
+.restaurantApp[data-activity][data-theme="dark"] #w31-pos-workspace .restaurantPosProduct{
+  background:var(--rc-surface,#252a34);color:var(--rc-text);
+  border-color:var(--rc-border)
+}
+.restaurantApp[data-activity][data-theme="dark"] #w31-pos-workspace #search{
+  background:var(--rc-surface,#252a34);color:var(--rc-text);border-color:var(--rc-border)
+}
+@media(max-width:1200px){
+ .restaurantApp[data-activity] #w31-pos-workspace .restaurantPosModern{
+   grid-template-columns:minmax(0,1fr)
+ }
+ .restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCheckout{
+   max-height:none;position:static;overflow:visible
+ }
+}
+@media(max-width:540px){
+ .restaurantApp[data-activity] #w31-pos-workspace{padding:7px}
+ .restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCatalog,
+ .restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCheckout{
+   padding:11px
+ }
+ .restaurantApp[data-activity] #w31-pos-workspace #menu.restaurantPosMenu{
+   grid-template-columns:repeat(2,minmax(0,1fr))
+ }
+ .restaurantApp[data-activity] #w31-pos-workspace .restaurantPosCheckout{
+   grid-template-columns:minmax(0,1fr)
+ }
+ .restaurantApp[data-activity] #w31-pos-workspace .restaurantPosSectionHeading h3{
+   font-size:16px
+ }
+}
