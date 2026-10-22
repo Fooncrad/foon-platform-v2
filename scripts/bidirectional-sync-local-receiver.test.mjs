@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import {applyVerifiedPullBatch} from "../lib/platform/bidirectional-sync-local-receiver.mjs";
 import {pullBatchSignatureMessage} from "../lib/platform/bidirectional-sync-signature.mjs";
 import {generateKeyPairSync,sign} from "node:crypto";
+import {digestChange} from "../lib/platform/bidirectional-sync-contract.mjs";
 const ids=["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333"];
 const scope={deviceId:ids[0],tenantId:ids[1],branchId:ids[2],after:4,limit:10};
-const event=(id)=>({id,event_id:ids[0],tenant_id:ids[1],branch_id:ids[2],payload_digest:"a".repeat(64)});
+const event=(id)=>{const c={eventId:ids[0],tenantId:ids[1],branchId:ids[2],actorId:ids[0],entityId:ids[0],entityType:"catalog_item",operation:"upsert",baseVersion:0,timestamp:"2026-10-22T18:00:00Z",payload:{name:"Coffee"}};return {id,event_id:c.eventId,tenant_id:c.tenantId,branch_id:c.branchId,actor_id:c.actorId,source_device_id:ids[0],entity_type:c.entityType,entity_id:c.entityId,operation:c.operation,base_version:c.baseVersion,next_version:1,event_timestamp:c.timestamp,payload_json:c.payload,payload_digest:digestChange(c)};};
 const batch={ok:true,tenantId:ids[1],branchId:ids[2],events:[event(5)],nextCursor:5};
 const pair=generateKeyPairSync("ed25519");
 const publicKey=pair.publicKey.export({type:"spki",format:"pem"});
@@ -69,4 +70,11 @@ test("empty signed pull with unchanged cursor commits without a pointless UPDATE
  assert.deepEqual(result,{status:"applied",nextCursor:scope.after,count:0});
  assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
  assert.equal(db.calls.at(-1),"commit");
+});
+
+test("even correctly signed corrupted digest cannot enter local transaction",async()=>{
+ const db=fixture();
+ const corrupt={...batch,events:[{...event(5),payload_digest:"b".repeat(64)}]};
+ await assert.rejects(()=>applyVerifiedPullBatch({db,batch:corrupt,scope,...signed(corrupt),applyEvent:async()=>true}),/SYNC_CORRUPT_REMOTE_EVENT/);
+ assert.deepEqual(db.calls,[]);
 });
