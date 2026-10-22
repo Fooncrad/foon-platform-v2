@@ -45,3 +45,6 @@ Before enabling any live device: deploy authenticated server endpoints to stagin
 
 ## Transaction-bound isolated inventory entrypoint
 `recordAuthorizedInventoryMovement` now composes the verified-device permission gate, journal deduplication, guarded stock projection update and single transaction commit/rollback. The new unit tests cover one authorized stock movement and denial of a cross-branch movement before transaction start. This operates **only** on the independent staging projection, not real business stock, POS, orders or a live HTTP endpoint. Integration tests on MariaDB and Windows, signed device credential checks and typed production catalog adapters are still required before any release.
+
+## Transaction cleanup hardening
+`recordAuthorizedChange` now uses a single `finally` cleanup path: successful commit marks the transaction completed; stale or duplicate events and business failures get exactly one rollback; a failed commit also triggers rollback attempt instead of returning a false success. Unit regression cases cover failed commit and single rollback. This is a source-level safety change; it does not establish the database driver's response to network loss during commit. Such a case still requires event-ID reconciliation before retry or ACK.
