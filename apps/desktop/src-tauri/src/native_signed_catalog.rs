@@ -7,7 +7,6 @@
 #![cfg(windows)]
 #![allow(dead_code)]
 use serde::{Deserialize,Serialize};
-use serde_json::Value;
 use std::collections::HashSet;
 use std::ffi::c_void;
 use std::ptr::{null,null_mut};
@@ -94,9 +93,12 @@ fn verify_cng_p256(public_xy:&[u8;64], digest:&[u8;32],signature:&[u8;64])->bool
        return false;
     }
     // SHA256 digest and IEEE P1363 signature layout (r||s), each 32 bytes.
-    unsafe{BCryptVerifySignature(key.0,null_mut(),digest.as_ptr() as *mut u8,
-      digest.len() as u32,signature.as_ptr() as *mut u8,
-      signature.len() as u32,0)}>=0
+    let verify_status = unsafe {
+        BCryptVerifySignature(key.0, null_mut(), digest.as_ptr() as *mut u8,
+            digest.len() as u32, signature.as_ptr() as *mut u8,
+            signature.len() as u32, 0)
+    };
+    verify_status >= 0
 }
 fn canonical(snapshot:&Snapshot)->Result<Vec<u8>,&'static str>{
     // Explicit arrays eliminate serde_json object-map vs JS key-order drift.
