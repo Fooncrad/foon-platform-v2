@@ -22,7 +22,7 @@ function dbFixture({existing=false,version=0}={}){
 test("authorized update and journal share one transaction, commit last",async()=>{
  const db=dbFixture();
  let businessCalls=0;
- const result=await recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>{businessCalls++;db.calls.push("business");}});
+ const result=await recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>{businessCalls++;db.calls.push("business");return true;}});
  assert.equal(result.status,"recorded");assert.equal(businessCalls,1);
  assert.equal(db.calls[0],"begin");assert.equal(db.calls.at(-1),"commit");
  assert.ok(db.calls.findIndex(x=>typeof x==="string"&&x.includes("INSERT INTO foon_sync_changes"))<db.calls.indexOf("business"));
@@ -66,4 +66,14 @@ test("generic sync.read alone never leaks customers, staff or order contents",as
  assert.equal(result.nextCursor,4,"cursor advances past filtered unauthorized rows without exposing them");
  const noCatalog=await readAuthorizedChanges({db,verifiedContext:{...context,grants:["sync.read"]},request:{tenantId:ids[1],branchId:ids[2]}});
  assert.deepEqual(noCatalog.events,[]);
+});
+
+test("business adapter must explicitly confirm applied mutation before committing journal",async()=>{
+ const db=dbFixture();
+ await assert.rejects(()=>recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>undefined}),/SYNC_BUSINESS_APPLY_UNCONFIRMED/);
+ assert.equal(db.calls.at(-1),"rollback");
+ assert.ok(!db.calls.includes("commit"));
+ const zeroDb=dbFixture();
+ await assert.rejects(()=>recordAuthorizedChange({db:zeroDb,verifiedContext:context,change,applyBusinessChange:async()=>({affectedRows:0})}),/SYNC_BUSINESS_APPLY_UNCONFIRMED/);
+ assert.equal(zeroDb.calls.at(-1),"rollback");
 });
