@@ -8,8 +8,11 @@ const cloudOrders=new URL("../app/restaurant/order-workspace.tsx",import.meta.ur
 const cloudAssets=[
   "merchant-dashboard.css","merchant-operations.css","merchant-experience.css"
 ];
-export const cloudCssPaths=Object.freeze(Object.fromEntries(cloudAssets.map(name=>
- [name,new URL("../app/restaurant/"+name,import.meta.url)])));
+export const cloudCssPaths=Object.freeze({
+ "globals.css":new URL("../app/globals.css",import.meta.url),
+ ...Object.fromEntries(cloudAssets.map(name=>
+  [name,new URL("../app/restaurant/"+name,import.meta.url)]))
+});
 
 export async function cloudUiInventory() {
  const [dashboard,orders]=await Promise.all([
@@ -45,5 +48,5 @@ export async function cloudUiInventory() {
  const channels=[...channelsText[1].matchAll(/([a-z_]+):"/g)].map(x=>x[1]);
  if(channels.length<6)throw Error("W28_ORDER_CHANNELS_INCOMPLETE");
  return {source:"app/restaurant/merchant-dashboard.tsx",modules,activities,channels,
-   originalCssFiles:cloudAssets.map(x=>"app/restaurant/"+x)};
+   originalCssFiles:["app/globals.css",...cloudAssets.map(x=>"app/restaurant/"+x)]};
 }
