@@ -3,7 +3,7 @@
 // authorization or a claim that all 26 backend modules run offline.
 import {readFile} from "node:fs/promises";
 const snapshotRoot=new URL("../apps/desktop/cloud-parity/main-5e1b369d/",import.meta.url);
-const css=["globals.css","merchant-dashboard.css","merchant-operations.css","merchant-experience.css"];
+const css=["globals.css","merchant-dashboard.css","merchant-operations.css","merchant-experience.css","shared-dashboard-legibility.css","reference-dashboard-layout.css","workspace-theme-control.css"];
 export const cloudCssPaths=Object.freeze(Object.fromEntries(css.map(name=>
  [name,new URL(name,snapshotRoot)])));
 
@@ -14,7 +14,7 @@ export async function cloudUiInventory(){
     !Array.isArray(snapshot.modules)||snapshot.modules.length!==26||
     !Array.isArray(snapshot.activities)||snapshot.activities.length!==15||
     !Array.isArray(snapshot.channels)||snapshot.channels.length!==8||
-    !Array.isArray(snapshot.originalCssFiles)||snapshot.originalCssFiles.length!==4||
+    !Array.isArray(snapshot.originalCssFiles)||snapshot.originalCssFiles.length!==7||
     new Set(snapshot.modules.map(m=>m.key)).size!==26||
     snapshot.modules.some(m=>!Array.isArray(m.roles)||!m.roles.length||
       !["pos","orders","kds"].includes(m.key)&&m.offlineWorking)){
