@@ -50,3 +50,15 @@ The packaged standalone server contains distributable JavaScript backend code. A
 **Schema-wide replication and cloud-to-local business-data import are not implemented.** The MySQL order uplink above reuses the existing authenticated Edge API. Existing Edge SQLite/native Windows experiments remain separate; copying their code would not establish schema-wide safe reconciliation. No production deployment or real-account acceptance is implied by the isolated tests.
 
 No claim of full offline module coverage, pixel comparison with production, or successful installation is implied by packaging. See `scripts/FOON-EDGE-SYNC.md` for the existing sync safety contract.
+
+## Windows Authenticode commercial signing gate
+
+The installer currently produced by `npm run dist` is **unsigned** and remains an engineering preview. For client/commercial distribution, obtain a trusted code-signing certificate in FOON's legal publisher name (hardware-backed or via an approved signing service) and securely provision the signing environment. Never commit private keys, PFX passwords or signing credentials to Git.
+
+After building and signing the final installer, verify it on Windows:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File apps/windows/verify-signature.ps1 -Installer "apps/windows/dist/FOON-Windows-Preview-0.3.0-x64-Setup.exe" -ExpectedThumbprint "<SHA1-or-SHA256-publisher-cert-thumbprint>"
+```
+
+The verification script rejects unsigned, untrusted or wrong-publisher binaries and prints SHA256 for the USB delivery manifest. This step does NOT sign the binary; it is a release acceptance gate. Timestamp, reputation/SmartScreen, vendor contract and executable/source-exposure review require separate verification. Do not distribute the preview as a signed production build merely because this script exists.
