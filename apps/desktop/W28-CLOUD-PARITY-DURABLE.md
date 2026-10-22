@@ -55,6 +55,16 @@ node .\scripts\foon-edge-durable-development-backup.mjs --development-only
 
 This performs a read-only SQLite online backup and a separate integrity check into the profile's `backups` subfolder; **no file-level copying of a live WAL** and no modification of original pending Outbox. Restore flow and scheduled backup retention are pending, do not mistake this for business disaster recovery.
 
+## W29 — Read-only recovery visibility
+
+A synthetic development recovery inspection utility is available at `scripts/foon-edge-w29-recovery-inspect.mjs`:
+
+```powershell
+node .\scripts\foon-edge-w29-recovery-inspect.mjs --development-only
+```
+
+It checks the unchanged tenant/branch/device scope, validates the 8-hour maximum offline lease without extending it, performs SQLite `PRAGMA quick_check`, counts orders, events, pending outbox entries, and existing backups. It only reports whether `station.lock` is present; it **never removes a lock or edits/restores SQLite** because distinguishing a live process from a crashed one must be independently established. W29 therefore **does not yet provide automatic restart recovery or restore**. It is safe to run as a development inspection without disclosing secret keys or passwords.
+
 ## No-release gates
 
 1. **Functional reuse of the original React/Next.js modules**, and a local API+permissions/data adapter — not yet completed. CSS parity alone is insufficient.
