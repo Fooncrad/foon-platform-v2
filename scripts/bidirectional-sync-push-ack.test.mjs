@@ -7,7 +7,7 @@ const ids=["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-22222
 const pair=generateKeyPairSync("ed25519"),privateKey=pair.privateKey.export({type:"pkcs8",format:"pem"}),publicKey=pair.publicKey.export({type:"spki",format:"pem"});
 const receipt={deviceId:ids[0],eventId:ids[1],tenantId:ids[2],branchId:ids[3],digest:"a".repeat(64),status:"recorded",nextVersion:1};
 const payload=signCommittedPushReceipt({receipt,privateKey}),expected={eventId:ids[1],tenantId:ids[2],branchId:ids[3],digest:receipt.digest};
-function dbFixture(existing=[]){const calls=[];return {calls,async beginTransaction(){calls.push("begin")},async commit(){calls.push("commit")},async rollback(){calls.push("rollback")},async execute(sql){calls.push(sql);if(sql.startsWith("SELECT payload_digest"))return [existing];return [{affectedRows:1}]}}}
+function dbFixture(existing=[],queued={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"pending",acknowledged_version:null}){const calls=[];return {calls,async beginTransaction(){calls.push("begin")},async commit(){calls.push("commit")},async rollback(){calls.push("rollback")},async execute(sql){calls.push(sql);if(sql.startsWith("SELECT tenant_id,branch_id"))return [queued?[queued]:[]];if(sql.startsWith("SELECT payload_digest"))return [existing];return [{affectedRows:1}]}}}
 test("valid receipt is durably recorded before acknowledging",async()=>{
  const db=dbFixture();
  const r=await persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey});
@@ -28,4 +28,25 @@ test("tampered receipts are rejected before opening a transaction",async()=>{
  const db=dbFixture();const tampered={...payload,receipt:{...payload.receipt,nextVersion:7}};
  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:tampered,expected,deviceId:ids[0],publicKey}),/SYNC_RECEIPT_SIGNATURE_INVALID/);
  assert.deepEqual(db.calls,[]);
+});
+
+test("missing or cross-scope queued event cannot be ACKed",async()=>{
+ for(const queued of [null,{tenant_id:ids[3],branch_id:ids[3],payload_digest:receipt.digest,state:"pending"}]){
+  const db=dbFixture([],queued);
+  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey}),/SYNC_OUTBOX_(EVENT_MISSING|SCOPE_MISMATCH)/);
+  assert.equal(db.calls.at(-1),"rollback");
+  assert.ok(!db.calls.some(x=>x.startsWith("INSERT INTO foon_sync_push_acknowledgments")));
+ }
+});
+test("outbox update failure rolls back receipt ledger",async()=>{
+ const db=dbFixture();const original=db.execute;
+ db.execute=async(sql)=>sql.startsWith("UPDATE foon_sync_pending_events")? [{affectedRows:0}]:original(sql);
+ await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey}),/SYNC_OUTBOX_ACK_UPDATE_FAILED/);
+ assert.equal(db.calls.at(-1),"rollback");
+});
+test("verified duplicate queued ACK is idempotent",async()=>{
+ const db=dbFixture([{payload_digest:receipt.digest,next_version:1,signature:payload.receipt.signature}],{tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:1});
+ const out=await persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey});
+ assert.equal(out.status,"acknowledged");
+ assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_pending_events")));
 });
