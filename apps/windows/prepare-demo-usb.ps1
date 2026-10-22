@@ -12,6 +12,8 @@ if (-not (Test-Path -LiteralPath $Destination -PathType Container)) { throw "DES
 $targetRoot = (Resolve-Path -LiteralPath $Destination).Path
 $target = Join-Path $targetRoot $info.Name
 if (Test-Path -LiteralPath $target) { throw "DESTINATION_INSTALLER_EXISTS" }
+$manifestPath = Join-Path $targetRoot "FOON-DELIVERY-README.txt"
+if (Test-Path -LiteralPath $manifestPath) { throw "DESTINATION_MANIFEST_EXISTS" }
 $sourceHash = (Get-FileHash -LiteralPath $src -Algorithm SHA256).Hash
 $signature = Get-AuthenticodeSignature -LiteralPath $src
 Copy-Item -LiteralPath $src -Destination $target -ErrorAction Stop
@@ -31,8 +33,6 @@ $manifest = @(
  "Never disable Windows antivirus or SmartScreen to install",
  "Do not use production customer data for demonstration"
 ) -join [Environment]::NewLine
-$manifestPath = Join-Path $targetRoot "FOON-DELIVERY-README.txt"
-if (Test-Path -LiteralPath $manifestPath) { throw "DESTINATION_MANIFEST_EXISTS" }
 [IO.File]::WriteAllText($manifestPath,$manifest,[Text.UTF8Encoding]::new($true))
 Write-Host "DELIVERY_COPY_VERIFIED $target"
 Write-Host "SHA256 $copiedHash"
