@@ -85,3 +85,14 @@ test("signed event cannot skip an entity version",async()=>{
  await assert.rejects(()=>applyVerifiedPullBatch({db,batch:invalid,scope,...signed(invalid),applyEvent:async()=>true}),/SYNC_CORRUPT_REMOTE_VERSION/);
  assert.deepEqual(db.calls,[]);
 });
+
+test("signed inventory movement must be unique and start at version one",async()=>{
+ const db=fixture();
+ const original=event(5);
+ const inventory={...original,entity_type:"inventory_movement",operation:"movement",payload_json:{itemId:ids[0],delta:-1},base_version:0,next_version:2};
+ const envelope={eventId:inventory.event_id,tenantId:inventory.tenant_id,branchId:inventory.branch_id,actorId:inventory.actor_id,entityType:inventory.entity_type,entityId:inventory.entity_id,operation:inventory.operation,baseVersion:inventory.base_version,timestamp:inventory.event_timestamp,payload:inventory.payload_json};
+ inventory.payload_digest=digestChange(envelope);
+ const malicious={...batch,events:[inventory]};
+ await assert.rejects(()=>applyVerifiedPullBatch({db,batch:malicious,scope,...signed(malicious),applyEvent:async()=>true}),/SYNC_CORRUPT_REMOTE_VERSION/);
+ assert.deepEqual(db.calls,[]);
+});
