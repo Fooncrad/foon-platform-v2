@@ -5,28 +5,35 @@
 <title>FOON — المحطة المحلية</title>
 <!-- Load exact cloud CSS files in original cascade order; no forked color tokens. -->
 <link rel="stylesheet" href="/cloud-ui-css/globals.css">
+<link rel="stylesheet" href="/console.css">
 <link rel="stylesheet" href="/cloud-ui-css/merchant-dashboard.css">
 <link rel="stylesheet" href="/cloud-ui-css/merchant-operations.css">
 <link rel="stylesheet" href="/cloud-ui-css/merchant-experience.css">
-<link rel="stylesheet" href="/console.css">
+<link rel="stylesheet" href="/cloud-ui-css/shared-dashboard-legibility.css">
+<link rel="stylesheet" href="/cloud-ui-css/reference-dashboard-layout.css">
 <link rel="stylesheet" href="/w28-shell.css">
 <script src="/console.js" type="module"></script>
 </head>
 <body>
-<div class="restaurantApp" data-activity="restaurant" dir="rtl" id="original-workspace-shell">
+<div class="restaurantApp" data-activity="restaurant" data-theme="light" data-theme-preference="light" dir="rtl" id="original-workspace-shell">
  <aside class="restaurantSidebar" id="navigation-shell" hidden>
-   <div class="restaurantSideBrand"><span aria-hidden="true">◧</span><div><b>FOON</b><small>نظام تشغيل الأنشطة</small></div></div>
+   <div class="restaurantSideBrand"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M20 21V3c-5 0-5 11 0 11"/></svg></span><div><b>FOON</b><small>نظام تشغيل الأنشطة</small></div></div>
    <p class="restaurantNavLabel">مساحة العمل</p>
+   <p id="w30-nav-context" class="restaurantNavContext">محطة التطوير المحلية</p>
    <nav id="cloud-navigation" aria-label="أقسام النشاط"></nav>
-   <div class="restaurantSideFooter"><p>الواجهة مطابقة للأصل من حيث مصدر التنسيق. الوحدات غير المرتبطة موضّحة صراحةً.</p></div>
+   <div class="restaurantSideFooter"><div class="w30-development-note">محطة تطوير محلية — الأقسام غير المنقولة ظاهرة لكنها غير قابلة للتنفيذ.</div></div>
  </aside>
+ <button id="w30-sidebar-overlay" class="w30-sidebar-overlay" type="button" hidden aria-label="إغلاق القائمة"></button>
  <main class="restaurantMain">
   <header class="restaurantTopbar">
-   <div class="restaurantBreadcrumb"><small>مساحة العمل</small><h1 id="desktop-heading">FOON — التشغيل المحلي</h1></div>
+   <button id="w30-mobile-trigger" type="button" class="restaurantMobileTrigger restaurantIconButton" aria-label="فتح قائمة النشاط" aria-expanded="false"><span aria-hidden="true">☰</span></button>
+   <div class="restaurantBreadcrumb"><small>مساحة العمل</small><h1 class="sr-only" id="desktop-heading">نقطة البيع</h1></div>
    <div class="restaurantTopActions">
+    <div class="tabs restaurantPosTopbarSlot" aria-label="وحدات التشغيل المحلية"><button id="pos-tab" aria-pressed="true">نقطة البيع</button><button id="kds-tab" aria-pressed="false">المطبخ والطلبات</button></div>
     <label for="language" class="w28-language-label">اللغة</label>
     <select id="language" aria-label="Language"><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option></select>
     <span id="connection" class="restaurantRoleBadge">محلي</span>
+    <button id="w30-expand-workspace" type="button" class="restaurantIconButton restaurantExpandWorkspace" aria-label="تكبير مساحة العمل" aria-pressed="false" hidden><span aria-hidden="true">⛶</span></button>
     <button id="logout" type="button" class="restaurantOutline" hidden>تسجيل الخروج</button>
    </div>
   </header>
@@ -46,16 +53,16 @@
    </section>
    <p id="message" role="status" aria-live="polite"></p>
    <section id="workspace" hidden>
-    <div class="restaurantPageHeading"><div><p>التشغيل المحلي</p><h2 id="title">نقطة البيع</h2></div><div class="tabs"><button id="pos-tab" aria-pressed="true">نقطة البيع</button><button id="kds-tab" aria-pressed="false">المطبخ والطلبات</button></div></div>
-    <div class="restaurantNotice w28-local-note">الطلبات محفوظة على محطة المطعم. يظهر تأكيد السحابة بعد اكتمال المزامنة.</div>
+    <div class="restaurantPageHeading restaurantPageHeadingPos"><div><p>التشغيل المحلي</p><h2 id="title">نقطة البيع</h2></div><span id="w30-role-badge" class="restaurantRoleBadge">مالك النشاط</span></div>
+    <div class="restaurantNotice w28-local-note">محطة تشغيل تجريبية محلية فقط. لا توجد مزامنة سحابية في هذا الإصدار، والطلبات المعلّقة محفوظة على هذا الجهاز.</div>
     <div class="stats restaurantStats">
      <article><small>طلبات تنتظر السحابة</small><strong id="pending-count">0</strong></article>
      <article><small>حالة المزامنة</small><strong id="sync-state">—</strong></article>
      <article><small>المنيو المحفوظ</small><strong id="catalog-time">—</strong></article>
     </div>
-    <div id="pos-layout" class="pos-layout restaurantPos">
-      <section class="panel restaurantPanel restaurantPosMenu"><header class="section-head"><h2>المنيو</h2><input id="search" type="search" aria-label="البحث عن صنف" placeholder="ابحث عن صنف…"></header><div id="menu" class="menu-grid"></div></section>
-      <aside class="panel cart restaurantPanel"><h2>طلب سفري جديد</h2><p class="muted">التقدير المحلي للمنيو البسيط. الأسعار النهائية يعتمدها الخادم عند المزامنة.</p><div id="cart-lines"></div><div class="total"><span>التقدير المحلي</span><strong id="cart-total">0.00 SAR</strong></div><button id="checkout" class="primary restaurantPrimary" disabled>حفظ الطلب</button><p class="muted">الدفع الإلكتروني والطاولات والخصومات والخيارات لا تُنفذ من هذه المحطة.</p></aside>
+    <div id="pos-layout" class="pos-layout restaurantPos restaurantPosModern">
+      <section class="panel restaurantPanel restaurantPosCatalog"><header class="section-head"><h2>المنيو</h2><input id="search" type="search" aria-label="البحث عن صنف" placeholder="ابحث عن صنف…"></header><div id="menu" class="menu-grid restaurantPosMenu"></div></section>
+      <aside class="panel cart restaurantPanel restaurantPosCheckout"><h2>طلب سفري جديد</h2><p class="muted">هذه محطة تطوير بسعر محلي تقديري، دون معالجة دفع أو تحقق ضريبي نهائي.</p><div id="cart-lines" class="restaurantCart"></div><div class="total"><span>التقدير المحلي</span><strong id="cart-total">0.00 SAR</strong></div><button id="checkout" class="primary restaurantPrimary" disabled>حفظ الطلب</button><p class="muted">الدفع الإلكتروني والطاولات والخصومات والخيارات غير مفعّلة في هذه النسخة المحلية.</p></aside>
     </div>
     <section class="panel orders restaurantPanel"><header class="section-head"><h2>الطلبات</h2><button id="refresh" class="restaurantOutline">تحديث</button></header><div id="orders" class="order-grid restaurantOrderCards"></div></section>
     <p id="desktop-parity-note" class="w28-parity-note" role="note">الأقسام المعروضة في القائمة مأخوذة من الموقع الأصلي؛ المعطّل منها لم يُنقل للتشغيل المحلي بعد.</p>
