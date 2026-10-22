@@ -16,7 +16,7 @@ test("repeated same event reports duplicate; tampered payload fails",async()=>{
  let digest;
  const first={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))digest=args.at(-1);return [[]]}};
  await appendScopedChange(first,{change,sourceDeviceId:ids[3]});
- const db={async execute(){return [[{payload_digest:digest}]]}};
+ const db={async execute(){return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3]}]]}};
  assert.equal((await appendScopedChange(db,{change,sourceDeviceId:ids[3]})).status,"duplicate");
  await assert.rejects(()=>appendScopedChange(db,{change:{...change,payload:{price:99}},sourceDeviceId:ids[3]}),/SYNC_IDEMPOTENCY_CONFLICT/);
 });
@@ -24,4 +24,12 @@ test("pull is branch scoped, bounded and monotone",async()=>{
  const db={async execute(sql,args){assert.match(sql,/tenant_id=\? AND branch_id=\?/);assert.deepEqual(args,[ids[1],ids[2],7,100]);return [[{id:8},{id:9}]]}};
  assert.deepEqual((await pullScopedChanges(db,{tenantId:ids[1],branchId:ids[2],after:7})).nextCursor,9);
  await assert.rejects(()=>pullScopedChanges(db,{tenantId:ids[1],branchId:ids[2],after:-1}),/SYNC_INVALID_CURSOR/);
+});
+
+test("replay from a different device cannot claim prior event",async()=>{
+ let originalDigest;
+ const capture={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))originalDigest=args.at(-1);return [[]]}};
+ await appendScopedChange(capture,{change,sourceDeviceId:ids[3]});
+ const replay={async execute(){return [[{payload_digest:originalDigest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[4]}]]}};
+ await assert.rejects(()=>appendScopedChange(replay,{change,sourceDeviceId:ids[3]}),/SYNC_IDEMPOTENCY_CONFLICT/);
 });
