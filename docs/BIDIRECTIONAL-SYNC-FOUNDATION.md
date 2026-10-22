@@ -15,3 +15,7 @@ Event UUID for replay prevention; tenant/branch/actor scope checked server-side;
 5. Hostinger preview redirect issue fixed and verified on staging. Keep operator's sync pause.
 6. Source and signed Windows installer separated from Hostinger API updater distribution, backup/rollback policy reviewed.
 No database or production change occurs from this branch until these gates are met.
+
+## Pull cursor correctness (new)
+The 0157 migration includes `foon_sync_scope_locks`: every journal writer must acquire the same tenant/branch InnoDB row mutex inside its existing transaction *before allocating* the journal auto-increment identifier, and hold it through commit or rollback. Without commit serialization, transaction B can commit id=12 while A's id=11 remains uncommitted; a polling device advances cursor to 12 and silently misses 11. The mutex prevents this within a scope. All future adapters must use `appendScopedChange` and the same transactional connection; direct inserts bypassing the mutex are forbidden.
+This is a source-level concurrency contract; it still requires a real two-session MariaDB integration test and does not authorize syncing live data.
