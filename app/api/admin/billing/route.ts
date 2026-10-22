@@ -1,4 +1,5 @@
 import {creditApprovedSubscription} from "@/lib/creator/subscription-commission";
+import {notificationCopy} from "@/scripts/customer-notification-copy.mjs";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
@@ -43,17 +44,11 @@ export async function PATCH(request:Request){
  if(b.status==="approved")await creditApprovedSubscription(db,rows[0] as {id:string;tenant_id:string;plan_id:string;billing_cycle:string;amount:string;currency:string});
  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id) VALUES (?,?,?,?)",[a.user,"platform.payment."+b.status,"payment_request",b.id]);
  if(b.status==="approved"){
-  const [owners]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email,u.email_verified_at,u.default_locale FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=? AND m.role='owner' AND m.status='active' AND u.status='active'",[rows[0].tenant_id]);
-  const ref="FOON-"+String(b.id),path="/tenant/subscription-receipts/"+encodeURIComponent(String(b.id));
-  const origin=String(process.env.APP_URL||process.env.NEXT_PUBLIC_SITE_URL||process.env.APP_BASE_URL||"https://nfoodz.com").replace(/\/$/,"");
-  for(const owner of owners){
-   if(!owner.email_verified_at)continue;
-   const locale=String(owner.default_locale),subject=locale==="fr"?"Reçu d'abonnement FOON "+ref:locale==="en"?"FOON subscription receipt "+ref:"إيصال اشتراك FOON "+ref;
-   const text=locale==="fr"?"Votre paiement est confirmé. Reçu : "+ref+". Montant : "+rows[0].amount+" "+rows[0].currency+". Consultez-le : "+origin+path+". Reçu administratif, pas une facture fiscale.":
-    locale==="en"?"Your subscription payment was confirmed. Receipt: "+ref+". Amount: "+rows[0].amount+" "+rows[0].currency+". View: "+origin+path+". Administrative receipt, not a tax invoice.":
-    "تم تأكيد سداد الاشتراك. رقم الإيصال: "+ref+". المبلغ: "+rows[0].amount+" "+rows[0].currency+". عرض الإيصال: "+origin+path+". إيصال إداري وليس فاتورة ضريبية.";
-   await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'payment_receipt',NULL,?,?,?)",[randomUUID(),owner.email,subject,text]);
-  }
+ const [rule]=await db.execute<RowDataPacket[]>("SELECT enabled,email_enabled FROM platform_notification_rules WHERE event_key='subscription_renewal' LIMIT 1");
+ if(!rule[0]||rule[0].enabled&&rule[0].email_enabled){
+ const [owners]=await db.execute<RowDataPacket[]>("SELECT DISTINCT u.email,u.default_locale FROM memberships m INNER JOIN users u ON u.id=m.user_id WHERE m.tenant_id=? AND m.role='owner' AND m.status='active' AND u.status='active'",[rows[0].tenant_id]);
+ for(const owner of owners){const copy=notificationCopy(String(owner.default_locale),"subscription_renewal",{reference:String(b.id)});await db.execute("INSERT INTO platform_notification_outbox(id,event_key,tenant_id,recipient_email,subject,body_text) VALUES (?,'subscription_renewal',?,?,?,?)",[randomUUID(),rows[0].tenant_id,owner.email,copy.subject,copy.text]);}
+ }
  }
  await db.commit();dispatchNotifications();return NextResponse.json({ok:true});}
  catch(error){await db.rollback();return NextResponse.json({ok:false,code:(error as {code?:string}).code==="ER_DUP_ENTRY"?"TRANSFER_REFERENCE_ALREADY_APPROVED":"PAYMENT_REVIEW_FAILED"},{status:(error as {code?:string}).code==="ER_DUP_ENTRY"?409:503});}finally{db.release();}

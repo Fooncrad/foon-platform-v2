@@ -29,7 +29,6 @@ export default function CreatorReferralEarnings({handle}:{handle:string}){
     <span dir="ltr">{item.amount} {item.currency}</span> · <span>{(item.commission_basis_points/100).toFixed(2)}%</span> ·
     <span>{item.billing_cycle==="yearly"?t("سنوي","Yearly","Annuel"):t("شهري","Monthly","Mensuel")}</span> ·
     <strong>{item.status==="paid"?t("مدفوعة","Paid","Payée"):item.status==="reversed"?t("ملغاة","Reversed","Annulée"):t("مستحقة ولم تُصرف","Earned, unpaid","Due, non versée")}</strong>
-    · <a href={"/customer/creator/referrals/"+encodeURIComponent(item.id)}>{t("كشف العمولة","Commission statement","Relevé de commission")}</a>
    </article>)}</div>
    {items.length===0&&<p>{t("لا توجد عمولات مستحقة بعد.","No commissions earned yet.","Pas de commission pour le moment.")}</p>}
   </>}

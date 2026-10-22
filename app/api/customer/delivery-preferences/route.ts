@@ -17,7 +17,7 @@ export async function GET(request:Request){
   const [tenants]=await db.execute<RowDataPacket[]>("SELECT t.id,p.country_code,p.activity_code FROM tenants t JOIN tenant_business_profiles p ON p.tenant_id=t.id JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? WHERE t.slug=? AND t.status='active' LIMIT 1",[user,slug]);
   if(!tenants.length)return NextResponse.json({ok:false,code:"STORE_CUSTOMER_REQUIRED"},{status:403});
   const tenant=tenants[0],countries=await allowedDeliveryCountries(String(tenant.id),String(tenant.country_code),String(tenant.activity_code),db);
-  const [addresses]=countries.length?await db.execute<RowDataPacket[]>("SELECT country_code,city,district,street_address,delivery_notes,latitude,longitude,phone FROM customer_delivery_addresses WHERE user_id=? AND country_code IN ("+countries.map(()=>"?").join(",")+") ORDER BY is_default DESC,updated_at DESC LIMIT 1",[user,...countries]):[[] as RowDataPacket[]];
+  const [addresses]=await db.execute<RowDataPacket[]>("SELECT country_code,city,district,street_address,delivery_notes,latitude,longitude,phone FROM customer_delivery_addresses WHERE user_id=? AND country_code IN ("+countries.map(()=>"?").join(",")+") ORDER BY is_default DESC,updated_at DESC LIMIT 1",[user,...countries]);
   const [branches]=await db.execute<RowDataPacket[]>("SELECT b.id,b.name,l.latitude,l.longitude FROM branches b LEFT JOIN branch_delivery_locations l ON l.branch_id=b.id AND l.tenant_id=b.tenant_id WHERE b.tenant_id=? AND b.enabled=TRUE ORDER BY b.created_at,b.id",[tenant.id]);
   const address=addresses[0];
   const coords=address&&address.latitude!==null&&address.longitude!==null?{latitude:Number(address.latitude),longitude:Number(address.longitude)}:null;

@@ -1,5 +1,3 @@
-import {queueCommissionNotice} from "@/lib/creator/commission-notices";
-import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import {database} from "@/lib/db/mysql";
 import {randomUUID} from "node:crypto";
@@ -59,7 +57,6 @@ export async function PATCH(request:Request){
   if(update.affectedRows!==1)throw Error("COMMISSION_CONFLICT");
   await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?)",
    [id,"creator.commission."+body.status,"creator_commission",body.id,JSON.stringify({reference:body.reference.trim(),amount:String(rows[0].amount),currency:rows[0].currency})]);
-  await queueCommissionNotice(db,body.id,body.status);
-  await db.commit();dispatchNotifications();return reply({ok:true});
+  await db.commit();return reply({ok:true});
  }catch{await db.rollback();return reply({ok:false,code:"COMMISSION_REVIEW_FAILED"},503);}finally{db.release();}
 }

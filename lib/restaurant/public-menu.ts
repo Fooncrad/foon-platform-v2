@@ -29,7 +29,7 @@ export async function publicMenuData(tenant:{id:string;name:string},slug:string)
   const deliveryCountries=merchantCountry?await allowedDeliveryCountries(tenantId,merchantCountry,String(merchantProfiles[0]?.activity_code??"restaurant"),db):[];
   const controls=await tenantPublicControls(tenantId,db);
   const [tableAccess,reservationAccess,roomServiceAccess]=await Promise.all([tenantEntitlement(tenantId,"tables"),tenantEntitlement(tenantId,"reservations"),tenantEntitlement(tenantId,"room_service")]);
-  const sections=tableAccess.enabled?(await resourceRows(db,tenantId,"sections")).filter(s=>s.status==="active").map(s=>({id:s.id,name:s.name,nameEn:String(s.data.nameEn||""),nameFr:String(s.data.nameFr||""),branchId:s.branch_id})):[];
+  const sections=tableAccess.enabled?(await resourceRows(db,tenantId,"sections")).filter(s=>s.status==="active").map(s=>({id:s.id,name:s.name,branchId:s.branch_id})):[];
   const [unfinished]=tableAccess.enabled?await db.execute<RowDataPacket[]>("SELECT DISTINCT table_id FROM restaurant_orders WHERE tenant_id=? AND table_id IS NOT NULL AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected'))",[tenantId]):[[] as RowDataPacket[]];
   const occupied=new Set(unfinished.map(row=>String(row.table_id)));
   const tableRows=tableAccess.enabled?await resourceRows(db,tenantId,"tables"):[];

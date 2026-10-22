@@ -1,25 +1,11 @@
-# Public restaurant menu when the internet is unavailable
+# Public menu browsing without internet
 
-Open the restaurant's public URL (`/<slug>` or `/menu/<slug>`) **once while connected** in the same browser/device. Wait for the saved-menu confirmation. After the network disappears, the already-open menu switches to local browsing, and visiting/reloading the restaurant URL uses the snapshot if the network request cannot complete. Browser data must remain intact. No device enrollment or database migration is needed.
+Visit the restaurant's `/<slug>` page online in the same browser first. The saved-menu message appears after the public snapshot has been stored. No device enrollment, employee account, local gateway or database migration is required.
 
-## What remains available offline
+When the browser reports it is offline, the open menu switches to a standalone browsing view. Reloading or reopening the same restaurant URL falls back to that view when the network is unavailable. Search, categories, branch selection and Arabic/English/French work locally. There are no order, payment, login, waiter-call or reservation controls in this view, and no offline customer order queue is created.
 
-- Restaurant name, stored cover/logo, public opening hours, address, phone and last-saved status, with a clear **not live** warning.
-- Responsive two-column mobile card grid, larger grids on tablets/desktops, optional list view, dark/light theme, horizontal category navigation with category images, branch picker, search and progressive item rendering.
-- All public active categories/items retrieved on the initial online visit. Each item retains Arabic, English and French names/descriptions, saved price, previous price, registered quantity, calories, localized nutrition, known allergen labels and a gallery of up to four uploaded photos.
-- Translated option group/value names and optional price-difference previews. These **do not** authorize ordering or confirm real-time stock/prices.
-- Arabic RTL, English LTR and French LTR; language may be switched without a network connection. The last saved language is the default at offline launch; numeric prices use Latin digits.
+Only explicitly selected public catalog fields are saved. Customer email, signed-in state, cart, tables and sessions are excluded. Authenticated HTML and APIs are never cached. Each restaurant has a separate canonical snapshot; URL query parameters are excluded. A confirmed 404/410 removes that restaurant's saved menu. Snapshots expire after seven days, including the photos, and are refreshed by another online visit. Clearing browser storage removes them. A first visit without internet cannot download a menu.
 
-Orders, cart submission, reservations, payments, user registration, waiter calls and API requests **are never queued or replayed offline**. The offline page is an isolated browsing snapshot and never includes account/session state, customer email, cart, order history or dining tables.
+Uploaded FOON PNG/JPEG/WebP pictures can be saved: at most 40 pictures and 20 MB per refresh, with an overall 80-picture/20-menu cache cap. External pictures are not fetched or cached; text remains usable when a photo is unavailable. Offline prices and availability reflect the last saved copy and may change. The browsing layout is deliberately lightweight and independent of Next.js scripts or customer sessions.
 
-## Media and storage restrictions
-
-Only same-origin FOON-uploaded images matching `/api/restaurant/assets/<UUID>` can be stored; external imagery is not cached. Up to **160 images / 60 MB per refresh** (4 MB per image) and **320 images / 20 menus globally** are retained in the service-worker Cache Storage. Cache entries expire after seven days and may be evicted earlier if the browser runs out of storage. The online page warns when some listed FOON images could not be saved. Cards and text details stay usable even without their photos.
-
-Menus remain isolated by canonical store slug; query strings do not create new copies. Invalidated public restaurant pages returning 404/410 have their snapshots removed. Private pages, authenticated HTML and API responses are never persisted in the menu cache. First-time offline access cannot download unseen menus. This feature does **not** provide offline POS/local gateway ordering, and does not preload non-restaurant storefront pagination.
-
-## Validation
-
-Run `node --experimental-strip-types --test scripts/public-menu-offline.test.mjs` with installed Playwright Chromium. The test covers worker-driven offline reload, 320px viewport, tenant separation, cached gallery images, option previews, Arabic/English/French, search, branch filtering, exclusion of customer data, and deletion on an online 404.
-
-For manual device testing: visit a public restaurant while online and wait for its saved notice; open item details and gallery; enable DevTools > Network > Offline; confirm the same saved content, category/branch/search and all three languages work; refresh and reopen the exact URL; restore network and confirm the live menu refreshes. A full browser cache/storage purge intentionally removes the saved snapshot.
+Verification: `node --test scripts/public-menu-offline.test.mjs` uses real Chromium and the production service worker; it checks offline navigation/reload, tenant separation, photo fallback, search/branch/language, mobile width, excluded customer data, and 404 invalidation. The merchant browser journey also checks the actual React page's transition to offline browsing and a subsequent offline reload.
