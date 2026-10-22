@@ -32,3 +32,9 @@ test("missing order and cross-branch lookup cannot mutate",async()=>{
  await assert.rejects(()=>applyEdgeOrderMutation(connection,base),/EDGE_ORDER_NOT_FOUND/);
  assert.equal(updated,false);
 });
+
+test("desktop compare-and-set refuses a concurrent change even when cloud already reached the target",async()=>{
+ const {connection,calls}=mock("preparing");
+ await assert.rejects(()=>applyEdgeOrderMutation(connection,{...base,payload:{...base.payload,expectedStatus:"new"}}),/EDGE_CONCURRENT_ORDER_UPDATE/);
+ assert.equal(calls.length,1);
+});

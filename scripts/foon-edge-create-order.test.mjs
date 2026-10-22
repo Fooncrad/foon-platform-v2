@@ -28,6 +28,13 @@ test("writes order and items using authoritative prices",async()=>{
  assert.match(writes[1].sql,/INSERT INTO restaurant_order_items/);
  assert.equal(writes[1].params[7],"19.90");
 });
+
+test("a changed full checkout total cannot silently replace the desktop snapshot",async()=>{
+ const {connection,writes}=fake();
+ await assert.rejects(()=>insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,expectedTotalCents:1980}},context),/EDGE_CHECKOUT_TOTAL_CHANGED/);
+ assert.equal(writes.length,0);
+ assert.equal((await insertPricedEdgeOrder(connection,{...event,payload:{...event.payload,expectedTotalCents:1990}},context)).total,"19.90");
+});
 test("unresolved policies block database writes",async()=>{
  const {connection,writes}=fake();
  await assert.rejects(()=>insertPricedEdgeOrder(connection,event,{...context,taxPolicyResolved:false}),/EDGE_ORDER_POLICY_UNRESOLVED/);

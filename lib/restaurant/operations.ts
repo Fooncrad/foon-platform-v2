@@ -7,6 +7,7 @@ import {assignedWaiterTableIds} from "./waiter-assignments";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
+import {queueDesktopOrderEvent,desktopSyncStates} from "@/lib/platform/desktop-sync-outbox.mjs";
 import {randomUUID,createHash} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {resourceModules,validateResource,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
@@ -393,7 +394,8 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
  if(!orders.length)return [];
  const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
- return orders.map(o=>{const checkout=o.checkout_snapshot?parseData(o.checkout_snapshot):null;return{...o,pickup_point:checkout?.pickupPoint??null,hotel_room:checkout?.hotelRoom??null,checkout_snapshot:financial?checkout:null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)};});
+ const desktopStates=await desktopSyncStates(db,tenantId,orders.map(order=>String(order.id)));
+ return orders.map(o=>{const checkout=o.checkout_snapshot?parseData(o.checkout_snapshot):null;return{...o,desktop_sync:desktopStates.get(String(o.id))??null,pickup_point:checkout?.pickupPoint??null,hotel_room:checkout?.hotelRoom??null,checkout_snapshot:financial?checkout:null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)};});
 }
 export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
  const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
@@ -521,6 +523,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
  await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
  await notifyOrder(db,tenantId,id,"new");
+ await queueDesktopOrderEvent(db,{tenantId,actorUserId:actor,orderId:id,kind:"created",requestedPayment:body.paymentStatus});
  return {id,total:totals.total,currency:profile.currency};
 }
 // POS "paid (manually verified)" at creation, including offline-queued replays.
@@ -573,7 +576,9 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  // Keep the table occupied until staff explicitly confirms departure.
  if(status!==String(order.status))await notifyOrder(db,tenantId,String(order.id),status);
  if(payment!==String(order.payment_status))await notifyOrder(db,tenantId,String(order.id),payment,true);
- await audit(db,tenantId,actor,"order.update",String(order.id),{status,paymentStatus:payment});return {id:order.id};
+ await audit(db,tenantId,actor,"order.update",String(order.id),{status,paymentStatus:payment});
+ await queueDesktopOrderEvent(db,{tenantId,actorUserId:actor,orderId:String(order.id),kind:"status",expectedStatus:String(order.status)});
+ return {id:order.id};
 }
 
 
