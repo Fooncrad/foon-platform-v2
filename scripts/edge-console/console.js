@@ -165,12 +165,14 @@ function renderCart(){
 function renderCategories(){
  const root=$("w31-pos-categories"),categories=[...new Set(state.menu.map(item=>String(item.category||"").trim()).filter(Boolean))];
  if(!categories.includes(activeCategory))activeCategory="all";
- root.replaceChildren();
+ const signature=JSON.stringify([language,activeCategory,categories]);
+ if(root.dataset.signature===signature)return;
+ root.replaceChildren();root.dataset.signature=signature;
  // Category buttons are selectors, never new order channels or tenant grants.
  for(const key of ["all",...categories]){
   const label=key==="all"?translated("الكل","All","Tous"):key;
   const button=node("button",label);button.type="button";button.setAttribute("aria-pressed",String(activeCategory===key));
-  button.onclick=()=>{activeCategory=key;renderMenu();};
+  button.onclick=()=>{activeCategory=key;renderMenu();const chosen=Array.from(root.querySelectorAll("button")).find(item=>item.getAttribute("aria-pressed")==="true");chosen?.focus();};
   root.append(button);
  }
  root.hidden=categories.length===0;
