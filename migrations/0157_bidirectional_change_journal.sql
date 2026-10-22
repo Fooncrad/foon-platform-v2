@@ -68,3 +68,18 @@ CREATE TABLE IF NOT EXISTS foon_sync_push_acknowledgments (
  PRIMARY KEY(device_id,event_id),
  KEY idx_foon_sync_ack_scope(tenant_id,branch_id,acknowledged_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dedicated event-based queue. Separate from the legacy 0156 order-only outbox,
+-- whose compound key cannot represent the bidirectional journal event UUID.
+CREATE TABLE IF NOT EXISTS foon_sync_pending_events (
+ device_id CHAR(36) NOT NULL,
+ event_id CHAR(36) NOT NULL,
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ payload_digest CHAR(64) NOT NULL,
+ state ENUM('pending','conflict','acknowledged') NOT NULL DEFAULT 'pending',
+ acknowledged_version BIGINT UNSIGNED NULL,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY(device_id,event_id),
+ KEY idx_foon_sync_pending_scope(tenant_id,branch_id,state)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
