@@ -77,3 +77,17 @@ test("business adapter must explicitly confirm applied mutation before committin
  await assert.rejects(()=>recordAuthorizedChange({db:zeroDb,verifiedContext:context,change,applyBusinessChange:async()=>({affectedRows:0})}),/SYNC_BUSINESS_APPLY_UNCONFIRMED/);
  assert.equal(zeroDb.calls.at(-1),"rollback");
 });
+
+test("failed commit triggers rollback and does not report recorded",async()=>{
+ const db=dbFixture();
+ db.commit=async()=>{db.calls.push("commit-failed");throw Error("DB_COMMIT_FAILED");};
+ await assert.rejects(()=>recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>true}),/DB_COMMIT_FAILED/);
+ assert.equal(db.calls.at(-1),"rollback");
+ assert.equal(db.calls.filter(x=>x==="rollback").length,1);
+});
+test("stale change is rolled back exactly once",async()=>{
+ const db=dbFixture({version:3});
+ const result=await recordAuthorizedChange({db,verifiedContext:context,change,applyBusinessChange:async()=>true});
+ assert.equal(result.status,"conflict");
+ assert.equal(db.calls.filter(x=>x==="rollback").length,1);
+});
