@@ -107,3 +107,134 @@ body { margin:0; }
  .restaurantApp main.restaurantMain{margin-inline-start:0}
  .restaurantApp #login-panel.auth-shell{padding:12px}
 }
+
+/* W30 cloud visual parity: the actual source reference dashboard (Oct 22 main)
+ * wins over the legacy 272px navy W28 adapter and generic console styles. */
+.restaurantApp[data-activity] .restaurantSidebar{
+  background:var(--rc-surface,#fff);color:var(--rc-text);width:254px;
+  border-inline-end:1px solid var(--rc-border)
+}
+.restaurantApp[data-activity] main.restaurantMain{
+  margin-inline-start:254px;max-width:none;width:auto;padding:0
+}
+.restaurantApp[data-activity]:has(#navigation-shell[hidden]) main.restaurantMain,
+.restaurantApp[data-activity].restaurantAppWide main.restaurantMain{margin-inline-start:0}
+.restaurantApp[data-activity] .restaurantSideBrand>span{background:var(--rc-accent)}
+.restaurantApp[data-activity] #cloud-navigation{display:grid;align-content:start;gap:3px;padding-inline:14px}
+.restaurantApp[data-activity] #cloud-navigation .restaurantNavTaskGroup{min-width:0}
+.restaurantApp[data-activity] #cloud-navigation .restaurantNavGroupToggle{
+  display:flex;align-items:center;text-align:start;width:100%
+}
+.restaurantApp[data-activity] #cloud-navigation .restaurantNavGroupItems{
+  display:grid;min-width:0
+}
+.restaurantApp[data-activity] #cloud-navigation button[disabled]{
+  opacity:.65;cursor:not-allowed;pointer-events:none
+}
+.restaurantApp[data-activity] #cloud-navigation button[disabled] span{
+  color:var(--rc-muted)
+}
+.restaurantApp[data-activity] .w30-development-note{
+  border:1px dashed var(--rc-border);border-radius:10px;padding:10px;
+  color:var(--rc-muted);font-size:11px;line-height:1.7
+}
+.restaurantApp[data-activity] .restaurantTopbar{min-height:64px}
+.restaurantApp[data-activity] .restaurantTopbar .restaurantTopActions{
+  gap:10px;flex-wrap:wrap;justify-content:flex-end;min-width:0
+}
+.restaurantApp[data-activity] .restaurantTopbar .restaurantPosTopbarSlot{
+  min-width:0;display:flex;gap:6px;align-items:center
+}
+.restaurantApp[data-activity] .restaurantTopbar .restaurantPosTopbarSlot button{
+  font-size:12px;min-height:40px;padding:7px 12px;border-radius:9px
+}
+.restaurantApp[data-activity] .restaurantTopbar select#language{
+  background:var(--rc-surface,#fff);color:var(--rc-text);
+  border:1px solid var(--rc-border)
+}
+.restaurantApp[data-activity] #workspace{min-width:0}
+.restaurantApp[data-activity] #workspace>.restaurantNotice{
+  margin-block:8px 12px;font-size:12px;line-height:1.7
+}
+.restaurantApp[data-activity] #workspace .restaurantPageHeadingPos{
+  margin-bottom:8px;display:flex!important
+}
+.restaurantApp[data-activity] .restaurantPosModern{
+  display:grid;grid-template-columns:minmax(0,1.7fr) minmax(310px,.85fr);
+  align-items:start;gap:15px;margin-bottom:20px;min-width:0
+}
+.restaurantApp[data-activity] .restaurantPosCatalog,
+.restaurantApp[data-activity] .restaurantPosCheckout{
+  min-width:0;border-radius:13px;padding:19px;
+  background:var(--rc-surface,#fff);border:1px solid var(--rc-border)
+}
+.restaurantApp[data-activity] #menu.restaurantPosMenu{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;margin:12px 0 0;padding:0;min-width:0
+}
+.restaurantApp[data-activity] #menu.restaurantPosMenu .product{
+  min-width:0;display:grid;gap:8px;align-content:start;
+  background:var(--rc-surface,#fff);border:1px solid var(--rc-border);
+  padding:16px 12px;line-height:1.65
+}
+.restaurantApp[data-activity] #menu.restaurantPosMenu .product span{
+  font-size:12px;color:var(--rc-accent);font-weight:750
+}
+.restaurantApp[data-activity] .restaurantPosCheckout #cart-lines.restaurantCart{
+  display:grid;gap:0;margin:8px 0;padding:0;border:0
+}
+.restaurantApp[data-activity] .restaurantPosCheckout .cart-line{
+  border-bottom:1px solid var(--rc-border)
+}
+.restaurantApp[data-activity] .restaurantPosCheckout #checkout{
+  background:var(--rc-accent);border:1px solid var(--rc-accent)
+}
+.restaurantApp[data-activity] #orders.restaurantOrderCards{
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,275px),1fr))
+}
+.restaurantApp[data-activity] #orders.restaurantOrderCards .order-card{
+  border-top:3px solid var(--rc-accent)
+}
+.restaurantApp[data-activity] .w30-sidebar-overlay{
+  display:none
+}
+@media(min-width:1024px){
+ .restaurantApp[data-activity] .restaurantSidebar{width:254px}
+ .restaurantApp[data-activity] .restaurantMain{margin-inline-start:254px}
+ .restaurantApp[data-activity].restaurantAppWide .restaurantSidebar{
+   transform:translateX(110%);visibility:hidden;pointer-events:none
+ }
+ .restaurantApp[data-activity].restaurantAppWide main.restaurantMain{margin-inline-start:0}
+}
+@media(max-width:1200px){
+ .restaurantApp[data-activity] .restaurantPosModern{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:1023px){
+ .restaurantApp[data-activity] .restaurantSidebar{display:none}
+ .restaurantApp[data-activity] main.restaurantMain{margin-inline-start:0}
+ .restaurantApp[data-activity] #w30-mobile-trigger{display:grid}
+ .restaurantApp[data-activity].w30-mobile-open #navigation-shell{
+   display:flex!important;position:fixed;inset-block:0;inset-inline-start:0;
+   width:min(85vw,300px);height:100dvh;overflow-y:auto;
+   z-index:101;transform:none;visibility:visible;
+   background:var(--rc-surface,#fff);box-shadow:0 12px 40px #0003;
+ }
+ .restaurantApp[data-activity].w30-mobile-open .w30-sidebar-overlay{
+   position:fixed;inset:0;border:0;border-radius:0;
+   z-index:100;display:block!important;background:#0b12208c;
+   width:100vw;height:100dvh
+ }
+ .restaurantApp[data-activity] .restaurantTopbar .restaurantTopActions{
+   justify-content:flex-start
+ }
+}
+@media(max-width:680px){
+ .restaurantApp[data-activity] .restaurantPosModern{grid-template-columns:minmax(0,1fr)}
+ .restaurantApp[data-activity] #menu.restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .restaurantApp[data-activity] .restaurantContent{padding:12px}
+ .restaurantApp[data-activity] .restaurantTopbar{gap:8px;padding:10px 12px}
+}
+@media(max-width:360px){
+ .restaurantApp[data-activity] #menu.restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .restaurantApp[data-activity] #menu.restaurantPosMenu .product{padding:10px}
+}
