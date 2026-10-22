@@ -72,7 +72,8 @@ export function createEdgeConsoleServer({tls,users,origin,gatewayUrl,gatewayToke
     return reply(res,200,{ok:true,source:inventory.source,
       modules:inventory.modules.filter(section=>section.roles.includes(user.role)),
       activities:inventory.activities,channels:inventory.channels,
-      originalCssFiles:inventory.originalCssFiles});
+      originalCssFiles:inventory.originalCssFiles,
+      activityCode:inventory.activities.includes(process.env.FOON_W28_DEMO_ACTIVITY)?process.env.FOON_W28_DEMO_ACTIVITY:"restaurant"});
    }
    if(req.method==="GET"&&url.pathname==="/api/state"){
     const catalog=await grant(user),[ordersResponse,healthResponse]=await Promise.all([gateway("/orders",user),gateway("/health",user)]);
