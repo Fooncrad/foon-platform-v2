@@ -152,7 +152,7 @@ const server=http.createServer({requestTimeout:15000,headersTimeout:10000},async
   return send(res,404,{error:"NOT_FOUND"});
  }catch(error){return send(res,error.message==="BODY_TOO_LARGE"?413:error.message==="INVALID_JSON"?400:500,{error:["BODY_TOO_LARGE","INVALID_JSON"].includes(error.message)?error.message:"GATEWAY_ERROR"});}
 });
-server.listen(port,host,()=>process.stdout.write("FOON SQLite LAN gateway on "+host+":"+port+"\\n"));
+server.listen(port,host,()=>process.stdout.write("FOON SQLite LAN gateway on "+host+":"+port+"\n"));
 let stoppingGateway;
 export function stopGateway(){
  if(!stoppingGateway){for(const client of clients)client.end();clients.clear();stoppingGateway=new Promise(resolve=>server.close(()=>{db.close();resolve();}));}
