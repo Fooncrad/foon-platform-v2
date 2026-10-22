@@ -8,9 +8,10 @@ test("appends event and version only through supplied transaction",async()=>{
  const db={async execute(sql,args){queries.push({sql,args});if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];return [{affectedRows:1}]}};
  const result=await appendScopedChange(db,{change,sourceDeviceId:ids[3]});
  assert.equal(result.status,"recorded");
- assert.equal(queries.length,4);
- assert.match(queries[2].sql,/INSERT INTO foon_sync_versions/);
- assert.match(queries[3].sql,/INSERT INTO foon_sync_changes/);
+ assert.equal(queries.length,5);
+ assert.match(queries[0].sql,/foon_sync_scope_locks/);
+ assert.match(queries[3].sql,/INSERT INTO foon_sync_versions/);
+ assert.match(queries[4].sql,/INSERT INTO foon_sync_changes/);
 });
 test("repeated same event reports duplicate; tampered payload fails",async()=>{
  let digest;
@@ -32,4 +33,13 @@ test("replay from a different device cannot claim prior event",async()=>{
  await appendScopedChange(capture,{change,sourceDeviceId:ids[3]});
  const replay={async execute(){return [[{payload_digest:originalDigest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[4]}]]}};
  await assert.rejects(()=>appendScopedChange(replay,{change,sourceDeviceId:ids[3]}),/SYNC_IDEMPOTENCY_CONFLICT/);
+});
+
+test("scope mutex is acquired before idempotency and journal allocation",async()=>{
+ const queries=[];
+ const db={async execute(sql,args){queries.push(sql);if(sql.includes("SELECT payload_digest")||sql.includes("SELECT version"))return [[]];return [{affectedRows:1}];}};
+ await appendScopedChange(db,{change,sourceDeviceId:ids[3]});
+ assert.match(queries[0],/INSERT INTO foon_sync_scope_locks/);
+ assert.match(queries[1],/SELECT payload_digest/);
+ assert.match(queries.at(-1),/INSERT INTO foon_sync_changes/);
 });
