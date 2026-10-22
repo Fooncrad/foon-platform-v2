@@ -43,3 +43,15 @@ test("scope mutex is acquired before idempotency and journal allocation",async()
  assert.match(queries[1],/SELECT payload_digest/);
  assert.match(queries.at(-1),/INSERT INTO foon_sync_changes/);
 });
+
+test("pull SQL includes scope fields required by strict receiver validation",async()=>{
+ const db={async execute(sql,args){
+  assert.match(sql,/SELECT id,event_id,tenant_id,branch_id,actor_id,source_device_id/);
+  assert.deepEqual(args,[ids[1],ids[2],0,100]);
+  return [[{id:1,event_id:ids[0],tenant_id:ids[1],branch_id:ids[2],payload_digest:"a".repeat(64)}]];
+ }};
+ const batch=await pullScopedChanges(db,{tenantId:ids[1],branchId:ids[2]});
+ assert.equal(batch.events[0].tenant_id,ids[1]);
+ assert.equal(batch.events[0].branch_id,ids[2]);
+ assert.equal(batch.nextCursor,1);
+});
