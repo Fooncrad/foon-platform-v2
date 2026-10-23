@@ -102,3 +102,6 @@ Cloud push now returns a signed `conflict` receipt (version 0 placeholder; not a
 
 ## Conflict review privacy tightening
 Read-only conflict summaries intentionally exclude `entityId`, as identifiers can contain or correlate with sensitive customer/order references in downstream adapters. They now expose only event ID, type, operation, base version, status and review time. Any later detail view must require a separate audited, entity-specific authorization check. Automated tests were updated, but have not been executed against the current branch.
+
+## Bounded Windows push pass
+`pushBoundedPendingSyncEvents` provides an **explicit**, bounded single-device push pass (1–100 events, default 20), repeatedly using the existing signed receipt verifier and durable outbox. It stops at the first signed conflict for operator review, preserves pending rows when offline or when receipts cannot be verified, and never runs on a timer. It is not a production worker and is not integrated with real POS/merchant inventory. Tests were added for acknowledgment/idle, conflict, invalid bound and offline errors but are not yet executed against a real MariaDB instance. No migration applied.
