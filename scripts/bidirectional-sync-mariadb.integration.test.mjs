@@ -29,6 +29,7 @@ test("real MariaDB advisory lock serializes Windows push across separate connect
     async execute(sql,args){
      // Only the journal reader is stubbed; GET_LOCK/RELEASE_LOCK
      // execute against independent real MariaDB connections.
+     if(sql.startsWith("SELECT event_id FROM foon_sync_pending_events")&&sql.includes("state='conflict'"))return [[]];
      if(sql.startsWith("SELECT event_id,payload_digest,event_payload FROM foon_sync_pending_events")){
       if(!enteredOnce){enteredOnce=true;enterResolve();await exit}
       return [[]];
