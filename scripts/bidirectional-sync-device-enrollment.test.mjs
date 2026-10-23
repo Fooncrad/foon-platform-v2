@@ -9,7 +9,7 @@ function fixture(){const calls=[];return {calls,async beginTransaction(){calls.p
 test("only credential SHA256 persisted, raw credential returned once",async()=>{
  const db=fixture();
  const result=await enrollSyncDevice({db,authorizeAdmin,session,grants:["sync.read","catalog.read"],expiresAt:"2027-01-01T00:00:00Z"});
- const insert=db.calls.find(x=>x.sql?.startsWith("INSERT"));
+ const insert=db.calls.find(x=>x.sql?.startsWith("INSERT INTO foon_sync_devices"));
  assert.equal(insert.args[4],createHash("sha256").update(result.credential).digest("hex"));
  assert.ok(!JSON.stringify(insert).includes(result.credential));
  assert.equal(db.calls.at(-1),"commit");
