@@ -79,3 +79,18 @@ test("push and pull HTTP methods are pinned to their respective routes",async()=
  }
  assert.equal(requests,0,"invalid method, endpoint or body must never reach network");
 });
+
+// A pull without its tenant, branch and cursor query must never reach the
+// network with a device bearer token, even when no pullQuery was provided.
+test("unscoped pull cannot send device credentials",async()=>{
+ let requests=0;
+ const fetchImpl=async()=>{requests++;return response(200,"application/json")};
+ for(const input of [
+  {url:"https://sync.example.com/api/sync/v1/pull",method:"GET"},
+  {url:"https://sync.example.com/api/sync/v1/pull?",method:"GET"},
+  {url:"https://sync.example.com/api/sync/v1/pull",method:"GET",pullQuery:{tenantId:"11111111-1111-4111-8111-111111111111",branchId:"22222222-2222-4222-8222-222222222222",after:0,limit:10}}
+ ]){
+  await assert.rejects(()=>requestSyncJson({...input,authorization,fetchImpl}),/SYNC_UNSAFE_QUERY/);
+ }
+ assert.equal(requests,0,"unscoped pull must not contact server");
+});
