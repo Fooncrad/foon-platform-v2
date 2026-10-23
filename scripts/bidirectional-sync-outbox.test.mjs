@@ -25,11 +25,17 @@ test("failed enqueue cannot report success",async()=>{
 });
 
 test("pending events can be reloaded after restart and verified before network delivery",async()=>{
- const db={async execute(sql,args){assert.match(sql,/ORDER BY queued_at ASC,event_id ASC/);assert.deepEqual(args,[ids[3],ids[1],ids[2],50]);return [[{event_id:ids[0],payload_digest:digestChange(change),event_payload:JSON.stringify(change)}]];}};
+ const db={async execute(sql,args){if(sql.includes("state='conflict'")){assert.deepEqual(args,[ids[3],ids[1],ids[2]]);return [[]];}assert.match(sql,/ORDER BY queued_at ASC,event_id ASC/);assert.deepEqual(args,[ids[3],ids[1],ids[2],50]);return [[{event_id:ids[0],payload_digest:digestChange(change),event_payload:JSON.stringify(change)}]];}};
  const events=await readPendingSyncEvents(db,{deviceId:ids[3],tenantId:ids[1],branchId:ids[2]});
  assert.equal(events.length,1);assert.deepEqual(events[0].payload,change.payload);
 });
 test("corrupt pending event cannot be sent",async()=>{
- const db={async execute(){return [[{event_id:ids[0],payload_digest:"a".repeat(64),event_payload:JSON.stringify(change)}]];}};
+ const db={async execute(sql){if(sql.includes("state='conflict'"))return [[]];return [[{event_id:ids[0],payload_digest:"a".repeat(64),event_payload:JSON.stringify(change)}]];}};
  await assert.rejects(()=>readPendingSyncEvents(db,{deviceId:ids[3],tenantId:ids[1],branchId:ids[2]}),/SYNC_OUTBOX_CORRUPT_EVENT/);
+});
+
+test("unresolved conflict blocks later pending events for the same scope",async()=>{
+ const calls=[];const db={async execute(sql,args){calls.push({sql,args});if(sql.includes("state='conflict'"))return [[{event_id:ids[0]}]];throw Error("PENDING_QUERY_MUST_NOT_RUN");}};
+ await assert.rejects(()=>readPendingSyncEvents(db,{deviceId:ids[3],tenantId:ids[1],branchId:ids[2]}),/SYNC_CONFLICT_REVIEW_REQUIRED/);
+ assert.equal(calls.length,1);assert.deepEqual(calls[0].args,[ids[3],ids[1],ids[2]]);
 });
