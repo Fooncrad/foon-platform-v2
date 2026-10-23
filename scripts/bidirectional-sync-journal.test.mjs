@@ -15,7 +15,7 @@ test("appends event and version only through supplied transaction",async()=>{
 });
 test("repeated same event reports duplicate; tampered payload fails",async()=>{
  let digest;
- const first={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))digest=args.at(-1);return [[]]}};
+ const first={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))digest=args.at(-1);return [{affectedRows:1}]}};
  await appendScopedChange(first,{change,sourceDeviceId:ids[3]});
  const db={async execute(){return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3],next_version:1}]]}};
  assert.equal((await appendScopedChange(db,{change,sourceDeviceId:ids[3]})).status,"duplicate");
@@ -29,7 +29,7 @@ test("pull is branch scoped, bounded and monotone",async()=>{
 
 test("replay from a different device cannot claim prior event",async()=>{
  let originalDigest;
- const capture={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))originalDigest=args.at(-1);return [[]]}};
+ const capture={async execute(sql,args){if(sql.includes("SELECT payload_digest"))return [[]];if(sql.includes("SELECT version"))return [[]];if(sql.includes("INSERT INTO foon_sync_changes"))originalDigest=args.at(-1);return [{affectedRows:1}]}};
  await appendScopedChange(capture,{change,sourceDeviceId:ids[3]});
  const replay={async execute(){return [[{payload_digest:originalDigest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[4]}]]}};
  await assert.rejects(()=>appendScopedChange(replay,{change,sourceDeviceId:ids[3]}),/SYNC_IDEMPOTENCY_CONFLICT/);
