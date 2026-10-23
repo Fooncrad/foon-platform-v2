@@ -94,3 +94,28 @@ test("unscoped pull cannot send device credentials",async()=>{
  }
  assert.equal(requests,0,"unscoped pull must not contact server");
 });
+
+// Even allowlisted keys must carry valid typed scope/cursor values before
+// the Windows device bearer credential can be transmitted.
+test("malformed pull scope and cursor never reach network",async()=>{
+ const base="https://sync.example.com/api/sync/v1/pull";
+ const valid={tenantId:"11111111-1111-4111-8111-111111111111",branchId:"22222222-2222-4222-8222-222222222222",after:0,limit:100};
+ const invalid=[
+  {...valid,tenantId:"not-a-uuid"},
+  {...valid,branchId:"not-a-uuid"},
+  {...valid,after:-1},
+  {...valid,after:1.5},
+  {...valid,after:"0"},
+  {...valid,limit:0},
+  {...valid,limit:201},
+  {...valid,limit:"100"}
+ ];
+ let requests=0;
+ const fetchImpl=async()=>{requests++;return response(200,"application/json")};
+ for(const pullQuery of invalid){
+  await assert.rejects(()=>requestSyncJson({url:base+"?"+new URLSearchParams(pullQuery),method:"GET",authorization,pullQuery,fetchImpl}),/SYNC_UNSAFE_QUERY/);
+ }
+ assert.equal(requests,0,"invalid pull requests must not transmit credentials");
+ await requestSyncJson({url:base+"?"+new URLSearchParams(valid),method:"GET",authorization,pullQuery:valid,fetchImpl});
+ assert.equal(requests,1,"valid pull remains usable");
+});
