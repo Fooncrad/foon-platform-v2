@@ -38,3 +38,17 @@ test("offline error propagates without acknowledging",async()=>{
  const x=fixture();await assert.rejects(()=>pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl:async()=>{throw Error("OFFLINE")}}),/OFFLINE/);
  assert.ok(!x.db.calls.includes("begin"));
 });
+
+test("parallel push pass on same device scope is rejected before network",async()=>{
+ const x=fixture();let release;const gate=new Promise(resolve=>{release=resolve});let entered;const started=new Promise(resolve=>{entered=resolve});
+ const first=pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl:async()=>{entered();await gate;return x.fetchImpl()}});
+ await started;
+ await assert.rejects(()=>pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl:x.fetchImpl}),/SYNC_PUSH_ALREADY_RUNNING/);
+ release();await first;assert.equal(x.getSent(),1);
+});
+test("same-scope lock is released after transport failure",async()=>{
+ const x=fixture();
+ await assert.rejects(()=>pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl:async()=>{throw Error("OFFLINE")}}),/OFFLINE/);
+ const outcome=await pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl:x.fetchImpl});
+ assert.equal(outcome.acknowledged,1);
+});
