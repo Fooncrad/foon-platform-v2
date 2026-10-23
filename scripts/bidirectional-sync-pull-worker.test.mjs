@@ -39,3 +39,32 @@ test("network recovery retries from unchanged cursor and commits only after sign
  assert.equal(db.calls.filter(x=>x==="commit").length,1);
  assert.equal(db.calls.filter(x=>x==="begin").length,1);
 });
+
+test("overlapping pull with uppercase UUID scope is blocked before cursor read or network",async()=>{
+ const db=fixture();
+ let release,entered;
+ const gate=new Promise(resolve=>{release=resolve});
+ const started=new Promise(resolve=>{entered=resolve});
+ const opts={db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true};
+ const first=pullAndApplyNextSyncBatch({...opts,fetchImpl:async()=>{entered();await gate;throw Error("SIMULATED_OFFLINE")}});
+ await started;
+ let extraFetches=0;
+ try{
+  await assert.rejects(()=>pullAndApplyNextSyncBatch({...opts,scope:{...scope,deviceId:scope.deviceId.toUpperCase()},fetchImpl:async()=>{extraFetches++;return response(signedBatch())}}),/SYNC_PULL_ALREADY_RUNNING/);
+  assert.equal(extraFetches,0);
+  assert.equal(db.calls.filter(sql=>sql.startsWith("SELECT last_pulled_id")).length,1,"overlap must not read stale cursor");
+ }finally{
+  release();
+  await assert.rejects(first,/SIMULATED_OFFLINE/);
+ }
+});
+test("pull scope lock is released after network failure so retry can succeed",async()=>{
+ const db=fixture();let attempts=0;
+ const opts={db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,
+  fetchImpl:async()=>{attempts++;if(attempts===1)throw Error("SIMULATED_OFFLINE");return response(signedBatch());}};
+ await assert.rejects(()=>pullAndApplyNextSyncBatch(opts),/SIMULATED_OFFLINE/);
+ const result=await pullAndApplyNextSyncBatch(opts);
+ assert.equal(result.status,"applied");
+ assert.equal(attempts,2);
+ assert.equal(db.calls.filter(x=>x==="commit").length,1);
+});
