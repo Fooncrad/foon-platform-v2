@@ -47,3 +47,12 @@ test("pull replay detection normalizes UUID letter case",()=>{
  const payload={ok:true,tenantId:ids[1],branchId:ids[2],nextCursor:6,events:[first,{...first,id:6,event_id:upper.toLowerCase()}]};
  assert.throws(()=>validatePullBatch(payload,query),/SYNC_DUPLICATE_PULL_EVENT/);
 });
+
+test("pull rejects cursor regression and over-limit batch before adapter execution",()=>{
+ const query={tenantId:ids[1],branchId:ids[2],after:4,limit:1};
+ const first={id:5,event_id:ids[0],tenant_id:ids[1],branch_id:ids[2],payload_digest:hash};
+ const second={...first,id:6,event_id:ids[2]};
+ const payload={ok:true,tenantId:ids[1],branchId:ids[2],nextCursor:6,events:[first,second]};
+ assert.throws(()=>validatePullBatch(payload,query),/SYNC_BATCH_SCOPE_MISMATCH/);
+ assert.throws(()=>validatePullBatch({...payload,events:[first],nextCursor:3},query),/SYNC_BATCH_SCOPE_MISMATCH/);
+});
