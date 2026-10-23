@@ -16,7 +16,7 @@ const eventId="58c77291-c3b0-4d99-9abe-6b35eadd52b6";
 const remoteDeviceId="c30a493e-9809-4950-82bc-66d54b6c4ed1";
 function signed(id,{sourceDeviceId=remoteDeviceId,idOverride=eventId,after=scope.after}={}){
  const change={eventId:idOverride,tenantId:scope.tenantId,branchId:scope.branchId,actorId:scope.deviceId,entityType:"catalog_item",entityId:eventId,operation:"upsert",baseVersion:0,timestamp:"2026-10-23T00:00:00Z",payload:{name:"Isolation probe"}};
- const event={id,event_id:eventId,tenant_id:change.tenantId,branch_id:change.branchId,actor_id:change.actorId,source_device_id:sourceDeviceId,entity_type:change.entityType,entity_id:change.entityId,operation:change.operation,base_version:0,next_version:1,event_timestamp:change.timestamp,payload_json:change.payload,payload_digest:digestChange(change)};
+ const event={id,event_id:change.eventId,tenant_id:change.tenantId,branch_id:change.branchId,actor_id:change.actorId,source_device_id:sourceDeviceId,entity_type:change.entityType,entity_id:change.entityId,operation:change.operation,base_version:0,next_version:1,event_timestamp:change.timestamp,payload_json:change.payload,payload_digest:digestChange(change)};
  const batch={ok:true,tenantId:scope.tenantId,branchId:scope.branchId,events:[event],nextCursor:id};
  return {batch,signature:sign(null,pullBatchSignatureMessage(batch,{...scope,after}),kp.privateKey).toString("base64url")};
 }
