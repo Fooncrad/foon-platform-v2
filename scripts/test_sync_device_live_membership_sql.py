@@ -59,5 +59,41 @@ class Checks(unittest.TestCase):
     def test_missing_membership(self):
         c = db(); c.execute("DELETE FROM memberships"); self.assertFalse(allowed(c))
 
+    def test_revoke_after_success_same_connection(self):
+        c = db()
+        self.assertTrue(allowed(c))
+        c.execute("UPDATE memberships SET status='revoked'")
+        self.assertFalse(allowed(c))
+
+    def test_demotion_after_success_same_connection(self):
+        c = db()
+        self.assertTrue(allowed(c))
+        c.execute("UPDATE memberships SET role='cashier'")
+        self.assertFalse(allowed(c))
+
+    def test_platform_admin_activation_after_success(self):
+        c = db()
+        self.assertTrue(allowed(c))
+        c.execute("INSERT INTO platform_admins VALUES (?,?)", (actor, 1))
+        self.assertFalse(allowed(c))
+
+    def test_foreign_tenant_owner_does_not_restore_revoked_membership(self):
+        c = db()
+        c.execute("UPDATE memberships SET status='revoked'")
+        c.execute("INSERT INTO tenants VALUES ('tenant-b','active')")
+        c.execute("INSERT INTO memberships VALUES (?,?,?,?)", (actor, "tenant-b", "active", "owner"))
+        self.assertFalse(allowed(c))
+
+    def test_enabled_platform_admin_not_masked_by_disabled_duplicate(self):
+        c = db()
+        c.execute("INSERT INTO platform_admins VALUES (?,?)", (actor, 0))
+        c.execute("INSERT INTO platform_admins VALUES (?,?)", (actor, 1))
+        self.assertFalse(allowed(c))
+
+    def test_null_status_is_denied(self):
+        c = db()
+        c.execute("UPDATE users SET status=NULL")
+        self.assertFalse(allowed(c))
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
