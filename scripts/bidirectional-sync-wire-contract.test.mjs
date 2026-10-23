@@ -30,3 +30,20 @@ test("filtered empty pull advances candidate cursor without falsely claiming app
  const batch={ok:true,tenantId:ids[1],branchId:ids[2],nextCursor:9,events:[]};
  assert.deepEqual(validatePullBatch(batch,query),{events:[],candidateCursor:9});
 });
+
+test("signed pull batches reject repeated event UUIDs despite increasing journal IDs",()=>{
+ const query={tenantId:ids[1],branchId:ids[2],after:4,limit:10};
+ const first={id:5,event_id:ids[0],tenant_id:ids[1],branch_id:ids[2],payload_digest:hash};
+ const repeated={...first,id:6};
+ const payload={ok:true,tenantId:ids[1],branchId:ids[2],nextCursor:6,events:[first,repeated]};
+ assert.throws(()=>validatePullBatch(payload,query),/SYNC_DUPLICATE_PULL_EVENT/);
+ // Distinct journal event UUIDs remain valid even when IDs are nonconsecutive.
+ assert.equal(validatePullBatch({...payload,events:[first,{...repeated,event_id:ids[0].replace("11111111","33333333")}]},query).candidateCursor,6);
+});
+test("pull replay detection normalizes UUID letter case",()=>{
+ const query={tenantId:ids[1],branchId:ids[2],after:4,limit:10};
+ const upper="AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA";
+ const first={id:5,event_id:upper,tenant_id:ids[1],branch_id:ids[2],payload_digest:hash};
+ const payload={ok:true,tenantId:ids[1],branchId:ids[2],nextCursor:6,events:[first,{...first,id:6,event_id:upper.toLowerCase()}]};
+ assert.throws(()=>validatePullBatch(payload,query),/SYNC_DUPLICATE_PULL_EVENT/);
+});
