@@ -102,3 +102,25 @@ CREATE TABLE IF NOT EXISTS foon_sync_devices (
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  KEY idx_foon_sync_devices_scope (tenant_id,branch_id,enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Rate limit device enrollment and revocation at the database boundary.
+CREATE TABLE IF NOT EXISTS foon_sync_admin_rate_limits (
+ actor_id CHAR(36) NOT NULL,
+ tenant_id CHAR(36) NOT NULL,
+ action_name VARCHAR(24) NOT NULL,
+ window_start DATETIME NOT NULL,
+ attempt_count INT UNSIGNED NOT NULL DEFAULT 0,
+ PRIMARY KEY (actor_id,tenant_id,action_name,window_start)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Credential-free audit trail; never store raw device secrets here.
+CREATE TABLE IF NOT EXISTS foon_sync_device_audit (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ device_id CHAR(36) NOT NULL,
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ actor_id CHAR(36) NOT NULL,
+ action_name ENUM('enroll','revoke') NOT NULL,
+ created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ KEY idx_foon_sync_audit_scope (tenant_id,branch_id,created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
