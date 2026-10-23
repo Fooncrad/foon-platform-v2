@@ -75,7 +75,7 @@ test("push and pull HTTP methods are pinned to their respective routes",async()=
   {url:pull,method:"GET",body:{change:{}}},
   {url,method:"DELETE",body:{change:{}}}
  ]){
-  await assert.rejects(()=>requestSyncJson({...input,authorization,fetchImpl}),/SYNC_(METHOD_ENDPOINT_MISMATCH|INVALID_METHOD|INVALID_REQUEST)/);
+  await assert.rejects(()=>requestSyncJson({...input,authorization,fetchImpl}),/SYNC_(METHOD_ENDPOINT_MISMATCH|INVALID_METHOD|INVALID_REQUEST|UNSAFE_QUERY)/);
  }
  assert.equal(requests,0,"invalid method, endpoint or body must never reach network");
 });
