@@ -164,3 +164,18 @@ copy-of-module check passed 6/6 focused cases; this is **not** a repository
 test run, Node 24 compatibility certification, or MariaDB integration test.
 Run the complete contract and MariaDB suites on the Windows machine before
 changing the PR from Draft. This does not enable production sync.
+
+### Duplicate pull-event replay guard (2026-10-23)
+`validatePullBatch` now rejects a batch containing the same `event_id`
+twice, even when the journal cursor IDs increase or the UUID letter case
+differs. A signed but malformed batch must not execute an order, reservation,
+or inventory movement adapter twice. The receiver verifies this before
+opening a local transaction, so the cursor stays unchanged on rejection.
+Regression tests were added to `scripts/bidirectional-sync-wire-contract.test.mjs`.
+
+A standalone Node 22.16.0 reproduction of the changed wire validator passed
+4/4 focused checks. This is **not** a full repository test run; the new
+repository test file, MariaDB suite, Node 24 and Windows restart/recovery
+scenarios remain unexecuted in this run. The journal's unique event-ID
+constraint is a separate server-side protection; the wire guard is defense
+in depth. Keep production sync flags off and migration 0157 unapplied.
