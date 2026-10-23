@@ -3,6 +3,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import mysql from "mysql2/promise";
+import {generateKeyPairSync} from "node:crypto";
+import {digestChange} from "../lib/platform/bidirectional-sync-contract.mjs";
+import {signCommittedPushReceipt} from "../lib/platform/bidirectional-sync-push-receipt.mjs";
 import {enqueueScopedSyncEvent,readPendingSyncEvents} from "../lib/platform/bidirectional-sync-outbox.mjs";
 import {pushNextPendingSyncEvent} from "../lib/platform/bidirectional-sync-push-worker.mjs";
 
@@ -22,7 +25,8 @@ function event(scope,id){return {eventId:id,tenantId:scope.tenantId,branchId:sco
 test("MariaDB outbox isolates device, tenant, branch and survives network failure",{skip:!url?"FOON_SYNC_MARIADB_TEST_URL is not configured":false,timeout:15000},async()=>{
  const db=await mysql.createConnection(url);
  try{
-  await db.execute("CREATE TEMPORARY TABLE foon_sync_pending_events (device_id CHAR(36) NOT NULL,event_id CHAR(36) NOT NULL,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,payload_digest CHAR(64) NOT NULL,event_payload JSON NOT NULL,queued_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),state ENUM('pending','conflict','acknowledged') NOT NULL DEFAULT 'pending',PRIMARY KEY(device_id,event_id)) ENGINE=InnoDB");
+  await db.execute("CREATE TEMPORARY TABLE foon_sync_pending_events (device_id CHAR(36) NOT NULL,event_id CHAR(36) NOT NULL,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,payload_digest CHAR(64) NOT NULL,event_payload JSON NOT NULL,queued_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),state ENUM('pending','conflict','acknowledged') NOT NULL DEFAULT 'pending',acknowledged_version BIGINT UNSIGNED NULL,PRIMARY KEY(device_id,event_id)) ENGINE=InnoDB");
+  await db.execute("CREATE TEMPORARY TABLE foon_sync_push_acknowledgments (device_id CHAR(36) NOT NULL,event_id CHAR(36) NOT NULL,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,payload_digest CHAR(64) NOT NULL,next_version BIGINT UNSIGNED NOT NULL,signature VARCHAR(128) NOT NULL,PRIMARY KEY(device_id,event_id)) ENGINE=InnoDB");
   await db.beginTransaction();
   try{for(let i=0;i<scopes.length;i++)await enqueueScopedSyncEvent(db,{change:event(scopes[i],ids[i]),deviceId:scopes[i].deviceId});await db.commit();}
   catch(error){await db.rollback();throw error;}
@@ -40,5 +44,28 @@ test("MariaDB outbox isolates device, tenant, branch and survives network failur
   for(let i=0;i<scopes.length;i++)assert.deepEqual((await readPendingSyncEvents(db,scopes[i])).map(x=>x.eventId),[ids[i]]);
   const [[count]]=await db.execute("SELECT COUNT(*) AS total FROM foon_sync_pending_events WHERE state='pending'");
   assert.equal(Number(count.total),scopes.length);
+  // A cloud commit can succeed while the response is lost in transit.
+  // A signed duplicate on reconnect must ACK only the original scope.
+  const kp=generateKeyPairSync("ed25519");
+  const privateKey=kp.privateKey.export({type:"pkcs8",format:"pem"});
+  const publicKey=kp.publicKey.export({type:"spki",format:"pem"});
+  const first=event(scopes[0],ids[0]);
+  const receipt=signCommittedPushReceipt({privateKey,receipt:{
+   deviceId:deviceA,eventId:first.eventId,tenantId:tenantA,branchId:branchA,
+   digest:digestChange(first),status:"duplicate",nextVersion:1
+  }});
+  const response=(data)=>({ok:true,status:200,redirected:false,headers:{get:()=>"application/json"},json:async()=>data});
+  const options={db,scope:scopes[0],url:"https://sync.example.com/api/sync/v1/push",authorization:"Bearer "+"x".repeat(64),publicKey};
+  const corrupted={...receipt,signature:"a".repeat(86)};
+  await assert.rejects(()=>pushNextPendingSyncEvent({...options,fetchImpl:async()=>response(corrupted)}),/SYNC_.*SIGNATURE/);
+  assert.equal((await readPendingSyncEvents(db,scopes[0])).length,1,"invalid signature must preserve the pending event");
+  const resumed=await pushNextPendingSyncEvent({...options,fetchImpl:async()=>response(receipt)});
+  assert.deepEqual(resumed,{status:"acknowledged",eventId:ids[0]});
+  assert.deepEqual(await readPendingSyncEvents(db,scopes[0]),[]);
+  for(let i=1;i<scopes.length;i++)assert.deepEqual((await readPendingSyncEvents(db,scopes[i])).map(x=>x.eventId),[ids[i]]);
+  const [[ackCount]]=await db.execute("SELECT COUNT(*) AS n FROM foon_sync_push_acknowledgments");
+  assert.equal(Number(ackCount.n),1,"one durable ACK only");
+  const idle=await pushNextPendingSyncEvent({...options,fetchImpl:async()=>{throw Error("ALREADY_ACKED_MUST_NOT_REPOST")}});
+  assert.deepEqual(idle,{status:"idle"});
  }finally{await db.end();}
 });
