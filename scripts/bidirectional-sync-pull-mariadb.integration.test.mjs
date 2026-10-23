@@ -13,11 +13,12 @@ const scope={deviceId:"a30a493e-9809-4950-82bc-66d54b6c4ed1",tenantId:"aba382f0-
 const kp=generateKeyPairSync("ed25519");
 const publicKey=kp.publicKey.export({type:"spki",format:"pem"});
 const eventId="58c77291-c3b0-4d99-9abe-6b35eadd52b6";
-function signed(id){
- const change={eventId,tenantId:scope.tenantId,branchId:scope.branchId,actorId:scope.deviceId,entityType:"catalog_item",entityId:eventId,operation:"upsert",baseVersion:0,timestamp:"2026-10-23T00:00:00Z",payload:{name:"Isolation probe"}};
- const event={id,event_id:eventId,tenant_id:change.tenantId,branch_id:change.branchId,actor_id:change.actorId,source_device_id:scope.deviceId,entity_type:change.entityType,entity_id:change.entityId,operation:change.operation,base_version:0,next_version:1,event_timestamp:change.timestamp,payload_json:change.payload,payload_digest:digestChange(change)};
+const remoteDeviceId="c30a493e-9809-4950-82bc-66d54b6c4ed1";
+function signed(id,{sourceDeviceId=remoteDeviceId,idOverride=eventId,after=scope.after}={}){
+ const change={eventId:idOverride,tenantId:scope.tenantId,branchId:scope.branchId,actorId:scope.deviceId,entityType:"catalog_item",entityId:eventId,operation:"upsert",baseVersion:0,timestamp:"2026-10-23T00:00:00Z",payload:{name:"Isolation probe"}};
+ const event={id,event_id:eventId,tenant_id:change.tenantId,branch_id:change.branchId,actor_id:change.actorId,source_device_id:sourceDeviceId,entity_type:change.entityType,entity_id:change.entityId,operation:change.operation,base_version:0,next_version:1,event_timestamp:change.timestamp,payload_json:change.payload,payload_digest:digestChange(change)};
  const batch={ok:true,tenantId:scope.tenantId,branchId:scope.branchId,events:[event],nextCursor:id};
- return {batch,signature:sign(null,pullBatchSignatureMessage(batch,scope),kp.privateKey).toString("base64url")};
+ return {batch,signature:sign(null,pullBatchSignatureMessage(batch,{...scope,after}),kp.privateKey).toString("base64url")};
 }
 test("real MariaDB signed pull and cursor commit or rollback together",{skip:!url?"FOON_SYNC_MARIADB_TEST_URL is not configured":false,timeout:15000},async()=>{
  const db=await mysql.createConnection(url);
@@ -41,5 +42,16 @@ test("real MariaDB signed pull and cursor commit or rollback together",{skip:!ur
   await assert.rejects(()=>applyVerifiedPullBatch({db,...packet,scope,publicKey,applyEvent}),/SYNC_CURSOR_CONFLICT/);
   [[count]]=await db.execute("SELECT COUNT(*) AS total FROM foon_sync_pull_test_projection");
   assert.equal(count.total,1);
+  // Cloud echo of a locally committed event must advance the cursor without
+  // inserting into the business projection a second time.
+  const echoScope={...scope,after:1};
+  const echo=signed(2,{sourceDeviceId:scope.deviceId,idOverride:"68c77291-c3b0-4d99-9abe-6b35eadd52b6",after:1});
+  const echoed=await applyVerifiedPullBatch({db,...echo,scope:echoScope,publicKey,applyEvent});
+  assert.equal(echoed.count,0);
+  assert.equal(echoed.nextCursor,2);
+  [[cursor]]=await db.execute("SELECT last_pulled_id FROM foon_sync_device_cursors WHERE device_id=? AND tenant_id=? AND branch_id=?",[scope.deviceId,scope.tenantId,scope.branchId]);
+  [[count]]=await db.execute("SELECT COUNT(*) AS total FROM foon_sync_pull_test_projection");
+  assert.equal(Number(cursor.last_pulled_id),2);
+  assert.equal(Number(count.total),1);
  }finally{await db.end();}
 });
