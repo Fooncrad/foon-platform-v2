@@ -49,3 +49,40 @@ test("unsigned top-level metadata cannot bypass event digest integrity",()=>{
  assert.throws(()=>validateChangeEnvelope(symbolKey),/SYNC_INVALID_ENVELOPE/);
  assert.equal(digestChange(c).length,64);
 });
+
+test("nested hidden and symbol metadata are rejected before hashing",()=>{
+ const hidden={...c,payload:{item:{name:"coffee"}}};
+ Object.defineProperty(hidden.payload.item,"ownerOverride",{value:true});
+ const symbol={...c,payload:{item:{name:"coffee",[Symbol("owner")]:true}}};
+ for(const change of [hidden,symbol]){
+  assert.throws(()=>validateChangeEnvelope(change),/SYNC_INVALID_PAYLOAD/);
+  assert.throws(()=>digestChange(change),/SYNC_INVALID_PAYLOAD/);
+ }
+});
+
+test("accessor properties cannot mutate signed payloads during validation",()=>{
+ let reads=0;
+ const item={name:"coffee"};
+ Object.defineProperty(item,"price",{enumerable:true,get(){reads++;return 12;}});
+ const nested={...c,payload:{item}};
+ const top={...c};
+ Object.defineProperty(top,"payload",{enumerable:true,get(){reads++;return c.payload;}});
+ for(const change of [nested,top]){
+  assert.throws(()=>validateChangeEnvelope(change),/SYNC_INVALID_(PAYLOAD|ENVELOPE)/);
+  assert.throws(()=>digestChange(change),/SYNC_INVALID_(PAYLOAD|ENVELOPE)/);
+ }
+ assert.equal(reads,0,"reject accessors without invoking them");
+});
+
+test("sparse arrays and arrays with extra or accessor keys are rejected",()=>{
+ const sparse=[1,,3];
+ const extra=[1,2];extra.admin=true;
+ const accessor=[1,2];
+ Object.defineProperty(accessor,"0",{enumerable:true,get(){throw Error("SHOULD_NOT_EXECUTE");}});
+ for(const list of [sparse,extra,accessor]){
+  const change={...c,payload:{items:list}};
+  assert.throws(()=>validateChangeEnvelope(change),/SYNC_INVALID_PAYLOAD/);
+  assert.throws(()=>digestChange(change),/SYNC_INVALID_PAYLOAD/);
+ }
+ assert.equal(validateChangeEnvelope({...c,payload:{items:[{name:"coffee"},2]}}).payload.items.length,2);
+});
