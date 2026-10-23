@@ -12,7 +12,7 @@ const batch={ok:true,tenantId:ids[1],branchId:ids[2],events:[event(5)],nextCurso
 const pair=generateKeyPairSync("ed25519");
 const publicKey=pair.publicKey.export({type:"spki",format:"pem"});
 const signed=(b=batch,sc=scope)=>({signature:sign(null,pullBatchSignatureMessage(b,sc),pair.privateKey).toString("base64url"),publicKey});
-function fixture({cursor=4,updateCount=1}={}){
+function fixture({cursor=4,updateCount=1,echoRecord=true,echoDigest=null}={}){
  const calls=[];
  const db={calls,async beginTransaction(){calls.push("begin");},
  async commit(){calls.push("commit");},
@@ -20,6 +20,11 @@ function fixture({cursor=4,updateCount=1}={}){
  async execute(sql,args){
   calls.push(sql);
   if(sql.startsWith("SELECT last_pulled_id"))return [[{last_pulled_id:cursor}]];
+  if(sql.startsWith("SELECT tenant_id,branch_id,payload_digest,event_payload FROM foon_sync_pending_events")){
+   const e=event(5);
+   const local={eventId:e.event_id,tenantId:e.tenant_id,branchId:e.branch_id,actorId:e.actor_id,entityType:e.entity_type,entityId:e.entity_id,operation:e.operation,baseVersion:e.base_version,timestamp:e.event_timestamp,payload:e.payload_json};
+   return [echoRecord?[{tenant_id:scope.tenantId,branch_id:scope.branchId,payload_digest:echoDigest??e.payload_digest,event_payload:JSON.stringify(local)}]:[]];
+  }
   if(sql.startsWith("UPDATE foon_sync_device_cursors"))return [{affectedRows:updateCount}];
   throw Error("UNEXPECTED_SQL");
  }};
@@ -39,6 +44,19 @@ test("signed echo of this device's already-committed event advances cursor witho
  assert.equal(writes,0);
  assert.equal(db.calls.filter(x=>x.startsWith("UPDATE foon_sync_device_cursors")).length,1);
  assert.equal(db.calls.at(-1),"commit");
+});
+test("signed self echo without durable local write cannot silently advance cursor",async()=>{
+ const own={...batch,events:[{...event(5),source_device_id:scope.deviceId}]};
+ const db=fixture({echoRecord:false});let writes=0;
+ await assert.rejects(()=>applyVerifiedPullBatch({db,batch:own,scope,...signed(own),applyEvent:async()=>{writes++;return true;}}),/SYNC_LOCAL_ECHO_UNPROVEN/);
+ assert.equal(writes,0);assert.equal(db.calls.at(-1),"rollback");
+ assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
+});
+test("signed self echo with mismatched durable digest cannot advance cursor",async()=>{
+ const own={...batch,events:[{...event(5),source_device_id:scope.deviceId}]};
+ const db=fixture({echoDigest:"f".repeat(64)});
+ await assert.rejects(()=>applyVerifiedPullBatch({db,batch:own,scope,...signed(own),applyEvent:async()=>true}),/SYNC_LOCAL_ECHO_UNPROVEN/);
+ assert.equal(db.calls.at(-1),"rollback");
 });
 test("rejected server identity never opens a transaction",async()=>{
  const db=fixture();
