@@ -25,6 +25,7 @@ test("real MariaDB signed pull and cursor commit or rollback together",{skip:!ur
  try{
   await db.execute("CREATE TEMPORARY TABLE foon_sync_device_cursors (device_id CHAR(36) NOT NULL,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,last_pulled_id BIGINT UNSIGNED NOT NULL,PRIMARY KEY(device_id,tenant_id,branch_id)) ENGINE=InnoDB");
   await db.execute("CREATE TEMPORARY TABLE foon_sync_pull_test_projection (event_id CHAR(36) PRIMARY KEY,description VARCHAR(100) NOT NULL) ENGINE=InnoDB");
+  await db.execute("CREATE TEMPORARY TABLE foon_sync_pending_events (device_id CHAR(36) NOT NULL,event_id CHAR(36) NOT NULL,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,payload_digest CHAR(64) NOT NULL,event_payload JSON NOT NULL,PRIMARY KEY(device_id,event_id)) ENGINE=InnoDB");
   await db.execute("INSERT INTO foon_sync_device_cursors(device_id,tenant_id,branch_id,last_pulled_id) VALUES (?,?,?,0)",[scope.deviceId,scope.tenantId,scope.branchId]);
   const applyEvent=async(conn,event)=>{await conn.execute("INSERT INTO foon_sync_pull_test_projection(event_id,description) VALUES (?,?)",[event.event_id,"applied"]);return true;};
   const packet=signed(1);
@@ -46,6 +47,11 @@ test("real MariaDB signed pull and cursor commit or rollback together",{skip:!ur
   // inserting into the business projection a second time.
   const echoScope={...scope,after:1};
   const echo=signed(2,{sourceDeviceId:scope.deviceId,idOverride:"68c77291-c3b0-4d99-9abe-6b35eadd52b6",after:1});
+  const own=echo.batch.events[0];
+  const ownChange={eventId:own.event_id,tenantId:own.tenant_id,branchId:own.branch_id,actorId:own.actor_id,entityType:own.entity_type,entityId:own.entity_id,operation:own.operation,baseVersion:own.base_version,timestamp:own.event_timestamp,payload:own.payload_json};
+  // The local outbox is durable proof that this device already committed the
+  // mutation. Without it, skipping a cloud echo after backup restore is unsafe.
+  await db.execute("INSERT INTO foon_sync_pending_events(device_id,event_id,tenant_id,branch_id,payload_digest,event_payload) VALUES (?,?,?,?,?,?)",[scope.deviceId,own.event_id,scope.tenantId,scope.branchId,own.payload_digest,JSON.stringify(ownChange)]);
   const echoed=await applyVerifiedPullBatch({db,...echo,scope:echoScope,publicKey,applyEvent});
   assert.equal(echoed.count,0);
   assert.equal(echoed.nextCursor,2);
