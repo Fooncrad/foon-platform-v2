@@ -12,7 +12,7 @@ const batch={ok:true,tenantId:ids[1],branchId:ids[2],events:[event(5)],nextCurso
 const pair=generateKeyPairSync("ed25519");
 const publicKey=pair.publicKey.export({type:"spki",format:"pem"});
 const signed=(b=batch,sc=scope)=>({signature:sign(null,pullBatchSignatureMessage(b,sc),pair.privateKey).toString("base64url"),publicKey});
-function fixture({cursor=4,updateCount=1,echoRecord=true,echoDigest=null}={}){
+function fixture({cursor=4,updateCount=1,echoRecord=true,echoDigest=null,echoRowOverrides=null}={}){
  const calls=[];
  const db={calls,async beginTransaction(){calls.push("begin");},
  async commit(){calls.push("commit");},
@@ -23,7 +23,7 @@ function fixture({cursor=4,updateCount=1,echoRecord=true,echoDigest=null}={}){
   if(sql.startsWith("SELECT tenant_id,branch_id,payload_digest,event_payload FROM foon_sync_pending_events")){
    const e=event(5);
    const local={eventId:e.event_id,tenantId:e.tenant_id,branchId:e.branch_id,actorId:e.actor_id,entityType:e.entity_type,entityId:e.entity_id,operation:e.operation,baseVersion:e.base_version,timestamp:e.event_timestamp,payload:e.payload_json};
-   return [echoRecord?[{tenant_id:scope.tenantId,branch_id:scope.branchId,payload_digest:echoDigest??e.payload_digest,event_payload:JSON.stringify(local)}]:[]];
+   return [echoRecord?[{tenant_id:scope.tenantId,branch_id:scope.branchId,payload_digest:echoDigest??e.payload_digest,event_payload:JSON.stringify(local),...(echoRowOverrides??{})}]:[]];
   }
   if(sql.startsWith("UPDATE foon_sync_device_cursors"))return [{affectedRows:updateCount}];
   throw Error("UNEXPECTED_SQL");
@@ -141,4 +141,23 @@ test("self echo with uppercase source UUID cannot double-apply a locally committ
  assert.deepEqual(result,{status:"applied",nextCursor:5,count:0});
  assert.equal(writes,0);
  assert.equal(db.calls.at(-1),"commit");
+});
+
+test("signed self echo accepts MariaDB UUID casing but rejects a different tenant",async()=>{
+ const mixedScope={...scope,tenantId:"a"+scope.tenantId.slice(1),branchId:"b"+scope.branchId.slice(1)};
+ const e={...event(5),tenant_id:mixedScope.tenantId,branch_id:mixedScope.branchId,source_device_id:mixedScope.deviceId};
+ const local={eventId:e.event_id,tenantId:e.tenant_id,branchId:e.branch_id,actorId:e.actor_id,entityId:e.entity_id,entityType:e.entity_type,operation:e.operation,baseVersion:e.base_version,timestamp:e.event_timestamp,payload:e.payload_json};
+ e.payload_digest=digestChange(local);
+ const own={...batch,tenantId:mixedScope.tenantId,branchId:mixedScope.branchId,events:[e]};
+ const stored={tenant_id:mixedScope.tenantId.toUpperCase(),branch_id:mixedScope.branchId.toUpperCase(),payload_digest:e.payload_digest,event_payload:JSON.stringify(local)};
+ const db=fixture({echoRowOverrides:stored});
+ let writes=0;
+ const result=await applyVerifiedPullBatch({db,batch:own,scope:mixedScope,...signed(own,mixedScope),applyEvent:async()=>{writes++;return true;}});
+ assert.deepEqual(result,{status:"applied",nextCursor:5,count:0});
+ assert.equal(writes,0,"local order must not be applied twice");
+ assert.equal(db.calls.at(-1),"commit");
+ const foreign=fixture({echoRowOverrides:{...stored,tenant_id:"c"+mixedScope.tenantId.slice(1)}});
+ await assert.rejects(()=>applyVerifiedPullBatch({db:foreign,batch:own,scope:mixedScope,...signed(own,mixedScope),applyEvent:async()=>{throw Error("FOREIGN_WRITE");}}),/SYNC_LOCAL_ECHO_UNPROVEN/);
+ assert.equal(foreign.calls.at(-1),"rollback");
+ assert.ok(!foreign.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
 });
