@@ -24,3 +24,11 @@ test("forbid external paths, URL credentials, query tokens and unsafe hosts",asy
   await assert.rejects(()=>requestSyncJson({url:target,authorization,fetchImpl:async()=>response(200,"application/json")}),/SYNC_(UNSAFE_ENDPOINT|UNEXPECTED_ENDPOINT)/,target);
  }
 });
+
+test("reject public API redirects and HTML without retrying against a new host",async()=>{
+ let calls=0;
+ for(const r of [response(307,"application/json"),response(200,"text/html")]){
+  await assert.rejects(()=>requestSyncJson({url,authorization,fetchImpl:async()=>{calls++;return r;}}),/SYNC_(REDIRECT_BLOCKED|NON_JSON_RESPONSE)/);
+ }
+ assert.equal(calls,2);
+});
