@@ -133,3 +133,12 @@ test("adapter exception during remote order application rolls back without advan
  assert.ok(!db.calls.includes("commit"));
  assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
 });
+
+test("self echo with uppercase source UUID cannot double-apply a locally committed change",async()=>{
+ const own={...batch,events:[{...event(5),source_device_id:scope.deviceId.toUpperCase()}]};
+ const db=fixture();let writes=0;
+ const result=await applyVerifiedPullBatch({db,batch:own,scope,...signed(own),applyEvent:async()=>{writes++;return true;}});
+ assert.deepEqual(result,{status:"applied",nextCursor:5,count:0});
+ assert.equal(writes,0);
+ assert.equal(db.calls.at(-1),"commit");
+});
