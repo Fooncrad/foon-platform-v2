@@ -19,3 +19,16 @@ test("rejects corrupted body, actor substitution and invalid JSON",()=>{
  assert.throws(()=>prepareSyncPullEvents([{...row,actor_id:ids[4]}],scope),/SYNC_CORRUPT_JOURNAL/);
  assert.throws(()=>prepareSyncPullEvents([{...row,payload_json:"{"}],scope),/SYNC_CORRUPT_PAYLOAD/);
 });
+test("rejects a tampered next_version even with a valid unchanged payload digest",()=>{
+ assert.throws(()=>prepareSyncPullEvents([{...row,next_version:999}],scope),/SYNC_CORRUPT_JOURNAL/);
+});
+test("rejects non-sequential stored version after a legitimate base version",()=>{
+ const revised={...change,baseVersion:3};
+ const revisedRow={...row,base_version:3,next_version:3,payload_digest:digestChange(revised)};
+ assert.throws(()=>prepareSyncPullEvents([revisedRow],scope),/SYNC_CORRUPT_JOURNAL/);
+});
+test("accepts the exact next version for an updated entity",()=>{
+ const revised={...change,baseVersion:3};
+ const revisedRow={...row,base_version:3,next_version:4,payload_digest:digestChange(revised)};
+ assert.equal(prepareSyncPullEvents([revisedRow],scope)[0].next_version,4);
+});
