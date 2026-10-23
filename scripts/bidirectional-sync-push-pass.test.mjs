@@ -17,7 +17,7 @@ function fixture({status="recorded",empty=false}={}){
   if(sql.startsWith("SELECT event_id,payload_digest,event_payload"))return [empty||state!=="pending"?[]:[{event_id:ids[3],payload_digest:digestChange(change),event_payload:JSON.stringify(change)}]];
   if(sql.startsWith("SELECT tenant_id,branch_id,payload_digest,state"))return [[{tenant_id:ids[1],branch_id:ids[2],payload_digest:digestChange(change),state}]];
   if(sql.startsWith("SELECT payload_digest,next_version,signature"))return [[]];
-  if(sql.startsWith("UPDATE foon_sync_pending_events"))state=sql.includes("state='conflict'")?"conflict":"acknowledged";
+  if(sql.startsWith("UPDATE foon_sync_pending_events"))state=sql.includes("SET state='conflict'")?"conflict":"acknowledged";
   return [{affectedRows:1}];
  }};
  const fetchImpl=async()=>{sent++;const data=signCommittedPushReceipt({receipt:{deviceId:ids[0],eventId:ids[3],tenantId:ids[1],branchId:ids[2],digest:digestChange(change),status,nextVersion:status==="conflict"?0:1},privateKey});return {ok:true,status:200,redirected:false,headers:{get:()=>"application/json"},json:async()=>data}};
