@@ -13,7 +13,7 @@ function fixture({status="recorded",empty=false}={}){
  let state="pending";let sent=0;const calls=[];
  const db={calls,async beginTransaction(){calls.push("begin")},async commit(){calls.push("commit")},async rollback(){calls.push("rollback")},async execute(sql){
   calls.push(sql);
-  if(sql.includes("state='conflict'"))return [[]];
+  if(sql.startsWith("SELECT event_id FROM foon_sync_pending_events")&&sql.includes("state='conflict'"))return [state==="conflict"?[{event_id:ids[3]}]:[]];
   if(sql.startsWith("SELECT event_id,payload_digest,event_payload"))return [empty||state!=="pending"?[]:[{event_id:ids[3],payload_digest:digestChange(change),event_payload:JSON.stringify(change)}]];
   if(sql.startsWith("SELECT tenant_id,branch_id,payload_digest,state"))return [[{tenant_id:ids[1],branch_id:ids[2],payload_digest:digestChange(change),state}]];
   if(sql.startsWith("SELECT payload_digest,next_version,signature"))return [[]];
