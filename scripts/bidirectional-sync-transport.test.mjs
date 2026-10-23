@@ -49,3 +49,16 @@ test("pull transport accepts only exact four allowlisted query keys",async()=>{
  await assert.rejects(()=>requestSyncJson({url:duplicated,method:"GET",authorization,pullQuery:valid,fetchImpl}),/SYNC_UNSAFE_QUERY/);
  assert.equal(sent,1,"invalid query must not reach network");
 });
+
+test("trailing-dot DNS aliases are rejected before sending bearer credentials",async()=>{
+ let requests=0;
+ const fetchImpl=async()=>{requests++;return response(200,"application/json")};
+ for(const host of ["localhost.","dev.local.","sync.internal.","sync.example.com."]){
+  await assert.rejects(
+   ()=>requestSyncJson({url:`https://${host}/api/sync/v1/push`,method:"POST",authorization,body:{events:[]},fetchImpl}),
+   /SYNC_UNSAFE_ENDPOINT/,
+   host
+  );
+ }
+ assert.equal(requests,0,"rejected DNS aliases must not receive credentials or network requests");
+});
