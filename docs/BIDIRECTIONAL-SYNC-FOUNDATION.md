@@ -99,3 +99,6 @@ Cloud push now returns a signed `conflict` receipt (version 0 placeholder; not a
 
 ## Windows conflict review metadata (not a UI or auto-resolver)
 `listScopedSyncConflicts` now reads only the local device's tenant/branch rows in `conflict` state, revalidates stored JSON event integrity and SHA-256 digest, and returns only safe event metadata (type, ID, operation, base version, update time). It intentionally does not expose payload/customer details, delete, acknowledge, or retry any conflicted event. The actual staff-authorized review UI and audited manual resolution remain to be built. The new tests were registered but have not been run against MariaDB. No migration applied.
+
+## Conflict review privacy tightening
+Read-only conflict summaries intentionally exclude `entityId`, as identifiers can contain or correlate with sensitive customer/order references in downstream adapters. They now expose only event ID, type, operation, base version, status and review time. Any later detail view must require a separate audited, entity-specific authorization check. Automated tests were updated, but have not been executed against the current branch.
