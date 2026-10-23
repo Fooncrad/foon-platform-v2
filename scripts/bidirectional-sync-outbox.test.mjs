@@ -39,3 +39,26 @@ test("unresolved conflict blocks later pending events for the same scope",async(
  await assert.rejects(()=>readPendingSyncEvents(db,{deviceId:ids[3],tenantId:ids[1],branchId:ids[2]}),/SYNC_CONFLICT_REVIEW_REQUIRED/);
  assert.equal(calls.length,1);assert.deepEqual(calls[0].args,[ids[3],ids[1],ids[2]]);
 });
+
+test("mixed-case UUID scope reloads the same pending event without crossing tenants or branches",async()=>{
+ const scoped={...change,eventId:"a"+ids[0].slice(1),tenantId:"b"+ids[1].slice(1),branchId:"c"+ids[2].slice(1)};
+ const db={async execute(sql){
+  if(sql.includes("state='conflict'"))return [[]];
+  return [[{event_id:scoped.eventId.toUpperCase(),payload_digest:digestChange(scoped),event_payload:JSON.stringify(scoped)}]];
+ }};
+ const scope={deviceId:ids[3],tenantId:scoped.tenantId.toUpperCase(),branchId:scoped.branchId.toUpperCase()};
+ assert.deepEqual((await readPendingSyncEvents(db,scope)).map(x=>x.eventId),[scoped.eventId]);
+ await assert.rejects(()=>readPendingSyncEvents(db,{...scope,tenantId:ids[1]}),/SYNC_OUTBOX_CORRUPT_EVENT/);
+ await assert.rejects(()=>readPendingSyncEvents(db,{...scope,branchId:ids[2]}),/SYNC_OUTBOX_CORRUPT_EVENT/);
+});
+test("idempotent replay accepts the same MariaDB UUID scope with different casing",async()=>{
+ const scoped={...change,eventId:"a"+ids[0].slice(1),tenantId:"b"+ids[1].slice(1),branchId:"c"+ids[2].slice(1)};
+ let inserts=0;
+ const db={async execute(sql){
+  if(!sql.startsWith("SELECT")){inserts++;return [{affectedRows:1}];}
+  return [[{tenant_id:scoped.tenantId.toUpperCase(),branch_id:scoped.branchId.toUpperCase(),payload_digest:digestChange(scoped),event_payload:JSON.stringify(scoped),state:"pending"}]];
+ }};
+ const result=await enqueueScopedSyncEvent(db,{change:scoped,deviceId:ids[3]});
+ assert.equal(result.status,"duplicate");
+ assert.equal(inserts,0);
+});
