@@ -114,3 +114,9 @@ Read-only conflict summaries intentionally exclude `entityId`, as identifiers ca
 
 ## Advisory lock unknown-state protection
 A failed/interrupted `GET_LOCK` request may leave acquisition status unknown even if the MariaDB server acquired the lock. The Windows wrapper now destroys the dedicated connection unless MariaDB explicitly reports lock acquisition or a definite busy response; successful lock acquisition still requires a verified `RELEASE_LOCK` before pooling the connection. Tests now cover uncertain acquisition and failed release. These are mocked regression tests, not proof against a live MariaDB server. No schema change or production activation.
+
+## Opt-in live MariaDB lock integration test
+
+A real two-connection test is available in `scripts/bidirectional-sync-mariadb.integration.test.mjs`. It holds a Windows sender lock on the first MariaDB connection, verifies a second connection receives `SYNC_PUSH_ALREADY_RUNNING`, releases the first lock, and verifies a third attempt succeeds. The outbox read is stubbed **only** to avoid touching application tables; all advisory-lock SQL runs against the real disposable MariaDB instance. No migration is needed for this isolated lock test.
+
+Set `FOON_SYNC_MARIADB_TEST_URL` to a **test-only** MariaDB URL, then execute `npm run test:bidirectional-sync:mariadb`. Without the variable, the test skips. Never supply a production DB URL. This test has been committed but **not executed** from the current environment; it does not establish that the complete push/pull system works. Other application-level transaction tests and Windows integration are still required.
