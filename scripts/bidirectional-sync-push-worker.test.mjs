@@ -15,6 +15,7 @@ function fixture({empty=false}={}){
  const calls=[];
  const db={calls,async beginTransaction(){calls.push("begin")},async rollback(){calls.push("rollback")},async commit(){calls.push("commit")},async execute(sql){
  calls.push(sql);
+ if(sql.includes("state='conflict'"))return [[]];
  if(sql.startsWith("SELECT event_id,payload_digest,event_payload"))return [empty?[]:[{event_id:change.eventId,payload_digest:digestChange(change),event_payload:JSON.stringify(change)}]];
  if(sql.startsWith("SELECT tenant_id,branch_id,payload_digest,state"))return [[{tenant_id:ids[1],branch_id:ids[2],payload_digest:digestChange(change),state:"pending"}]];
  if(sql.startsWith("SELECT payload_digest,next_version,signature"))return [[]];
