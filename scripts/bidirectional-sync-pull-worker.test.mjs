@@ -68,3 +68,34 @@ test("pull scope lock is released after network failure so retry can succeed",as
  assert.equal(attempts,2);
  assert.equal(db.calls.filter(x=>x==="commit").length,1);
 });
+
+test("pull lock stays held while the local transaction is committing",async()=>{
+ const db=fixture();
+ let releaseCommit,commitEntered;
+ const pendingCommit=new Promise(resolve=>{releaseCommit=resolve});
+ const entered=new Promise(resolve=>{commitEntered=resolve});
+ let commitCalls=0,networkRequests=0;
+ db.commit=async()=>{
+  commitCalls++;
+  if(commitCalls===1){commitEntered();await pendingCommit;}
+  db.calls.push("commit");
+ };
+ const opts={db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,
+  fetchImpl:async()=>{networkRequests++;return response(signedBatch());}};
+ const first=pullAndApplyNextSyncBatch(opts);
+ await entered;
+ try{
+  // Previously the outer async function returned the receiver's Promise
+  // without awaiting it, releasing its finally lock before DB commit.
+  await assert.rejects(()=>pullAndApplyNextSyncBatch({...opts,scope:{...scope,deviceId:scope.deviceId.toUpperCase()}}),/SYNC_PULL_ALREADY_RUNNING/);
+  assert.equal(networkRequests,1,"no second network pull while first commit is pending");
+  assert.equal(commitCalls,1);
+ }finally{
+  releaseCommit();
+  await first;
+ }
+ const retried=await pullAndApplyNextSyncBatch(opts);
+ assert.equal(retried.status,"applied");
+ assert.equal(networkRequests,2,"lock is released after commit finishes");
+ assert.equal(commitCalls,2);
+});
