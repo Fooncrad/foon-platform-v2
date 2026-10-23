@@ -105,3 +105,6 @@ Read-only conflict summaries intentionally exclude `entityId`, as identifiers ca
 
 ## Bounded Windows push pass
 `pushBoundedPendingSyncEvents` provides an **explicit**, bounded single-device push pass (1–100 events, default 20), repeatedly using the existing signed receipt verifier and durable outbox. It stops at the first signed conflict for operator review, preserves pending rows when offline or when receipts cannot be verified, and never runs on a timer. It is not a production worker and is not integrated with real POS/merchant inventory. Tests were added for acknowledgment/idle, conflict, invalid bound and offline errors but are not yet executed against a real MariaDB instance. No migration applied.
+
+## Windows push-pass local concurrency guard
+`pushBoundedPendingSyncEvents` now prevents overlapping calls for the same device/tenant/branch **within a single Node process**, releases its guard even after failures, and fails closed if the same event is returned twice in one pass (to avoid infinite retry loops). This is not a cross-process/distributed lock; the Windows runner must additionally enforce single-instance execution across separate processes and persist retries securely. Two regression tests were added but have not yet run with the full repository. No production activation or migrations.
