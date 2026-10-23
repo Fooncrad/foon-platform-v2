@@ -53,3 +53,31 @@ test("same-scope lock is released after transport failure",async()=>{
  const outcome=await pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl:x.fetchImpl});
  assert.equal(outcome.acknowledged,1);
 });
+
+test("uppercase and lowercase UUID spellings cannot start concurrent push passes",async()=>{
+ const x=fixture();
+ const mixedScope={...scope,deviceId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"};
+ let release,entered;
+ const gate=new Promise(resolve=>{release=resolve});
+ const started=new Promise(resolve=>{entered=resolve});
+ const first=pushBoundedPendingSyncEvents({...params,scope:mixedScope,db:x.db,fetchImpl:async()=>{
+  entered();await gate;throw Error("SIMULATED_OFFLINE");
+ }});
+ await started;
+ let secondFetches=0;
+ try{
+  await assert.rejects(()=>pushBoundedPendingSyncEvents({...params,scope:{...mixedScope,deviceId:mixedScope.deviceId.toUpperCase()},db:x.db,fetchImpl:async()=>{
+   secondFetches++;throw Error("SECOND_PUSH_SHOULD_NOT_START");
+  }}),/SYNC_PUSH_ALREADY_RUNNING/);
+  assert.equal(secondFetches,0,"same device must not send a second concurrent request");
+ }finally{
+  release();
+  await assert.rejects(first,/SIMULATED_OFFLINE/);
+ }
+});
+test("invalid UUID push scope fails before reading outbox or sending network requests",async()=>{
+ const x=fixture();let networkCalls=0;
+ await assert.rejects(()=>pushBoundedPendingSyncEvents({...params,scope:{...scope,deviceId:"not-a-uuid"},db:x.db,fetchImpl:async()=>{networkCalls++;}}),/SYNC_INVALID_PUSH_SCOPE/);
+ assert.equal(x.db.calls.length,0);
+ assert.equal(networkCalls,0);
+});
