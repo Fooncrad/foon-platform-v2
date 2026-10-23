@@ -32,3 +32,20 @@ test("reject public API redirects and HTML without retrying against a new host",
  }
  assert.equal(calls,2);
 });
+
+test("pull transport accepts only exact four allowlisted query keys",async()=>{
+ const base="https://sync.example.com/api/sync/v1/pull";
+ const valid={tenantId:"11111111-1111-4111-8111-111111111111",branchId:"22222222-2222-4222-8222-222222222222",after:0,limit:10};
+ const qs=new URLSearchParams(valid).toString();
+ let sent=0;
+ const fetchImpl=async()=>{sent++;return response(200,"application/json")};
+ await requestSyncJson({url:base+"?"+qs,method:"GET",authorization,pullQuery:valid,fetchImpl});
+ assert.equal(sent,1);
+ // Previously a caller could substitute an arbitrary fourth key, including
+ // a bearer token, as long as pullQuery mirrored the forged URL.
+ const forged={tenantId:valid.tenantId,branchId:valid.branchId,after:0,token:"secret"};
+ await assert.rejects(()=>requestSyncJson({url:base+"?"+new URLSearchParams(forged),method:"GET",authorization,pullQuery:forged,fetchImpl}),/SYNC_UNSAFE_QUERY/);
+ const duplicated=base+"?tenantId="+valid.tenantId+"&tenantId="+valid.tenantId+"&branchId="+valid.branchId+"&after=0";
+ await assert.rejects(()=>requestSyncJson({url:duplicated,method:"GET",authorization,pullQuery:valid,fetchImpl}),/SYNC_UNSAFE_QUERY/);
+ assert.equal(sent,1,"invalid query must not reach network");
+});
