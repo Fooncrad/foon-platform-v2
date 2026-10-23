@@ -1,6 +1,5 @@
 import {NextResponse} from "next/server";
 import {database} from "@/lib/db/mysql";
-import {assertSameOrigin} from "@/lib/security/origin";
 import {authenticateEnrolledSyncDevice} from "@/lib/platform/bidirectional-sync-device-auth.mjs";
 import {handleAuthenticatedSyncPush} from "@/lib/platform/bidirectional-sync-cloud-handler.mjs";
 import {applyScopedInventoryMovement,validateInventoryMovement} from "@/lib/platform/bidirectional-sync-inventory.mjs";
@@ -11,7 +10,9 @@ const reply=(code:string,status:number)=>NextResponse.json({ok:false,code},{stat
 export async function POST(request:Request){
  // Entire route is OFF until the isolated migration and real integration tests pass.
  if(process.env.FOON_SYNC_PUSH_ENABLED!=="true")return reply("FEATURE_DISABLED",404);
- try{assertSameOrigin(request)}catch{return reply("FORBIDDEN",403)}
+ // Device-to-server bearer requests have no browser Origin; reject a mismatched Origin if supplied.
+ const origin=request.headers.get("origin");
+ if(origin){try{if(origin!==new URL(process.env.APP_URL||"").origin)return reply("FORBIDDEN",403)}catch{return reply("FORBIDDEN",403)}}
  const key=process.env.FOON_SYNC_ED25519_PRIVATE_KEY?.replace(/\\n/g,"\n");
  if(!key)return reply("SYNC_NOT_CONFIGURED",503);
  const bearer=request.headers.get("authorization")||"";
