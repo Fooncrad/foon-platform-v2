@@ -147,3 +147,20 @@ A signed cloud conflict receipt already changes its local outbox row from pendin
 
 ## Unsigned top-level envelope metadata hardening (2026-10-23)
 `validateChangeEnvelope` now rejects any unknown, hidden, symbol, or non-plain-object top-level fields. The event digest binds only the documented envelope fields, so silently forwarding additional top-level metadata could allow an adapter to observe data not covered by the digest. This change fails closed instead of accepting that mismatch. The new regression test is in `scripts/bidirectional-sync-contract.test.mjs`. An isolated Node 22 harness of the relevant validator/digest functions passed five targeted cases; this is **not** a full-repository test, Node 24 validation, or MariaDB integration run. Production flags and migration 0157 remain disabled/unapplied.
+
+### Signed-envelope nested JSON hardening (2026-10-23)
+
+The Windows/cloud change-envelope validator rejects unrepresentable JavaScript
+metadata **at every payload depth**, not only at the envelope root. Nested
+symbol keys, non-enumerable properties, getters/setters, sparse arrays, array
+extra properties and array element accessors are rejected before canonical
+hashing. The envelope root also requires ten own, enumerable data fields, so
+accessor getters are never executed during validation. This prevents an
+in-memory event from being interpreted differently from its signed JSON digest.
+
+Added focused regression coverage in
+`scripts/bidirectional-sync-contract.test.mjs`. An isolated Node 22.16.0
+copy-of-module check passed 6/6 focused cases; this is **not** a repository
+test run, Node 24 compatibility certification, or MariaDB integration test.
+Run the complete contract and MariaDB suites on the Windows machine before
+changing the PR from Draft. This does not enable production sync.
