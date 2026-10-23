@@ -19,3 +19,20 @@ test("rejects corrupted body, actor substitution and invalid JSON",()=>{
  assert.throws(()=>prepareSyncPullEvents([{...row,actor_id:ids[4]}],scope),/SYNC_CORRUPT_JOURNAL/);
  assert.throws(()=>prepareSyncPullEvents([{...row,payload_json:"{"}],scope),/SYNC_CORRUPT_PAYLOAD/);
 });
+
+test("cloud feed rejects a version jump before signing an order or reservation",()=>{
+ for(const entityType of ["order","reservation","catalog_item"]){
+  const candidate={...change,entityType};
+  const malformed={...row,entity_type:entityType,payload_digest:digestChange(candidate),next_version:2};
+  assert.throws(()=>prepareSyncPullEvents([malformed],scope),/SYNC_CORRUPT_JOURNAL_VERSION/);
+ }
+});
+
+test("cloud feed rejects inventory movement using a reused entity ID",()=>{
+ const movement={...change,entityType:"inventory_movement",operation:"movement",entityId:ids[4],payload:{itemId:ids[4],delta:-1}};
+ const malformed={...row,entity_type:movement.entityType,entity_id:movement.entityId,operation:movement.operation,payload_json:JSON.stringify(movement.payload),payload_digest:digestChange(movement)};
+ assert.throws(()=>prepareSyncPullEvents([malformed],scope),/SYNC_CORRUPT_JOURNAL_VERSION/);
+ const valid={...movement,entityId:movement.eventId};
+ const accepted={...malformed,entity_id:valid.entityId,payload_digest:digestChange(valid)};
+ assert.equal(prepareSyncPullEvents([accepted],scope)[0].next_version,1);
+});
