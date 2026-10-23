@@ -85,3 +85,20 @@ CREATE TABLE IF NOT EXISTS foon_sync_pending_events (
  PRIMARY KEY(device_id,event_id),
  KEY idx_foon_sync_pending_scope(tenant_id,branch_id,state,queued_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Enrolled Windows devices: grants and identity are server-owned.
+-- Provisioning and rotation are separate admin-only operations (not implemented here).
+CREATE TABLE IF NOT EXISTS foon_sync_devices (
+ device_id CHAR(36) NOT NULL PRIMARY KEY,
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ actor_id CHAR(36) NOT NULL,
+ token_sha256 CHAR(64) NOT NULL,
+ grants_json JSON NOT NULL,
+ enabled BOOLEAN NOT NULL DEFAULT FALSE,
+ revoked BOOLEAN NOT NULL DEFAULT FALSE,
+ suspended BOOLEAN NOT NULL DEFAULT FALSE,
+ expires_at DATETIME(6) NOT NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ KEY idx_foon_sync_devices_scope (tenant_id,branch_id,enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
