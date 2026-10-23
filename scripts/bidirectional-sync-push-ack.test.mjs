@@ -22,7 +22,9 @@ test("duplicate signed ACK is idempotent without an insert",async()=>{
 test("conflict receipts never mark a push acknowledged",async()=>{
  const conflict=signCommittedPushReceipt({receipt:{...receipt,status:"conflict"},privateKey});const db=dbFixture();
  const r=await persistVerifiedPushAcknowledgment({db,payload:conflict,expected,deviceId:ids[0],publicKey});
- assert.equal(r.status,"conflict");assert.deepEqual(db.calls,[]);
+ assert.equal(r.status,"conflict");assert.equal(db.calls.at(-1),"commit");
+ assert.ok(db.calls.some(x=>x.startsWith("UPDATE foon_sync_pending_events SET state=\'conflict\'")));
+ assert.ok(!db.calls.some(x=>x.startsWith("INSERT INTO foon_sync_push_acknowledgments")));
 });
 test("tampered receipts are rejected before opening a transaction",async()=>{
  const db=dbFixture();const tampered={...payload,receipt:{...payload.receipt,nextVersion:7}};
@@ -49,4 +51,18 @@ test("verified duplicate queued ACK is idempotent",async()=>{
  const out=await persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey});
  assert.equal(out.status,"acknowledged");
  assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_pending_events")));
+});
+
+test("signed conflict refuses to mark an already acknowledged event as conflict",async()=>{
+ const conflict=signCommittedPushReceipt({receipt:{...receipt,status:"conflict",nextVersion:0},privateKey});
+ const db=dbFixture([],{tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:1});
+ await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:conflict,expected,deviceId:ids[0],publicKey}),/SYNC_OUTBOX_ACK_CONFLICT/);
+ assert.equal(db.calls.at(-1),"rollback");
+});
+test("failed conflict persistence rolls back and stays retryable",async()=>{
+ const conflict=signCommittedPushReceipt({receipt:{...receipt,status:"conflict",nextVersion:0},privateKey});
+ const db=dbFixture();const execute=db.execute.bind(db);
+ db.execute=async(sql)=>sql.startsWith("UPDATE foon_sync_pending_events SET state='conflict'")?[{affectedRows:0}]:execute(sql);
+ await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:conflict,expected,deviceId:ids[0],publicKey}),/SYNC_OUTBOX_CONFLICT_WRITE_FAILED/);
+ assert.equal(db.calls.at(-1),"rollback");
 });
