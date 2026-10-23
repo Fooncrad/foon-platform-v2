@@ -26,3 +26,16 @@ test("offline transport preserves cursor",async()=>{
  await assert.rejects(()=>pullAndApplyNextSyncBatch({db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,fetchImpl:async()=>{throw Error("OFFLINE")}}),/OFFLINE/);
  assert.equal(db.calls.includes("begin"),false);
 });
+
+test("network recovery retries from unchanged cursor and commits only after signed response",async()=>{
+ const db=fixture();let attempts=0;
+ const opts={db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,
+  fetchImpl:async()=>{attempts++;if(attempts===1)throw Error("SIMULATED_NETWORK_DROP");return response(signedBatch());}};
+ await assert.rejects(()=>pullAndApplyNextSyncBatch(opts),/SIMULATED_NETWORK_DROP/);
+ assert.equal(db.calls.includes("begin"),false);
+ const result=await pullAndApplyNextSyncBatch(opts);
+ assert.equal(result.nextCursor,0);
+ assert.equal(attempts,2);
+ assert.equal(db.calls.filter(x=>x==="commit").length,1);
+ assert.equal(db.calls.filter(x=>x==="begin").length,1);
+});
