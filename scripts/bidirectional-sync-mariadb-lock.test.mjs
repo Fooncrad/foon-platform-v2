@@ -36,3 +36,14 @@ test("failed RELEASE_LOCK destroys connection and rejects success",async()=>{
  await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:x.pool,scope,maxEvents:1}),/SYNC_LOCK_RELEASE_FAILED/);
  assert.equal(x.calls.at(-1).sql,"destroy");
 });
+
+test("mixed-case UUID spellings use the same MariaDB advisory lock name",async()=>{
+ const lower=fixture({grant:0});
+ const upper=fixture({grant:0});
+ const upperScope=Object.fromEntries(Object.entries(scope).map(([key,id])=>[key,id.toUpperCase()]));
+ await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:lower.pool,scope}),/SYNC_PUSH_ALREADY_RUNNING/);
+ await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:upper.pool,scope:upperScope}),/SYNC_PUSH_ALREADY_RUNNING/);
+ assert.equal(lower.calls[1].args[0],upper.calls[1].args[0],"cross-process locks must not diverge by UUID letter case");
+ assert.equal(lower.calls.at(-1).sql,"release");
+ assert.equal(upper.calls.at(-1).sql,"release");
+});
