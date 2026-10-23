@@ -21,7 +21,7 @@ test("reject unauthorized, 5xx, malformed JSON and false success",async()=>{
 });
 test("forbid external paths, URL credentials, query tokens and unsafe hosts",async()=>{
  for(const target of ["http://sync.example.com/api/sync/v1/push","https://sync.example.com/preview","https://user:pass@sync.example.com/api/sync/v1/push","https://sync.example.com/api/sync/v1/push?token=x","https://localhost/api/sync/v1/push"]){
-  await assert.rejects(()=>requestSyncJson({url:target,authorization,fetchImpl:async()=>response(200,"application/json")}),/SYNC_(UNSAFE_ENDPOINT|UNEXPECTED_ENDPOINT)/,target);
+  await assert.rejects(()=>requestSyncJson({url:target,authorization,fetchImpl:async()=>response(200,"application/json")}),/SYNC_(UNSAFE_ENDPOINT|UNEXPECTED_ENDPOINT|UNSAFE_QUERY)/,target);
  }
 });
 
