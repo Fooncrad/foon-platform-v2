@@ -64,3 +64,44 @@ test("real MariaDB signed pull and cursor commit or rollback together",{skip:!ur
   assert.equal(Number(count.total),1);
  }finally{await db.end();}
 });
+
+test("real MariaDB atomically replays order, inventory and reservation after interrupted pull",{skip:!url?"FOON_SYNC_MARIADB_TEST_URL is not configured":false,timeout:15000},async()=>{
+ const db=await mysql.createConnection(url);
+ try{
+  await db.execute("CREATE TEMPORARY TABLE foon_sync_device_cursors (device_id CHAR(36) NOT NULL,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,last_pulled_id BIGINT UNSIGNED NOT NULL,PRIMARY KEY(device_id,tenant_id,branch_id)) ENGINE=InnoDB");
+  await db.execute("CREATE TEMPORARY TABLE foon_sync_business_probe (event_id CHAR(36) PRIMARY KEY,tenant_id CHAR(36) NOT NULL,branch_id CHAR(36) NOT NULL,entity_type VARCHAR(40) NOT NULL) ENGINE=InnoDB");
+  await db.execute("INSERT INTO foon_sync_device_cursors(device_id,tenant_id,branch_id,last_pulled_id) VALUES (?,?,?,0)",[scope.deviceId,scope.tenantId,scope.branchId]);
+  const kinds=["order","inventory_movement","reservation"];
+  const ids=["a8c77291-c3b0-4d99-9abe-6b35eadd52b6","b8c77291-c3b0-4d99-9abe-6b35eadd52b6","c8c77291-c3b0-4d99-9abe-6b35eadd52b6"];
+  const events=kinds.map((entityType,i)=>{
+   const change={eventId:ids[i],tenantId:scope.tenantId,branchId:scope.branchId,actorId:scope.deviceId,entityType,entityId:ids[i],operation:entityType==="inventory_movement"?"movement":"upsert",baseVersion:0,timestamp:"2026-10-23T00:00:00Z",payload:entityType==="inventory_movement"?{itemId:eventId,delta:-1}:{status:"pending"}};
+   return {id:i+1,event_id:change.eventId,tenant_id:change.tenantId,branch_id:change.branchId,actor_id:change.actorId,source_device_id:remoteDeviceId,entity_type:change.entityType,entity_id:change.entityId,operation:change.operation,base_version:0,next_version:1,event_timestamp:change.timestamp,payload_json:change.payload,payload_digest:digestChange(change)};
+  });
+  const multi={ok:true,tenantId:scope.tenantId,branchId:scope.branchId,events,nextCursor:3};
+  const signature=sign(null,pullBatchSignatureMessage(multi,scope),kp.privateKey).toString("base64url");
+  let failReservation=true;
+  const applyEvent=async(conn,e)=>{
+   assert.equal(e.tenant_id,scope.tenantId);
+   assert.equal(e.branch_id,scope.branchId);
+   await conn.execute("INSERT INTO foon_sync_business_probe(event_id,tenant_id,branch_id,entity_type) VALUES (?,?,?,?)",[e.event_id,e.tenant_id,e.branch_id,e.entity_type]);
+   if(e.entity_type==="reservation"&&failReservation)throw Error("SIMULATED_RESERVATION_WRITE_FAILURE");
+   return true;
+  };
+  const input={db,batch:multi,scope,signature,publicKey,applyEvent};
+  await assert.rejects(()=>applyVerifiedPullBatch(input),/SIMULATED_RESERVATION_WRITE_FAILURE/);
+  let [[cursor]]=await db.execute("SELECT last_pulled_id FROM foon_sync_device_cursors WHERE device_id=? AND tenant_id=? AND branch_id=?",[scope.deviceId,scope.tenantId,scope.branchId]);
+  let [[count]]=await db.execute("SELECT COUNT(*) AS n FROM foon_sync_business_probe");
+  assert.equal(Number(cursor.last_pulled_id),0,"failed reservation must roll back order, inventory and cursor");
+  assert.equal(Number(count.n),0);
+  failReservation=false;
+  const result=await applyVerifiedPullBatch(input);
+  assert.deepEqual(result,{status:"applied",nextCursor:3,count:3});
+  [[cursor]]=await db.execute("SELECT last_pulled_id FROM foon_sync_device_cursors WHERE device_id=? AND tenant_id=? AND branch_id=?",[scope.deviceId,scope.tenantId,scope.branchId]);
+  [[count]]=await db.execute("SELECT COUNT(*) AS n FROM foon_sync_business_probe");
+  assert.equal(Number(cursor.last_pulled_id),3);
+  assert.equal(Number(count.n),3);
+  await assert.rejects(()=>applyVerifiedPullBatch(input),/SYNC_CURSOR_CONFLICT/);
+  [[count]]=await db.execute("SELECT COUNT(*) AS n FROM foon_sync_business_probe");
+  assert.equal(Number(count.n),3,"replayed signed batch must not duplicate business events");
+ }finally{await db.end();}
+});
