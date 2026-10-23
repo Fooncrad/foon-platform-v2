@@ -56,7 +56,7 @@ test("MariaDB outbox isolates device, tenant, branch and survives network failur
   }});
   const response=(data)=>({ok:true,status:200,redirected:false,headers:{get:()=>"application/json"},json:async()=>data});
   const options={db,scope:scopes[0],url:"https://sync.example.com/api/sync/v1/push",authorization:"Bearer "+"x".repeat(64),publicKey};
-  const corrupted={...receipt,signature:"a".repeat(86)};
+  const corrupted={...receipt,receipt:{...receipt.receipt,signature:"a".repeat(86)}};
   await assert.rejects(()=>pushNextPendingSyncEvent({...options,fetchImpl:async()=>response(corrupted)}),/SYNC_.*SIGNATURE/);
   assert.equal((await readPendingSyncEvents(db,scopes[0])).length,1,"invalid signature must preserve the pending event");
   const resumed=await pushNextPendingSyncEvent({...options,fetchImpl:async()=>response(receipt)});
