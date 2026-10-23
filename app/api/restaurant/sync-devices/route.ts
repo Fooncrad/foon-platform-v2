@@ -24,7 +24,7 @@ export async function POST(request:Request){
  if(!Array.isArray(body.grants)||typeof body.expiresAt!=="string")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const conn=await database().getConnection();
  try{
-  const result=await enrollSyncDevice({db:conn,session:null,authorizeAdmin:()=>authorizeCurrentSyncDeviceAdmin(null,scope),grants:body.grants,expiresAt:body.expiresAt});
+  const result=await enrollSyncDevice({db:conn,session:null,authorizeAdmin:async()=>{const admin=await authorizeCurrentSyncDeviceAdmin(null,scope);return {...admin,verifiedServerSide:true as const}},grants:body.grants,expiresAt:body.expiresAt});
   return NextResponse.json({ok:true,device:result},{headers:{"Cache-Control":"no-store"}});
  }catch(error){
   const code=error instanceof Error?error.message:"";
@@ -37,7 +37,7 @@ export async function DELETE(request:Request){
  if(!scope||typeof (input as Record<string,unknown>).deviceId!=="string"||!uuid.test((input as Record<string,string>).deviceId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const conn=await database().getConnection();
  try{
-  const result=await revokeSyncDevice({db:conn,session:null,authorizeAdmin:()=>authorizeCurrentSyncDeviceAdmin(null,scope),deviceId:(input as Record<string,string>).deviceId});
+  const result=await revokeSyncDevice({db:conn,session:null,authorizeAdmin:async()=>{const admin=await authorizeCurrentSyncDeviceAdmin(null,scope);return {...admin,verifiedServerSide:true as const}},deviceId:(input as Record<string,string>).deviceId});
   return NextResponse.json({ok:true,...result},{headers:{"Cache-Control":"no-store"}});
  }catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}finally{conn.release()}
 }
