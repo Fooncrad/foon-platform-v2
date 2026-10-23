@@ -67,5 +67,20 @@ test("MariaDB outbox isolates device, tenant, branch and survives network failur
   assert.equal(Number(ackCount.n),1,"one durable ACK only");
   const idle=await pushNextPendingSyncEvent({...options,fetchImpl:async()=>{throw Error("ALREADY_ACKED_MUST_NOT_REPOST")}});
   assert.deepEqual(idle,{status:"idle"});
+  // Simulate a previously signed conflict followed by a dependent queued edit.
+  const conflictId="66666666-6666-4666-8666-666666666666";
+  const laterId="77777777-7777-4777-8777-777777777777";
+  await db.beginTransaction();
+  try{
+   await enqueueScopedSyncEvent(db,{change:event(scopes[0],conflictId),deviceId:deviceA});
+   await enqueueScopedSyncEvent(db,{change:event(scopes[0],laterId),deviceId:deviceA});
+   await db.commit();
+  }catch(error){await db.rollback();throw error;}
+  await db.execute("UPDATE foon_sync_pending_events SET state='conflict' WHERE device_id=? AND event_id=?",[deviceA,conflictId]);
+  await assert.rejects(()=>readPendingSyncEvents(db,scopes[0]),/SYNC_CONFLICT_REVIEW_REQUIRED/);
+  let unexpectedSends=0;
+  await assert.rejects(()=>pushNextPendingSyncEvent({...options,fetchImpl:async()=>{unexpectedSends++;return response(receipt)}}),/SYNC_CONFLICT_REVIEW_REQUIRED/);
+  assert.equal(unexpectedSends,0,"later events must not bypass an unresolved conflict");
+  for(let i=1;i<scopes.length;i++)assert.deepEqual((await readPendingSyncEvents(db,scopes[i])).map(x=>x.eventId),[ids[i]]);
  }finally{await db.end();}
 });
