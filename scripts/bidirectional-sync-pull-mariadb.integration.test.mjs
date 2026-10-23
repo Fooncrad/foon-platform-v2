@@ -47,6 +47,9 @@ test("real MariaDB signed pull and cursor commit or rollback together",{skip:!ur
   // inserting into the business projection a second time.
   const echoScope={...scope,after:1};
   const echo=signed(2,{sourceDeviceId:scope.deviceId,idOverride:"68c77291-c3b0-4d99-9abe-6b35eadd52b6",after:1});
+  await assert.rejects(()=>applyVerifiedPullBatch({db,...echo,scope:echoScope,publicKey,applyEvent}),/SYNC_LOCAL_ECHO_UNPROVEN/);
+  [[cursor]]=await db.execute("SELECT last_pulled_id FROM foon_sync_device_cursors WHERE device_id=? AND tenant_id=? AND branch_id=?",[scope.deviceId,scope.tenantId,scope.branchId]);
+  assert.equal(Number(cursor.last_pulled_id),1,"unproven local echo must not advance cursor");
   const own=echo.batch.events[0];
   const ownChange={eventId:own.event_id,tenantId:own.tenant_id,branchId:own.branch_id,actorId:own.actor_id,entityType:own.entity_type,entityId:own.entity_id,operation:own.operation,baseVersion:own.base_version,timestamp:own.event_timestamp,payload:own.payload_json};
   // The local outbox is durable proof that this device already committed the
