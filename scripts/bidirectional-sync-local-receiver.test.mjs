@@ -124,3 +124,12 @@ test("signed inventory movement must be unique and start at version one",async()
  await assert.rejects(()=>applyVerifiedPullBatch({db,batch:malicious,scope,...signed(malicious),applyEvent:async()=>true}),/SYNC_CORRUPT_REMOTE_VERSION/);
  assert.deepEqual(db.calls,[]);
 });
+
+test("adapter exception during remote order application rolls back without advancing cursor",async()=>{
+ const db=fixture();let calls=0;
+ await assert.rejects(()=>applyVerifiedPullBatch({db,...signed(),batch,scope,applyEvent:async()=>{calls++;throw Error("SIMULATED_DISK_FAILURE");}}),/SIMULATED_DISK_FAILURE/);
+ assert.equal(calls,1);
+ assert.equal(db.calls.at(-1),"rollback");
+ assert.ok(!db.calls.includes("commit"));
+ assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
+});
