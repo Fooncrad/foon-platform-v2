@@ -29,3 +29,11 @@ test("version counter cannot wrap past JavaScript safe integer range",()=>{
  const current={tenantId:c.tenantId,branchId:c.branchId,entityId:c.entityId,entityType:c.entityType,version:Number.MAX_SAFE_INTEGER};
  assert.throws(()=>resolveChange({incoming:{...c,baseVersion:0},current}),/SYNC_INVALID_CURRENT_VERSION/);
 });
+
+test("inventory movement is immutable and must use its event UUID as entity UUID",()=>{
+ const movement={...c,entityType:"inventory_movement",operation:"movement",entityId:c.eventId,baseVersion:0};
+ assert.deepEqual(resolveChange({incoming:movement,current:null}),{status:"apply",nextVersion:1});
+ assert.deepEqual(resolveChange({incoming:movement,current:{tenantId:c.tenantId,branchId:c.branchId,entityId:c.eventId,entityType:"inventory_movement",version:1}}),{status:"conflict",reason:"SYNC_MOVEMENT_ALREADY_EXISTS"});
+ assert.equal(resolveChange({incoming:{...movement,entityId:ids[4]},current:null}).reason,"SYNC_INVALID_MOVEMENT_ID");
+ assert.equal(resolveChange({incoming:{...movement,baseVersion:1},current:null}).reason,"SYNC_INVALID_MOVEMENT_ID");
+});
