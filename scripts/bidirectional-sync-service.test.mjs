@@ -56,10 +56,10 @@ test("generic sync.read alone never leaks customers, staff or order contents",as
  const db=dbFixture();
  db.execute=async(sql)=>{
   if(sql.includes("FROM foon_sync_changes WHERE tenant_id"))return [[
-   {id:1,entity_type:"customer_reference",payload_json:'{"private":"x"}'},
-   {id:2,entity_type:"staff_assignment",payload_json:'{"private":"y"}'},
+   {id:1,tenant_id:ids[1],branch_id:ids[2],entity_type:"customer_reference",payload_json:'{"private":"x"}'},
+   {id:2,tenant_id:ids[1],branch_id:ids[2],entity_type:"staff_assignment",payload_json:'{"private":"y"}'},
    catalogRow(3),
-   {id:4,entity_type:"order",payload_json:'{"private":"z"}'}
+   {id:4,tenant_id:ids[1],branch_id:ids[2],entity_type:"order",payload_json:'{"private":"z"}'}
   ]];
   return [[]];
  };
@@ -109,4 +109,17 @@ test("signed read refuses unauthorized branch before signing",async()=>{
  const privateKey=pair.privateKey.export({format:"pem",type:"pkcs8"});
  await assert.rejects(()=>readSignedAuthorizedChanges({db,verifiedContext:context,request:{tenantId:ids[1],branchId:ids[4]},privateKey}),/SYNC_SCOPE_FORBIDDEN/);
  assert.deepEqual(db.calls,[]);
+});
+
+// A filtered-out order/reservation must not hide a cross-tenant/branch journal
+// row and silently advance the Windows cursor past valid business events.
+test("unauthorized cross-scope rows fail before cursor advancement or signing",async()=>{
+ for(const wrong of [{tenant_id:ids[4]},{branch_id:ids[4]}]){
+  const db=dbFixture();
+  db.execute=async(sql)=>sql.includes("FROM foon_sync_changes WHERE tenant_id")?[[{...catalogRow(8),entity_type:"order",...wrong}]]:[[]];
+  await assert.rejects(()=>readAuthorizedChanges({db,verifiedContext:context,request:{tenantId:ids[1],branchId:ids[2]}}),/SYNC_FEED_SCOPE_MISMATCH/);
+  const pair=generateKeyPairSync("ed25519");
+  const privateKey=pair.privateKey.export({format:"pem",type:"pkcs8"});
+  await assert.rejects(()=>readSignedAuthorizedChanges({db,verifiedContext:context,request:{tenantId:ids[1],branchId:ids[2]},privateKey}),/SYNC_FEED_SCOPE_MISMATCH/);
+ }
 });
