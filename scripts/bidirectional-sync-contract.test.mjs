@@ -37,3 +37,15 @@ test("inventory movement is immutable and must use its event UUID as entity UUID
  assert.equal(resolveChange({incoming:{...movement,entityId:ids[4]},current:null}).reason,"SYNC_INVALID_MOVEMENT_ID");
  assert.equal(resolveChange({incoming:{...movement,baseVersion:1},current:null}).reason,"SYNC_INVALID_MOVEMENT_ID");
 });
+
+test("unsigned top-level metadata cannot bypass event digest integrity",()=>{
+ const injected={...c,adminOverride:true};
+ assert.throws(()=>validateChangeEnvelope(injected),/SYNC_INVALID_ENVELOPE/);
+ assert.throws(()=>digestChange(injected),/SYNC_INVALID_ENVELOPE/);
+ const hidden={...c};
+ Object.defineProperty(hidden,"internalGrant",{value:"owner"});
+ assert.throws(()=>validateChangeEnvelope(hidden),/SYNC_INVALID_ENVELOPE/);
+ const symbolKey={...c,[Symbol("role")]:"admin"};
+ assert.throws(()=>validateChangeEnvelope(symbolKey),/SYNC_INVALID_ENVELOPE/);
+ assert.equal(digestChange(c).length,64);
+});
