@@ -11,6 +11,7 @@ test("conflict review returns only metadata and enforces device/branch filter",a
  const result=await listScopedSyncConflicts(db,scope);
  assert.equal(result[0].status,"conflict");assert.equal(result[0].entityType,"order");
  assert.equal(JSON.stringify(result).includes("private@example.com"),false);
+ assert.equal(Object.hasOwn(result[0],"entityId"),false);
  assert.match(db.calls[0].sql,/state='conflict'/);
  assert.deepEqual(db.calls[0].args,[ids[3],ids[1],ids[2],50]);
 });
