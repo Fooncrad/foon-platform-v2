@@ -22,7 +22,7 @@ test("failed business mutation rolls back queued event",async()=>{
  assert.equal(db.calls.at(-1),"rollback");assert.ok(!db.calls.includes("commit"));
 });
 test("already queued event never repeats the business mutation",async()=>{
- const db=dbFixture({existing:[{tenant_id:ids[1],branch_id:ids[2],payload_digest:digestChange(change),state:"pending"}]});let writes=0;
+ const db=dbFixture({existing:[{tenant_id:ids[1],branch_id:ids[2],payload_digest:digestChange(change),event_payload:JSON.stringify(change),state:"pending"}]});let writes=0;
  const result=await recordLocalBusinessChange({db,change,deviceId:ids[3],applyBusinessChange:async()=>{writes++;return true}});
  assert.equal(result.status,"duplicate");assert.equal(writes,0);assert.equal(db.calls.at(-1),"rollback");
 });
