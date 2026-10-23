@@ -21,6 +21,7 @@ test("real MariaDB advisory lock serializes Windows push across separate connect
  const entered=new Promise(resolve=>{enterResolve=resolve});
  const exit=new Promise(resolve=>{exitResolve=resolve});
  let enteredOnce=false;
+ let first;
  const wrapper={
   async getConnection(){
    const conn=await pool.getConnection();
@@ -40,7 +41,7 @@ test("real MariaDB advisory lock serializes Windows push across separate connect
   }
  };
  try{
-  const first=pushWithMariaDbDeviceLock({pool:wrapper,scope,maxEvents:1});
+  first=pushWithMariaDbDeviceLock({pool:wrapper,scope,maxEvents:1});
   await entered;
   await assert.rejects(
    ()=>pushWithMariaDbDeviceLock({pool:wrapper,scope,maxEvents:1}),
@@ -51,6 +52,8 @@ test("real MariaDB advisory lock serializes Windows push across separate connect
   assert.equal((await pushWithMariaDbDeviceLock({pool:wrapper,scope,maxEvents:1})).status,"idle");
  }finally{
   exitResolve();
+  // Never close the pool while an acquired lock is still in use.
+  if(first)await first.catch(()=>{});
   await pool.end();
  }
 });
