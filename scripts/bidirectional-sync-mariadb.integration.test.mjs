@@ -48,6 +48,13 @@ test("real MariaDB advisory lock serializes Windows push across separate connect
    ()=>pushWithMariaDbDeviceLock({pool:wrapper,scope,maxEvents:1}),
    /SYNC_PUSH_ALREADY_RUNNING/
   );
+  // A second Windows process may use uppercase UUIDs for the same scope.
+  // It must still contend on the identical server-side MariaDB lock.
+  const upperScope=Object.fromEntries(Object.entries(scope).map(([key,id])=>[key,id.toUpperCase()]));
+  await assert.rejects(
+   ()=>pushWithMariaDbDeviceLock({pool:wrapper,scope:upperScope,maxEvents:1}),
+   /SYNC_PUSH_ALREADY_RUNNING/
+  );
   exitResolve();
   assert.equal((await first).status,"idle");
   assert.equal((await pushWithMariaDbDeviceLock({pool:wrapper,scope,maxEvents:1})).status,"idle");
