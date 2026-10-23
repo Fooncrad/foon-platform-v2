@@ -5,7 +5,6 @@ import {handleAuthenticatedSyncPull} from "@/lib/platform/bidirectional-sync-clo
 import {parseSyncPullQuery} from "@/lib/platform/bidirectional-sync-pull-query.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const noStore={"Cache-Control":"no-store"};
 const reply=(code:string,status:number)=>NextResponse.json({ok:false,code},{status,headers:noStore});
 export async function GET(request:Request){
