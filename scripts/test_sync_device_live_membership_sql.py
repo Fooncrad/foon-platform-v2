@@ -95,5 +95,35 @@ class Checks(unittest.TestCase):
         c.execute("UPDATE users SET status=NULL")
         self.assertFalse(allowed(c))
 
+    def test_foreign_actor_owner_cannot_reuse_device(self):
+        c = db()
+        c.execute("INSERT INTO users VALUES ('actor-b','active')")
+        c.execute("UPDATE memberships SET user_id='actor-b'")
+        self.assertFalse(allowed(c))
+
+    def test_same_tenant_other_branch_does_not_match_device(self):
+        c = db()
+        c.execute("UPDATE branches SET id='branch-b'")
+        self.assertFalse(allowed(c))
+
+    def test_null_role_is_denied(self):
+        c = db()
+        c.execute("UPDATE memberships SET role=NULL")
+        self.assertFalse(allowed(c))
+
+    def test_reactivated_membership_restores_access(self):
+        c = db()
+        c.execute("UPDATE memberships SET status='revoked'")
+        self.assertFalse(allowed(c))
+        c.execute("UPDATE memberships SET status='active'")
+        self.assertTrue(allowed(c))
+
+    def test_reenabled_branch_restores_access(self):
+        c = db()
+        c.execute("UPDATE branches SET enabled=0")
+        self.assertFalse(allowed(c))
+        c.execute("UPDATE branches SET enabled=1")
+        self.assertTrue(allowed(c))
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
