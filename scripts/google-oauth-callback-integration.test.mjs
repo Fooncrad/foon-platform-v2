@@ -11,10 +11,10 @@ const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.Modu
 const policy = require('../lib/auth/google-oauth-security.mjs');
 const state = 'A'.repeat(43);
 
-function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, consented = true } = {}) {
+function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, checkoutStore = '', consented = true } = {}) {
   const actions = { sql: [], cookieWrites: [], sessions: [], commits: 0, rollbacks: 0, connections: 0 };
   const jar = {
-    get: (name) => ({ value: name === 'foon_google_legal_consent' && !consented ? undefined : state }),
+    get: (name) => name === 'foon_google_checkout_store' ? (checkoutStore ? {value:checkoutStore} : undefined) : ({value: name === 'foon_google_legal_consent' && !consented ? undefined : state}),
     set: (...args) => actions.cookieWrites.push(args),
   };
   const db = {
@@ -102,12 +102,12 @@ test('creates verified local user only after Google token verification', async (
   assert.equal(actions.sessions.length, 1);
 });
 
-test('rejects Google new-account creation without explicit state-bound consent', async () => {
-  const { run, actions } = setup({ consented: false });
-  assert.match((await run()).url, /GOOGLE_LEGAL_CONSENT_REQUIRED/);
-  assert.equal(actions.sessions.length, 0);
-  assert.equal(actions.commits, 0);
-  assert.equal(actions.sql.some(x => x.sql.startsWith('INSERT INTO users')), false);
+test('rejects new Google account without explicit legal consent', async () => {
+ const {run,actions}=setup({consented:false});
+ assert.match((await run()).url,/GOOGLE_LEGAL_CONSENT_REQUIRED/);
+ assert.equal(actions.sessions.length,0);
+ assert.equal(actions.commits,0);
+ assert.equal(actions.sql.some(x=>x.sql.startsWith('INSERT INTO users')),false);
 });
 
 test('rejects Google identity with unverified email before database access', async () => {
@@ -129,4 +129,15 @@ test('platform administrator disabling Google prevents identity linking and sess
   assert.equal(actions.sessions.length,0);
   assert.equal(actions.sql.some(x=>x.sql.includes('INSERT INTO auth_google_identities')),false);
   assert.equal(actions.commits,0);
+});
+
+test('Google checkout returns to safe same-origin store cart',async()=>{
+ const {run,actions}=setup({checkoutStore:'nasser',matched:{id:'user-7',status:'active',email_verified_at:'2026-10-24'}});
+ assert.equal((await run()).url,'https://example.test/nasser?checkout=google#menu-cart');
+ assert.deepEqual(actions.sessions,['user-7']);
+ assert.ok(actions.cookieWrites.some(([name,,options])=>name==='foon_google_checkout_store'&&options.path==='/api/auth/google'&&options.maxAge===0));
+});
+test('unsafe Google checkout targets are never used as redirect URLs',async()=>{
+ const {run}=setup({checkoutStore:'//attacker.example',matched:{id:'user-8',status:'active',email_verified_at:'2026-10-24'}});
+ assert.equal((await run()).url,'https://example.test/account');
 });

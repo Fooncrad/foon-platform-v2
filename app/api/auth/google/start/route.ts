@@ -22,6 +22,9 @@ async function begin(request:Request,legalAccepted:boolean,asJson:boolean){
  if(base.protocol!=="https:" && process.env.NODE_ENV==="production")return failure("GOOGLE_NOT_CONFIGURED");
  const state=randomBytes(32).toString("base64url");
  const jar=await cookies();
+ const store=new URL(request.url).searchParams.get("store")??"";
+ const checkoutStore=/^[a-z0-9][a-z0-9-]{0,79}$/.test(store)?store:"";
+ jar.set("foon_google_checkout_store",checkoutStore,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:COOKIE_PATH,maxAge:checkoutStore?600:0});
  jar.set("foon_google_oauth_state",state,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:COOKIE_PATH,maxAge:600});
  // An explicit POST is the only route that binds the user's consent to this OAuth state.
  jar.set("foon_google_legal_consent",legalAccepted?state:"",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:COOKIE_PATH,maxAge:legalAccepted?600:0});

@@ -13,6 +13,9 @@ export async function GET(request:Request){
  const url=new URL(request.url),code=url.searchParams.get("code"),incoming=url.searchParams.get("state");
  const jar=await cookies(),saved=jar.get("foon_google_oauth_state")?.value;
  const legalConsentState=jar.get("foon_google_legal_consent")?.value;
+ const store=jar.get("foon_google_checkout_store")?.value??"";
+ const checkoutStore=/^[a-z0-9][a-z0-9-]{0,79}$/.test(store)?store:"";
+ jar.set("foon_google_checkout_store","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:GOOGLE_OAUTH_COOKIE_PATH,maxAge:0});
  jar.set("foon_google_oauth_state","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:GOOGLE_OAUTH_COOKIE_PATH,maxAge:0});
  jar.set("foon_google_legal_consent","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:GOOGLE_OAUTH_COOKIE_PATH,maxAge:0});
  if(!code||!validGoogleOauthState(incoming,saved))return fail(request,"GOOGLE_STATE_INVALID");
@@ -57,6 +60,6 @@ export async function GET(request:Request){
    await createSession(userId,db);
    await db.commit();
   }catch(error){await db.rollback();throw error;}finally{db.release();}
-  return NextResponse.redirect(new URL("/account",appUrl));
+  return NextResponse.redirect(new URL(checkoutStore?"/"+checkoutStore+"?checkout=google#menu-cart":"/account",appUrl));
  }catch{return fail(request,"GOOGLE_AUTH_UNAVAILABLE");}
 }
