@@ -363,6 +363,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
  await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill(visualSlug+"-guest@test.example");
  await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+ await publicPage.getByRole('dialog').locator('input[name="legalConsent"]').check();
  await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true})).toBeVisible();
  await captureScreenshot(publicPage.getByRole('dialog'),{path:'work/menu-waiter-mobile.png'});
