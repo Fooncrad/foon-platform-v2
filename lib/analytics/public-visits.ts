@@ -4,7 +4,7 @@ export type PublicVisitKind="storefront"|"restaurant_item"|"catalog_product"|"cr
 export const PUBLIC_VISIT_KINDS=new Set<PublicVisitKind>(["storefront","restaurant_item","catalog_product","creator_profile"]);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const validAnalyticsId=(value:unknown):value is string=>typeof value==="string"&&UUID.test(value);
-export const validAnalyticsSlug=(value:unknown):value is string=>typeof value==="string"&&/^[a-z0-9][a-z0-9-]{0,79}$/.test(value);
+export const validAnalyticsSlug=(value:unknown):value is string=>typeof value==="string"&&/^[a-z0-9][a-z0-9-]{1,118}[a-z0-9]$/.test(value);
 export function visitFingerprint(token:string,kind:PublicVisitKind,subject:string,day:string){
  return createHash("sha256").update("foon-visit-v1\0"+token+"\0"+kind+"\0"+subject+"\0"+day).digest("hex");
 }
