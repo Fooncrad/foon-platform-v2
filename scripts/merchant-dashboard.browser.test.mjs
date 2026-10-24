@@ -263,10 +263,6 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await expect(page.getByText("تم حفظ القالب والمظهر. يظهر التغيير في منيو مطعمك مباشرة.",{exact:true})).toBeVisible();
   await publicPage.setViewportSize({width:1440,height:1000});
   await publicPage.goto(origin+"/"+visualSlug);
-  // Each template scenario starts with an empty synthetic cart, even though real
-  // customer carts must persist across same-store navigation and OAuth returns.
-  await publicPage.evaluate(store=>sessionStorage.removeItem("foon-menu-cart:"+store),visualSlug);
-  await publicPage.reload();
   await expect(publicPage.getByRole("heading",{name:"مطعم المعاينة",exact:true})).toHaveCount(1);
   await expect(publicPage.locator(".publicMenu")).toHaveAttribute("data-template",template);
   await expect(publicPage.getByRole("heading",{name:"قهوة المعاينة",exact:true})).toBeVisible();
@@ -280,6 +276,11 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await expect(publicPage.locator('.publicMenuHeader .publicMenuCategoryTrigger')).toBeHidden();
   await expect(mobileDock.locator('.publicMenuServices')).toHaveCount(0);
   await expect(mobileDock.locator('a[href$="/login"]')).toHaveCount(1);
+  // Clear the synthetic cart through the same UI customers use; cart persistence
+  // across template navigation is intentional and must not break empty-state checks.
+  const previousCoffee=publicPage.getByLabel("كمية قهوة المعاينة",{exact:true});
+  if(await previousCoffee.count())await previousCoffee.fill("0");
+  await expect(publicPage.locator(".publicMenuCart")).toHaveCount(0);
   await mobileDock.getByRole('button',{name:'السلة',exact:false}).click();
   const emptyCart=publicPage.getByRole('dialog',{name:'السلة',exact:true});await expect(emptyCart).toContainText('سلتك فارغة');await emptyCart.press('Escape');
   await mobileDock.getByRole('button',{name:'الأقسام',exact:true}).click();await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();await publicPage.getByRole('dialog').press('Escape');
