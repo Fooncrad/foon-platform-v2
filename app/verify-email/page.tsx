@@ -15,9 +15,9 @@ export default async function VerifyEmailPage({searchParams}:{searchParams:Promi
   try{const [rows]=await database().execute<RowDataPacket[]>("SELECT email_verified_at FROM users WHERE id=? AND status='active' LIMIT 1",[user]);verified=Boolean(rows[0]?.email_verified_at);}catch{}
  }
  const labels={
-  ar:{title:"تأكيد البريد الإلكتروني",message:"إذا وصلتك رسالة تأكيد فافتح رابطها لتوثيق بريدك. وإذا لم تصلك، اضغط «إعادة إرسال رابط التأكيد» أدناه. يمكنك استخدام حسابك أثناء الانتظار.",back:"الانتقال إلى حسابي",login:"تسجيل الدخول"},
-  en:{title:"Verify your email",message:"Open a verification link if you received one. Otherwise, select “Resend verification email” below. You can continue using your account while waiting.",back:"Continue to my account",login:"Sign in"},
-  fr:{title:"Vérifier votre adresse e-mail",message:"Ouvrez le lien reçu pour vérifier votre adresse. Sinon, cliquez sur « Renvoyer le lien de vérification » ci-dessous. Vous pouvez continuer à utiliser votre compte pendant l’attente.",back:"Continuer vers mon compte",login:"Se connecter"}
+  ar:{title:"تأكيد البريد الإلكتروني",message:"إذا وصلتك رسالة تأكيد فافتح رابطها لتوثيق بريدك. وإذا لم تصلك، اضغط «إعادة إرسال رابط التأكيد» أدناه. يمكنك الدخول إلى حسابك، لكن لا يمكنك إتمام طلب أو حجز حتى توثيق البريد.",back:"الانتقال إلى حسابي",login:"تسجيل الدخول"},
+  en:{title:"Verify your email",message:"Open a verification link if you received one. Otherwise, select “Resend verification email” below. You can sign in while waiting, but checkout and reservations require a verified email.",back:"Continue to my account",login:"Sign in"},
+  fr:{title:"Vérifier votre adresse e-mail",message:"Ouvrez le lien reçu pour vérifier votre adresse. Sinon, cliquez sur « Renvoyer le lien de vérification » ci-dessous. Vous pouvez vous connecter, mais les commandes et réservations exigent un e-mail vérifié.",back:"Continuer vers mon compte",login:"Se connecter"}
  }[language];
  return <main className="auth-shell" lang={language} dir={language==="ar"?"rtl":"ltr"}><section className="auth-card">
   <Link className="auth-brand" href="/">FOON</Link>
