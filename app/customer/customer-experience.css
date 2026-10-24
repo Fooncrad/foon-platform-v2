@@ -104,3 +104,8 @@
 .customerGrowthActions a,.customerGrowthStores a{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-width:0;padding:10px 14px;border:1px solid currentColor;border-radius:12px;text-decoration:none;overflow-wrap:anywhere}
 .customerGrowthActions a:focus-visible,.customerGrowthStores a:focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
 @media(max-width:420px){.customerGrowthStats{gap:6px}.customerGrowthStats>div{padding:9px}.customerGrowthStats span{font-size:.75rem}.customerGrowthActions a{width:100%;justify-content:center}}
+
+.customerGrowthStores button{max-width:100%;padding:10px 14px;border:1px solid currentColor;border-radius:12px;background:transparent;color:inherit;cursor:pointer;text-align:start;overflow-wrap:anywhere}
+.customerGrowthStores button[aria-pressed="true"]{border-color:#e2a93b}
+.customerGrowthStores button:focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
+.customerGrowthStores button:disabled{opacity:.6;cursor:wait}
