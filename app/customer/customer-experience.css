@@ -94,3 +94,46 @@
 .customerDashboard[data-theme="light"] :is(.customerOrderCount,.customerOrderStatus){color:var(--customer-status,#815911)}
 
 .customerDashboard .customerPinnedStores{order:-2;grid-column:1 / -1;scroll-margin-top:24px}.customerDashboard .customerPinnedStoreList{display:grid;gap:10px;margin-top:14px}.customerDashboard .customerPinnedStore{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border:1px solid var(--customer-line,#ffffff20);border-radius:14px}.customerDashboard .customerPinnedStore>div{display:grid;gap:5px;min-width:0}.customerDashboard .customerPinnedStore strong{overflow-wrap:anywhere}.customerDashboard .customerPinnedStore small{color:var(--customer-muted,#a9a6a0);font-size:12px}.customerDashboard .customerPinnedStore>a{padding:8px 12px;border-radius:10px;background:#e2a93b20;color:inherit;font-weight:650;text-decoration:none}.customerDashboard .customerPinnedStore>a:hover{text-decoration:underline}.customerDashboard .customerOrderCard[id]{scroll-margin-top:100px}
+
+
+/* Customer command center: an action-oriented private landing experience. */
+.customerDashboard{max-width:100%;overflow-x:clip}
+.customerDashboard :is(.customerActionHub,.customerActionHub *){box-sizing:border-box;min-width:0}
+.customerDashboard .customerActionHub{margin:18px clamp(12px,3vw,28px) 26px;padding:clamp(16px,3vw,28px);border-radius:24px;background:linear-gradient(135deg,#2c281f,#1f211e);border:1px solid #e2a93b36;color:#f8f3e9;box-shadow:0 12px 42px #0000001b}
+.customerDashboard .customerActionHeading{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 22px}
+.customerDashboard .customerActionHeading>div{flex:1 1 300px}
+.customerDashboard .customerActionEyebrow{font-size:12px;color:#e2a93b;font-weight:800}
+.customerDashboard .customerActionHeading h2{font-size:clamp(20px,2.5vw,30px);line-height:1.35;margin:8px 0}
+.customerDashboard .customerActionHeading p{font-size:13px;color:#d4cabe;line-height:1.8;margin:0}
+.customerDashboard .customerActionHub a{min-height:44px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;overflow-wrap:anywhere}
+.customerDashboard .customerHubDiscover{padding:10px 16px;border-radius:12px;background:#e2a93b;color:#171613!important;font-weight:800}
+.customerDashboard .customerActionMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-block:20px}
+.customerDashboard .customerActionMetrics a{display:grid;gap:6px;justify-items:start;text-align:start;padding:16px;border:1px solid #ffffff25;border-radius:16px;background:#ffffff08;color:#f8f3e9}
+.customerDashboard .customerActionMetrics a:hover,.customerDashboard .customerQuickActions a:hover{border-color:#e2a93b}
+.customerDashboard .customerActionMetrics strong{font-size:clamp(23px,3vw,32px);line-height:1;font-variant-numeric:tabular-nums;color:#e2a93b}
+.customerDashboard .customerActionMetrics span{font-size:12px;color:#ded5c8}
+.customerDashboard .customerNextAction{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:18px;border:1px solid #e2a93b60;border-radius:17px;background:#e2a93b13}
+.customerDashboard .customerNextAction>div{flex:1 1 260px}
+.customerDashboard .customerNextAction small{color:#e2a93b;font-size:12px;font-weight:700}
+.customerDashboard .customerNextAction h3{font-size:18px;margin:6px 0;line-height:1.5}
+.customerDashboard .customerNextAction p{color:#ded5c8;font-size:13px;margin:0;line-height:1.8}
+.customerDashboard .customerNextAction>a{padding:12px 17px;border-radius:12px;background:#e2a93b;color:#171613!important;font-weight:800;gap:8px}
+.customerDashboard .customerQuickActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-block:16px}
+.customerDashboard .customerQuickActions a{display:flex;gap:9px;justify-content:start;padding:11px 13px;border:1px solid #ffffff2b;border-radius:12px;background:#ffffff07;color:#f8f3e9;text-align:start;font-size:13px}
+.customerDashboard .customerQuickActions a span{color:#e2a93b;font-size:17px;flex:0 0 auto}
+.customerDashboard .customerHubPrivacy{font-size:12px;line-height:1.8;color:#d2c7b9;margin:10px 0 0}
+.customerDashboard .customerOrderFilterButtons{display:flex;flex-wrap:wrap;gap:8px;margin-block:12px}
+.customerDashboard .customerOrderFilterButtons button{min-height:44px;padding:10px 12px;border:1px solid var(--customer-line,#ffffff2d);border-radius:12px;background:transparent;color:inherit;font:inherit;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.customerDashboard .customerOrderFilterButtons button[aria-pressed="true"]{background:#e2a93b;color:#171613;border-color:#e2a93b;font-weight:800}
+.customerDashboard .customerOrderFilterButtons span{font-variant-numeric:tabular-nums}
+.customerDashboard .customerFilterFeedback{font-size:12px;opacity:.8;margin:8px 0}
+.customerDashboard .customerFilterEmpty{padding:18px;border:1px dashed var(--customer-line,#ffffff3b);border-radius:12px;font-size:13px;line-height:1.8}
+.customerDashboard .customerOrderFiltered[data-filter="active"] .customerOrderCard:not([data-phase="active"]),
+.customerDashboard .customerOrderFiltered[data-filter="finished"] .customerOrderCard:not([data-phase="finished"]),
+.customerDashboard .customerOrderFiltered[data-filter="cancelled"] .customerOrderCard:not([data-phase="cancelled"]){display:none}
+.customerDashboard[data-theme="light"] .customerActionHub{background:linear-gradient(135deg,#30291f,#1f211e);color:#f8f3e9}
+.customerDashboard[data-theme="light"] .customerOrderFilterButtons button:not([aria-pressed="true"]){color:var(--customer-ink,#1b1b1b);background:#fff}
+.customerDashboard .customerActionHub :is(a,button):focus-visible,.customerDashboard .customerOrderFilterButtons button:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+@media(max-width:660px){.customerDashboard .customerActionMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.customerDashboard .customerQuickActions{grid-template-columns:repeat(2,minmax(0,1fr))}.customerDashboard .customerActionHub{margin:12px 12px 22px;padding:15px}.customerDashboard .customerOrderFilterButtons button{flex:1 1 calc(50% - 8px);justify-content:space-between}}
+@media(max-width:340px){.customerDashboard .customerQuickActions{grid-template-columns:1fr}.customerDashboard .customerNextAction>a{width:100%}}
+@media(prefers-reduced-motion:reduce){.customerDashboard .customerActionHub *{scroll-behavior:auto;transition:none!important}}
