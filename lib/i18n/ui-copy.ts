@@ -1,5 +1,8 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "ترتيب المجموعة":["Group sort order","Ordre du groupe"],
+ "مخزون الإضافة (فارغ = غير محدود)":["Add-on stock (blank = unlimited)","Stock du supplément (vide = illimité)"],
+ "ترتيب الإضافة":["Add-on sort order","Ordre du supplément"],
  "وصف المتجر بالإنجليزية": ["Store description in English", "Description de la boutique en anglais"],
  "وصف المتجر بالفرنسية": ["Store description in French", "Description de la boutique en français"],
  "عنوان المتجر بالإنجليزية": ["Store address in English", "Adresse de la boutique en anglais"],
