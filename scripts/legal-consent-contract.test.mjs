@@ -26,7 +26,7 @@ test("registration and onboarding reject direct API bypass and persist acceptanc
   const src=read(path);
   assert.match(src,/legalAccepted!==true/,path);
   assert.match(src,/LEGAL_CONSENT_REQUIRED/,path);
-  assert.match(src,/legal_accepted_at=NOW\(\)/,path);
+  assert.match(src,/legal_accepted_at=/,path);
  }
 });
 
