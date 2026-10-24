@@ -235,7 +235,13 @@
 }
 /* Layout is allowed to wrap; never shrink labels character-by-character. */
 @media(max-width:1440px){
- .restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb{display:none}
+ .restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb{
+  flex:0 0 1px;
+  min-inline-size:1px;
+  max-inline-size:1px;
+  overflow:visible;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb small{display:none}
  .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{justify-content:flex-start}
 }
 @media(max-width:1023px){
