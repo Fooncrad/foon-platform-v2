@@ -114,7 +114,9 @@ test("merchant catalog API validates precise measured stock and rejects coercion
 test("catalog update and delete report missing records instead of false success",()=>{
  const route=readFileSync(new URL("../app/api/restaurant/activity-catalog/route.ts",import.meta.url),"utf8");
  assert.ok(route.includes('if(!changed)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404})'));
- assert.ok(route.includes('if(!deleted)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404})'));
+ assert.ok(route.includes('code:"CATALOG_ITEM_NOT_FOUND"'),"missing categories/products must be reported");
+ assert.ok(route.includes("if(rows.length!==ids.length)"),"bulk deletion rejects missing records atomically");
+ assert.ok(route.includes("await db.rollback()"),"failed batch transactions roll back");
 });
 
 test("catalog image deletion reports missing records",()=>{
@@ -143,7 +145,7 @@ test("merchant catalog rejects malformed initial and paginated responses",()=>{
  const editor=readFileSync(new URL("../app/restaurant/activity-catalog-editor.tsx",import.meta.url),"utf8");
  assert.ok(editor.includes('throw Error("INVALID_CATALOG_RESPONSE")'));
  assert.ok(editor.includes("!Number.isInteger(d.page)||d.page<1"));
- assert.ok(editor.includes('setTotal(d.total);setPage(d.page);setMessage("")'));
+ assert.ok(editor.includes('setTotal(d.total);setPage(d.page);setSelectedProductIds(new Set());setMessage("")'));
  assert.ok((editor.match(/!Array\.isArray\(d\.categories\)/g)??[]).length>=2);
 });
 
