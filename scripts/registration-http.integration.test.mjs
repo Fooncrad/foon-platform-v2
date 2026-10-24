@@ -24,9 +24,10 @@ test("production registration routes activate owners and isolate store customers
    try{await fetch(origin+"/login");ready=true;break;}catch{await new Promise(resolve=>setTimeout(resolve,500));}
   }
   assert.ok(ready,output);
-  const owner={email:"http-owner@test.example",password:"a-strong-test-password",name:"Owner",storeName:"HTTP store",slug:"http-owner-store",kind:"store",activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"};
+  const owner={email:"http-owner@test.example",password:"a-strong-test-password",name:"Owner",storeName:"HTTP store",slug:"http-owner-store",kind:"store",activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true};
   assert.equal((await post("/api/auth/register",owner,"https://foreign.example")).status,403);
   assert.equal((await post("/api/auth/register",{...owner,slug:"admin"})).status,400);
+  assert.equal((await post("/api/auth/register",{...owner,legalAccepted:false})).status,400);
   const created=await post("/api/auth/register",owner);assert.equal(created.status,201,await created.clone().text());
   assert.match(created.headers.get("set-cookie")||"",/foon_session=/);
   const result=await created.json();assert.equal(result.plan,"free");assert.equal(result.tenant.status,"active");
@@ -67,9 +68,10 @@ test("production registration routes activate owners and isolate store customers
   // Existing accounts create the selected activity directly, without admin provisioning.
   const ownerCookie=sessionCookie(created);
   const onboard=(body,cookie=ownerCookie,source=origin)=>fetch(origin+"/api/restaurant/onboard",{method:"POST",headers:{origin:source,"content-type":"application/json",cookie},body:JSON.stringify(body)});
-  const input={name:"Additional business",slug:"additional-business",activity:"clothing",countryCode:"AE",currency:"AED",region:"دبي",taxNumber:"123456789"};
+  const input={name:"Additional business",slug:"additional-business",activity:"clothing",countryCode:"AE",currency:"AED",region:"دبي",taxNumber:"123456789",legalAccepted:true};
   assert.equal((await onboard(input,"")).status,401);
   assert.equal((await onboard(input,ownerCookie,"https://foreign.example")).status,403);
+  assert.equal((await onboard({...input,legalAccepted:false})).status,400);
   for(const invalid of [{activity:"unknown"},{activity:undefined},{currency:"SAR"},{countryCode:"XX"},{region:"invalid"}])assert.equal((await onboard({...input,...invalid})).status,400);
   const [[before]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=?",[result.user.id]);assert.equal(Number(before.n),1);
   for(const activity of ["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]){
@@ -84,7 +86,8 @@ test("production registration routes activate owners and isolate store customers
   const [[after]]=await db.execute("SELECT COUNT(*) AS n FROM memberships WHERE user_id=?",[result.user.id]);assert.equal(Number(after.n),16);
   const [[admins]]=await db.execute("SELECT COUNT(*) AS n FROM platform_admins WHERE user_id=?",[result.user.id]);assert.equal(Number(admins.n),0);
   console.log("Self-service onboarding: all 15 activity profiles, free activation, owner isolation, locale validation and collision rollback verified");
-  const customer={email:"http-customer@test.example",password:"a-strong-test-password",name:"Customer",storeSlug:owner.slug};
+  const customer={email:"http-customer@test.example",password:"a-strong-test-password",name:"Customer",storeSlug:owner.slug,legalAccepted:true};
+  assert.equal((await post("/api/customer/register",{...customer,legalAccepted:false})).status,400);
   const registered=await post("/api/customer/register",customer);assert.equal(registered.status,201,await registered.clone().text());
   const customerResult=await registered.json();assert.equal(customerResult.tenantId,result.tenant.id);
   const [[access]]=await db.execute("SELECT (SELECT COUNT(*) FROM memberships WHERE user_id=?) AS staff,(SELECT COUNT(*) FROM tenant_customers WHERE user_id=? AND tenant_id=?) AS customer",[customerResult.user.id,customerResult.user.id,result.tenant.id]);
