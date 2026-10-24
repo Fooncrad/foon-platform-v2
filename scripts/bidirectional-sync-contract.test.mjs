@@ -86,3 +86,16 @@ test("sparse arrays and arrays with extra or accessor keys are rejected",()=>{
  }
  assert.equal(validateChangeEnvelope({...c,payload:{items:[{name:"coffee"},2]}}).payload.items.length,2);
 });
+
+test("UUID casing does not change movement identity or current scoped version identity",()=>{
+ const eventId="a1b2c3d4-e5f6-4a1b-8c2d-123456789abc";
+ const movement={...c,eventId,entityId:eventId.toUpperCase(),entityType:"inventory_movement",operation:"movement",baseVersion:0};
+ assert.deepEqual(resolveChange({incoming:movement,current:null}),{status:"apply",nextVersion:1});
+ const scoped={...c,tenantId:eventId,branchId:eventId,entityId:eventId,baseVersion:2};
+ const current={tenantId:eventId.toUpperCase(),branchId:eventId.toUpperCase(),entityId:eventId.toUpperCase(),entityType:"catalog_item",version:2};
+ assert.deepEqual(resolveChange({incoming:scoped,current}),{status:"apply",nextVersion:3});
+ assert.equal(resolveChange({incoming:scoped,current:{...current,tenantId:ids[1]}}).reason,"SYNC_SCOPE_MISMATCH");
+ assert.equal(resolveChange({incoming:scoped,current:{...current,branchId:ids[2]}}).reason,"SYNC_SCOPE_MISMATCH");
+ assert.equal(resolveChange({incoming:movement, current:null,alreadyApplied:false}).status,"apply");
+ assert.equal(resolveChange({incoming:{...movement,entityId:ids[4]},current:null}).reason,"SYNC_INVALID_MOVEMENT_ID");
+});
