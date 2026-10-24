@@ -12,7 +12,7 @@ export default function RequiredLegalConsent({language="ar",name="legalConsent",
  return <div className="foonLegalConsent" style={{display:"grid",gap:6,margin:"12px 0",fontSize:14,lineHeight:1.8}}>
   <label style={{display:"flex",gap:10,alignItems:"flex-start",cursor:"pointer"}}>
    <input type="checkbox" name={name} required checked={checked} onChange={onChange?event=>onChange(event.target.checked):undefined} style={{width:18,height:18,flexShrink:0,marginTop:5}} aria-describedby={name+"-hint"}/>
-   <span>{text.before} <Link href="/p/terms" target="_blank" rel="noopener noreferrer" style={{textDecoration:"underline"}}>{text.terms}</Link> {text.and} <Link href="/p/privacy" target="_blank" rel="noopener noreferrer" style={{textDecoration:"underline"}}>{text.privacy}</Link>.</span>
+   <span>{text.before} <Link href="/terms" target="_blank" rel="noopener noreferrer" style={{textDecoration:"underline"}}>{text.terms}</Link> {text.and} <Link href="/privacy" target="_blank" rel="noopener noreferrer" style={{textDecoration:"underline"}}>{text.privacy}</Link>.</span>
   </label>
   <small id={name+"-hint"} style={{opacity:.7}}>{text.required}</small>
  </div>;
