@@ -5,7 +5,7 @@ export async function runCustomerCartChecks({db,call,fixtures}){
  for(const fixture of fixtures){
   const {owner}=fixture,slug=owner.email.split('@')[0],activity=slug.replace('catalog-pos-','');
   const [[business]]=await db.execute('SELECT country_code FROM tenant_business_profiles WHERE tenant_id=?',[owner.tenant]);
-  const customer=await call('/api/customer/register','POST',{name:'Cart customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug});
+  const customer=await call('/api/customer/register','POST',{name:'Cart customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug,legalAccepted:true});
   assert.equal(customer.status,201,JSON.stringify(customer.body));
   const unverified=await call('/api/customer/orders','POST',{storeSlug:slug},customer.cookie);
   assert.equal(unverified.status,403,'unverified customers cannot place any order');
