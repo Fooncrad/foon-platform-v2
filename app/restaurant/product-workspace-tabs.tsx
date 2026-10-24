@@ -10,8 +10,8 @@ export default function ProductWorkspaceTabs({tabs,initialTab="items",title,desc
  return <section className={styles.workspace} aria-label={title}>
   {(title||description)&&<header className={styles.heading}>{title&&<h2>{title}</h2>}{description&&<p>{description}</p>}</header>}
   <nav className={styles.tabs} role="tablist" aria-label={title}>
-   {tabs.map(tab=><button key={tab.id} type="button" id={"foon-workspace-tab-"+tab.id} role="tab" aria-selected={active.id===tab.id} aria-controls={"foon-workspace-panel-"+tab.id} tabIndex={active.id===tab.id?0:-1} className={active.id===tab.id?styles.active:""} onClick={()=>setSelected(tab.id)}>{tab.label}</button>)}
+   {tabs.map(tab=><button key={tab.id} type="button" id={"foon-workspace-tab-"+tab.id} role="tab" aria-selected={active.id===tab.id} aria-controls={"foon-workspace-panel-"+tab.id} className={active.id===tab.id?styles.active:""} onClick={()=>setSelected(tab.id)}>{tab.label}</button>)}
   </nav>
-  {tabs.map(tab=><section key={tab.id} id={"foon-workspace-panel-"+tab.id} role="tabpanel" aria-labelledby={"foon-workspace-tab-"+tab.id} hidden={active.id!==tab.id} className={styles.panel}>{tab.content}</section>)}
+  {tabs.map(tab=><section key={tab.id} id={"foon-workspace-panel-"+tab.id} role="tabpanel" aria-labelledby={"foon-workspace-tab-"+tab.id} hidden={active.id!==tab.id} className={styles.panel}>{active.id===tab.id?tab.content:null}</section>)}
  </section>;
 }
