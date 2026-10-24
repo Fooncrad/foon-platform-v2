@@ -14,7 +14,7 @@ test("payment settings isolate tenants and branches, hide secrets and reject sta
  let output="";server.stdout.on("data",chunk=>{output+=chunk;});server.stderr.on("data",chunk=>{output+=chunk;});
  const register=async(activity)=>{
   const suffix=randomUUID().slice(0,8);
-  const response=await fetch(origin+"/api/auth/register",{method:"POST",headers:{"content-type":"application/json",origin},body:JSON.stringify({email:"payments-"+suffix+"@test.example",password:"synthetic-long-password-2026",name:"Payment test owner",storeName:"Payment test "+suffix,slug:"payment-test-"+suffix,kind:"store",activity,countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});
+  const response=await fetch(origin+"/api/auth/register",{method:"POST",headers:{"content-type":"application/json",origin},body:JSON.stringify({email:"payments-"+suffix+"@test.example",password:"synthetic-long-password-2026",name:"Payment test owner",storeName:"Payment test "+suffix,slug:"payment-test-"+suffix,kind:"store",activity,countryCode:"SA",currency:"SAR",region:countryRegions.SA[0],legalAccepted:true})});
   assert.equal(response.status,201,await response.clone().text());
   const data=await response.json(),cookie=response.headers.get("set-cookie")?.split(";")[0];assert.ok(cookie);
   return {tenant:data.tenant.id,cookie};
