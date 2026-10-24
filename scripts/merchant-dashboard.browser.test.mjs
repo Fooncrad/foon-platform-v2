@@ -154,6 +154,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel("رابط المتجر",{exact:true}).fill(visualSlug);
  await page.getByLabel("البريد الإلكتروني",{exact:true}).fill(visualSlug+"@test.example");
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
+ await page.locator('input[name="legalConsent"]').check();
  await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
  await expect(page.getByRole("heading",{name:"تأكيد البريد الإلكتروني",exact:true})).toBeVisible();
  await page.getByRole("link",{name:"الانتقال إلى حسابي",exact:true}).click();
@@ -456,7 +457,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  // Joining on mobile must also unlock the separate desktop service instance.
  const unlinkedContext=await browser.newContext({viewport:{width:390,height:844}});
  try{
-  const registered=await unlinkedContext.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'operations-owner-b',name:'عميل متجر آخر',email:visualSlug+"-unlinked@test.example",password:'a-strong-test-password'}});
+  const registered=await unlinkedContext.request.post(origin+'/api/customer/register',{headers:{origin},data:{storeSlug:'operations-owner-b',name:'عميل متجر آخر',email:visualSlug+"-unlinked@test.example",password:'a-strong-test-password',legalAccepted:true}});
   expect(registered.status()).toBe(201);
   const customerPage=await unlinkedContext.newPage();
   await customerPage.goto(origin+"/"+visualSlug);
@@ -518,7 +519,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
    try{
     context.setDefaultTimeout(12000);
     const slug="service-ui-"+activity+"-"+randomUUID().slice(0,8);
-    const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
+    const created=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Activity owner",storeName:"Activity "+activity,slug,email:slug+"@test.example",password:"a-strong-test-password",activity,countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true}});
     expect(created.status(),await created.text()).toBe(201);
     const account=await created.json();
     if(activity==="watches"){
@@ -709,7 +710,7 @@ test("dashboard currencies follow the store and each order in three languages",a
  const db=await mysql.createConnection(process.env.DATABASE_URL);
  try{
   const slug='currency-overview-'+randomUUID().slice(0,8);
-  const response=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Currency owner',storeName:'Currency store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'watches',countryCode:'SA',currency:'SAR',region:'الرياض'}});
+  const response=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Currency owner',storeName:'Currency store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'watches',countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true}});
   expect(response.status(),await response.text()).toBe(201);
   const account=await response.json();
   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
@@ -742,7 +743,7 @@ test('storefront carts support retail variants and laundry collection without le
  try{
   const create=async(activity)=>{
    const slug='public-cart-'+activity+'-'+randomUUID().slice(0,8);
-   const r=await merchant.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Cart merchant',storeName:'Cart '+activity,slug,email:slug+'@test.example',password:'a-strong-test-password',activity,countryCode:'SA',currency:'SAR',region:'الرياض'}});
+   const r=await merchant.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Cart merchant',storeName:'Cart '+activity,slug,email:slug+'@test.example',password:'a-strong-test-password',activity,countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true}});
    expect(r.status(),await r.text()).toBe(201);const owner=await r.json();
    await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
    await db.execute("UPDATE tenant_business_profiles SET currency='USD' WHERE tenant_id=?",[owner.tenant.id]);
@@ -792,6 +793,7 @@ test('storefront carts support retail variants and laundry collection without le
   }
   await cart.getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
   const auth=cart.locator('.publicMenuInlineAuth form');await auth.getByLabel('الاسم',{exact:true}).fill('Cart customer');const cartCustomerEmail=randomUUID()+'@test.example';await auth.getByLabel('البريد الإلكتروني',{exact:true}).fill(cartCustomerEmail);await auth.getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+  await auth.locator('input[name="legalConsent"]').check();
   await auth.getByRole('button',{name:'متابعة الطلب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeVisible();await expect(cart).toContainText('19.50 USD');
   const unverifiedOrder=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');
   await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
@@ -827,7 +829,7 @@ test('customer and catalog interfaces use cookie locale without Arabic interface
  const context=await browser.newContext({viewport:{width:320,height:900}});context.setDefaultTimeout(15000);
  try{
   const slug='locale-notify-'+randomUUID().slice(0,8);
-  const merchant=await context.request.post(origin+'/api/auth/register',{headers:{origin,cookie:'foon_language=en'},data:{name:'Owner',storeName:'Locale store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(merchant.status(),await merchant.text()).toBe(201);
+  const merchant=await context.request.post(origin+'/api/auth/register',{headers:{origin,cookie:'foon_language=en'},data:{name:'Owner',storeName:'Locale store',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true}});expect(merchant.status(),await merchant.text()).toBe(201);
   const page=await context.newPage();
   for(const language of ['en','fr']){
    await context.addCookies([{name:'foon_language',value:language,url:origin}]);await page.goto(origin+'/restaurant');
@@ -840,7 +842,7 @@ test('customer and catalog interfaces use cookie locale without Arabic interface
    const text=await page.locator('.restaurantMain').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
   }
   await context.clearCookies();await context.addCookies([{name:'foon_language',value:'en',url:origin}]);
-  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Customer',email:slug+'-customer@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);
+  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Customer',email:slug+'-customer@test.example',password:'a-strong-test-password',storeSlug:slug,legalAccepted:true}});expect(customer.status()).toBe(201);
   await page.goto(origin+'/customer');await expect(page.getByRole('heading',{name:'My orders',exact:true})).toBeVisible();
   const text=await page.locator('main').innerText();expect(text.replace(/اللغة \/ Language \/ Langue|العربية/g,'')).not.toMatch(/[\u0600-\u06ff]/);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -850,7 +852,7 @@ test('customer and catalog interfaces use cookie locale without Arabic interface
 test('merchant configures weight options and selling measurements in mobile dialogs',async({browser})=>{
  const db=await mysql.createConnection(process.env.DATABASE_URL),context=await browser.newContext({viewport:{width:320,height:900}});
  try{
-  const slug='measure-'+randomUUID().slice(0,8),r=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Measure owner',storeName:'Measures',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(r.status()).toBe(201);const owner=await r.json();
+  const slug='measure-'+randomUUID().slice(0,8),r=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Measure owner',storeName:'Measures',slug,email:slug+'@test.example',password:'a-strong-test-password',activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true}});expect(r.status()).toBe(201);const owner=await r.json();
   await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
   const headers={origin,'x-foon-tenant':owner.tenant.id},c=await context.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'category',name:'Measures'}}),p=await context.request.post(origin+'/api/restaurant/activity-catalog',{headers,data:{kind:'product',name:'Rice pack',price:10,categoryId:(await c.json()).id}});expect(p.status()).toBe(201);const product=(await p.json()).id;
   await context.addCookies([{name:'foon_language',value:'en',url:origin}]);const page=await context.newPage();await page.goto(origin+'/restaurant');await page.getByRole('button',{name:'Open business menu',exact:true}).click();await page.locator('.restaurantDrawer').getByRole('button',{name:'Products and categories',exact:true}).click();
@@ -859,7 +861,7 @@ test('merchant configures weight options and selling measurements in mobile dial
   const box=await dialog.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(320);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await dialog.getByRole('radio',{name:'نصف كيلو',exact:true}).check();await dialog.getByLabel('SKU',{exact:true}).fill('HALF-KG');await dialog.getByLabel('Combination stock (blank = unlimited)',{exact:true}).fill('0.375');await dialog.getByRole('button',{name:'Add combination',exact:true}).click();await expect(dialog).toContainText('HALF-KG');await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await page.getByRole('button',{name:'Confirm addition',exact:true}).click();await expect(page.locator('.foonStorefrontCart')).toContainText('4.50');await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.375');await page.getByLabel('Quantity (kg)',{exact:true}).fill('0.125');await expect(page.locator('.foonStorefrontCart')).toContainText('1.50');
   const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);expect(attributes.measurements.quantityMode).toBe('measured');
-  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);const measuredCustomer=(await customer.json()).user;await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[measuredCustomer.id]);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
+  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug,legalAccepted:true}});expect(customer.status()).toBe(201);const measuredCustomer=(await customer.json()).user;await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[measuredCustomer.id]);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
  }finally{await db.end();await context.close()}
 });
 
@@ -870,7 +872,7 @@ test("existing accounts create activity-specific businesses without administrato
   try{
    await context.addCookies([{name:"foon_language",value:locale,url:origin}]);
    const slug="self-service-"+randomUUID().slice(0,8);
-   const registered=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Owner",storeName:"Original business",email:slug+"@test.example",password:"synthetic-long-password",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"}});expect(registered.status()).toBe(201);
+   const registered=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Owner",storeName:"Original business",email:slug+"@test.example",password:"synthetic-long-password",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true}});expect(registered.status()).toBe(201);
    const page=await context.newPage();await page.goto(origin+"/restaurant/register");
    await page.locator('select[name="activity"]').selectOption(activity);
    await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");
@@ -888,7 +890,7 @@ test('administrator customizes one activity without changing another activity in
  const context=await browser.newContext({viewport:{width:320,height:740}}),db=await mysql.createConnection(process.env.DATABASE_URL);
  try{
   await context.addCookies([{name:'foon_language',value:'en',url:origin}]);const slug='plan-ui-'+randomUUID().slice(0,8);
-  const registered=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Admin test',email:slug+'@test.example',password:'synthetic-long-password',storeName:slug,slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'}});expect(registered.status()).toBe(201);const account=await registered.json();
+  const registered=await context.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Admin test',email:slug+'@test.example',password:'synthetic-long-password',storeName:slug,slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true}});expect(registered.status()).toBe(201);const account=await registered.json();
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'admin',TRUE)",[account.user.id]);
   const plan=randomUUID(),planName='Activity isolation '+slug;await db.execute('INSERT INTO package_plans(id,code,name_ar,name_en,name_fr) VALUES (?,?,?,?,?)',[plan,slug,'اختبار النشاط',planName,'Test activité']);
   await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,'digital_menu',TRUE,8)",[plan]);
@@ -922,7 +924,7 @@ test('all activity storefront templates retain distinct direction and responsive
   const page=await customer.newPage();
   for(const activity of activities){
    const slug='storefront-visual-'+activity+'-'+randomUUID().slice(0,8);
-   const registered=await merchant.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Visual merchant',storeName:'Visual '+activity,slug,email:slug+'@test.example',password:'a-strong-test-password',activity,countryCode:'SA',currency:'SAR',region:'الرياض'}});
+   const registered=await merchant.request.post(origin+'/api/auth/register',{headers:{origin},data:{name:'Visual merchant',storeName:'Visual '+activity,slug,email:slug+'@test.example',password:'a-strong-test-password',activity,countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true}});
    expect(registered.status(),await registered.text()).toBe(201);const account=await registered.json();
    await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[account.tenant.id]);
    const headers={origin,'x-foon-tenant':account.tenant.id};
@@ -976,7 +978,7 @@ test("guest service request drafts remain on storefront through registration and
   let registeredCustomer="";
   for(const [index,activity,action,requestType] of [[0,"publicworks","Request a quotation","quote"],[1,"carwash","Request appointment","appointment"]]){
    const slug="journey-"+activity+"-"+randomUUID().slice(0,8);
-   const response=await merchant.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Journey merchant",storeName:"Journey "+activity,slug,email:slug+"@test.example",password,activity,countryCode:"SA",currency:"SAR",region:"الرياض"}});
+   const response=await merchant.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Journey merchant",storeName:"Journey "+activity,slug,email:slug+"@test.example",password,activity,countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true}});
    expect(response.status(),await response.text()).toBe(201);
    const owner=await response.json();
    await db.execute("UPDATE tenant_subscriptions SET plan_id='operations-enterprise' WHERE tenant_id=?",[owner.tenant.id]);
@@ -1006,6 +1008,7 @@ test("guest service request drafts remain on storefront through registration and
     await inline.getByLabel("Name",{exact:true}).fill("Journey customer");
     await inline.getByLabel("Email",{exact:true}).fill(email);
     await inline.getByLabel("Password",{exact:true}).fill(password);
+    await inline.locator('input[name="legalConsent"]').check();
    }else{
     await inline.getByLabel("Email",{exact:true}).fill(email);
     await inline.getByLabel("Password",{exact:true}).fill(password);
