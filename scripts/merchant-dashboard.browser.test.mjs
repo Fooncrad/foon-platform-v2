@@ -154,6 +154,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByLabel("رابط المتجر",{exact:true}).fill(visualSlug);
  await page.getByLabel("البريد الإلكتروني",{exact:true}).fill(visualSlug+"@test.example");
  await page.getByLabel("كلمة المرور",{exact:false}).fill("a-strong-test-password");
+ await page.locator('input[name="legalConsent"]').check();
  await page.getByRole("button",{name:"إنشاء الحساب",exact:true}).click();
  await expect(page.getByRole("heading",{name:"تأكيد البريد الإلكتروني",exact:true})).toBeVisible();
  await page.getByRole("link",{name:"الانتقال إلى حسابي",exact:true}).click();
@@ -798,6 +799,7 @@ test('storefront carts support retail variants and laundry collection without le
   }
   await cart.getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
   const auth=cart.locator('.publicMenuInlineAuth form');await auth.getByLabel('الاسم',{exact:true}).fill('Cart customer');const cartCustomerEmail=randomUUID()+'@test.example';await auth.getByLabel('البريد الإلكتروني',{exact:true}).fill(cartCustomerEmail);await auth.getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+  await auth.locator('input[name="legalConsent"]').check();
   await auth.getByRole('button',{name:'متابعة الطلب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeVisible();await expect(cart).toContainText('19.50 USD');
   const unverifiedOrder=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');
   await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
@@ -881,6 +883,7 @@ test("existing accounts create activity-specific businesses without administrato
    await page.locator('select[name="activity"]').selectOption(activity);
    await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+   await page.locator('input[name="legalConsent"]').check();
    const response=page.waitForResponse(r=>r.url().endsWith("/api/restaurant/onboard")&&r.request().method()==="POST");
    await page.locator('button[type="submit"],form button:not([type])').click();const result=await response;expect(result.status()).toBe(201);const body=await result.json();expect(body.activity).toBe(activity);
    const routeSlug=({clothing:"fashion",automotive:"car",publicworks:"contracting"})[activity]??activity;
@@ -1012,6 +1015,7 @@ test("guest service request drafts remain on storefront through registration and
     await inline.getByLabel("Name",{exact:true}).fill("Journey customer");
     await inline.getByLabel("Email",{exact:true}).fill(email);
     await inline.getByLabel("Password",{exact:true}).fill(password);
+    await inline.locator('input[name="legalConsent"]').check();
    }else{
     await inline.getByLabel("Email",{exact:true}).fill(email);
     await inline.getByLabel("Password",{exact:true}).fill(password);
