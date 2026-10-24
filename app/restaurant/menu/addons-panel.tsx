@@ -79,7 +79,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
  function editGroup(group:Resource){setEditingGroup(group.id);setDraftGroup({name:group.name,nameEn:String(group.data.nameEn??""),nameFr:String(group.data.nameFr??""),required:group.data.requiredFlag==="yes",multiple:group.data.selectionType==="multiple",min:String(group.data.minSelect??0),max:String(group.data.maxSelect??1),sort:String(group.data.sortOrder??0)})}
  function editValue(v:Resource,copy=false){setGroupId(String(v.data.groupId??""));setEditingValue(copy?null:v.id);setDraftValue({name:v.name+(copy?" - "+tr("نسخة","Copy","Copie"):""),nameEn:String(v.data.nameEn??""),nameFr:String(v.data.nameFr??""),price:String(v.data.priceDelta??0),stock:v.data.stockQuantity==null?"":String(v.data.stockQuantity),sort:String(v.data.sortOrder??0),imageUrl:String(v.data.imageUrl??"")})}
  function exportAll(){
-  downloadCsv([["name","menuItem","menuItemId","groupName","groupNameEn","groupNameFr","price","stockQuantity","isRequired","minSelections","maxSelections","sortOrder","isAvailable","valueEn","valueFr","imageUrl"],...values.filter(v=>itemGroups.some(g=>g.id===v.data.groupId)).map(v=>{const g=itemGroups.find(g=>g.id===v.data.groupId)!;return [v.name,nameOfItem(itemId),itemId,g.name,g.data.nameEn,g.data.nameFr,v.data.priceDelta??0,v.data.stockQuantity??"",g.data.requiredFlag==="yes",g.data.minSelect??0,g.data.maxSelect??1,v.data.sortOrder??0,v.status==="active",v.data.nameEn,v.data.nameFr,v.data.imageUrl]})],"foon-menu-addons-"+itemId+".csv");
+  downloadCsv([["name","menuItem","menuItemId","groupName","groupNameEn","groupNameFr","price","stockQuantity","isRequired","minSelections","maxSelections","sortOrder","isAvailable","valueEn","valueFr","imageUrl"],...itemGroups.flatMap(g=>{const available=values.filter(v=>v.data.groupId===g.id);return available.length?available.map(v=>[v.name,nameOfItem(itemId),itemId,g.name,g.data.nameEn,g.data.nameFr,v.data.priceDelta??0,v.data.stockQuantity??"",g.data.requiredFlag==="yes",g.data.minSelect??0,g.data.maxSelect??1,v.data.sortOrder??0,v.status==="active",v.data.nameEn,v.data.nameFr,v.data.imageUrl]):[["",nameOfItem(itemId),itemId,g.name,g.data.nameEn,g.data.nameFr,0,"",g.data.requiredFlag==="yes",g.data.minSelect??0,g.data.maxSelect??1,g.data.sortOrder??0,g.status==="active","","",""]]})],"foon-menu-addons-"+itemId+".csv");
  }
  async function importFile(file:File){
   if(file.size>1024*1024){setError("CSV_FILE_TOO_LARGE");return}
@@ -95,7 +95,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
     const productId=field(line,"menuItemId"),productName=field(line,"menuItem");
     if(productId&&productId!==itemId||productName&&productName!==nameOfItem(itemId))continue;
     const groupName=field(line,"groupName").trim(),optionName=field(line,"name").trim();
-    if(!groupName||!optionName)continue;
+    if(!groupName)continue;
     const price=Number(field(line,"price","0")),stockText=field(line,"stockQuantity","");
     const stock=stockText===""?null:Number(stockText);
     if(!Number.isFinite(price)||price<0||price>1000000||stock!==null&&(!Number.isFinite(stock)||stock<0))throw Error("CSV_INVALID_VALUE_ROW_"+(done+2));
@@ -107,6 +107,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
      id=created.id;existingGroups.set(groupName.toLowerCase(),id);
     }
     if(!id||!id36.test(id))throw Error("INVALID_GROUP_ID");
+    if(!optionName)continue;
     await api("menuValues","POST",{name:optionName,status:field(line,"isAvailable","true")==="false"?"inactive":"active",data:{groupId:id,priceDelta:price,stockQuantity:stock,nameEn:field(line,"valueEn"),nameFr:field(line,"valueFr"),sortOrder:Number(field(line,"sortOrder","0")),imageUrl:field(line,"imageUrl")||null}});
     done++;
    }
@@ -131,7 +132,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
    <label>{tr("اسم المجموعة","Group name","Nom du groupe")}<input required maxLength={180} value={draftGroup.name} onChange={e=>setDraftGroup(p=>({...p,name:e.target.value}))}/></label>
    <label>English<input maxLength={180} value={draftGroup.nameEn} onChange={e=>setDraftGroup(p=>({...p,nameEn:e.target.value}))}/></label>
    <label>Français<input maxLength={180} value={draftGroup.nameFr} onChange={e=>setDraftGroup(p=>({...p,nameFr:e.target.value}))}/></label>
-   <div style={{display:"flex",flexWrap:"wrap",gap:12}}><label><input type="checkbox" checked={draftGroup.required} onChange={e=>setDraftGroup(p=>({...p,required:e.target.checked,min:e.target.checked&&Number(p.min)<1?"1":p.min}))}/>{tr("إلزامية","Required","Requis")}</label><label><input type="checkbox" checked={draftGroup.multiple} onChange={e=>setDraftGroup(p=>({...p,multiple:e.target.checked,max:e.target.checked?"2":"1",min:!e.target.checked&&Number(p.min)>1?"1":p.min}))}/>{tr("اختيارات متعددة","Multiple choices","Choix multiples")}</label></div>
+   <div style={{display:"flex",flexWrap:"wrap",gap:12}}><label><input type="checkbox" checked={draftGroup.required} onChange={e=>setDraftGroup(p=>({...p,required:e.target.checked,min:e.target.checked?String(Math.max(1,Number(p.min)||1)):"0"}))}/>{tr("إلزامية","Required","Requis")}</label><label><input type="checkbox" checked={draftGroup.multiple} onChange={e=>setDraftGroup(p=>({...p,multiple:e.target.checked,max:e.target.checked?"2":"1",min:!e.target.checked&&Number(p.min)>1?"1":p.min}))}/>{tr("اختيارات متعددة","Multiple choices","Choix multiples")}</label></div>
    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
     <label>{tr("الأدنى","Minimum","Minimum")}<input type="number" min={draftGroup.required?1:0} max={draftGroup.multiple?100:1} value={draftGroup.min} onChange={e=>setDraftGroup(p=>({...p,min:e.target.value}))} required dir="ltr"/></label>
     {draftGroup.multiple&&<label>{tr("الأقصى","Maximum","Maximum")}<input type="number" min={1} max={100} value={draftGroup.max} onChange={e=>setDraftGroup(p=>({...p,max:e.target.value}))} required dir="ltr"/></label>}
