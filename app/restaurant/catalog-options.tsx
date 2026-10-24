@@ -4,6 +4,7 @@ import CatalogVariants from "./catalog-variants";
 import styles from "./catalog-dialog.module.css";
 import {useRef,useState} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
+import {quoteCsvCell} from "@/lib/security/csv-export";
 type Value={id:string;name_ar:string;name_en?:string;name_fr?:string;price_delta:number;stock_quantity:number|null;sort_order:number;image_url?:string|null;enabled:boolean};
 type Group={id:string;name_ar:string;name_en?:string;name_fr?:string;min_select:number;max_select:number;sort_order:number;enabled:boolean;required:boolean;selection_type:string;values:Value[]};
 const presets=[
@@ -24,15 +25,15 @@ export default function CatalogOptions({tenantId,product,name,activity,categoryN
  const [editingValue,setEditingValue]=useState<string|undefined>();
  const [value,setValue]=useState(""),[valueEn,setValueEn]=useState(""),[valueFr,setValueFr]=useState(""),[price,setPrice]=useState("0"),[stock,setStock]=useState(""),[valueOrder,setValueOrder]=useState("0"),[imageUrl,setImageUrl]=useState("");
  const visibleGroups=groups.filter(g=>(g.name_ar+" "+(g.name_en??"")+" "+(g.name_fr??"")+" "+g.values.map(v=>v.name_ar+" "+(v.name_en??"")+" "+(v.name_fr??"")).join(" ")).toLowerCase().includes(search.toLowerCase()));
- function exportAddonsCsv(){const quote=(v:unknown)=>"\""+String(v??"").replaceAll("\"","\"\"")+"\"";const rows=[["product","group_ar","group_en","group_fr","required","selection_type","min_select","max_select","group_enabled","group_order","value_ar","value_en","value_fr","price","stock","value_enabled","value_order","image_url"],...groups.flatMap(g=>g.values.length?g.values.map(v=>[name,g.name_ar,g.name_en,g.name_fr,g.required,g.selection_type,g.min_select,g.max_select,g.enabled,g.sort_order,v.name_ar,v.name_en,v.name_fr,v.price_delta,v.stock_quantity??"",v.enabled,v.sort_order,v.image_url??""]):[[name,g.name_ar,g.name_en,g.name_fr,g.required,g.selection_type,g.min_select,g.max_select,g.enabled,g.sort_order,"","","","","","","",""]])];const file=new Blob(["\uFEFF"+rows.map(row=>row.map(quote).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(file);const link=document.createElement("a");link.href=url;link.download="foon-product-addons-"+product+".csv";link.click();URL.revokeObjectURL(url)}
+ function exportAddonsCsv(){const rows=[["product","group_ar","group_en","group_fr","required","selection_type","min_select","max_select","group_enabled","group_order","value_ar","value_en","value_fr","price","stock","value_enabled","value_order","image_url"],...groups.flatMap(g=>g.values.length?g.values.map(v=>[name,g.name_ar,g.name_en,g.name_fr,g.required,g.selection_type,g.min_select,g.max_select,g.enabled,g.sort_order,v.name_ar,v.name_en,v.name_fr,v.price_delta,v.stock_quantity??"",v.enabled,v.sort_order,v.image_url??""]):[[name,g.name_ar,g.name_en,g.name_fr,g.required,g.selection_type,g.min_select,g.max_select,g.enabled,g.sort_order,"","","","","","","",""]])];const file=new Blob(["\uFEFF"+rows.map(row=>row.map(quoteCsvCell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(file);const link=document.createElement("a");link.href=url;link.download="foon-product-addons-"+product+".csv";link.click();URL.revokeObjectURL(url)}
 
  function exportImportCsv(kind:"groups"|"values"){
   if(!categoryName){setError(l("اسم القسم مطلوب لتصدير قالب استيراد مطابق.","Category name is required for an import-ready CSV.","Le nom de catégorie est requis."));return}
-  const quote=(v:unknown)=>'"'+String(v??"").replaceAll('"','""')+'"';
+
   const records:unknown[][]=kind==="groups"?
    [["category","product","name","name_en","name_fr","selection","required","max"],...groups.map(g=>[categoryName,name,g.name_ar,g.name_en??"",g.name_fr??"",g.selection_type,g.required?"yes":"no",g.max_select])]:
    [["category","product","group","name","name_en","name_fr","price","stock","image_1"],...groups.flatMap(g=>g.values.map(v=>[categoryName,name,g.name_ar,v.name_ar,v.name_en??"",v.name_fr??"",Number(v.price_delta).toFixed(2),v.stock_quantity??"",typeof v.image_url==="string"&&v.image_url.startsWith("https://")?v.image_url:""]))];
-  const blob=new Blob(["\uFEFF"+records.map(row=>row.map(quote).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const blob=new Blob(["\uFEFF"+records.map(row=>row.map(quoteCsvCell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="foon-"+kind+"-import-"+product+".csv";link.click();URL.revokeObjectURL(url);
  }
  async function load(){const r=await fetch("/api/restaurant/activity-catalog/options?product="+product,{headers:{"x-foon-tenant":tenantId},cache:"no-store"});if(!r.ok)throw Error();const d=await r.json();setGroups(d.groups);setVariants(d.variants??[]);setSelected(old=>d.groups.some((g:Group)=>g.id===old)?old:d.groups[0]?.id??"")}
