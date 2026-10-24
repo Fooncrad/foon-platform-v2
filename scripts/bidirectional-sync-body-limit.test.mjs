@@ -26,6 +26,25 @@ test('rejects an oversized chunked body before reading all chunks', async () => 
   assert.equal(item.cancelled, true);
   assert.ok(item.readCount < 3);
 });
+test('oversized body rejects promptly even if stream cancellation never settles', async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    pull(controller) { controller.enqueue(new Uint8Array(MAX_SYNC_PUSH_BODY_BYTES + 1)); },
+    cancel() { cancelled = true; return new Promise(() => {}); }
+  }, { highWaterMark: 0 });
+  let timer;
+  try {
+    const outcome = await Promise.race([
+      readBoundedSyncPushBody({ headers: new Headers(), body }).then(
+        () => 'UNEXPECTED_SUCCESS', error => error.message
+      ),
+      new Promise(resolve => { timer = setTimeout(() => resolve('HUNG_CANCEL'), 200); })
+    ]);
+    assert.equal(outcome, 'SYNC_PAYLOAD_TOO_LARGE');
+    assert.equal(cancelled, true);
+  } finally { clearTimeout(timer); }
+});
+
 test('rejects oversized declared Content-Length before consuming body', async () => {
   const item = streamedRequest([bytes('safe')], { 'content-length': String(MAX_SYNC_PUSH_BODY_BYTES + 1) });
   await assert.rejects(readBoundedSyncPushBody(item.request), /SYNC_PAYLOAD_TOO_LARGE/);
