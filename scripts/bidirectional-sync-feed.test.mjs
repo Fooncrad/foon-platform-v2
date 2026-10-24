@@ -64,3 +64,23 @@ test("feed requires literal tenant and branch scope strings",()=>{
   }
  }
 });
+
+test("feed rejects coerced SQL version values before signing orders, stock or reservations",()=>{
+ for(const entityType of ["order","inventory_movement","reservation"]){
+  const movement=entityType==="inventory_movement";
+  const candidate={...change,entityType,entityId:movement?change.eventId:change.entityId,operation:movement?"movement":"upsert"};
+  const entry={...row,entity_type:entityType,entity_id:candidate.entityId,operation:candidate.operation,payload_digest:digestChange(candidate)};
+  for(const field of ["base_version","next_version"]){
+   const expected=field==="base_version"?0:1;
+   for(const invalid of [null,[],[expected],{valueOf:()=>expected},String(expected)+"e0"," "+expected+" "]){
+    assert.throws(()=>prepareSyncPullEvents([{...entry,[field]:invalid}],scope),/SYNC_CORRUPT_JOURNAL_VERSION/);
+   }
+  }
+  for(const versions of [[0,1],["0","1"],[0,"1"],["0",1]]){
+   const [base_version,next_version]=versions;
+   const [accepted]=prepareSyncPullEvents([{...entry,base_version,next_version}],scope);
+   assert.equal(accepted.next_version,1);
+   assert.equal(accepted.base_version,0);
+  }
+ }
+});
