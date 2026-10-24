@@ -10,7 +10,14 @@ export default function CustomerSecurityCenter({language}:{language:Lang}){
   if(!r.ok||!data?.ok||!Array.isArray(data.sessions))throw Error("SESSIONS_UNAVAILABLE");
   setSessions(data.sessions);setLimited(data.limited===true);
  },[]);
- useEffect(()=>{let active=true;void load().catch(()=>{if(active)setError(t("تعذر تحميل الجلسات.","Sessions could not be loaded.","Impossible de charger les sessions."));}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[load,language]);
+ useEffect(()=>{
+  const controller=new AbortController();
+  void fetch("/api/customer/security/sessions",{cache:"no-store",signal:controller.signal})
+   .then(async response=>{const body=await response.json().catch(()=>null);if(!response.ok||!body?.ok||!Array.isArray(body.sessions))throw Error("SESSIONS_UNAVAILABLE");return body;})
+   .then(body=>{if(controller.signal.aborted)return;setSessions(body.sessions);setLimited(body.limited===true);setLoading(false);})
+   .catch(()=>{if(controller.signal.aborted)return;setError(language==="en"?"Sessions could not be loaded.":language==="fr"?"Impossible de charger les sessions.":"تعذر تحميل الجلسات.");setLoading(false);});
+  return()=>controller.abort();
+ },[language]);
  async function revoke(id?:string){
   if(busy)return;
   const question=id?t("إنهاء جلسة هذا الجهاز الآخر؟","Sign out this other session?","Déconnecter cette autre session ?"):t("إنهاء جميع الجلسات الأخرى مع الحفاظ على هذه الجلسة؟","Sign out other sessions and keep this one?","Déconnecter les autres sessions en conservant celle-ci ?");
