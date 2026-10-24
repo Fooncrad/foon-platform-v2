@@ -66,3 +66,41 @@ test("optional public creator profile keeps privacy barriers, multilingual visit
  assert.match(share,/navigator\.clipboard\.writeText/);
  assert.doesNotMatch(publicPage,/SELECT.*customer_user_id|SELECT.*restaurant_orders/);
 });
+
+test("customer session security API never discloses tokens and only revokes owned other sessions",()=>{
+ const api=read("app/api/customer/security/sessions/route.ts");
+ const ui=read("app/customer/customer-security-center.tsx");
+ assert.match(api,/employeePersonalAccessDenied/);
+ assert.match(api,/currentUserId\(\)/);
+ assert.match(api,/currentSessionId\(\)/);
+ assert.match(api,/assertSameOrigin\(request\)/);
+ assert.match(api,/WHERE user_id=\? AND expires_at>UTC_TIMESTAMP\(\)/);
+ assert.match(api,/WHERE user_id=\? AND id=\? AND id<>\?/);
+ assert.match(api,/WHERE user_id=\? AND id<>\? AND expires_at>UTC_TIMESTAMP\(\)/);
+ assert.match(api,/CURRENT_SESSION_PROTECTED/);
+ assert.match(api,/Cache-Control":"private, no-store"/);
+ assert.doesNotMatch(api,/SELECT[^"]*token_hash/);
+ assert.match(ui,/customerSecurityDanger/);
+ assert.match(ui,/window\.confirm/);
+ assert.match(ui,/aria-labelledby="customer-security-title"/);
+});
+test("FOON customer passport balances and activity timeline remain private and scoped",()=>{
+ const page=read("app/customer/page.tsx");
+ const wallet=read("app/customer/customer-loyalty-passport.tsx");
+ const timeline=read("app/customer/customer-journey-timeline.tsx");
+ const hub=read("app/customer/customer-action-hub.tsx");
+ assert.match(page,/JOIN tenant_loyalty_programs p ON p\.tenant_id=t\.id AND p\.enabled=TRUE/);
+ assert.match(page,/l\.user_id=c\.user_id/);
+ assert.match(page,/WHERE c\.user_id=\?/);
+ assert.match(page,/GROUP BY t\.id,t\.name,t\.slug,p\.min_redeem_points/);
+ assert.match(page,/CUSTOMER_LOYALTY_UNAVAILABLE/);
+ assert.match(page,/CustomerLoyaltyPassport/);
+ assert.match(page,/CustomerJourneyTimeline/);
+ assert.match(page,/CustomerSecurityCenter/);
+ assert.match(page,/id=\{"customer-reservation-"/);
+ assert.match(page,/id=\{"customer-service-"/);
+ assert.match(timeline,/customerJourney/);
+ assert.match(wallet,/Each store has separate points and redemption rules/);
+ for(const a of ["#customer-security-center","#customer-journey","#customer-passport"])assert.ok(hub.includes(a),a);
+ assert.doesNotMatch(read("app/creators/[handle]/page.tsx"),/customer_loyalty_ledger|auth_sessions/);
+});
