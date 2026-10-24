@@ -26,3 +26,13 @@ test("business error never produces signed ACK",async()=>{
  await assert.rejects(()=>handleAuthenticatedSyncPush({connection:db,authenticateDevice:async()=>ctx,credential:"server-only",change,privateKey,applyBusinessChange:async()=>{throw Error("BUSINESS_FAILED")}}),/BUSINESS_FAILED/);
  assert.equal(db.calls.at(-1),"rollback");
 });
+
+
+test("cloud commits order and signs verifiable ACK despite MariaDB UUID display casing",async()=>{
+ const scoped={...change,tenantId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",branchId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",actorId:"cccccccc-cccc-4ccc-8ccc-cccccccccccc"};
+ const upper={...ctx,deviceId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd".toUpperCase(),tenantId:scoped.tenantId.toUpperCase(),branchId:scoped.branchId.toUpperCase(),actorId:scoped.actorId.toUpperCase()};
+ const db=fixture();
+ const result=await handleAuthenticatedSyncPush({connection:db,authenticateDevice:async()=>upper,credential:"server-only",change:scoped,privateKey,applyBusinessChange:async()=>{db.calls.push("business");return true}});
+ assert.equal(db.calls.at(-1),"commit");
+ assert.equal(verifyCommittedPushReceipt({payload:result,expected:{eventId:scoped.eventId,tenantId:scoped.tenantId,branchId:scoped.branchId,digest:result.receipt.digest},deviceId:upper.deviceId.toLowerCase(),publicKey}).status,"verified");
+});
