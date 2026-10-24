@@ -118,6 +118,27 @@ export async function runActivityPosChecks({db,call,register}){
  await runMeasuredCatalogChecks({db,call,resource,owner,other:secondActor,category});
  await runCatalogImageChecks({db,call,owner,product,foreign:fixtures.find(f=>f.owner.email.startsWith("catalog-pos-perfume")).owner});
  await runCustomerCartChecks({db,call,fixtures});
+ // Non-restaurant product deletion is a reversible tombstone, not a physical
+ // DELETE; options, image data and past orders must remain referentially intact.
+ const removalOwner=fixtures.find(f=>f.owner.email.startsWith("catalog-pos-grocery"))?.owner;
+ assert.ok(removalOwner);
+ const catalogRemoval=(method,body)=>call("/api/restaurant/activity-catalog",method,body,removalOwner.cookie,removalOwner.tenant);
+ const removalCategory=ok(await catalogRemoval("POST",{kind:"category",name:"Temporary removal category"})).id;
+ const removalA=ok(await catalogRemoval("POST",{kind:"product",name:"Temporary removal one",categoryId:removalCategory,price:2})).id;
+ const removalB=ok(await catalogRemoval("POST",{kind:"product",name:"Temporary removal two",categoryId:removalCategory,price:3})).id;
+ assert.equal((await catalogRemoval("DELETE",{kind:"product",ids:[removalA,removalA]})).status,400,"duplicate IDs are rejected");
+ const failedRemoval=await catalogRemoval("DELETE",{kind:"product",ids:[removalA,randomUUID()]});
+ assert.equal(failedRemoval.status,409,"a missing item aborts the entire transaction");
+ assert.ok(ok(await catalogRemoval("GET"),200).products.some(row=>row.id===removalA));
+ const removed=await catalogRemoval("DELETE",{kind:"product",ids:[removalA,removalB]});
+ assert.equal(removed.status,200,JSON.stringify(removed.body));assert.equal(removed.body.deleted,2);
+ const managerProducts=ok(await catalogRemoval("GET"),200).products;
+ assert.ok(!managerProducts.some(row=>[removalA,removalB].includes(row.id)));
+ const [history]=await db.execute("SELECT id,enabled,JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')) AS archived FROM catalog_products WHERE tenant_id=? AND id IN (?,?)",[removalOwner.tenant,removalA,removalB]);
+ assert.equal(history.length,2);assert.ok(history.every(row=>!row.enabled&&String(row.archived)==="true"));
+ const [removalAudits]=await db.execute("SELECT resource_id FROM restaurant_audit_events WHERE tenant_id=? AND action='catalog.product.archive' AND resource_id IN (?,?)",[removalOwner.tenant,removalA,removalB]);
+ assert.equal(removalAudits.length,2);
+ assert.equal((await catalogRemoval("PATCH",{kind:"product",id:removalA,enabled:true})).status,404,"archived products cannot be reactivated by stale updates");
  return fixtures;
 }
 
