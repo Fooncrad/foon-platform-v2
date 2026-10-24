@@ -25,7 +25,7 @@ test("The transitive Zod validation dependency cannot regress to an affected rel
 });
 
 test("The lockfile has no additional old Zod or Nodemailer versions",()=>{
- const hits=Object.entries(packages).filter(([key])=>/(?:^|\\/)node_modules\\/(?:zod|nodemailer)$/.test(key));
+ const hits=Object.entries(packages).filter(([key])=>["zod","nodemailer"].some(name=>key==="node_modules/"+name||key.endsWith("/node_modules/"+name)));
  assert.deepEqual(hits.map(([key])=>key).sort(),["node_modules/nodemailer","node_modules/zod"]);
  assert.deepEqual(hits.map(([,node])=>node.version).sort(),["10.1.4","4.6.6"]);
 });
