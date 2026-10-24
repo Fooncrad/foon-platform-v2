@@ -28,7 +28,7 @@ export default async function CustomerPage(){
 
  const id=await currentUserId();if(!id)redirect("/login");
  if(await isEmployeeAccount(id))redirect("/account");
- const [rows]=await database().execute<RowDataPacket[]>("SELECT display_name,email,email_verified_at,status FROM users WHERE id=? AND status='active' LIMIT 1",[id]);
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT display_name,email,email_verified_at,status,UNIX_TIMESTAMP() AS now_epoch FROM users WHERE id=? AND status='active' LIMIT 1",[id]);
  const user=rows[0];if(!user)redirect("/login");
  const [profiles]=await database().execute<RowDataPacket[]>("SELECT phone FROM user_profiles WHERE user_id=? LIMIT 1",[id]);
  const [stores]=await database().execute<RowDataPacket[]>("SELECT t.id,t.name,t.slug,COALESCE(history.order_count,0) AS order_count,history.last_order_at FROM tenant_customers c JOIN tenants t ON t.id=c.tenant_id AND t.status='active' LEFT JOIN (SELECT tenant_id,COUNT(*) AS order_count,MAX(created_at) AS last_order_at FROM restaurant_orders WHERE customer_user_id=? GROUP BY tenant_id) history ON history.tenant_id=t.id WHERE c.user_id=? ORDER BY (history.last_order_at IS NULL),history.last_order_at DESC,c.created_at DESC LIMIT 100",[id,id]);
@@ -61,7 +61,7 @@ export default async function CustomerPage(){
  const orderPhase=(status:unknown):"active"|"finished"|"cancelled"=>["cancelled","rejected","refunded"].includes(String(status))?"cancelled":["completed","delivered"].includes(String(status))?"finished":"active";
  const orderCounts={all:orders.length,active:orders.filter(order=>orderPhase(order.status)==="active").length,finished:orders.filter(order=>orderPhase(order.status)==="finished").length,cancelled:orders.filter(order=>orderPhase(order.status)==="cancelled").length};
  const nearestActiveOrder=orders.find(order=>orderPhase(order.status)==="active");
- const now=Date.now();
+ const now=Number(user.now_epoch)*1000;
  const upcomingReservations=reservations.filter(reservation=>{
   if(!["pending","confirmed","checked_in"].includes(String(reservation.status)))return false;
   const details=typeof reservation.data==="string"?safeReservationData(reservation.data):reservation.data&&typeof reservation.data==="object"&&!Array.isArray(reservation.data)?reservation.data:{};
