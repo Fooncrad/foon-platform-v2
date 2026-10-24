@@ -40,3 +40,11 @@ test("signed ACK accepts case-only UUID differences but rejects tampering and fo
  assert.throws(()=>verifyCommittedPushReceipt({payload:signed,expected:upper,deviceId:ids[0],publicKey}),/SYNC_RECEIPT_DEVICE_MISMATCH/);
  assert.throws(()=>verifyCommittedPushReceipt({payload:{...signed,receipt:{...signed.receipt,tenantId:mixed.tenantId.toUpperCase()}},expected:upper,deviceId:mixed.deviceId,publicKey}),/SYNC_RECEIPT_SIGNATURE_INVALID/);
 });
+
+test("signer rejects array and object coercion for receipt identity and digest",()=>{
+ for(const field of ["deviceId","eventId","tenantId","branchId","digest"]){
+  for(const invalid of [[receipt[field]],{toString(){return receipt[field]}}]){
+   assert.throws(()=>signOne({...receipt,[field]:invalid}),/SYNC_INVALID_RECEIPT/,field);
+  }
+ }
+});
