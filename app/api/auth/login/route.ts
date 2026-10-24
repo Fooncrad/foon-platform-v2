@@ -14,10 +14,10 @@ export async function POST(request:Request){
   catch { return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403}); }
   const body=await request.json(); email=String(body.email??"").trim().toLowerCase(); const password=String(body.password??"");
   if(!(await loginAllowed(email,ip))) return NextResponse.json({ok:false,code:"TOO_MANY_ATTEMPTS"},{status:429});
-  const [rows]=await database().execute<RowDataPacket[]>("SELECT id,password_hash,status FROM users WHERE email=? LIMIT 1",[email]);
+  const [rows]=await database().execute<RowDataPacket[]>("SELECT id,password_hash,status,email_verified_at FROM users WHERE email=? LIMIT 1",[email]);
   const user=rows[0]; const valid=!!user?.password_hash && user.status==="active" && await verifyPassword(password,String(user.password_hash));
   await recordLogin(email,ip,valid);
   if(!valid)return NextResponse.json({ok:false,code:"INVALID_CREDENTIALS"},{status:401});
-  await createSession(String(user.id)); return NextResponse.json({ok:true});
+  await createSession(String(user.id)); return NextResponse.json({ok:true,emailVerificationRequired:!user.email_verified_at});
  }catch{return NextResponse.json({ok:false,code:"LOGIN_UNAVAILABLE"},{status:503});}
 }
