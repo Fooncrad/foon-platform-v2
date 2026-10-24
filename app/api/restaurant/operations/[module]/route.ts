@@ -244,7 +244,23 @@ async function mutate(request:Request,module:string,method:string){
    const [before]=await db.execute<RowDataPacket[]>("SELECT status FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='reservation' FOR UPDATE",[ctx.tenantId,body.id]);reservationBefore=before[0]?String(before[0].status):null;
   }
   let result;
-  if(module==="sections"&&method==="POST"&&body.sections){result=await createDiningBatch(db,ctx.tenantId,ctx.user,ctx.role,body);}else if(Object.hasOwn(resourceModules,module)){
+  if(module==="menu"&&method==="DELETE"&&Array.isArray(body.items)){
+   // A bounded all-or-nothing archive. Never accept a client-provided tenant or branch,
+   // and keep the canonical item and historical orders in place.
+   if(!["owner","manager"].includes(ctx.role)||body.id!==undefined||body.items.length<1||body.items.length>100)throw new ResourceError("INVALID_INPUT");
+   const entries=body.items as unknown[];
+   if(entries.some(entry=>!entry||typeof entry!=="object"||Array.isArray(entry)||typeof (entry as {id?:unknown}).id!=="string"||typeof (entry as {version?:unknown}).version!=="string"))throw new ResourceError("INVALID_INPUT");
+   const items=entries as {id:string;version:string}[];
+   if(items.some(item=>item.id.length>64||item.id.length<3||item.version.length!==64)||new Set(items.map(item=>item.id)).size!==items.length)throw new ResourceError("INVALID_INPUT");
+   for(const item of items){
+    // The record's real branch, not the caller's header, decides PIN enforcement.
+    const [target]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='menu_item' LIMIT 1",[ctx.tenantId,item.id]);
+    if(target[0]?.branch_id)await requireAdditionalBranchUnlock(ctx.tenantId,String(target[0].branch_id),ctx.user);
+    // saveResource verifies tenant ownership and optimistic row version, and audits each archive.
+    await saveResource(db,ctx.tenantId,ctx.user,ctx.role,"menu",{id:item.id,version:item.version},true);
+   }
+   result={deleted:items.length};
+  }else if(module==="sections"&&method==="POST"&&body.sections){result=await createDiningBatch(db,ctx.tenantId,ctx.user,ctx.role,body);}else if(Object.hasOwn(resourceModules,module)){
    if(method==="POST"&&body.id!==undefined||method!=="POST"&&typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
    if(module==="storefront"&&method!=="DELETE"){
     for(const [key,feature] of [["logoUrl","branding.logo"],["menuTheme","branding.menu_theme"],["fontPreset","branding.custom_font"],["platformBranding","branding.white_label"]]){

@@ -169,3 +169,13 @@
   .restaurantApp .restaurantMenuHierarchyGuide {padding:10px 12px}
   .restaurantApp .restaurantListTools .restaurantMenuCategoryFilter {max-width:100%;width:100%}
 }
+
+/* Restaurant menu: bounded multi-select and explicit destructive action. */
+.restaurantApp .restaurantMenuBulkActions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;margin:8px 0 12px;background:var(--rc-surface,#fff);border:1px solid var(--rc-border,#d5dce5);border-radius:12px;min-width:0}
+.restaurantApp .restaurantMenuBulkActions label{display:inline-flex;gap:8px;align-items:center;font-weight:650;cursor:pointer;max-width:100%}
+.restaurantApp .restaurantMenuBulkActions input[type=checkbox],.restaurantApp .restaurantMenuItemSelection input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;accent-color:#b54b34;cursor:pointer}
+.restaurantApp .restaurantMenuBulkActions strong{font-variant-numeric:tabular-nums}
+.restaurantApp .restaurantMenuBulkActions button.restaurantMenuDeleteSelected{margin-inline-start:auto;background:#a62f28;color:#fff;border:1px solid #a62f28;border-radius:10px;padding:10px 14px;min-height:44px;font-weight:800}
+.restaurantApp .restaurantMenuBulkActions button:disabled{opacity:.45;cursor:not-allowed}
+.restaurantApp .restaurantMenuItemSelection{display:inline-flex;align-items:center;justify-content:center;max-width:36px;margin-inline-end:4px}
+@media(max-width:420px){.restaurantApp .restaurantMenuBulkActions button.restaurantMenuDeleteSelected{width:100%;margin:0}}

@@ -14,3 +14,10 @@
 
 .manager fieldset { min-width:0; max-width:100%; display:grid; gap:12px; border:1px solid var(--border,#d9e2ee); border-radius:12px; padding:12px; }
 .manager fieldset :is(input,textarea) { width:100%; max-width:100%; box-sizing:border-box; }
+
+/* Multi-select only the current product page; never a hidden search result. */
+.bulkToolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px;border:1px solid var(--border,#d9e2ee);border-radius:14px;margin-block:12px;background:var(--surface,#fff)}
+.manager .bulkToolbar label,.manager .rowSelection{display:inline-flex;flex-direction:row;gap:8px;align-items:center;font-weight:700;cursor:pointer}
+.manager .bulkToolbar input[type=checkbox],.manager .rowSelection input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:0;accent-color:#a62f28}
+.manager .bulkToolbar button{margin-inline-start:auto;background:#a62f28;color:white;border-color:#a62f28;font-weight:800}
+@media(max-width:420px){.manager .bulkToolbar button{width:100%;margin-inline-start:0}}

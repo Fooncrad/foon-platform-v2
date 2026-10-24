@@ -49,6 +49,28 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const item=await save(a,"menu","Coffee",{price:10,oldPrice:15,calories:120,nutrition:"Protein 3g",allergens:"Milk",quantity:18,categoryId:categoryA});
   const persistedMenu=await resource(a,"menu",undefined,"GET"),persistedCoffee=persistedMenu.body.resources.find(r=>r.id===item);assert.equal(persistedCoffee.data.oldPrice,15);assert.equal(persistedCoffee.data.calories,120);assert.equal(persistedCoffee.data.quantity,18);assert.equal(persistedCoffee.data.nutrition,"Protein 3g");
   const editedCoffee=await resource(a,"menu",{id:item,version:persistedCoffee.version,name:"Coffee",status:"active",branchId:a.branch,data:{price:10,categoryId:categoryA,description:"Updated description"}},"PATCH");assert.equal(editedCoffee.status,200);const preservedCoffee=(await resource(a,"menu",undefined,"GET")).body.resources.find(r=>r.id===item);assert.equal(preservedCoffee.data.oldPrice,15);assert.equal(preservedCoffee.data.nutrition,"Protein 3g");
+  // Individual and bulk menu removal must be tenant-scoped, optimistic and atomic.
+  const one=await save(a,"menu","Remove first",{price:2,categoryId:categoryA});
+  const two=await save(a,"menu","Remove second",{price:3,categoryId:categoryA});
+  const menuRows=(await resource(a,"menu",undefined,"GET")).body.resources;
+  const first=menuRows.find(row=>row.id===one),second=menuRows.find(row=>row.id===two);
+  assert.ok(first&&second);
+  const deleteItems=[{id:one,version:first.version},{id:two,version:second.version}];
+  assert.equal((await resource(a,"menu",{items:[deleteItems[0],deleteItems[0]]},"DELETE")).status,400);
+  const failedBulk=await resource(a,"menu",{items:[deleteItems[0],{id:two,version:"0".repeat(64)}]},"DELETE");
+  assert.equal(failedBulk.body.code,"CONFLICT");
+  const beforeRemoval=(await resource(a,"menu",undefined,"GET")).body.resources;
+  assert.ok(beforeRemoval.some(row=>row.id===one)&&beforeRemoval.some(row=>row.id===two),"version conflict rolls back the entire bulk removal");
+  const removed=await resource(a,"menu",{items:deleteItems},"DELETE");
+  assert.equal(removed.status,200,JSON.stringify(removed.body));assert.equal(removed.body.deleted,2);
+  const afterRemoval=(await resource(a,"menu",undefined,"GET")).body.resources;
+  assert.ok(!afterRemoval.some(row=>row.id===one||row.id===two));
+  const [preserved]=await db.execute("SELECT id,enabled FROM restaurant_menu_items WHERE tenant_id=? AND id IN (?,?)",[a.tenant,one,two]);
+  assert.equal(preserved.length,2,"historical item rows are retained");
+  assert.ok(preserved.every(row=>!row.enabled));
+  const [auditRows]=await db.execute("SELECT resource_id FROM restaurant_audit_events WHERE tenant_id=? AND action='menu.archive' AND resource_id IN (?,?)",[a.tenant,one,two]);
+  assert.equal(auditRows.length,2,"all archive actions are audited");
+  assert.equal((await resource(a,"menu",{items:deleteItems},"DELETE")).status,404);
   const table=await save(a,"tables","Table 1",{capacity:4},"available");
   const family=await save(a,"sections","Families",{}),terrace=await save(a,"sections","Terrace",{});
   const batch=await resource(a,"sections",{branchId:a.branch,sections:[{id:family,name:"Families",start:1,count:2,capacity:4},{id:terrace,name:"Terrace",start:1,count:2,capacity:6}]});assert.equal(batch.status,201,JSON.stringify(batch.body));assert.equal(batch.body.count,4);
