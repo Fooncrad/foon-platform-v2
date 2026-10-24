@@ -1,0 +1,32 @@
+/* Privacy-safe public page analytics, scoped to owner/creator dashboards. */
+.restaurantApp .foonVisitAnalytics{display:grid;gap:14px;min-inline-size:0;margin-block:16px}
+.restaurantApp .foonVisitAnalytics>header{margin:0}
+.restaurantApp .foonVisitAnalytics>header p{line-height:1.65}
+.restaurantApp .foonVisitAnalytics h4{margin:0;font-size:15px}
+.restaurantApp .foonVisitAnalyticsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.restaurantApp .foonVisitAnalyticsGrid article{display:grid;gap:6px;min-inline-size:0;padding:14px;border:1px solid var(--rc-border,#d5dce5);border-radius:13px;background:var(--rc-surface,#fff)}
+.restaurantApp .foonVisitAnalyticsGrid small{font-size:13px;font-weight:650}
+.restaurantApp .foonVisitAnalyticsGrid strong{font-size:clamp(25px,3vw,36px);font-variant-numeric:tabular-nums;color:var(--rc-text,#172033)}
+.restaurantApp .foonVisitAnalyticsGrid span{font-size:12px;color:var(--rc-muted,#58677a);line-height:1.6}
+.restaurantApp .foonVisitAnalyticsList{display:grid;gap:6px;max-block-size:440px;overflow-y:auto;overscroll-behavior:contain}
+.restaurantApp .foonVisitAnalyticsRow{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--rc-border,#d5dce5);border-radius:10px;min-inline-size:0}
+.restaurantApp .foonVisitAnalyticsRow>span{min-inline-size:0;overflow-wrap:anywhere;font-weight:650}
+.restaurantApp .foonVisitAnalyticsRow small{display:block;font-weight:400;color:var(--rc-muted,#58677a);margin-block-start:4px}
+.restaurantApp .foonVisitAnalyticsRow>strong{font-variant-numeric:tabular-nums;flex:0 0 auto}
+.restaurantApp .foonVisitAnalyticsPagination{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px}
+.restaurantApp .foonVisitAnalyticsPagination button{padding:8px 14px;min-block-size:44px;border:1px solid var(--rc-border,#d5dce5);border-radius:10px;background:var(--rc-surface,#fff);color:var(--rc-text,#172033);cursor:pointer}
+.restaurantApp .foonVisitAnalyticsPagination button:disabled{opacity:.5;cursor:not-allowed}
+.customerDashboard .foonCreatorVisitStats,.creatorEditor .foonCreatorVisitStats{display:grid;gap:12px;padding:16px;border-radius:16px;border:1px solid var(--customer-line,#8c8476);background:var(--customer-surface,#24221e);color:var(--customer-text,#f8f3e9);min-inline-size:0;margin-block:16px}
+.creatorEditor .foonCreatorVisitStats{--customer-surface:#24221e;--customer-text:#f8f3e9;--customer-line:#5a554e}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitStats h2{font-size:17px;margin:0;color:inherit}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitTotals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitTotals>span{display:grid;gap:4px;border:1px solid var(--customer-line,#5a554e);border-radius:12px;padding:12px;min-inline-size:0}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitTotals small{font-size:12px;line-height:1.5}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitTotals strong{font-size:clamp(20px,3vw,28px);font-variant-numeric:tabular-nums}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitStats p{margin:0;line-height:1.7;overflow-wrap:break-word}
+:where(.customerDashboard,.creatorEditor) .foonCreatorVisitStats a{display:inline-flex;align-items:center;justify-content:center;min-block-size:44px;padding:9px 14px;border:1px solid currentColor;border-radius:10px;color:inherit;font-weight:700;justify-self:start}
+@media(max-width:560px){
+ .restaurantApp .foonVisitAnalyticsGrid{grid-template-columns:1fr}
+ :where(.customerDashboard,.creatorEditor) .foonCreatorVisitTotals{gap:6px}
+ :where(.customerDashboard,.creatorEditor) .foonCreatorVisitTotals>span{padding:8px}
+}
