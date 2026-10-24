@@ -115,7 +115,7 @@ export async function PATCH(request:Request){
  }
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{
-  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?",[...values,ctx.tenantId,body.id]);
+  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?"+(body.kind==="product"?" AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,\'$.__foon_archived\')),\'false\')<>\'true\'":""),[...values,ctx.tenantId,body.id]);
   const changed=(result as {affectedRows?:number}).affectedRows??0;
   if(!changed)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});
   return NextResponse.json({ok:true,changed});
