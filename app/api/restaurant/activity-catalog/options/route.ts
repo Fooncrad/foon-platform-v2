@@ -32,16 +32,18 @@ export async function POST(request:Request){
  try{assertSameOrigin(request)}catch{return fail("FORBIDDEN",403)}
  const ctx=await authorize(request);if(!ctx)return fail("FORBIDDEN",403);
  const b=await request.json().catch(()=>null);
- if(!b||typeof b.product!=="string"||b.product.length!==36||!["group","value","deleteGroup","deleteValue","variant","deleteVariant","updateValue","updateGroup"].includes(b.action))return fail("INVALID_INPUT");
+ if(!b||typeof b.product!=="string"||b.product.length!==36||!["group","value","deleteGroup","deleteValue","variant","deleteVariant","updateValue","updateGroup","toggleGroup","toggleValue"].includes(b.action))return fail("INVALID_INPUT");
  const deleting=b.action.startsWith("delete");
  if(deleting&&(typeof b.id!=="string"||b.id.length!==36))return fail("INVALID_INPUT");
- if(!deleting&&b.action!=="variant"){
+ if(!deleting&&b.action!=="variant"&&!b.action.startsWith("toggle")){
   for(const key of ["name","nameEn","nameFr"]){if(typeof (b[key]??"")!=="string"||String(b[key]??"").trim().length>180)return fail("INVALID_NAME")}
   if(typeof b.name!=="string"||b.name.trim().length<1)return fail("INVALID_NAME");
-  if(["group","updateGroup"].includes(b.action)&&(typeof b.required!=="boolean"||!["single","multiple"].includes(b.type)||!Number.isInteger(b.max)||b.max<1||b.max>50))return fail("INVALID_SELECTION");
+  if(["group","updateGroup"].includes(b.action)&&(typeof b.required!=="boolean"||!["single","multiple"].includes(b.type)||!Number.isInteger(b.max)||b.max<1||b.max>50||!Number.isInteger(b.min)||b.min<0||b.min>b.max||b.required&&b.min<1||b.type==="single"&&b.min>1))return fail("INVALID_SELECTION");
+  if(["group","updateGroup","value","updateValue"].includes(b.action)&&(b.sortOrder!==undefined&&(!Number.isInteger(b.sortOrder)||b.sortOrder<0||b.sortOrder>1000000)))return fail("INVALID_SORT_ORDER");
   if(["value","updateValue"].includes(b.action)&&(typeof b.group!=="string"||typeof b.price!=="number"||!Number.isFinite(b.price)||b.price<0||b.price>9999999999||(b.stock!==null&&(!(b.stock===0||validCatalogQuantity(b.stock,999999999))||b.stock<0||b.stock>999999999))))return fail("INVALID_VALUE");
  }
- if(["variant","updateValue","updateGroup"].includes(b.action)&&b.id!==undefined&&(typeof b.id!=="string"||b.id.length!==36))return fail("INVALID_INPUT");
+ if(["variant","updateValue","updateGroup","toggleGroup","toggleValue"].includes(b.action)&&b.id!==undefined&&(typeof b.id!=="string"||b.id.length!==36))return fail("INVALID_INPUT");
+ if(b.action.startsWith("toggle")&&(typeof b.id!=="string"||b.id.length!==36||typeof b.enabled!=="boolean"))return fail("INVALID_INPUT");
  if(b.action==="variant"&&(!Array.isArray(b.options)||!b.options.length||b.options.length>20||b.options.some((id:unknown)=>typeof id!=="string"||id.length!==36)||new Set(b.options).size!==b.options.length||typeof b.sku!=="string"||b.sku.length>100||(b.stock!==null&&!(b.stock===0||validCatalogQuantity(b.stock,999999999)))))return fail("INVALID_VARIANT");
  const db=await database().getConnection();
  try{
@@ -50,7 +52,14 @@ export async function POST(request:Request){
   if(!products.length){await db.rollback();return fail("PRODUCT_NOT_FOUND",404)}
   if(!(await tenantEntitlement(ctx.tenantId,"variants",db)).enabled){await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
   const [groups]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_option_groups WHERE tenant_id=? AND product_id=? FOR UPDATE",[ctx.tenantId,b.product]);
-  if(b.action==="variant"){
+  if(b.action==="toggleGroup"){
+   if(!groups.some(g=>g.id===b.id)){await db.rollback();return fail("GROUP_NOT_FOUND",404)}
+   await db.execute("UPDATE catalog_option_groups SET enabled=? WHERE tenant_id=? AND product_id=? AND id=?",[b.enabled,ctx.tenantId,b.product,b.id]);
+  }else if(b.action==="toggleValue"){
+   const [found]=await db.execute<RowDataPacket[]>("SELECT v.id FROM catalog_option_values v JOIN catalog_option_groups g ON g.id=v.group_id AND g.tenant_id=v.tenant_id WHERE v.tenant_id=? AND g.product_id=? AND v.id=? FOR UPDATE",[ctx.tenantId,b.product,b.id]);
+   if(!found.length){await db.rollback();return fail("VALUE_NOT_FOUND",404)}
+   await db.execute("UPDATE catalog_option_values SET enabled=? WHERE tenant_id=? AND id=?",[b.enabled,ctx.tenantId,b.id]);
+  }else if(b.action==="variant"){
    const [values]=await db.execute<RowDataPacket[]>("SELECT v.id,v.group_id,g.selection_type,g.required,g.min_select,g.max_select FROM catalog_option_values v JOIN catalog_option_groups g ON g.id=v.group_id AND g.tenant_id=v.tenant_id WHERE g.tenant_id=? AND g.product_id=? AND g.enabled=TRUE AND v.enabled=TRUE",[ctx.tenantId,b.product]);
    if(b.options.some((id:string)=>!values.some(v=>v.id===id))){await db.rollback();return fail("INVALID_OPTIONS")}
    const [activeGroups]=await db.execute<RowDataPacket[]>("SELECT id,selection_type,required,min_select,max_select FROM catalog_option_groups WHERE tenant_id=? AND product_id=? AND enabled=TRUE",[ctx.tenantId,b.product]);
@@ -66,11 +75,11 @@ export async function POST(request:Request){
    await db.execute("UPDATE catalog_variants SET enabled=FALSE WHERE tenant_id=? AND product_id=? AND id=?",[ctx.tenantId,b.product,b.id]);
   }else if(b.action==="updateGroup"){
    if(!groups.some(g=>g.id===b.id)){await db.rollback();return fail("GROUP_NOT_FOUND",404)}
-   await db.execute("UPDATE catalog_option_groups SET name_ar=?,name_en=?,name_fr=?,selection_type=?,required=?,min_select=?,max_select=? WHERE tenant_id=? AND product_id=? AND id=?",[b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.type,b.required,b.required?1:0,b.type==="single"?1:b.max,ctx.tenantId,b.product,b.id]);
+   await db.execute("UPDATE catalog_option_groups SET name_ar=?,name_en=?,name_fr=?,selection_type=?,required=?,min_select=?,max_select=?,sort_order=COALESCE(?,sort_order) WHERE tenant_id=? AND product_id=? AND id=?",[b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.type,b.required,b.required?Math.max(1,b.min):b.min,b.type==="single"?1:b.max,b.sortOrder??null,ctx.tenantId,b.product,b.id]);
   }
   else if(b.action==="group"){
    if(groups.length>=20){await db.rollback();return fail("GROUP_LIMIT",409)}
-   await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,name_en,name_fr,selection_type,required,min_select,max_select) VALUES (?,?,?,?,?,?,?,?,?,?)",[randomUUID(),ctx.tenantId,b.product,b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.type,b.required,b.required?1:0,b.type==="single"?1:b.max]);
+   await db.execute("INSERT INTO catalog_option_groups(id,tenant_id,product_id,name_ar,name_en,name_fr,selection_type,required,min_select,max_select,sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?)",[randomUUID(),ctx.tenantId,b.product,b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.type,b.required,b.required?Math.max(1,b.min):b.min,b.type==="single"?1:b.max,b.sortOrder??0]);
   }else{
    const group=b.action==="deleteGroup"?b.id:b.group;
    if(!groups.some(g=>g.id===group)){await db.rollback();return fail("GROUP_NOT_FOUND",404)}
@@ -84,11 +93,11 @@ export async function POST(request:Request){
     if(typeof b.id!=="string"){await db.rollback();return fail("INVALID_INPUT")}
     const [found]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_option_values WHERE tenant_id=? AND group_id=? AND id=?",[ctx.tenantId,group,b.id]);
     if(!found.length){await db.rollback();return fail("VALUE_NOT_FOUND",404)}
-    await db.execute("UPDATE catalog_option_values SET name_ar=?,name_en=?,name_fr=?,price_delta=?,stock_quantity=? WHERE tenant_id=? AND group_id=? AND id=?",[b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.price,b.stock,ctx.tenantId,group,b.id]);
+    await db.execute("UPDATE catalog_option_values SET name_ar=?,name_en=?,name_fr=?,price_delta=?,stock_quantity=?,sort_order=COALESCE(?,sort_order) WHERE tenant_id=? AND group_id=? AND id=?",[b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.price,b.stock,b.sortOrder??null,ctx.tenantId,group,b.id]);
    }else{
     const [values]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_option_values WHERE tenant_id=? AND group_id=?",[ctx.tenantId,group]);
     if(values.length>=100){await db.rollback();return fail("VALUE_LIMIT",409)}
-    await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,name_en,name_fr,price_delta,stock_quantity) VALUES (?,?,?,?,?,?,?,?)",[randomUUID(),ctx.tenantId,group,b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.price,b.stock]);
+    await db.execute("INSERT INTO catalog_option_values(id,tenant_id,group_id,name_ar,name_en,name_fr,price_delta,stock_quantity,sort_order) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),ctx.tenantId,group,b.name.trim(),b.nameEn?.trim()||null,b.nameFr?.trim()||null,b.price,b.stock,b.sortOrder??0]);
    }
   }
   await db.commit();return NextResponse.json({ok:true});
