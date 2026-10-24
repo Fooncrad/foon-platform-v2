@@ -16,7 +16,7 @@ test("customer checkout persists before HTTP, isolates ownership, survives retri
  try{
   let ready=false;for(let i=0;i<60;i++){try{await fetch(local+"/login",{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,500));}}assert.ok(ready,output);
   const suffix=randomUUID().slice(0,8),password="synthetic-long-password-2026";
-  const r=await fetch(local+"/api/auth/register",{method:"POST",headers:{origin:app,"content-type":"application/json"},body:JSON.stringify({email:"checkout-owner-"+suffix+"@test.example",password,name:"Owner",storeName:"Checkout "+suffix,slug:"checkout-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0]})});
+  const r=await fetch(local+"/api/auth/register",{method:"POST",headers:{origin:app,"content-type":"application/json"},body:JSON.stringify({email:"checkout-owner-"+suffix+"@test.example",password,name:"Owner",storeName:"Checkout "+suffix,slug:"checkout-"+suffix,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0],legalAccepted:true})});
   assert.equal(r.status,201,await r.clone().text());const owner=await r.json(),tenant=owner.tenant.id,ownerCookie=r.headers.get("set-cookie").split(";")[0];
   const [[branch]]=await pool.execute("SELECT id FROM branches WHERE tenant_id=? LIMIT 1",[tenant]);
   const customer=randomUUID(),email="checkout-customer-"+suffix+"@test.example";
