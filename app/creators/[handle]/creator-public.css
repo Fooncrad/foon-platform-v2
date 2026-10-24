@@ -31,3 +31,19 @@
 .creatorPublicCover{width:100%;flex:0 0 100%;height:clamp(120px,23vw,230px);border-radius:16px;overflow:hidden;background:linear-gradient(120deg,#282218,#76511c,#29241c)}
 .creatorPublicCover img{display:block;width:100%;height:100%;object-fit:cover}
 @media(max-width:460px){.creatorPublicCover{height:130px}}
+
+/* Mobile-first public profile with safe, accessible sharing. */
+.creatorPublic{overflow-x:clip;box-sizing:border-box}
+.creatorPublic *{box-sizing:border-box;min-width:0}
+.creatorPublicShare{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-block:14px}
+.creatorPublicShare button{min-height:44px;padding:10px 15px;border:1px solid #e2a93b;border-radius:12px;background:#e2a93b;color:#171613;font:inherit;font-weight:800;cursor:pointer}
+.creatorPublicShare button+button{background:transparent;color:#e2a93b}
+.creatorPublicShare [role="status"]{flex:1 1 100%;font-size:12px;color:#bedbc1}
+.creatorPublicShare button:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+.creatorPublicSafeNote{font-size:12px;color:#d0c8b9;line-height:1.8}
+.creatorPublicHeader{align-items:flex-start}
+.creatorPublic>section{min-width:0}
+.creatorPublic>nav a{min-height:44px;display:inline-flex;align-items:center}
+.creatorPublicGallery img{display:block}
+@media(max-width:420px){.creatorPublic{padding:12px}.creatorPublicShare button{flex:1 1 120px}.creatorPublicHeader{padding:15px}}
+@media(prefers-reduced-motion:reduce){.creatorPublicSocial .creatorSocialLink{transition:none}.creatorSocialLink:hover{transform:none}}
