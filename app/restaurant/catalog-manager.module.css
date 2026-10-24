@@ -41,3 +41,9 @@
 .actionCard small{opacity:.72;font-variant-numeric:tabular-nums}
 .actionCard>button{justify-self:start;max-width:100%}
 @media(max-width:600px){.unified :global(.foonMenuCategoryForm),.unified :global(.foonItemForm){grid-template-columns:1fr;padding:12px}.unified :global(.foonCatalogRow){padding:12px;gap:8px}.unified :global(.foonCatalogRow) select{flex:1 1 100%;min-width:0}.productActionGrid{grid-template-columns:1fr}.unified :global(.foonCatalogPagination){flex-wrap:wrap}}
+
+.catalogSearch{width:100%;max-width:100%;margin-bottom:14px}
+.unified .catalogSearch :global(.foonItemForm){display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;align-items:end;margin:0}
+.catalogPaging{padding-top:12px}
+.catalogPaging :global(.foonCatalogPagination){margin:0}
+@media(max-width:720px){.unified .catalogSearch :global(.foonItemForm){grid-template-columns:1fr}.catalogPaging{padding-top:8px}}
