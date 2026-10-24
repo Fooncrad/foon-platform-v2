@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
+import {quoteCsvCell} from "@/lib/security/csv-export";
 
 type Data={itemId?:string;groupId?:string;nameEn?:string|null;nameFr?:string|null;selectionType?:string;requiredFlag?:string;minSelect?:number;maxSelect?:number;priceDelta?:number;stockQuantity?:number|null;sortOrder?:number;imageUrl?:string|null};
 type Resource={id:string;name:string;status:string;version:string|number;data:Data};
@@ -23,8 +24,8 @@ function decodeCsv(text:string):string[][]{
  return rows;
 }
 function downloadCsv(rows:unknown[][],filename:string){
- const quote=(value:unknown)=>'"'+String(value??"").replaceAll('"','""')+'"';
- const csv="\uFEFF"+rows.map(row=>row.map(quote).join(",")).join("\r\n");
+
+ const csv="\uFEFF"+rows.map(row=>row.map(quoteCsvCell).join(",")).join("\r\n");
  const href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
  const element=document.createElement("a");element.href=href;element.download=filename;element.click();URL.revokeObjectURL(href);
 }
