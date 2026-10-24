@@ -1,3 +1,4 @@
+import CreatorVisitTracker from "./creator-visit-tracker";
 import Link from "next/link";
 import {cookies as uiCookies} from "next/headers";
 import CreatorPublicShare from "./creator-public-share";
@@ -56,7 +57,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
   const parsed=normalizeCreatorSocialLink(row.platform,row.url);
   return parsed?[parsed]:[];
  });
- return <main className="creatorPublic" dir={language==="ar"?"rtl":"ltr"} lang={language}>
+ return <><CreatorVisitTracker handle={handle}/><main className="creatorPublic" dir={language==="ar"?"rtl":"ltr"} lang={language}>
   <nav aria-label={t("التنقل في البروفايل العام","Public profile navigation","Navigation du profil public")}><Link href="/">FOON</Link><Link href="/creators">{t("اكتشف المبدعين","Discover creators","Découvrir les créateurs")}</Link><Link href="/market">{t("استكشاف المتاجر","Explore stores","Explorer les boutiques")}</Link></nav>
   <section className="creatorPublicHeader">
    <div className="creatorPublicCover">{Number(profile.has_cover)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar?type=cover"} alt={t("غلاف ملف ","Cover of ","Couverture de ")+String(profile.display_name)} width={1000} height={230}/>}</div>
@@ -82,5 +83,5 @@ export default async function CreatorPublicPage({params}:CreatorParams){
     {item.caption&&<figcaption>{String(item.caption)}</figcaption>}
    </figure>)}</div>:<p>{t("لم ينشر صانع المحتوى أعمالًا بعد.","No portfolio work published yet.","Aucune œuvre publiée pour le moment.")}</p>}
   </section>
- </main>;
+ </main></>;
 }
