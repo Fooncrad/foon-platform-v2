@@ -31,6 +31,8 @@ export async function GET(request:Request){
   let userId:string;
   try{
    await db.beginTransaction();
+   const [googleFlags]=await db.execute<RowDataPacket[]>("SELECT config_value FROM platform_configuration WHERE config_key='google_oauth_enabled' LIMIT 1");
+   if(googleFlags[0]?.config_value==="false"){await db.rollback();return fail(request,"GOOGLE_DISABLED");}
    const [linked]=await db.execute<RowDataPacket[]>("SELECT user_id FROM auth_google_identities WHERE google_sub=? LIMIT 1 FOR UPDATE",[identity.sub]);
    if(linked[0]){
     userId=String(linked[0].user_id);
