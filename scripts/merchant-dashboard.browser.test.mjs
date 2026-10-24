@@ -207,7 +207,14 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"إضافة قسم جديد",exact:true}).click();
  await page.getByLabel("اسم القسم",{exact:true}).fill("مشروبات المعاينة");
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
- await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
+ // Check persisted category rather than an implementation-specific transient toast.
+ await expect.poll(async()=>{
+  const db=await mysql.createConnection(process.env.DATABASE_URL);
+  try{
+   const [rows]=await db.execute("SELECT COUNT(*) AS total FROM restaurant_menu_categories WHERE tenant_id=? AND name=? AND enabled=TRUE",[visualTenant.tenant,"مشروبات المعاينة"]);
+   return Number(rows[0]?.total??0);
+  }finally{await db.end();}
+ },{timeout:15000}).toBe(1);
  await page.getByRole("button",{name:"الأصناف",exact:true}).click();
  await page.getByRole("button",{name:"إضافة صنف جديد",exact:true}).click();
  await page.getByLabel("اسم الصنف",{exact:true}).fill("قهوة المعاينة");
