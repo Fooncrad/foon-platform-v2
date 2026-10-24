@@ -37,7 +37,7 @@ export async function POST(request:Request){
    if(kind==="product"){
     if(!validId(body.productId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
     resourceId=String(body.productId);
-    const [products]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND id=? LIMIT 1",[tenantId,resourceId]);
+    const [products]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND id=? UNION ALL SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='menu' AND status='active' AND archived=FALSE LIMIT 1",[tenantId,resourceId,tenantId,resourceId]);
     if(!products.length)return NextResponse.json({ok:false,code:"NOT_FOUND"},{status:404});
    }
   }
@@ -61,6 +61,10 @@ export async function GET(request:Request){
   const [membership]=await database().execute<RowDataPacket[]>("SELECT 1 FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' AND role IN ('owner','manager') LIMIT 1",[tenantId,viewer]);
   if(!membership.length)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403,headers:noStore});
   const productId=kind==="product"?(url.searchParams.get("productId")||""):"";
+  if(kind==="product"&&!productId){
+   const [rows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total, SUM(visit_date=UTC_DATE()) AS today, SUM(visit_date>=UTC_DATE()-INTERVAL 6 DAY) AS last7Days, SUM(visit_date>=UTC_DATE()-INTERVAL 29 DAY) AS last30Days FROM public_visit_daily WHERE kind='product' AND tenant_id=?",[tenantId]);
+   const v=rows[0];return NextResponse.json({ok:true,visits:{total:Number(v?.total||0),today:Number(v?.today||0),last7Days:Number(v?.last7Days||0),last30Days:Number(v?.last30Days||0)}},{headers:noStore});
+  }
   if(kind==="product"&&!validId(productId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400,headers:noStore});
   return NextResponse.json({ok:true,visits:await countPublicVisits(kind,tenantId,productId,"")},{headers:noStore});
  }catch{return NextResponse.json({ok:false,code:"VISITS_UNAVAILABLE"},{status:503,headers:noStore});}
