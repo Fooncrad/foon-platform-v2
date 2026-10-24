@@ -178,6 +178,10 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const calls=await resource(a,"waiterCalls",undefined,"GET");assert.equal(calls.body.resources[0].status,"pending");assert.equal(calls.body.resources[0].data.tableId,table);
   assert.equal((await call("/api/restaurant/operations/waiterCalls","GET",undefined,customer.cookie,a.tenant)).status,403);
   const bookingPayload={storeSlug:"operations-owner-a",branchId:a.branch,action:"reservation",sectionId:family,partySize:3,phone:"0500000000",scheduledAt:new Date(Date.now()+86400000).toISOString(),requestKey:randomUUID()};
+  const unverifiedBooking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);
+  assert.equal(unverifiedBooking.status,403);
+  assert.equal(unverifiedBooking.body.code,"EMAIL_VERIFICATION_REQUIRED");
+  await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[customer.body.user.id]);
   assert.equal((await call("/api/customer/services","POST",{...bookingPayload,scheduledAt:new Date(Date.now()-60000).toISOString()},customer.cookie)).status,400);
   const booking=await call("/api/customer/services","POST",bookingPayload,customer.cookie);assert.equal(booking.status,201,JSON.stringify(booking.body));
   const savedBookings=await resource(a,"reservations",undefined,"GET");assert.equal(savedBookings.body.resources.find(row=>row.id===booking.body.id).status,"pending");
@@ -186,6 +190,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const [[graceRow]]=await db.execute("SELECT data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='branch_config' AND archived=FALSE AND JSON_TYPE(JSON_EXTRACT(data,'$.noShowGraceMinutes')) IN ('INTEGER','DOUBLE') ORDER BY updated_at DESC,created_at DESC LIMIT 1",[a.tenant,a.branch]);
   assert.equal((typeof graceRow.data==="string"?JSON.parse(graceRow.data):graceRow.data).noShowGraceMinutes,5);
   const autoCustomer=await call("/api/customer/register","POST",{email:"operations-auto-customer@test.example",name:"Auto Customer",password,storeSlug:"operations-owner-a"});assert.equal(autoCustomer.status,201,JSON.stringify(autoCustomer.body));
+  await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[autoCustomer.body.user.id]);
   const autoBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},autoCustomer.cookie);assert.equal(autoBooking.status,201,JSON.stringify(autoBooking.body));
   const pendingAuto=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===autoBooking.body.id);assert.ok(pendingAuto);
   const confirmedAuto=await resource(a,"reservations",{id:autoBooking.body.id,version:pendingAuto.version,name:pendingAuto.name,status:"confirmed",branchId:a.branch,data:resourceData("reservations",pendingAuto.data)},"PATCH");assert.equal(confirmedAuto.status,200,JSON.stringify(confirmedAuto.body));
