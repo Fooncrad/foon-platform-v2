@@ -53,3 +53,13 @@ test("real translation data and payment/outbox CREATEs remain whole", async () =
     assert.match(statements[0], /^CREATE TABLE IF NOT EXISTS/);
   }
 });
+
+test("Google identity migration uses the same user foreign-key shape as existing creator identities", async () => {
+  const migration = await readFile("migrations/0159_google_account_identities.sql","utf8");
+  const established = await readFile("migrations/0107_customer_creator_profiles.sql","utf8");
+  assert.match(established,/user_id VARCHAR\(36\) NOT NULL PRIMARY KEY/);
+  assert.match(migration,/user_id VARCHAR\(36\) NOT NULL/);
+  assert.match(migration,/FOREIGN KEY \(user_id\) REFERENCES users\(id\) ON DELETE CASCADE/);
+  assert.match(migration,/ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;/);
+  assert.equal(splitSqlStatements(migration).length,1);
+});
