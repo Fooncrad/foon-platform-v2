@@ -9,7 +9,7 @@ export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
 const fail=(code:string,status:number)=>NextResponse.json({ok:false,code},{status,headers});
 const validId=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-async function access(){
+async function access():Promise<{error:NextResponse;userId?:never;sessionId?:never}|{error?:never;userId:string;sessionId:string}>{
  const denied=await employeePersonalAccessDenied();if(denied)return {error:denied};
  const userId=await currentUserId(),sessionId=await currentSessionId();
  if(!userId||!sessionId)return {error:fail("UNAUTHENTICATED",401)};
