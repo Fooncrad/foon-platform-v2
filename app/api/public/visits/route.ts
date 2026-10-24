@@ -15,9 +15,11 @@ export async function POST(request:Request){
   const viewer=await currentUserId();
   let tenantId="",resourceId="",ownerUserId="";
   if(kind==="profile"){
-   ownerUserId=String(body.id);
-   const [owners]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? LIMIT 1",[ownerUserId]);
+   const [owners]=await database().execute<RowDataPacket[]>(
+    "SELECT p.user_id FROM customer_creator_profiles p JOIN users u ON u.id=p.user_id AND u.status='active' WHERE p.handle=? AND p.visibility='public' AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=p.user_id) AND NOT EXISTS (SELECT 1 FROM platform_admins a WHERE a.user_id=p.user_id) LIMIT 1",
+    [String(body.id)]);
    if(!owners.length)return NextResponse.json({ok:false,code:"NOT_FOUND"},{status:404});
+   ownerUserId=String(owners[0].user_id);
    if(viewer===ownerUserId)return NextResponse.json({ok:true,counted:false},{headers:noStore});
   }else{
    const [tenants]=await database().execute<RowDataPacket[]>("SELECT id FROM tenants WHERE slug=? AND status='active' LIMIT 1",[String(body.id)]);
