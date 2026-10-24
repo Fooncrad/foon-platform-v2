@@ -818,3 +818,30 @@ body{min-width:0;overflow-x:clip}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .foonLanguageSelector{display:inline-flex;align-items:center;min-width:0;max-width:100%}
 .foonLanguageSelector select{min-width:96px;max-width:125px;min-height:40px;padding:7px 8px;border:1px solid var(--border,#d9e2ee);border-radius:10px;background:var(--surface,#fff);color:var(--text,#172033);font:inherit;cursor:pointer}
+
+
+/* Unified merchant add-on workflow for restaurant and activity catalogs. */
+.foonAddonsWorkflow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:10px;margin-block:16px;min-width:0}
+.foonAddonsWorkflow>div{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:5px;align-content:start;padding:13px;border:1px solid var(--border,#ced5df);border-radius:14px;background:var(--surface,#fff);min-width:0;overflow-wrap:anywhere}
+.foonAddonsWorkflow b{grid-row:span 2;display:grid;place-items:center;min-width:30px;height:30px;border-radius:50%;background:#aa6430;color:#fff;font-variant-numeric:tabular-nums}
+.foonAddonsWorkflow strong{font-size:14px}
+.foonAddonsWorkflow span{font-size:12px;line-height:1.65;opacity:.9}
+.foonAddonsStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr));gap:10px;margin-block:12px}
+.foonAddonsStats p{display:flex;flex-direction:column;gap:5px;margin:0;padding:12px;border:1px solid var(--border,#ced5df);border-radius:12px;background:var(--surface,#fff)}
+.foonAddonsStats strong{font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}
+.foonAddonsStats span{font-size:12px;opacity:.85;line-height:1.5}
+.foonAddonsWarning{margin-block:12px!important;padding:12px 14px;border-radius:12px;border:1px solid #d8a851;background:#fff1d2;color:#6f4515;line-height:1.7;overflow-wrap:anywhere}
+.foonAddonsHint{font-size:13px;line-height:1.75;opacity:.88;overflow-wrap:anywhere}
+.foonAddonsEmpty{padding:20px;text-align:center;border:1px dashed var(--border,#b4becc);border-radius:14px;line-height:1.7}
+.foonAddonsGroup{min-width:0;border:1px solid var(--border,#ced5df);border-radius:14px;padding:14px;margin-block:12px;overflow-wrap:anywhere}
+.foonAddonsGroup h3{line-height:1.6;margin-block:0 6px}
+.foonAddonsGroup h3 small{font-size:12px;font-weight:500}
+.foonAddonsGroup button{min-height:40px;margin-inline-end:5px;margin-block:4px}
+.foonAddonsPreview{margin-block:20px;padding:16px;border:1px solid var(--border,#b8c7d8);border-radius:16px;background:var(--surface,#fff);min-width:0}
+.foonAddonsPreview h3{margin-top:0}
+.foonAddonsPreview fieldset{display:block;border:1px solid var(--border,#ced5df);border-radius:12px;padding:12px;margin-block:10px;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.foonAddonsPreview legend{padding-inline:6px;font-weight:750}
+.foonAddonsPreview fieldset>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:6px;border-bottom:1px solid var(--border,#e1e5ea)}
+.foonAddonsPreview fieldset>div:last-child{border-bottom:0}
+.foonAddonsPreview fieldset[disabled]{opacity:.75}
+@media(max-width:420px){.foonAddonsWorkflow{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.foonAddonsWorkflow>div{padding:9px;column-gap:6px}.foonAddonsWorkflow b{min-width:25px;height:25px}.foonAddonsPreview{padding:10px}.foonAddonsGroup{padding:10px}}
