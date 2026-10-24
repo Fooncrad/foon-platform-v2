@@ -161,3 +161,21 @@ test("signed self echo accepts MariaDB UUID casing but rejects a different tenan
  assert.equal(foreign.calls.at(-1),"rollback");
  assert.ok(!foreign.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
 });
+
+test("signed inventory pull accepts casing-only movement UUID but rejects foreign movement identity",async()=>{
+ const eventId="a1b2c3d4-e5f6-4a1b-8c2d-123456789abc";
+ const movement={...event(5),event_id:eventId,entity_id:eventId.toUpperCase(),entity_type:"inventory_movement",operation:"movement",payload_json:{itemId:ids[0],delta:-1}};
+ const envelope={eventId:movement.event_id,tenantId:movement.tenant_id,branchId:movement.branch_id,actorId:movement.actor_id,entityId:movement.entity_id,entityType:movement.entity_type,operation:movement.operation,baseVersion:movement.base_version,timestamp:movement.event_timestamp,payload:movement.payload_json};
+ movement.payload_digest=digestChange(envelope);
+ const valid={...batch,events:[movement]};
+ const db=fixture();let applied=0;
+ const result=await applyVerifiedPullBatch({db,batch:valid,scope,...signed(valid),applyEvent:async()=>{applied++;return true;}});
+ assert.equal(result.count,1);assert.equal(applied,1);assert.equal(db.calls.at(-1),"commit");
+ const wrong={...movement,entity_id:ids[2]};
+ const wrongEnvelope={...envelope,entityId:wrong.entity_id};
+ wrong.payload_digest=digestChange(wrongEnvelope);
+ const invalid={...batch,events:[wrong]};
+ const rejected=fixture();
+ await assert.rejects(()=>applyVerifiedPullBatch({db:rejected,batch:invalid,scope,...signed(invalid),applyEvent:async()=>{throw Error("SHOULD_NOT_APPLY");}}),/SYNC_CORRUPT_REMOTE_VERSION/);
+ assert.deepEqual(rejected.calls,[]);
+});

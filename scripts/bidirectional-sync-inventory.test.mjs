@@ -72,3 +72,12 @@ test("malformed projection quantities fail before any stock mutation",async()=>{
   assert.equal(updated,false);
  }
 });
+
+test("movement UUID casing is accepted, but foreign and malformed movement IDs are rejected",()=>{
+ const eventId="a1b2c3d4-e5f6-4a1b-8c2d-123456789abc";
+ const mixed={...change,eventId,entityId:eventId.toUpperCase()};
+ assert.deepEqual(validateInventoryMovement(mixed),{itemId:ids[4],delta:-3});
+ for(const bad of [ids[4],"not-a-uuid"]){
+  assert.throws(()=>validateInventoryMovement({...mixed,entityId:bad}),/SYNC_INVENTORY_EVENT_ID_MISMATCH/);
+ }
+});
