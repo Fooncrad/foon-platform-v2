@@ -11,6 +11,12 @@ import {validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 export const runtime="nodejs";
 const fail=(code:string,status=400)=>NextResponse.json({ok:false,code},{status});
+function validAddonImage(value:unknown){
+ if(value===null||value==="")return true;
+ if(typeof value!=="string"||value.length>1024)return false;
+ if(/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(value))return true;
+ try{const url=new URL(value);return url.protocol==="https:"&&Boolean(url.hostname)&&!url.username&&!url.password&&(!url.port||url.port==="443")}catch{return false}
+}
 async function authorize(request:Request){
  const user=await currentUserId(),tenant=request.headers.get("x-foon-tenant");
  if(!user||!tenant)return null;
@@ -39,7 +45,7 @@ export async function POST(request:Request){
   for(const key of ["name","nameEn","nameFr"]){if(typeof (b[key]??"")!=="string"||String(b[key]??"").trim().length>180)return fail("INVALID_NAME")}
   if(typeof b.name!=="string"||b.name.trim().length<1)return fail("INVALID_NAME");
   if(["group","updateGroup"].includes(b.action)&&(typeof b.required!=="boolean"||!["single","multiple"].includes(b.type)||!Number.isInteger(b.max)||b.max<1||b.max>50||!Number.isInteger(b.min)||b.min<0||b.min>b.max||b.required&&b.min<1||b.type==="single"&&b.min>1))return fail("INVALID_SELECTION");
-  if(["value","updateValue"].includes(b.action)&&b.imageUrl!==undefined&&b.imageUrl!==null&&(typeof b.imageUrl!=="string"||b.imageUrl.length>1024||b.imageUrl&&!/^https:\/\/[^\s]+$/i.test(b.imageUrl)&&!/^\/api\/restaurant\/assets\/[-a-z0-9/]+$/i.test(b.imageUrl)))return fail("INVALID_IMAGE_URL");
+  if(["value","updateValue"].includes(b.action)&&b.imageUrl!==undefined&&b.imageUrl!==null&&!validAddonImage(b.imageUrl))return fail("INVALID_IMAGE_URL");
   if(["group","updateGroup","value","updateValue"].includes(b.action)&&(b.sortOrder!==undefined&&(!Number.isInteger(b.sortOrder)||b.sortOrder<0||b.sortOrder>1000000)))return fail("INVALID_SORT_ORDER");
   if(["value","updateValue"].includes(b.action)&&(typeof b.group!=="string"||typeof b.price!=="number"||!Number.isFinite(b.price)||b.price<0||b.price>9999999999||(b.stock!==null&&(!(b.stock===0||validCatalogQuantity(b.stock,999999999))||b.stock<0||b.stock>999999999))))return fail("INVALID_VALUE");
  }
