@@ -1,0 +1,9 @@
+type Lang="ar"|"en"|"fr";
+export type CustomerJourneyEntry={id:string;kind:"order"|"reservation"|"service";title:string;subtitle:string;status:string;at:string;href:string};
+export default function CustomerJourneyTimeline({language,events}:{language:Lang;events:CustomerJourneyEntry[]}){
+ const t=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
+ const labels={order:t("طلب شراء","Order","Commande"),reservation:t("حجز","Booking","Réservation"),service:t("طلب خدمة","Service","Service")};
+ return <section id="customer-journey" className="customerJourney" aria-labelledby="customer-journey-title"><header><small>{t("رحلتي مع FOON","My FOON journey","Mon parcours FOON")}</small><h2 id="customer-journey-title">{t("سجل نشاطي الموحّد","My activity timeline","Mon fil d’activité")}</h2><p>{t("الطلبات والحجوزات وطلبات الخدمات المرتبطة بحسابك في مكان واحد؛ هذا السجل خاص بك.","Orders, bookings and service requests in one private timeline.","Commandes, réservations et services dans un journal privé.")}</p></header>
+  {events.length?<ol>{events.map(item=><li key={item.kind+"-"+item.id}><span className="customerJourneySymbol" aria-hidden="true">{item.kind==="order"?"▣":item.kind==="reservation"?"◷":"◇"}</span><div><small>{labels[item.kind]}</small><h3>{item.title}</h3><p>{item.subtitle}</p><time dateTime={item.at}>{new Date(item.at).toLocaleString(language==="ar"?"ar-SA-u-nu-latn":language==="fr"?"fr-FR":"en-GB",{timeZone:"Asia/Riyadh",dateStyle:"medium",timeStyle:"short",numberingSystem:"latn"})}</time> <span className="customerJourneyState">{item.status}</span></div><a href={item.href}>{t("التفاصيل","Details","Détails")}</a></li>)}</ol>:<p>{t("ستظهر هنا رحلتك بعد أول طلب أو حجز أو خدمة.","Your timeline starts with your first order, booking or service.","Le fil commencera avec une commande, réservation ou service.")}</p>}
+ </section>;
+}
