@@ -68,7 +68,9 @@ test("account password and OAuth login routes only dispatch after successful aut
  const login=readFileSync(new URL("../app/api/auth/login/route.ts",import.meta.url),"utf8");
  const google=readFileSync(new URL("../app/api/auth/google/callback/route.ts",import.meta.url),"utf8");
  const registration=readFileSync(new URL("../app/api/customer/register/route.ts",import.meta.url),"utf8");
+ const merchantRegistration=readFileSync(new URL("../app/api/auth/register/route.ts",import.meta.url),"utf8");
  assert.match(login,/if\(!valid\)return[\s\S]+await createSession\(String\(user\.id\)\);[\s\S]+queueLoginAlert\(database\(\),String\(user\.id\),request,"password"\)/);
  assert.match(google,/await db\.commit\(\);[\s\S]+queueLoginAlert\(database\(\),userId,request,"google"\)/);
  assert.match(registration,/await db\.commit\(\);[\s\S]+queueLoginAlert\(database\(\),id,request,"registration"\)/);
+ assert.match(merchantRegistration,/await db\.commit\(\);[\s\S]+queueLoginAlert\(database\(\),id,request,"registration"\)/);
 });
