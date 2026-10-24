@@ -119,3 +119,23 @@ test("silent missing journal insert never reports a successful change",async()=>
  }};
  await assert.rejects(()=>appendScopedChange(db,{change,sourceDeviceId:ids[3]}),/SYNC_JOURNAL_INSERT_FAILED/);
 });
+
+test("journal idempotent replay accepts MariaDB UUID casing but rejects different scope or device",async()=>{
+ const replayChange={...change,eventId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",tenantId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",branchId:"cccccccc-cccc-4ccc-8ccc-cccccccccccc",actorId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd",entityId:"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"};
+ const sourceDeviceId="ffffffff-ffff-4fff-8fff-ffffffffffff";
+ const digest=(await import("../lib/platform/bidirectional-sync-contract.mjs")).digestChange(replayChange);
+ const stored={payload_digest:digest,tenant_id:replayChange.tenantId.toUpperCase(),branch_id:replayChange.branchId.toUpperCase(),source_device_id:sourceDeviceId.toUpperCase(),next_version:1};
+ const queries=[];
+ const db={async execute(sql){queries.push(sql);return sql.includes("SELECT payload_digest")?[[stored]]:[{affectedRows:1}]}};
+ assert.equal((await appendScopedChange(db,{change:replayChange,sourceDeviceId})).status,"duplicate");
+ assert.equal(queries.length,2,"duplicate must not update version, business entity or journal");
+ for(const key of ["tenant_id","branch_id","source_device_id"]){
+  const changed={...stored,[key]:"11111111-1111-4111-8111-111111111111"};
+  const denied={async execute(sql){return sql.includes("SELECT payload_digest")?[[changed]]:[{affectedRows:1}]}};
+  await assert.rejects(()=>appendScopedChange(denied,{change:replayChange,sourceDeviceId}),/SYNC_IDEMPOTENCY_CONFLICT/);
+ }
+ for(const changed of [{...stored,payload_digest:"b".repeat(64)},{...stored,source_device_id:"not-a-uuid"}]){
+  const denied={async execute(sql){return sql.includes("SELECT payload_digest")?[[changed]]:[{affectedRows:1}]}};
+  await assert.rejects(()=>appendScopedChange(denied,{change:replayChange,sourceDeviceId}),/SYNC_IDEMPOTENCY_CONFLICT/);
+ }
+});
