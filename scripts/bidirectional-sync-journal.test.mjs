@@ -159,3 +159,17 @@ test("pull refuses corrupt, duplicate, unordered or unsafe journal IDs before cu
  assert.equal(valid.nextCursor,9,"mysql2 BIGINT strings remain supported");
  assert.equal((await pullScopedChanges({async execute(){return [[]]}},{tenantId:ids[1],branchId:ids[2],after:7,limit:2})).nextCursor,7);
 });
+
+test("pull rejects non-string tenant and branch UUIDs before database access",async()=>{
+ let calls=0;
+ const db={async execute(){calls++;return [[]]}};
+ const scope={tenantId:ids[1],branchId:ids[2]};
+ for(const field of ["tenantId","branchId"]){
+  for(const invalid of [[scope[field]],{toString(){return scope[field]}}]){
+   await assert.rejects(()=>pullScopedChanges(db,{...scope,[field]:invalid}),/SYNC_INVALID_SCOPE/);
+  }
+ }
+ assert.equal(calls,0,"invalid scopes must never reach SQL");
+ assert.equal((await pullScopedChanges(db,scope)).nextCursor,0,"valid string UUID scope remains accepted");
+ assert.equal(calls,1);
+});
