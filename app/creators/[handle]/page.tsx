@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {cookies as uiCookies} from "next/headers";
 import CreatorPublicShare from "./creator-public-share";
+import CreatorVisitTracker from "./creator-visit-tracker";
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
@@ -56,7 +57,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
   const parsed=normalizeCreatorSocialLink(row.platform,row.url);
   return parsed?[parsed]:[];
  });
- return <main className="creatorPublic" dir={language==="ar"?"rtl":"ltr"} lang={language}>
+ return <main className="creatorPublic" dir={language==="ar"?"rtl":"ltr"} lang={language}><CreatorVisitTracker handle={handle}/>
   <nav aria-label={t("التنقل في البروفايل العام","Public profile navigation","Navigation du profil public")}><Link href="/">FOON</Link><Link href="/creators">{t("اكتشف المبدعين","Discover creators","Découvrir les créateurs")}</Link><Link href="/market">{t("استكشاف المتاجر","Explore stores","Explorer les boutiques")}</Link></nav>
   <section className="creatorPublicHeader">
    <div className="creatorPublicCover">{Number(profile.has_cover)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar?type=cover"} alt={t("غلاف ملف ","Cover of ","Couverture de ")+String(profile.display_name)} width={1000} height={230}/>}</div>
