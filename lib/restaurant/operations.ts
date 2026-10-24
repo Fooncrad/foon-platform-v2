@@ -469,6 +469,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  }
 
  const stockDebits:StockDebit[]=[];
+ const restaurantOptionDebits:{id:string;quantity:number}[]=[];
  const choices=profile.catalog?await activityPosOptions(db,tenantId,cart.map(item=>item.id),true):await menuOptions(db,tenantId,cart.map(item=>item.id));
  const lines:{id:string;name:string;quantity:number;price:number;total:number;options:{name:string;price:number}[]}[]=[];let subtotal=0;
  for(const item of [...cart].sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
@@ -484,7 +485,21 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   const price=Math.round(Number(rows[0].price)*100)+options.reduce((sum,option)=>sum+Math.round(option.price*100),0);
   if(!Number.isFinite(price)||price<0||price>100000000)throw new ResourceError("ITEM_UNAVAILABLE");
   if(profile.catalog){await debitCatalogVariant(db,tenantId,item.id,selected,item.quantity,stockDebits);await debitActivityStock(db,tenantId,"product",item.id,item.quantity,stockDebits);for(const option of selected)await debitActivityStock(db,tenantId,"option",option,item.quantity,stockDebits);await ensureActivitySaleReference(db,tenantId,rows[0]);}
-  else await db.execute("INSERT IGNORE INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'menu_item',?,'active','{}')",[item.id,tenantId,rows[0].name]);
+  else {
+   // Canonical restaurant add-ons now have their own finite inventory. Lock and
+   // debit inside checkout's transaction; repeated options across lines are
+   // checked against the remaining stock, never against stale cart snapshots.
+   for(const optionId of [...selected].sort()){
+    const [addonStock]=await db.execute<RowDataPacket[]>("SELECT stock_quantity FROM restaurant_menu_option_values WHERE tenant_id=? AND id=? FOR UPDATE",[tenantId,optionId]);
+    if(!addonStock.length)throw new ResourceError("INVALID_OPTIONS");
+    if(addonStock[0].stock_quantity!==null){
+     if(Number(addonStock[0].stock_quantity)<item.quantity)throw new ResourceError("INSUFFICIENT_STOCK");
+     await db.execute("UPDATE restaurant_menu_option_values SET stock_quantity=stock_quantity-? WHERE tenant_id=? AND id=?",[item.quantity,tenantId,optionId]);
+     restaurantOptionDebits.push({id:optionId,quantity:item.quantity});
+    }
+   }
+   await db.execute("INSERT IGNORE INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'menu_item',?,'active','{}')",[item.id,tenantId,rows[0].name]);
+  }
   const total=Math.round(price*Math.round(item.quantity*1000)/1000);subtotal+=total;lines.push({id:item.id,name:profile.catalog&&catalogQuantityPolicy(rows[0].attributes).measured?String(rows[0].name).slice(0,166)+" / "+catalogQuantityPolicy(rows[0].attributes).unit:String(rows[0].name),quantity:item.quantity,price:price/100,total:total/100,options});
  }
  if(subtotal>999999999999)throw new ResourceError("INVALID_CART");
@@ -519,7 +534,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  await db.execute("INSERT INTO restaurant_orders(id,tenant_id,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,coupon_id,customer_name,customer_phone,customer_user_id,created_by,request_key,request_fingerprint,channel,subtotal,discount,total,kitchen_notes,order_notes,currency,checkout_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,tenantId,branchId,tableId,reservationId,dining?.sectionId??null,body.channel==="dine_in"?partySize:null,dining?JSON.stringify(dining):null,couponId,customerName,phone,customerId,actor,requestKey,fingerprint,String(body.channel),subtotal/100,discount/100,totals.total,kitchenNotes,orderNotes,profile.currency,JSON.stringify(snapshot)]);
  if(tableId)await db.execute("UPDATE restaurant_resources SET status='occupied',version=version+1 WHERE id=? AND tenant_id=? AND kind='dining_table' AND status='available'",[tableId,tenantId]);
  for(const line of lines)await db.execute("INSERT INTO restaurant_order_items(id,tenant_id,order_id,menu_item_id,item_name,quantity,unit_price,line_total,options_snapshot) VALUES (?,?,?,?,?,?,?,?,?)",[randomUUID(),tenantId,id,line.id,line.name,line.quantity,line.price,line.total,JSON.stringify(line.options)]);
- await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{})});
+ await audit(db,tenantId,actor,"order.create",id,{total:totals.total,...(profile.catalog?{stockDebits,currency:profile.currency}:{restaurantOptionDebits})});
  await notifyOrder(db,tenantId,id,"new");
  return {id,total:totals.total,currency:profile.currency};
 }
@@ -564,7 +579,20 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
   if(!(payment==="unpaid"&&next==="paid"&&status!=="cancelled"||payment==="paid"&&next==="refunded"))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
  }
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
- if(status==="cancelled"&&order.status!=="cancelled")await restoreActivityStock(db,tenantId,String(order.id));
+ if(status==="cancelled"&&order.status!=="cancelled"){
+  await restoreActivityStock(db,tenantId,String(order.id));
+  const [events]=await db.execute<RowDataPacket[]>("SELECT metadata FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='order.create' ORDER BY id LIMIT 1",[tenantId,String(order.id)]);
+  const metadata=events.length?(typeof events[0].metadata==="string"?JSON.parse(events[0].metadata):events[0].metadata):null;
+  if(Array.isArray(metadata?.restaurantOptionDebits)){
+   for(const debit of [...metadata.restaurantOptionDebits].sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
+    if(typeof debit.id!=="string"||!Number.isInteger(debit.quantity)||debit.quantity<1||debit.quantity>999)throw new ResourceError("STOCK_RESTORE_CONFLICT");
+    const [stock]=await db.execute<RowDataPacket[]>("SELECT stock_quantity FROM restaurant_menu_option_values WHERE tenant_id=? AND id=? FOR UPDATE",[tenantId,debit.id]);
+    if(!stock.length||stock[0].stock_quantity===null)continue;
+    if(Number(stock[0].stock_quantity)+debit.quantity>999999999)throw new ResourceError("STOCK_RESTORE_CONFLICT");
+    await db.execute("UPDATE restaurant_menu_option_values SET stock_quantity=stock_quantity+? WHERE tenant_id=? AND id=?",[debit.quantity,tenantId,debit.id]);
+   }
+  }
+ }
  await db.execute("UPDATE restaurant_orders SET status=?,payment_status=?,version=version+1 WHERE id=? AND tenant_id=?",[status,payment,order.id,tenantId]);
  // Staff acceptance and preparation start share one status transition in this lifecycle.
  for(const event of preparationPrintEvents(String(order.status),status))await queueOrderPrintJobs(db,tenantId,String(order.id),event);
