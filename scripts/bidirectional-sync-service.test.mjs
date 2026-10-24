@@ -11,6 +11,15 @@ const catalogRow=(id=3)=>({id,event_id:change.eventId,tenant_id:change.tenantId,
  actor_id:change.actorId,source_device_id:context.deviceId,entity_type:change.entityType,entity_id:change.entityId,
  operation:change.operation,base_version:change.baseVersion,next_version:1,event_timestamp:change.timestamp,
  payload_json:JSON.stringify(change.payload),payload_digest:digestChange(change)});
+// Build complete journal rows even when their entity read grant is absent.
+// Hidden rows must still pass integrity checks before a cursor can advance.
+function scopedRow(id,entityType,payload){
+ const eventId=`${String(id).padStart(8,"0")}-1111-4111-8111-111111111111`;
+ const movement=entityType==="inventory_movement";
+ const c={...change,eventId,entityType,entityId:movement?eventId:change.entityId,operation:movement?"movement":"upsert",payload};
+ return {...catalogRow(id),event_id:c.eventId,entity_id:c.entityId,entity_type:c.entityType,operation:c.operation,
+  payload_json:JSON.stringify(c.payload),payload_digest:digestChange(c)};
+}
 function dbFixture({existing=false,version=0}={}){
  const calls=[];
  return {calls,async beginTransaction(){calls.push("begin");},async commit(){calls.push("commit");},async rollback(){calls.push("rollback");},
@@ -56,10 +65,10 @@ test("generic sync.read alone never leaks customers, staff or order contents",as
  const db=dbFixture();
  db.execute=async(sql)=>{
   if(sql.includes("FROM foon_sync_changes WHERE tenant_id"))return [[
-   {id:1,tenant_id:ids[1],branch_id:ids[2],entity_type:"customer_reference",payload_json:'{"private":"x"}'},
-   {id:2,tenant_id:ids[1],branch_id:ids[2],entity_type:"staff_assignment",payload_json:'{"private":"y"}'},
+   scopedRow(1,"customer_reference",{private:"x"}),
+   scopedRow(2,"staff_assignment",{private:"y"}),
    catalogRow(3),
-   {id:4,tenant_id:ids[1],branch_id:ids[2],entity_type:"order",payload_json:'{"private":"z"}'}
+   scopedRow(4,"order",{private:"z"})
   ]];
   return [[]];
  };
@@ -68,6 +77,19 @@ test("generic sync.read alone never leaks customers, staff or order contents",as
  assert.equal(result.nextCursor,4,"cursor advances past filtered unauthorized rows without exposing them");
  const noCatalog=await readAuthorizedChanges({db,verifiedContext:{...context,grants:["sync.read"]},request:{tenantId:ids[1],branchId:ids[2]}});
  assert.deepEqual(noCatalog.events,[]);
+});
+
+test("corrupt hidden order, inventory or reservation rows block signed cursor advancement",async()=>{
+ const pair=generateKeyPairSync("ed25519");
+ const privateKey=pair.privateKey.export({format:"pem",type:"pkcs8"});
+ const request={tenantId:ids[1],branchId:ids[2],after:0,limit:100};
+ for(const entityType of ["order","inventory_movement","reservation"]){
+  const row=scopedRow(8,entityType,entityType==="inventory_movement"?{itemId:ids[0],delta:-1}:{status:"pending"});
+  const db=dbFixture();
+  db.execute=async(sql)=>sql.includes("FROM foon_sync_changes WHERE tenant_id")?[[{...row,payload_digest:"0".repeat(64)}]]:[[]];
+  await assert.rejects(()=>readAuthorizedChanges({db,verifiedContext:context,request}),/SYNC_CORRUPT_JOURNAL/);
+  await assert.rejects(()=>readSignedAuthorizedChanges({db,verifiedContext:context,request,privateKey}),/SYNC_CORRUPT_JOURNAL/);
+ }
 });
 
 test("business adapter must explicitly confirm applied mutation before committing journal",async()=>{
