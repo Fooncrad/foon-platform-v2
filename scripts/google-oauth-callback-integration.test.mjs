@@ -9,6 +9,7 @@ const ts = require('typescript');
 const source = readFileSync(new URL('../app/api/auth/google/callback/route.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const policy = require('../lib/auth/google-oauth-security.mjs');
+const guidance = require('../lib/auth/public-login-url.mjs');
 const state = 'A'.repeat(43);
 
 function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, checkoutStore = '', consented = true } = {}) {
@@ -41,6 +42,8 @@ function setup({ linked = null, matched = null, suppliedState = state, googleVer
     '@/lib/auth/login-alert': { queueLoginAlert: async (_db,id,request,method) => {actions.alerts.push({id,method,url:request.url});return true;} },
     '@/lib/notifications/dispatch': { dispatchNotifications: () => { actions.dispatches++; } },
     '@/lib/auth/google-oauth-security.mjs': policy,
+    '@/lib/auth/public-login-url.mjs': guidance,
+    '@/lib/auth/account-login-policy': { accountMembershipRestriction: async () => null },
   };
   const context = {
     exports: {},
@@ -82,7 +85,7 @@ test('blocks automatic email linking to an unverified local account', async () =
 
 test('blocks inactive matched user even with verified email', async () => {
   const { run, actions } = setup({ matched: { id: 'user-3', status: 'suspended', email_verified_at: '2026-10-24' } });
-  assert.match((await run()).url, /GOOGLE_ACCOUNT_DISABLED/);
+  assert.match((await run()).url, /ACCOUNT_SUSPENDED/);
   assert.equal(actions.sessions.length, 0);
 });
 
@@ -144,6 +147,11 @@ test('Google checkout returns to safe same-origin store cart',async()=>{
 test('unsafe Google checkout targets are never used as redirect URLs',async()=>{
  const {run}=setup({checkoutStore:'//attacker.example',matched:{id:'user-8',status:'active',email_verified_at:'2026-10-24'}});
  assert.equal((await run()).url,'https://example.test/account');
+});
+
+test('Hostinger internal callback origin redirects to canonical public guidance',async()=>{
+ const configured=guidance.accountHelpUrl('https://nfoodz.com','http://0.0.0.0:3000/api/auth/google/callback','GOOGLE_ACCOUNT_DISABLED',true);
+ assert.equal(configured,'https://nfoodz.com/account-status?code=GOOGLE_ACCOUNT_DISABLED');
 });
 
 test('invalid OAuth callback does not email account owner',async()=>{

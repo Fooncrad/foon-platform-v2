@@ -33,7 +33,7 @@ export async function GET(request:Request){
  const pageSize=50,offset=(page-1)*pageSize;
  const categoryId=params.get("category")?.slice(0,36)??"";
  const q=params.get("q")?.trim().slice(0,100)??"";
- const where=["p.tenant_id=?"],values:(string|number)[]=[ctx.tenantId!];
+ const where=["p.tenant_id=?","COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.attributes,'$.__foon_archived')),'0') NOT IN ('1','true')"],values:(string|number)[]=[ctx.tenantId!];
  if(categoryId){where.push("p.category_id=?");values.push(categoryId)}
  if(q){where.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");values.push("%"+q+"%","%"+q+"%","%"+q+"%")}
  try{
@@ -115,7 +115,7 @@ export async function PATCH(request:Request){
  }
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{
-  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?",[...values,ctx.tenantId,body.id]);
+  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?"+(body.kind==="product"?" AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,\'$.__foon_archived\')),\'0\') NOT IN (\'1\',\'true\')":""),[...values,ctx.tenantId,body.id]);
   const changed=(result as {affectedRows?:number}).affectedRows??0;
   if(!changed)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});
   return NextResponse.json({ok:true,changed});
@@ -126,18 +126,42 @@ export async function DELETE(request:Request){
  try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const ctx=await scope(request);if(ctx.error)return ctx.error;
  const body=await request.json().catch(()=>null);
- if(!body||!["category","product"].includes(body.kind)||typeof body.id!=="string"||body.id.length!==36)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ if(!body||typeof body!=="object"||Array.isArray(body)||!["category","product"].includes(body.kind))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const ids=body.kind==="product"&&Array.isArray(body.ids)?body.ids:[body.id];
+ if(!Array.isArray(ids)||ids.length<1||ids.length>100||ids.some(id=>typeof id!=="string"||!/^[0-9a-f-]{36}$/i.test(id))||new Set(ids).size!==ids.length||(body.kind==="category"&&ids.length!==1))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const db=await database().getConnection();
  try{
+  await db.beginTransaction();
   if(body.kind==="category"){
-   const [children]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND category_id=? LIMIT 1",[ctx.tenantId,body.id]);
-   const [subcategories]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND parent_id=? LIMIT 1",[ctx.tenantId,body.id]);
-   if(children.length||subcategories.length)return NextResponse.json({ok:false,code:"CATEGORY_NOT_EMPTY"},{status:409});
+   const [children]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND category_id=? LIMIT 1",[ctx.tenantId,ids[0]]);
+   const [subcategories]=await db.execute<RowDataPacket[]>("SELECT id FROM catalog_categories WHERE tenant_id=? AND parent_id=? LIMIT 1",[ctx.tenantId,ids[0]]);
+   if(children.length||subcategories.length){await db.rollback();return NextResponse.json({ok:false,code:"CATEGORY_NOT_EMPTY"},{status:409});}
+   const [result]=await db.execute("DELETE FROM catalog_categories WHERE tenant_id=? AND id=?",[ctx.tenantId,ids[0]]);
+   if(!((result as {affectedRows?:number}).affectedRows??0)){await db.rollback();return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});}
+  }else{
+   const placeholders=ids.map(()=>"?").join(",");
+   // Preserve prior orders, option values, media and inventory history. Hide the
+   // product from every public catalog through enabled=FALSE and from the manager
+   // catalog through a JSON tombstone (no destructive foreign-key cascades).
+   const [rows]=await db.execute<RowDataPacket[]>(
+    "SELECT id FROM catalog_products WHERE tenant_id=? AND id IN ("+placeholders+") AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0') NOT IN ('1','true') FOR UPDATE",
+    [ctx.tenantId,...ids]
+   );
+   if(rows.length!==ids.length){await db.rollback();return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND",missing:ids.length-rows.length},{status:409});}
+   await db.execute(
+    "UPDATE catalog_products SET enabled=FALSE,attributes=JSON_SET(COALESCE(attributes,JSON_OBJECT()),'$.__foon_archived',TRUE) WHERE tenant_id=? AND id IN ("+placeholders+")",
+    [ctx.tenantId,...ids]
+   );
+   const actor=await currentUserId();if(!actor)throw Error("UNAUTHENTICATED");
+   for(const id of ids)await db.execute(
+    "INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,?,?,?)",
+    [ctx.tenantId,actor,"catalog.product.archive",id,JSON.stringify({bulk:ids.length>1,count:ids.length})]
+   );
   }
-  const table=body.kind==="category"?"catalog_categories":"catalog_products";
-  const [result]=await database().execute("DELETE FROM "+table+" WHERE tenant_id=? AND id=?",[ctx.tenantId,body.id]);
-  const deleted=(result as {affectedRows?:number}).affectedRows??0;
-  if(!deleted)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});
-  return NextResponse.json({ok:true,deleted});
- }catch{return NextResponse.json({ok:false,code:"CATALOG_DELETE_FAILED"},{status:503})}
+  await db.commit();
+  return NextResponse.json({ok:true,deleted:ids.length,archived:body.kind==="product"});
+ }catch{
+  await db.rollback();
+  return NextResponse.json({ok:false,code:"CATALOG_DELETE_FAILED"},{status:503});
+ }finally{db.release();}
 }
-
