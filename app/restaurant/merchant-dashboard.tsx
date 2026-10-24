@@ -1,5 +1,5 @@
-import VisitAnalytics from "./visit-analytics";
 "use client";
+import VisitAnalytics from "./visit-analytics";
 import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {activityWorkspaceUrl,activityPaymentsUrl,activityMediaStudioUrl,activitySectionUrl} from "@/lib/tenant/workspace-routes";
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
