@@ -1,4 +1,5 @@
 import StorefrontReceipt from "./storefront-receipt";
+import PublicVisitTracker from "@/app/components/public-visit-tracker";
 import {catalogQuantityPolicy} from "@/lib/platform/catalog-measurements";
 import {customerCartAvailable} from "@/lib/platform/customer-checkout";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
@@ -144,5 +145,5 @@ async function PublicTenantPage({params,searchParams}:{params:Promise<{slug:stri
 
 export default async function StorePage(props:Parameters<typeof PublicTenantPage>[0]){
  const content=await PublicTenantPage(props);const {slug}=await props.params;
- return <>{content}<StorefrontReceipt slug={slug.toLowerCase()} language={(await cookies()).get("foon_language")?.value??"ar"}/></>;
+ return <>{content}<PublicVisitTracker kind="storefront" slug={slug.toLowerCase()}/><StorefrontReceipt slug={slug.toLowerCase()} language={(await cookies()).get("foon_language")?.value??"ar"}/></>;
 }
