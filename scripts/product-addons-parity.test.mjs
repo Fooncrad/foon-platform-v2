@@ -67,3 +67,15 @@ test("all merchant activities explain add-on setup, availability and preview in 
  assert.match(styles,/@media\(max-width:420px\)/);
  assert.match(styles,/\.foonAddonsPreview/);
 });
+
+test("main restaurant dashboard also explains add-on actions and exposes linked fields",()=>{
+ const manager=source("app/restaurant/resource-manager.tsx");
+ const css=source("app/restaurant/merchant-experience.css");
+ assert.match(manager,/restaurantAddonsQuickGuide/);
+ assert.match(manager,/module==="menuGroups"\|\|module==="menuValues"/);
+ assert.match(manager,/associatedName\("menu",row\.data\.itemId\)/);
+ assert.match(manager,/associatedName\("menuGroups",row\.data\.groupId\)/);
+ assert.match(manager,/row\.data\.stockQuantity==null/);
+ assert.match(manager,/restaurantAddonsQuickStats/);
+ assert.match(css,/restaurantAddonsQuickGuide/);
+});
