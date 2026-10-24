@@ -104,3 +104,29 @@ test("FOON customer passport balances and activity timeline remain private and s
  for(const a of ["#customer-security-center","#customer-journey","#customer-passport"])assert.ok(hub.includes(a),a);
  assert.doesNotMatch(read("app/creators/[handle]/page.tsx"),/customer_loyalty_ledger|auth_sessions/);
 });
+
+test("creator public visits use public handle, verify visibility and hide visitor identities",()=>{
+ const api=read("app/api/public/visits/route.ts");
+ const tracker=read("app/creators/[handle]/creator-visit-tracker.tsx");
+ const page=read("app/creators/[handle]/page.tsx");
+ const stats=read("app/customer/creator/creator-profile-insights.tsx");
+ const editor=read("app/customer/creator/creator-editor.tsx");
+ const logic=read("lib/analytics/public-visits.ts");
+ assert.match(api,/validCreatorHandle\(String\(body\.id\)\)/);
+ assert.match(api,/p\.handle=\? AND p\.visibility='public'/);
+ assert.match(api,/u\.status='active'/);
+ assert.match(api,/NOT EXISTS \(SELECT 1 FROM memberships/);
+ assert.match(api,/NOT EXISTS \(SELECT 1 FROM platform_admins/);
+ assert.match(api,/if\(viewer===ownerUserId\)/);
+ assert.match(api,/owner!==viewer/);
+ assert.match(api,/countPublicVisits\("profile"/);
+ assert.match(logic,/createHmac\("sha256"/);
+ assert.match(logic,/INSERT IGNORE INTO public_visit_daily/);
+ assert.match(tracker,/kind:"profile",id:handle/);
+ assert.match(page,/CreatorVisitTracker handle=\{handle\}/);
+ assert.match(editor,/CreatorProfileInsights publicProfile=\{saved.visibility==="public"\}/);
+ assert.match(stats,/last7Days/);
+ assert.match(stats,/last30Days/);
+ assert.match(stats,/deduplicated once per visitor per day/);
+ assert.doesNotMatch(stats,/visitor_hash|token_hash|x-forwarded-for/);
+});
