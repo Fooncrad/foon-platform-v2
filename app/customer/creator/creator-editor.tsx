@@ -5,6 +5,7 @@ import Link from "next/link";
 import CreatorSocialLinksEditor from "./social-links-editor";
 import CreatorQr from "./creator-qr";
 import CreatorReferralEarnings from "./referral-earnings";
+import CreatorProfileInsights from "./creator-profile-insights";
 type Profile={handle:string;display_name:string;bio:string;visibility:"public"|"private"};
 type Portfolio={id:string;media_id:string;caption:string;file_name:string};
 type LibraryImage={id:string;name:string};
@@ -85,6 +86,7 @@ export default function CreatorEditor(){
     {publicUrl&&<div className="creatorPublicLink creatorShareStrip"><a href={publicUrl} target="_blank" rel="noopener noreferrer">{t("معاينة بروفايلي كما يراه الزوار","Preview as a visitor","Aperçu visiteur")}</a><button type="button" onClick={()=>void copyPublicLink()}>{t("نسخ رابط المشاركة","Copy share link","Copier le lien")}</button></div>}
     {shareMessage&&<p role="status">{shareMessage}</p>}
    </section>
+   {saved&&<CreatorProfileInsights publicProfile={saved.visibility==="public"}/>}
    <CreatorSocialLinksEditor ready={Boolean(saved)}/>
    {saved&&<CreatorReferralEarnings handle={saved.handle}/>}
    {saved?.visibility==="public"&&<CreatorQr handle={saved.handle}/>}
