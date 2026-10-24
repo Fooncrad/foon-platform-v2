@@ -9,8 +9,8 @@ export const dynamic="force-dynamic";
 const noStore={"Cache-Control":"private, no-store"};
 const summary=async(where:string,values:string[])=>{
  const [rows]=await database().execute<RowDataPacket[]>(
-  "SELECT COUNT(*) AS total,COALESCE(SUM(visit_day=UTC_DATE()),0) AS today,"+
-  "COALESCE(SUM(visit_day>=DATE_SUB(UTC_DATE(),INTERVAL 6 DAY)),0) AS last7 FROM public_page_visits WHERE "+where,values);
+  "SELECT COUNT(*) AS total,COALESCE(SUM(visit_day=DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR)),0) AS today,"+
+  "COALESCE(SUM(visit_day>=DATE_SUB(DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR),INTERVAL 6 DAY)),0) AS last7 FROM public_page_visits WHERE "+where,values);
  return {total:Number(rows[0]?.total??0),today:Number(rows[0]?.today??0),last7:Number(rows[0]?.last7??0)};
 };
 export async function GET(request:NextRequest){
