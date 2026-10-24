@@ -6,6 +6,7 @@ import {database} from "@/lib/db/mysql";
 import {validCreatorHandle} from "@/lib/creator/profile-policy";
 import {normalizeCreatorSocialLink} from "@/lib/creator/social-links";
 import CreatorSocialIcon from "@/app/components/creator-social-icon";
+import PublicVisitTracker from "@/app/components/public-visit-tracker";
 import "./creator-public.css";
 
 export const dynamic="force-dynamic";
@@ -28,7 +29,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
  const {handle}=await params;
  if(!validCreatorHandle(handle))notFound();
  const [profiles]=await database().execute<RowDataPacket[]>(
-  "SELECT p.handle,p.display_name,p.bio,CASE WHEN up.avatar_image IS NULL THEN 0 ELSE 1 END AS has_avatar,CASE WHEN up.cover_image IS NULL THEN 0 ELSE 1 END AS has_cover FROM customer_creator_profiles p "+
+  "SELECT p.user_id,p.handle,p.display_name,p.bio,CASE WHEN up.avatar_image IS NULL THEN 0 ELSE 1 END AS has_avatar,CASE WHEN up.cover_image IS NULL THEN 0 ELSE 1 END AS has_cover FROM customer_creator_profiles p "+
   "JOIN users u ON u.id=p.user_id AND u.status='active' "+
   "LEFT JOIN user_profiles up ON up.user_id=p.user_id "+
   "WHERE p.handle=? AND p.visibility='public' "+
@@ -51,7 +52,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
   const parsed=normalizeCreatorSocialLink(row.platform,row.url);
   return parsed?[parsed]:[];
  });
- return <main className="creatorPublic">
+ return <main className="creatorPublic"><PublicVisitTracker kind="profile" userId={String(profile.user_id)}/>
   <nav><Link href="/">FOON</Link><Link href="/market">استكشاف المتاجر</Link></nav>
   <section className="creatorPublicHeader">
    <div className="creatorPublicCover">{Number(profile.has_cover)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar?type=cover"} alt={"غلاف ملف "+String(profile.display_name)} width={1000} height={230}/>}</div>
