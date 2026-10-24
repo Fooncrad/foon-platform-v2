@@ -123,3 +123,36 @@ test("unauthorized cross-scope rows fail before cursor advancement or signing",a
   await assert.rejects(()=>readSignedAuthorizedChanges({db,verifiedContext:context,request:{tenantId:ids[1],branchId:ids[2]},privateKey}),/SYNC_FEED_SCOPE_MISMATCH/);
  }
 });
+
+
+test("signed order, inventory and reservation feeds accept casing-only UUID differences without weakening isolation",async()=>{
+ const tenant="a1b2c3d4-e5f6-4a1b-8c2d-123456789abc";
+ const branch="b1c2d3e4-f5a6-4b1c-8d2e-abcdef123456";
+ const ctx={...context,tenantId:tenant,branchId:branch,grants:["sync.read","orders.read","inventory.read","reservations.read"]};
+ const pair=generateKeyPairSync("ed25519");
+ const privateKey=pair.privateKey.export({format:"pem",type:"pkcs8"});
+ const publicKey=pair.publicKey.export({format:"pem",type:"spki"});
+ const request={tenantId:tenant,branchId:branch,after:0,limit:100};
+ for(const entityType of ["order","inventory_movement","reservation"]){
+  const movement=entityType==="inventory_movement";
+  const entry={...change,tenantId:tenant.toUpperCase(),branchId:branch.toUpperCase(),
+   entityType,operation:movement?"movement":"upsert",
+   entityId:movement?change.eventId:change.entityId,
+   payload:movement?{itemId:ids[0],delta:-1}:{status:"pending"}};
+  const row={id:9,event_id:entry.eventId,tenant_id:entry.tenantId,branch_id:entry.branchId,
+   actor_id:entry.actorId,source_device_id:ctx.deviceId,entity_type:entry.entityType,
+   entity_id:entry.entityId,operation:entry.operation,base_version:0,next_version:1,
+   event_timestamp:entry.timestamp,payload_json:JSON.stringify(entry.payload),payload_digest:digestChange(entry)};
+  const db={async execute(sql){return [sql.includes("FROM foon_sync_changes WHERE tenant_id")?[row]:[]];}};
+  const signed=await readSignedAuthorizedChanges({db,verifiedContext:ctx,request,privateKey});
+  assert.equal(signed.events.length,1);
+  assert.equal(signed.events[0].tenant_id,entry.tenantId,"preserve digest-bound UUID casing");
+  assert.equal(signed.events[0].branch_id,entry.branchId);
+  assert.equal(signed.nextCursor,9);
+  assert.equal(verifySignedPullBatch({batch:signed,scope:{...request,deviceId:ctx.deviceId},signature:signed.signature,publicKey}),true);
+  for(const changed of [{tenant_id:ids[4]},{branch_id:ids[4]}]){
+   const denied={async execute(sql){return [sql.includes("FROM foon_sync_changes WHERE tenant_id")?[{...row,...changed}]:[]];}};
+   await assert.rejects(()=>readSignedAuthorizedChanges({db:denied,verifiedContext:ctx,request,privateKey}),/SYNC_FEED_SCOPE_MISMATCH/);
+  }
+ }
+});
