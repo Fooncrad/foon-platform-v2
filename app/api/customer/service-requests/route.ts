@@ -55,9 +55,10 @@ export async function POST(request:Request){
  try{
   await db.beginTransaction();
   // Lock customer account to serialize retries and avoid concurrent double submissions.
-  const [users]=await db.execute<RowDataPacket[]>("SELECT display_name FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
+  const [users]=await db.execute<RowDataPacket[]>("SELECT display_name,email_verified_at FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   const ctx=await customerScope(db,user,slug);
   if(!users.length||!ctx) {await db.rollback();return fail("STORE_CUSTOMER_REQUIRED",403)}
+  if(!users[0].email_verified_at){await db.rollback();return fail("EMAIL_VERIFICATION_REQUIRED",403)}
    if(!publicControlAllowed(await tenantPublicControls(ctx.tenantId,db),"serviceRequests")){await db.rollback();return fail("PUBLIC_FEATURE_DISABLED",403)}
   if(!serviceRequestTypeAllowed(ctx.activity,type,true)) {await db.rollback();return fail("UNSUPPORTED_REQUEST_TYPE")}
   if(!(await tenantEntitlement(ctx.tenantId,"catalog",db)).enabled) {await db.rollback();return fail("PLAN_FEATURE_REQUIRED",403)}
