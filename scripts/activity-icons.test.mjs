@@ -7,7 +7,7 @@ import {ACTIVITY_IDENTITY_ICONS,activityIdentityIcon,activitySectionIcon,activit
 
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const activities=Object.keys(ACTIVITY_PRESETS);
-const renderedIcons=new Set([...read("app/restaurant/merchant-icon.tsx").matchAll(/^\s{2}([a-zA-Z]+):</gm)].map(x=>x[1]));
+const renderedIcons=new Set([...read("app/restaurant/merchant-icon.tsx").matchAll(/^\s+([a-zA-Z]+):</gm)].map(x=>x[1]));
 
 test("all fifteen registered activities use distinct, drawable identity icons",()=>{
  assert.equal(activities.length,15);
