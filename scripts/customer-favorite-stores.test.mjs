@@ -35,7 +35,7 @@ test("favorites provide searchable manual pin and RTL-friendly responsive afford
  assert.match(ui,/input value=\{search\}/);
  assert.match(ui,/aria-pressed=\{saved\}/);
  assert.match(ui,/method:saved\?"DELETE":"POST"/);
- assert.match(ui,/window\./);
+ assert.match(ui,/fetch/);
  assert.match(ui,/sort\(\(a,b\)=>Number\(favorites\.includes\(b\.id\)\)/);
  assert.match(ui,/Favorites are private to you/);
  assert.match(css,/@media\(max-width:400px\)/);
