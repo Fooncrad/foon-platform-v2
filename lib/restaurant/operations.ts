@@ -569,14 +569,17 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  }
  let status=String(order.status),payment=String(order.payment_status);
  if(body.status!==undefined){
-  const next=String(body.status);
+  // Reject arrays/objects before they can coerce into valid lifecycle names.
+  if(typeof body.status!=="string")throw new ResourceError("INVALID_TRANSITION");
+  const next=body.status;
   if(!orderStatusTransitionAllowed(status,next))throw new ResourceError("INVALID_TRANSITION");
   if(!canRoleTransitionOrder(role,String(order.channel),status,next))throw new ResourceError("FORBIDDEN");
   if(next==="cancelled"&&payment==="paid")throw new ResourceError("REFUND_REQUIRED");status=next;
  }
  if(body.paymentStatus!==undefined){
   if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
-  const next=String(body.paymentStatus);
+  if(typeof body.paymentStatus!=="string")throw new ResourceError("INVALID_PAYMENT_TRANSITION");
+  const next=body.paymentStatus;
   if(!(payment==="unpaid"&&next==="paid"&&status!=="cancelled"||payment==="paid"&&next==="refunded"))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
  }
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
