@@ -7,7 +7,8 @@ const sent=new Set<string>();
 export function recordPublicVisit(target:VisitTarget){
  if(typeof window==="undefined"||navigator.webdriver)return;
  // Preview and administration must not inflate public counters.
- if(new URLSearchParams(window.location.search).has("previewTemplate"))return;
+ const params=new URLSearchParams(window.location.search);
+ if(params.has("previewTemplate")||params.has("preview"))return;
  const key=JSON.stringify(target);
  if(sent.has(key))return;
  sent.add(key);
