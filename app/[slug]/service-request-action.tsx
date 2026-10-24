@@ -33,7 +33,7 @@ export default function ServiceRequestAction({slug,serviceId,serviceName,mode,la
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(result.code??"SAVE_FAILED");
    setSuccess(String(result.id));window.dispatchEvent(new CustomEvent("foon:service-request-sent"));requestRef.current=null;
-  }catch(e){setError(e instanceof Error&&e.message==="RATE_LIMITED"?t.limit:t.fail);}
+  }catch(e){setError(e instanceof Error&&e.message==="EMAIL_VERIFICATION_REQUIRED"?(language==="ar"?"يجب تأكيد بريدك الإلكتروني قبل إرسال الطلب.":language==="fr"?"Vérifiez votre adresse e-mail avant d’envoyer la demande.":"Verify your email before sending this request."):e instanceof Error&&e.message==="RATE_LIMITED"?t.limit:t.fail);}
   finally{setBusy(false);}
  }
  return <div className="foonServiceRequestAction">
@@ -46,7 +46,7 @@ export default function ServiceRequestAction({slug,serviceId,serviceName,mode,la
     <label>{t.phone}<input name="phone" type="tel" inputMode="tel" dir="ltr" maxLength={40} defaultValue={defaultPhone} required pattern="[+0-9 ()-]{7,40}"/></label>
     {mode==="appointment"&&<label>{t.date}<input name="scheduledAt" type="datetime-local" dir="ltr" lang="en" required/></label>}
     <label>{t.notes}<textarea name="notes" rows={3} maxLength={1000} defaultValue="" placeholder={t.notes}/></label>
-    {error&&<p role="alert">{error}</p>}
+    {error&&<p role="alert">{error}{error.includes(language==="ar"?"تأكيد بريدك":language==="fr"?"Vérifiez votre adresse":"Verify your email")&&<>{" · "}<Link href="/verify-email">{language==="ar"?"تأكيد البريد أو إعادة الإرسال":language==="fr"?"Vérifier ou renvoyer le lien":"Verify email or resend link"}</Link></>}</p>}
     {!authenticated&&<p role="status">{t.login}</p>}
     <div className="foonServiceRequestButtons"><button type="submit" disabled={busy||!authenticated}>{busy?t.working:t.send}</button><button type="button" disabled={busy} onClick={()=>setOpen(false)}>{t.close}</button></div>
    </form>
