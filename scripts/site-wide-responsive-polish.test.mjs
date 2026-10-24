@@ -27,7 +27,8 @@ test("responsive foundation is loaded site-wide and preserves independent visual
 test("admin and merchant top bars do not wrap locale text into columns at narrow widths",()=>{
  assert.match(css,/\.restaurantApp \.restaurantBreadcrumb small\s*\{/);
  assert.match(css,/overflow-wrap:normal/);
- assert.match(css,/\.restaurantApp:not\(\.restaurantPosFocus\) \.restaurantBreadcrumb\{display:none\}/);
+ assert.match(css,/\.restaurantApp:not\(\.restaurantPosFocus\) \.restaurantBreadcrumb small\{display:none\}/);
+ assert.match(css,/\.restaurantApp:not\(\.restaurantPosFocus\) \.restaurantBreadcrumb\s*\{[\s\S]*?overflow:visible/);
  assert.match(css,/\.adminShell \.adminTopActions\s*\{/);
  assert.match(css,/flex-wrap:wrap!important/);
  assert.match(css,/direction:inherit!important/);
