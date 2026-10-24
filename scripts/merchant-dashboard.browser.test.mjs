@@ -394,7 +394,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.locator('#menu-cart').getByLabel('رقم الطاولة',{exact:true}).selectOption(tableId);
  await publicPage.locator('#menu-cart').getByRole('spinbutton',{name:/^عدد الأشخاص/}).fill('3');
  await publicPage.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
- await expect(publicPage.locator('.publicMenuCart .publicMenuCheckoutNotice')).toContainText('تم تسجيل طلبك');
+ await expect(publicPage.locator('.publicMenuCheckoutSuccess')).toContainText('تم تسجيل طلبك');
  await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
  await expect(page.getByRole('heading',{name:'تقويم الحجوزات',exact:true})).toBeVisible();
