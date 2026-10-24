@@ -5,7 +5,7 @@ import {quoteCsvCell} from "@/lib/security/csv-export";
 
 type Data={itemId?:string;groupId?:string;nameEn?:string|null;nameFr?:string|null;selectionType?:string;requiredFlag?:string;minSelect?:number;maxSelect?:number;priceDelta?:number;stockQuantity?:number|null;sortOrder?:number;imageUrl?:string|null};
 type Resource={id:string;name:string;status:string;version:string|number;data:Data};
-type Item={id:string;name:string};
+type Item={id:string;name:string;currency?:string;price?:number};
 type DraftGroup={name:string;nameEn:string;nameFr:string;required:boolean;multiple:boolean;min:string;max:string;sort:string};
 type DraftValue={name:string;nameEn:string;nameFr:string;price:string;stock:string;sort:string;imageUrl:string};
 const emptyGroup:DraftGroup={name:"",nameEn:"",nameFr:"",required:false,multiple:false,min:"0",max:"1",sort:"0"};
@@ -59,6 +59,12 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
  const activeGroup=itemGroups.some(g=>g.id===groupId)?groupId:itemGroups[0]?.id??"";
  const nameOfItem=(id:string)=>items.find(item=>item.id===id)?.name??id;
  const fields={display:"grid",gap:9,minWidth:0} as const;
+ const currency=items.find(item=>item.id===itemId)?.currency||"SAR";
+ const activeValues=(id:string)=>values.filter(v=>v.data.groupId===id&&v.status==="active"&&(v.data.stockQuantity==null||Number(v.data.stockQuantity)>0));
+ const activeGroups=itemGroups.filter(g=>g.status==="active");
+ const blockedGroups=activeGroups.filter(g=>g.data.requiredFlag==="yes"&&activeValues(g.id).length<Math.max(1,Number(g.data.minSelect??0)));
+ const availableValues=activeGroups.flatMap(g=>activeValues(g.id));
+ const money=(amount:number)=>amount.toFixed(2)+" "+currency;
  async function perform(task:()=>Promise<unknown>,success:string){
   setBusy(true);setError("");setMessage("");
   try{await task();await refresh();setMessage(success);return true}
@@ -69,11 +75,15 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
   const type=draftGroup.multiple?"multiple":"single";
   const min=Number(draftGroup.min),max=type==="single"?1:Number(draftGroup.max),sortOrder=Number(draftGroup.sort);
   if(!draftGroup.name.trim()||!Number.isInteger(min)||!Number.isInteger(max)||min<0||min>max||draftGroup.required&&min<1||!Number.isInteger(sortOrder)||sortOrder<0){setError(tr("تحقق من اسم المجموعة وحدود الاختيارات","Check group name and selection limits","Vérifiez le groupe et les limites"));return}
+  if(min>100||max>100||type==="single"&&min>1){setError(tr("الحد الأقصى 100، والاختيار الفردي يقبل قيمة واحدة.","Maximum 100 selections; single-choice accepts one.","Maximum 100 ; un choix pour un groupe unique."));return}
+  if(groups.some(g=>g.id!==editingGroup&&g.data.itemId===itemId&&g.name.trim().toLocaleLowerCase()===draftGroup.name.trim().toLocaleLowerCase())){setError(tr("اسم المجموعة مستخدم لهذا الصنف.","Group name already exists for this product.","Ce nom de groupe existe déjà."));return}
   const existing=groups.find(g=>g.id===editingGroup);
   if(await perform(()=>api("menuGroups",existing?"PATCH":"POST",{...(existing?{id:existing.id,version:existing.version}:{}),name:draftGroup.name.trim(),status:existing?.status??"active",data:{itemId,selectionType:type,requiredFlag:draftGroup.required?"yes":"no",minSelect:min,maxSelect:max,sortOrder,nameEn:draftGroup.nameEn.trim(),nameFr:draftGroup.nameFr.trim()}}),tr("تم حفظ المجموعة","Group saved","Groupe enregistré"))){setEditingGroup(null);setDraftGroup(emptyGroup)}
  }
  async function storeValue(){
   if(!activeGroup||!draftValue.name.trim()||draftValue.name.length>180||!Number.isFinite(Number(draftValue.price))||Number(draftValue.price)<0||Number(draftValue.price)>1000000||draftValue.stock!==""&&(!Number.isFinite(Number(draftValue.stock))||Number(draftValue.stock)<0)||!Number.isInteger(Number(draftValue.sort))||Number(draftValue.sort)<0){setError(tr("تحقق من بيانات الإضافة","Check add-on values","Vérifiez l’option"));return}
+  if(draftValue.stock!==""&&Math.abs(Number(draftValue.stock)*1000-Math.round(Number(draftValue.stock)*1000))>1e-7){setError(tr("المخزون يقبل ثلاث خانات عشرية فقط.","Stock supports at most three decimals.","Trois décimales maximum pour le stock."));return}
+  if(values.some(v=>v.id!==editingValue&&v.data.groupId===activeGroup&&v.name.trim().toLocaleLowerCase()===draftValue.name.trim().toLocaleLowerCase())){setError(tr("الإضافة موجودة مسبقًا في هذه المجموعة.","This add-on already exists in the group.","Ce supplément existe déjà dans ce groupe."));return}
   const existing=values.find(v=>v.id===editingValue);
   if(await perform(()=>api("menuValues",existing?"PATCH":"POST",{...(existing?{id:existing.id,version:existing.version}:{}),name:draftValue.name.trim(),status:existing?.status??"active",data:{groupId:activeGroup,priceDelta:Number(draftValue.price),stockQuantity:draftValue.stock===""?null:Number(draftValue.stock),sortOrder:Number(draftValue.sort),imageUrl:draftValue.imageUrl.trim()||null,nameEn:draftValue.nameEn.trim(),nameFr:draftValue.nameFr.trim()}}),tr("تم حفظ الإضافة","Add-on saved","Option enregistrée"))){setEditingValue(null);setDraftValue(emptyValue)}
  }
@@ -122,8 +132,20 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
  return <section className="foonMenuStep" id="menu-addons" dir={language==="ar"?"rtl":"ltr"} style={{minWidth:0,overflowWrap:"anywhere"}}>
   <h2>{tr("إضافات المنتجات والأصناف","Product add-ons and options","Suppléments et options")}</h2>
   <p>{tr("مجموعات إلزامية أو اختيارية، سعر إضافي، مخزون مستقل، ترتيب، نسخ، إيقاف واستيراد وتصدير. الأسعار والتحقق من المخزون يعاد احتسابها عند الطلب.","Required/optional groups, price, stock, ordering, copy, availability and CSV transfer. Checkout recalculates prices and stock.","Groupes requis ou facultatifs, prix, stock, ordre, copie, disponibilité et CSV.")}</p>
+  <div className="foonAddonsWorkflow" aria-label={tr("خطوات إعداد الإضافات","Add-on setup steps","Étapes de configuration")}>
+   <div><b>1</b><strong>{tr("حدد الصنف","Choose product","Choisir l’article")}</strong><span>{tr("كل مجموعة تتبع الصنف المختار فقط.","Options belong to the selected product only.","Les options concernent cet article uniquement.")}</span></div>
+   <div><b>2</b><strong>{tr("أنشئ المجموعة","Create group","Créer un groupe")}</strong><span>{tr("حدد الاسم والإلزام وحدود الاختيار.","Set name, requirement and selection limits.","Nom, obligation et limites de choix.")}</span></div>
+   <div><b>3</b><strong>{tr("أضف القيم","Add choices","Ajouter les choix")}</strong><span>{tr("سعر إضافي ومخزون مستقل لكل اختيار.","Extra price and stock for each choice.","Supplément et stock de chaque choix.")}</span></div>
+   <div><b>4</b><strong>{tr("راجع المعاينة","Review preview","Vérifier l’aperçu")}</strong><span>{tr("تأكد من وجود قيم متاحة بالمجموعات الإلزامية.","Check required groups have choices in stock.","Vérifier les choix des groupes obligatoires.")}</span></div>
+  </div>
   {loading?<p>{tr("جارٍ التحميل...","Loading...","Chargement...")}</p>:<div style={fields}>
   <label>{tr("الصنف","Product","Produit")}<select value={itemId} onChange={e=>{setItemId(e.target.value);setEditingGroup(null);setEditingValue(null);setDraftGroup(emptyGroup);setDraftValue(emptyValue)}}>{items.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+  <div className="foonAddonsStats" aria-live="polite">
+   <p><strong>{itemGroups.length.toLocaleString("en-US")}</strong><span>{tr("مجموعات","Groups","Groupes")}</span></p>
+   <p><strong>{availableValues.length.toLocaleString("en-US")}</strong><span>{tr("قيم متاحة","Available choices","Choix disponibles")}</span></p>
+   <p><strong>{blockedGroups.length.toLocaleString("en-US")}</strong><span>{tr("مجموعات تحتاج تعديلًا","Groups needing attention","Groupes à corriger")}</span></p>
+  </div>
+  {blockedGroups.length>0&&<p role="alert" className="foonAddonsWarning">{tr("مجموعة إلزامية بلا قيم كافية نشطة ومتوفرة؛ أضف قيمًا أو خفّض الحد الأدنى: ","A required group has too few active choices in stock; add choices or lower its minimum: ","Un groupe obligatoire manque de choix disponibles : ")}{blockedGroups.map(g=>g.name).join("، ")}</p>}
   <div style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
    <input style={{minWidth:0,flex:"1 1 160px"}} aria-label={tr("بحث عن إضافة","Search add-ons","Recherche d’options")} placeholder={tr("بحث بالمجموعة أو الإضافة","Search group or add-on","Rechercher groupe ou option")} value={query} onChange={e=>setQuery(e.target.value)}/>
    <button type="button" disabled={!values.length} onClick={exportAll}>{tr("تصدير CSV","Export CSV","Exporter CSV")}</button>
@@ -133,6 +155,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
   </div>
   <form onSubmit={e=>{e.preventDefault();void storeGroup()}} style={{...fields,border:"1px solid #8885",borderRadius:12,padding:12}}>
    <h3>{editingGroup?tr("تعديل مجموعة","Edit group","Modifier le groupe"):tr("مجموعة إضافات جديدة","New group","Nouveau groupe")}</h3>
+   <p className="foonAddonsHint">{tr("مثال: الحجم أو الإضافات. اختيار فردي = قيمة واحدة، ومتعدد = قيم وفق الحدود.","Example: Size or Extras. Single means one choice; multiple follows the limits.","Exemple : Taille ou Extras. Un choix, ou plusieurs selon les limites.")}</p>
    <label>{tr("اسم المجموعة","Group name","Nom du groupe")}<input required maxLength={180} value={draftGroup.name} onChange={e=>setDraftGroup(p=>({...p,name:e.target.value}))}/></label>
    <label>English<input maxLength={180} value={draftGroup.nameEn} onChange={e=>setDraftGroup(p=>({...p,nameEn:e.target.value}))}/></label>
    <label>Français<input maxLength={180} value={draftGroup.nameFr} onChange={e=>setDraftGroup(p=>({...p,nameFr:e.target.value}))}/></label>
@@ -146,6 +169,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
   </form>
   {!!itemGroups.length&&<form onSubmit={e=>{e.preventDefault();void storeValue()}} style={{...fields,border:"1px solid #8885",borderRadius:12,padding:12}}>
    <h3>{editingValue?tr("تعديل الإضافة","Edit add-on","Modifier l’option"):tr("إضافة جديدة","New add-on","Nouvelle option")}</h3>
+   <p className="foonAddonsHint">{tr("السعر الإضافي 0 = مجاني؛ المخزون الفارغ = غير محدود؛ صفر = نافد.","Extra price 0 = free; blank stock = unlimited; 0 stock = unavailable.","Supplément 0 = gratuit ; stock vide = illimité ; 0 = rupture.")}</p>
    <label>{tr("المجموعة","Group","Groupe")}<select value={activeGroup} onChange={e=>setGroupId(e.target.value)}>{itemGroups.filter(g=>g.status==="active").map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
    <label>{tr("اسم الإضافة","Add-on name","Nom de l’option")}<input required maxLength={180} value={draftValue.name} onChange={e=>setDraftValue(p=>({...p,name:e.target.value}))}/></label>
    <label>English<input maxLength={180} value={draftValue.nameEn} onChange={e=>setDraftValue(p=>({...p,nameEn:e.target.value}))}/></label>
