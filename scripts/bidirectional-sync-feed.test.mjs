@@ -36,3 +36,12 @@ test("cloud feed rejects inventory movement using a reused entity ID",()=>{
  const accepted={...malformed,entity_id:valid.entityId,payload_digest:digestChange(valid)};
  assert.equal(prepareSyncPullEvents([accepted],scope)[0].next_version,1);
 });
+
+test("signed inventory feed accepts case-only movement identity but rejects another UUID",()=>{
+ const eventId="a1b2c3d4-e5f6-4a1b-8c2d-123456789abc";
+ const movement={...change,eventId,entityId:eventId.toUpperCase(),entityType:"inventory_movement",operation:"movement",baseVersion:0,payload:{itemId:ids[4],delta:-1}};
+ const movementRow={...row,event_id:movement.eventId,entity_id:movement.entityId,entity_type:movement.entityType,operation:movement.operation,payload_json:JSON.stringify(movement.payload),payload_digest:digestChange(movement)};
+ assert.equal(prepareSyncPullEvents([movementRow],scope)[0].entity_id,movement.entityId);
+ const wrong={...movement,entityId:ids[4]};
+ assert.throws(()=>prepareSyncPullEvents([{...movementRow,entity_id:wrong.entityId,payload_digest:digestChange(wrong)}],scope),/SYNC_CORRUPT_JOURNAL_VERSION/);
+});
