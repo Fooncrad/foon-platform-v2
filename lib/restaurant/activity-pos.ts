@@ -23,10 +23,10 @@ export async function activityPosMenu(db:PoolConnection,tenantId:string,branch:s
 }
 export async function activityPosOptions(db:PoolConnection,tenantId:string,ids:string[],lock=false){
  const result:Record<string,MenuGroup[]>={};if(!ids.length)return result;
- const [groups]=await db.execute<RowDataPacket[]>("SELECT id,product_id,name_ar,name_en,name_fr,selection_type,required,min_select,max_select FROM catalog_option_groups WHERE tenant_id=? AND enabled=TRUE AND product_id IN ("+ids.map(()=>"?").join(",")+") ORDER BY id"+(lock?" FOR UPDATE":""),[tenantId,...ids]);
+ const [groups]=await db.execute<RowDataPacket[]>("SELECT id,product_id,name_ar,name_en,name_fr,selection_type,required,min_select,max_select FROM catalog_option_groups WHERE tenant_id=? AND enabled=TRUE AND product_id IN ("+ids.map(()=>"?").join(",")+") ORDER BY sort_order,id"+(lock?" FOR UPDATE":""),[tenantId,...ids]);
  if(!groups.length)return result;
  if(!(await tenantEntitlement(tenantId,"variants",db)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
- const [values]=await db.execute<RowDataPacket[]>("SELECT id,group_id,name_ar,name_en,name_fr,price_delta,image_url,stock_quantity FROM catalog_option_values WHERE tenant_id=? AND enabled=TRUE AND group_id IN ("+groups.map(()=>"?").join(",")+") ORDER BY id"+(lock?" FOR UPDATE":""),[tenantId,...groups.map(g=>g.id)]);
+ const [values]=await db.execute<RowDataPacket[]>("SELECT id,group_id,name_ar,name_en,name_fr,price_delta,image_url,stock_quantity FROM catalog_option_values WHERE tenant_id=? AND enabled=TRUE AND group_id IN ("+groups.map(()=>"?").join(",")+") ORDER BY sort_order,id"+(lock?" FOR UPDATE":""),[tenantId,...groups.map(g=>g.id)]);
  for(const g of groups)(result[String(g.product_id)]??=[]).push({id:String(g.id),name:String(g.name_ar),nameEn:String(g.name_en??""),nameFr:String(g.name_fr??""),type:String(g.selection_type),required:Boolean(g.required),min:Number(g.min_select),max:Number(g.max_select),values:values.filter(v=>String(v.group_id)===String(g.id)).map(v=>({id:String(v.id),name:String(v.name_ar),nameEn:String(v.name_en??""),nameFr:String(v.name_fr??""),imageUrl:v.image_url?String(v.image_url):null,price:Number(v.price_delta),stock:v.stock_quantity===null?null:Number(v.stock_quantity)}))});
  return result;
 }

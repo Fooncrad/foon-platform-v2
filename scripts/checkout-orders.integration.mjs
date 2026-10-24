@@ -72,6 +72,7 @@ test('authoritative tax and fees persist across activities, replay and settings 
     const discounted=ok(await op('pos','POST',{...payload,requestKey:randomUUID(),couponCode:'TEN'}));assert.equal(discounted.total,95);
     const discountedOrder=ok(await op('orders','GET'),200).orders.find(o=>o.id===discounted.id);assert.equal(discountedOrder.discount,10);assert.equal(discountedOrder.checkout_snapshot.tax,4.29);
     const customer=await call('/api/customer/register','POST',{name:'Tax customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug});ok(customer);
+    await db.execute('UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?',[customer.body.user.id]);
     const purchase=ok(await call('/api/customer/orders','POST',{storeSlug:slug,branchId:registration.branch.id,channel:'takeaway',requestKey:randomUUID(),items:[{id:product,quantity:1}],total:0},{cookie:customer.cookie,tenant:owner.tenant}));assert.equal(purchase.total,105);
     const customerOrder=ok(await op('orders','GET'),200).orders.find(o=>o.id===purchase.id);ok(await op('orders','PATCH',{id:purchase.id,version:customerOrder.version,paymentStatus:'paid'}),200);
     assert.equal((await fetch(origin+'/receipts/'+purchase.id,{headers:{cookie:customer.cookie}})).status,200);assert.equal(ok(await call('/api/restaurant/receipts','POST',{id:purchase.id},owner),200).path,'/receipts/'+purchase.id);

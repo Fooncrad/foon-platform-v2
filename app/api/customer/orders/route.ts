@@ -39,8 +39,9 @@ export async function POST(request:Request){
   await db.query("SET time_zone='+00:00'");await db.beginTransaction();
   // Acquire the same exclusive customer lock used by createOrder before any
   // joined shared reads; concurrent retries must not deadlock on lock upgrade.
-  const [actors]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
+  const [actors]=await db.execute<RowDataPacket[]>("SELECT id,email_verified_at FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   if(!actors.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");
+  if(!actors[0].email_verified_at)throw new ResourceError("EMAIL_VERIFICATION_REQUIRED");
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id,t.kind,b.activity_code,b.country_code,u.display_name FROM tenants t LEFT JOIN tenant_business_profiles b ON b.tenant_id=t.id JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
   if(!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");const tenantId=String(stores[0].id);tenantIdForAlert=tenantId;
   if(!customerCartAvailable(String(stores[0].activity_code??""),String(stores[0].kind)))throw new ResourceError("CART_NOT_AVAILABLE");
@@ -80,5 +81,5 @@ export async function POST(request:Request){
   const result=await createOrder(db,tenantId,user,{...body,orderNotes,customerPhone,customerName:String(stores[0].display_name||"عميل")},user);
   if(customerDelivery)await saveCheckoutDeliveryAddress(db,user,{countryCode:body.deliveryCountryCode,city:body.deliveryCity,address:body.deliveryAddress,phone:customerPhone,latitude:body.latitude,longitude:body.longitude});
   await db.commit();dispatchNotifications();return NextResponse.json({ok:true,...result},{status:201});
- }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code,...(code==="DELIVERY_OUT_OF_RANGE"&&deliveryOutsideMessage?{message:deliveryOutsideMessage}:{})},{status:code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
+ }catch(error){await db.rollback();const code=error instanceof ResourceError?error.code:"ORDER_UNAVAILABLE";if(code==="DELIVERY_DRIVER_UNAVAILABLE"&&tenantIdForAlert){try{await db.beginTransaction();await queueDeliveryDriverAlerts(db,tenantIdForAlert);await db.commit();dispatchNotifications();}catch{await db.rollback();}}return NextResponse.json({ok:false,code,...(code==="DELIVERY_OUT_OF_RANGE"&&deliveryOutsideMessage?{message:deliveryOutsideMessage}:{})},{status:code==="EMAIL_VERIFICATION_REQUIRED"||code==="STORE_CUSTOMER_REQUIRED"||code==="PLAN_FEATURE_REQUIRED"||code==="CART_NOT_AVAILABLE"||code==="PUBLIC_FEATURE_DISABLED"?403:code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="RESERVATION_NOT_AVAILABLE"||code==="RESERVATION_ALREADY_ORDERED"||code==="HOTEL_ROOM_UNAVAILABLE"?409:code==="ORDER_UNAVAILABLE"?503:400});}finally{db.release();}
 }
