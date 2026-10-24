@@ -54,3 +54,16 @@ test("public menu mobile actions are not duplicated and offline status follows t
  assert.match(publicMenu,/publicMenuInfoBar[^\n]*mode="reservation"/);
  assert.match(publicMenu,/publicMenuHeader[^\n]*mode="waiter"/);
 });
+
+const stableStorefrontCss=readFileSync(new URL("../app/[slug]/unified-storefront-ux.css",import.meta.url),"utf8");
+const stableCart=readFileSync(new URL("../app/[slug]/storefront-cart.tsx",import.meta.url),"utf8");
+
+test("storefront and menu remain width-stable during mobile booking and checkout",()=>{
+ assert.match(stableStorefrontCss,/html:has\(\.publicMenu\)[\s\S]*scrollbar-gutter: stable/);
+ assert.match(stableStorefrontCss,/\.publicMenu :is\(input:not\([\s\S]*font-size: 16px !important/);
+ assert.match(stableStorefrontCss,/max-inline-size: calc\(100dvw - 24px\)/);
+ assert.match(stableStorefrontCss,/max-block-size: calc\(100dvh - 24px\)/);
+ assert.match(stableStorefrontCss,/\.publicMenu:has\(:is\(input, textarea, select\):focus\) \.publicMenuMobileDock/);
+ assert.doesNotMatch(publicMenu,/getElementById\('menu-items'\)\?\.scrollIntoView/);
+ assert.doesNotMatch(stableCart,/scrollIntoView/);
+});
