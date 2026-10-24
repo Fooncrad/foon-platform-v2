@@ -4,19 +4,19 @@
  * overrides the identity/colour tokens of a merchant or activity.
  * Every dashboard root owns its CSS; scoped selectors avoid POS/print output.
  */
-:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonStorefrontCart){
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart){
  max-inline-size:100%;
 }
-:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonStorefrontCart)
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
  :is(main,section,article,aside,header,footer,form,fieldset,nav){
  min-inline-size:0;
 }
-:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonStorefrontCart)
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
  :is(input,select,textarea){
  max-inline-size:100%;
 }
 /* Native RTL/LTR direction is inherited. Keep numeric controls in Latin digits. */
-:where(.restaurantApp,.adminShell,.customerDashboard,.publicMenu,.foonStorefrontCart)
+:where(.restaurantApp,.adminShell,.customerDashboard,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
  :is(input[type="number"],input[type="tel"],input[type="date"],input[type="time"],input[type="datetime-local"]){
  direction:ltr;
  font-variant-numeric:lining-nums tabular-nums;
@@ -59,16 +59,16 @@
  max-inline-size:142px;
 }
 /* Every text control should be reachable by keyboard, also on dark themes. */
-:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonStorefrontCart)
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
  :is(button,a,input,select,textarea,summary):focus-visible{
  outline:3px solid var(--foon-focus-accent,#dd963a);
  outline-offset:3px;
 }
-:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonStorefrontCart)
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
  :is(button,input,select,textarea):disabled{
  cursor:not-allowed;
 }
-:where(.restaurantApp,.adminShell,.customerDashboard,.publicMenu,.foonStorefrontCart)
+:where(.restaurantApp,.adminShell,.customerDashboard,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
  :is([role="alert"],[role="status"]){
  max-inline-size:100%;
  overflow-wrap:anywhere;
@@ -348,7 +348,7 @@
  }
 }
 @media(prefers-reduced-motion:reduce){
- :where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonStorefrontCart)
+ :where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
   :is(button,a,input,select,textarea){
   scroll-behavior:auto;
  }
@@ -356,4 +356,66 @@
 @media print{
  .restaurantApp .restaurantTopbar,.adminShell .adminTop{position:static;box-shadow:none}
  .restaurantApp .restaurantPopover{display:none}
+}
+
+/* All non-food storefront templates: groceries, retail, gifts, hotels and services. */
+.foonActivityStorefront :is(.foonActivityHeader,.foonActivityHeaderActions,.foonActivityContent,.foonActivityProducts,.foonActivityCartRail){
+ min-inline-size:0;
+ max-inline-size:100%;
+}
+.foonActivityStorefront .foonActivityHeader{
+ display:flex;
+ align-items:center;
+ flex-wrap:wrap;
+ gap:12px;
+}
+.foonActivityStorefront .foonActivityHeaderBrand,
+.foonActivityStorefront .foonActivityHeaderActions{
+ min-inline-size:0;
+}
+.foonActivityStorefront .foonActivityStoreName{
+ min-inline-size:0;
+ overflow-wrap:break-word;
+}
+.foonActivityStorefront .foonActivityHeaderActions{
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ gap:8px;
+}
+.foonActivityStorefront .foonActivityHeaderActions :is(a,button,select){
+ min-block-size:44px;
+ max-inline-size:100%;
+}
+.foonActivityStorefront .foonActivityCategories{
+ max-inline-size:100%;
+ overscroll-behavior-inline:contain;
+ scroll-padding-inline:12px;
+}
+.foonActivityStorefront .foonActivityProducts > *,
+.foonActivityStorefront .foonActivityProductInfo{
+ min-inline-size:0;
+}
+.foonActivityStorefront .foonActivityProductInfo :is(h2,h3,p){
+ overflow-wrap:break-word;
+}
+.foonActivityStorefront .foonActivityMobileDock{
+ padding-block-end:max(10px,env(safe-area-inset-bottom,0px));
+}
+@media(max-width:680px){
+ .foonActivityStorefront .foonActivityHeader{
+  align-items:flex-start;
+  padding-inline:12px;
+ }
+ .foonActivityStorefront .foonActivityHeaderBrand{
+  flex:1 1 140px;
+ }
+ .foonActivityStorefront .foonActivityHeaderActions{
+  flex:1 1 100%;
+  justify-content:flex-start;
+ }
+ .foonActivityStorefront .foonActivityContent{
+  padding-inline:12px;
+  padding-block-end:calc(92px + env(safe-area-inset-bottom,0px));
+ }
 }
