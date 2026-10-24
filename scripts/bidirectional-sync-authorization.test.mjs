@@ -20,3 +20,13 @@ test("pull checks device and branch, read grants, and cursor bounds",()=>{
  assert.throws(()=>authorizeSyncPull(context,{tenantId:ids[1],branchId:ids[4]}),/SYNC_SCOPE_FORBIDDEN/);
  assert.throws(()=>authorizeSyncPull(context,{tenantId:ids[1],branchId:ids[2],limit:201}),/SYNC_INVALID_LIMIT/);
 });
+
+
+test("MariaDB UUID display casing does not deny a scoped order, but different identities still fail",()=>{
+ const scoped={...change,tenantId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",branchId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",actorId:"cccccccc-cccc-4ccc-8ccc-cccccccccccc",entityType:"order"};
+ const upper={...context,tenantId:scoped.tenantId.toUpperCase(),branchId:scoped.branchId.toUpperCase(),actorId:scoped.actorId.toUpperCase(),grants:["orders.write"]};
+ assert.equal(authorizeSyncPush(upper,scoped).change.eventId,scoped.eventId);
+ for(const field of ["tenantId","branchId","actorId"]){
+  assert.throws(()=>authorizeSyncPush({...upper,[field]:ids[0]},scoped),/SYNC_SCOPE_FORBIDDEN/);
+ }
+});
