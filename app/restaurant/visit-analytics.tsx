@@ -26,13 +26,13 @@ export default function VisitAnalytics({tenantId,language="ar",profile=false}:{t
  return <section className="restaurantPanel" aria-label={translate("إحصائيات الزيارات","Visit analytics","Statistiques des visites")} style={{marginBlock:"16px"}}>
   <header><div><h3>{translate("إحصائيات الزيارات","Visit analytics","Statistiques des visites")}</h3><p>{translate("زيارات فريدة يومياً، دون احتساب زيارات المالك","Daily unique visits, excluding owner views","Visites uniques quotidiennes, hors propriétaire")}</p></div></header>
   {error?<p role="status">{translate("إحصائيات الزيارات غير متاحة حالياً","Visit statistics unavailable","Statistiques momentanément indisponibles")}</p>:<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:12,padding:12}}>
-   {[
+   {([
     [translate("إجمالي الزيارات","Total visits","Total des visites"),visits?.total],
     [translate("زيارات اليوم","Visits today","Visites aujourd’hui"),visits?.today],
     [translate("آخر 7 أيام","Last 7 days","7 derniers jours"),visits?.last7Days],
     [translate("آخر 30 يوماً","Last 30 days","30 derniers jours"),visits?.last30Days],
     ...(profile?[]:[[translate("مشاهدات المنتجات","Product views","Vues des produits"),products?.total] as const])
-   ].map(([label,value])=><article key={label} style={{border:"1px solid var(--border,#e4e4e7)",borderRadius:12,padding:14,minWidth:0}}><small>{label}</small><strong style={{display:"block",fontSize:24,marginTop:8,fontVariantNumeric:"tabular-nums"}}>{format(value)}</strong></article>)}
+   ] as Array<[string,number|undefined]>).map(([label,value])=><article key={label} style={{border:"1px solid var(--border,#e4e4e7)",borderRadius:12,padding:14,minWidth:0}}><small>{label}</small><strong style={{display:"block",fontSize:24,marginTop:8,fontVariantNumeric:"tabular-nums"}}>{format(value)}</strong></article>)}
   </div>}
  </section>;
 }
