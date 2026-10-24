@@ -17,7 +17,7 @@
     "reservations:no-show-worker": "node --experimental-strip-types scripts/reservation-no-show-worker.mjs",
     "print:agent": "node --env-file=.env.print-agent scripts/foon-print-agent.mjs",
     "test:migrations": "node --test scripts/sql-statements.test.mjs scripts/marketplace-visibility-migration.test.mjs scripts/short-activity-routes.test.mjs scripts/activity-route-slug-migration.test.mjs scripts/release-migration-delivery.test.mjs",
-    "test:mail": "node --experimental-strip-types --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/email-verification.test.mjs",
+    "test:mail": "node --experimental-strip-types --test scripts/mail.test.mjs scripts/notification-delivery.test.mjs scripts/customer-notification-policy.test.mjs scripts/email-verification.test.mjs scripts/google-platform-verification.test.mjs scripts/google-oauth-callback-integration.test.mjs",
     "mail:verify": "node scripts/verify-mail.mjs",
     "test:admin-policy": "node --test scripts/admin-policy.test.mjs",
     "test:admin-provision": "node --test scripts/admin-provision-profile.test.mjs",
