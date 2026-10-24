@@ -1,6 +1,7 @@
 "use client";
 import {useUiText} from "@/lib/i18n/ui-language";
 import RequiredLegalConsent from "@/app/components/required-legal-consent";
+import {ACCOUNT_HELP_CODES,accountHelpCode} from "@/lib/auth/public-login-url.mjs";
 import {useEffect,useState,type FormEvent} from "react";
 type Lang="ar"|"en"|"fr";
 export default function InlineCustomerAuth({slug,language,onSuccess,onVerificationRequired,purpose="order"}:{slug:string;language:Lang;onSuccess:()=>void;onVerificationRequired?:()=>void;purpose?:"order"|"service"}){
@@ -19,7 +20,7 @@ export default function InlineCustomerAuth({slug,language,onSuccess,onVerificati
   const body=mode==="recover"?{email:f.get("email")}:mode==="register"?{storeSlug:slug,name:f.get("name"),email:f.get("email"),password:f.get("password"),legalAccepted:f.get("legalConsent")==="on"}:{email:f.get("email"),password:f.get("password")};
   const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
   const result=await r.json().catch(()=>({}));
-  if(!r.ok){setMessage(labels.error+(result.code?" ("+result.code+")":""));return;}
+  if(!r.ok){if(ACCOUNT_HELP_CODES.has(String(result.code))){window.location.assign("/account-status?code="+encodeURIComponent(accountHelpCode(result.code)));return;}setMessage(labels.error+(result.code?" ("+result.code+")":""));return;}
   if(mode==="recover"){setMessage(labels.sent);return;}
   if(mode==="login"){const join=await fetch("/api/customer/join-store",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({storeSlug:slug})});if(!join.ok){const j=await join.json().catch(()=>({}));setMessage(labels.error+(j.code?" ("+j.code+")":""));return;}}
   onSuccess();
