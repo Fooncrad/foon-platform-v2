@@ -7,6 +7,7 @@ import {registrationActivities} from "@/lib/tenant/registration-activities";
 import {localizedActivityModules} from "@/lib/platform/activity-presets";
 import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 import {supportedCountries,countryRegions,currencyForCountry} from "@/lib/tenant/country-catalog";
+import RequiredLegalConsent from "@/app/components/required-legal-consent";
 export default function RestaurantRegisterPage(){
  const [lang]=useLanguagePreference(),router=useRouter();
  const t=(ar:string,en:string,fr:string)=>lang==="en"?en:lang==="fr"?fr:ar;
@@ -15,7 +16,7 @@ export default function RestaurantRegisterPage(){
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy)return;setBusy(true);setError("");const data=new FormData(event.currentTarget);
   try{
-   const response=await fetch("/api/restaurant/onboard",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),slug:data.get("slug"),activity,countryCode:country,currency:currencyForCountry(country),region,taxNumber:data.get("taxNumber"),referralHandle:new URLSearchParams(window.location.search).get("ref")??undefined})});
+   const response=await fetch("/api/restaurant/onboard",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:data.get("name"),slug:data.get("slug"),activity,countryCode:country,currency:currencyForCountry(country),region,taxNumber:data.get("taxNumber"),referralHandle:new URLSearchParams(window.location.search).get("ref")??undefined,legalAccepted:data.get("legalConsent")==="on"})});
    const result=await response.json().catch(()=>({}));
    if(response.ok){
     // The active tenant is bound to the authenticated session, not the URL.
@@ -42,6 +43,7 @@ export default function RestaurantRegisterPage(){
    <label>{t("العملة","Currency","Devise")}<input readOnly dir="ltr" value={currencyForCountry(country)??""}/></label>
    <label>{t("المنطقة / المدينة","Region / city","Région / ville")}{countryRegions[country]?<select required value={region} onChange={e=>setRegion(e.target.value)}>{countryRegions[country].map(r=><option key={r} value={r}>{r}</option>)}</select>:<input required minLength={2} maxLength={120} value={region} onChange={e=>setRegion(e.target.value)}/>}</label>
    <label>{t("الرقم الضريبي (اختياري)","Tax registration number (optional)","Numéro fiscal (facultatif)")}<input name="taxNumber" maxLength={64} dir="ltr"/></label>
+   <RequiredLegalConsent language={lang}/>
    {error&&<div className="form-error" role="alert">{error}</div>}
    <button disabled={busy} aria-busy={busy}>{busy?t("جارٍ إنشاء النشاط…","Creating business…","Création en cours…"):t("إنشاء النشاط والفرع الرئيسي","Create business and main branch","Créer l’activité et l’établissement principal")}</button>
   </form>

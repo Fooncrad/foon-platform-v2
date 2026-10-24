@@ -11,10 +11,10 @@ const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.Modu
 const policy = require('../lib/auth/google-oauth-security.mjs');
 const state = 'A'.repeat(43);
 
-function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, checkoutStore = '' } = {}) {
+function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, checkoutStore = '', consented = true } = {}) {
   const actions = { sql: [], cookieWrites: [], sessions: [], commits: 0, rollbacks: 0, connections: 0 };
   const jar = {
-    get: (name) => name === 'foon_google_checkout_store' ? (checkoutStore ? {value:checkoutStore} : undefined) : ({value:state}),
+    get: (name) => name === 'foon_google_checkout_store' ? (checkoutStore ? {value:checkoutStore} : undefined) : ({value: name === 'foon_google_legal_consent' && !consented ? undefined : state}),
     set: (...args) => actions.cookieWrites.push(args),
   };
   const db = {
@@ -100,6 +100,14 @@ test('creates verified local user only after Google token verification', async (
   assert.match(insert.sql, /email_verified_at\) VALUES \(\?,\?,\?,\?,\?,NOW\(\)\)/);
   assert.equal(actions.commits, 1);
   assert.equal(actions.sessions.length, 1);
+});
+
+test('rejects new Google account without explicit legal consent', async () => {
+ const {run,actions}=setup({consented:false});
+ assert.match((await run()).url,/GOOGLE_LEGAL_CONSENT_REQUIRED/);
+ assert.equal(actions.sessions.length,0);
+ assert.equal(actions.commits,0);
+ assert.equal(actions.sql.some(x=>x.sql.startsWith('INSERT INTO users')),false);
 });
 
 test('rejects Google identity with unverified email before database access', async () => {
