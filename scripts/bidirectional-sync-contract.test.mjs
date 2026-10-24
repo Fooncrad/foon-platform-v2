@@ -99,3 +99,13 @@ test("UUID casing does not change movement identity or current scoped version id
  assert.equal(resolveChange({incoming:movement, current:null,alreadyApplied:false}).status,"apply");
  assert.equal(resolveChange({incoming:{...movement,entityId:ids[4]},current:null}).reason,"SYNC_INVALID_MOVEMENT_ID");
 });
+
+test("UUID fields reject coercible non-string values before signing or database writes",()=>{
+ for(const key of ["eventId","tenantId","branchId","actorId","entityId"]){
+  for(const invalid of [[c[key]],{toString(){return c[key];}},null,42]){
+   assert.throws(()=>validateChangeEnvelope({...c,[key]:invalid}),/SYNC_INVALID_SCOPE/);
+   assert.throws(()=>digestChange({...c,[key]:invalid}),/SYNC_INVALID_SCOPE/);
+  }
+  assert.equal(validateChangeEnvelope({...c,[key]:c[key].toUpperCase()})[key],c[key].toUpperCase());
+ }
+});
