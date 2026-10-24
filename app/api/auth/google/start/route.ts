@@ -4,6 +4,7 @@ import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {accountHelpUrl} from "@/lib/auth/public-login-url.mjs";
 
 export const runtime="nodejs";
 const COOKIE_PATH="/api/auth/google";
@@ -11,7 +12,7 @@ async function begin(request:Request,legalAccepted:boolean,asJson:boolean){
  const clientId=process.env.GOOGLE_CLIENT_ID;
  const clientSecret=process.env.GOOGLE_CLIENT_SECRET;
  const origin=process.env.APP_URL;
- const failure=(code:string)=>asJson?NextResponse.json({ok:false,code},{status:503}):NextResponse.redirect(new URL("/login?error="+code,request.url));
+ const failure=(code:string)=>asJson?NextResponse.json({ok:false,code},{status:503}):NextResponse.redirect(accountHelpUrl(origin,request.url,code,process.env.NODE_ENV==="production"));
  if(!clientId||!clientSecret||!origin)return failure("GOOGLE_NOT_CONFIGURED");
  // OAuth credentials and switch belong to the platform only.
  try{
