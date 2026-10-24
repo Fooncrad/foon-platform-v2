@@ -11,7 +11,7 @@ const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.Modu
 const policy = require('../lib/auth/google-oauth-security.mjs');
 const state = 'A'.repeat(43);
 
-function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true' } = {}) {
+function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true } = {}) {
   const actions = { sql: [], cookieWrites: [], sessions: [], commits: 0, rollbacks: 0, connections: 0 };
   const jar = {
     get: () => ({ value: state }),
@@ -24,6 +24,7 @@ function setup({ linked = null, matched = null, suppliedState = state, googleVer
     release() {},
     async execute(sql, args) {
       actions.sql.push({ sql, args });
+      if (sql.includes('google_oauth_enabled')) return [[{ config_value: googleEnabled ? 'true' : 'false' }]];
       if (sql.includes('FROM auth_google_identities')) return [[linked ? { user_id: linked.id } : null].filter(Boolean)];
       if (sql.includes('FROM users WHERE id=')) return [[linked].filter(Boolean)];
       if (sql.includes('FROM users WHERE email=')) return [[matched].filter(Boolean)];
@@ -112,4 +113,12 @@ test('linked verified Google identity may sign in without new identity insert', 
   assert.equal((await run()).url, 'https://example.test/account');
   assert.deepEqual(actions.sessions, ['user-5']);
   assert.equal(actions.sql.some(x => x.sql.startsWith('INSERT INTO auth_google_identities')), false);
+});
+
+test('platform administrator disabling Google prevents identity linking and session creation', async () => {
+  const {run,actions}=setup({googleEnabled:false});
+  assert.match((await run()).url,/GOOGLE_DISABLED/);
+  assert.equal(actions.sessions.length,0);
+  assert.equal(actions.sql.some(x=>x.sql.includes('INSERT INTO auth_google_identities')),false);
+  assert.equal(actions.commits,0);
 });
