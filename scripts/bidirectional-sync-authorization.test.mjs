@@ -30,3 +30,19 @@ test("MariaDB UUID display casing does not deny a scoped order, but different id
   assert.throws(()=>authorizeSyncPush({...upper,[field]:ids[0]},scoped),/SYNC_SCOPE_FORBIDDEN/);
  }
 });
+
+test("pull accepts MariaDB UUID casing but never a different tenant, branch or missing grant",()=>{
+ const tenantId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+ const branchId="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+ const upperContext={...context,tenantId:tenantId.toUpperCase(),branchId:branchId.toUpperCase()};
+ const request={tenantId,branchId,after:4,limit:10};
+ assert.deepEqual(authorizeSyncPull(upperContext,request),request);
+ assert.deepEqual(authorizeSyncPull({...upperContext,tenantId,branchId},{...request,tenantId:tenantId.toUpperCase(),branchId:branchId.toUpperCase()}),{...request,tenantId:tenantId.toUpperCase(),branchId:branchId.toUpperCase()});
+ for(const field of ["tenantId","branchId"]){
+  assert.throws(()=>authorizeSyncPull(upperContext,{...request,[field]:ids[4]}),/SYNC_SCOPE_FORBIDDEN/);
+  assert.throws(()=>authorizeSyncPull(upperContext,{...request,[field]:"invalid-uuid"}),/SYNC_SCOPE_FORBIDDEN/);
+ }
+ assert.throws(()=>authorizeSyncPull({...upperContext,grants:[]},request),/SYNC_READ_FORBIDDEN/);
+ assert.throws(()=>authorizeSyncPull({...upperContext,revoked:true},request),/SYNC_DEVICE_DISABLED/);
+ assert.throws(()=>authorizeSyncPull(upperContext,{...request,after:-1}),/SYNC_INVALID_CURSOR/);
+});
