@@ -22,9 +22,9 @@ test("customer creator profile visibility, public media, ownership and staff iso
   let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+"/login",{signal:AbortSignal.timeout(1000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,250));}}
   assert.ok(ready,output);
   const slug="creator-store-"+randomUUID().slice(0,8);
-  const owner=await call("/api/auth/register","POST",{name:"Owner",email:slug+"@test.example",password,storeName:"Creator test merchant",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض"});
+  const owner=await call("/api/auth/register","POST",{name:"Owner",email:slug+"@test.example",password,storeName:"Creator test merchant",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true});
   assert.equal(owner.status,201,JSON.stringify(owner.body));
-  const registerCustomer=async()=>{const email="creator-"+randomUUID()+"@test.example";const res=await call("/api/customer/register","POST",{name:"Test creator",email,password,storeSlug:slug});assert.equal(res.status,201,JSON.stringify(res.body));return {id:res.body.user.id,cookie:res.cookie};};
+  const registerCustomer=async()=>{const email="creator-"+randomUUID()+"@test.example";const res=await call("/api/customer/register","POST",{name:"Test creator",email,password,storeSlug:slug,legalAccepted:true});assert.equal(res.status,201,JSON.stringify(res.body));return {id:res.body.user.id,cookie:res.cookie};};
   const creator=await registerCustomer(),second=await registerCustomer();
   const profile="/api/account/creator-profile",social="/api/account/creator-social-links",handle="art-"+randomUUID().slice(0,12);
   assert.equal((await call(profile)).status,401);
