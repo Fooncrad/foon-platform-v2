@@ -55,9 +55,9 @@ const defaults:Record<Kind,Record<Language,{title:string;intro:string;sections:S
   ]}
  }
 };
-export default async function LegalPublicPage({kind}:{kind:Kind}){
+export default async function LegalPublicPage({kind,searchParams}:{kind:Kind;searchParams?:Promise<{lang?:string}>}){
  const locale=(await cookies()).get("foon_language")?.value;
- const language=resolvePublicContentLanguage(undefined,locale);
+ const language=resolvePublicContentLanguage((await searchParams)?.lang,locale);
  const fallback=defaults[kind][language];
  let published:{title:string;body:string}|null=null;
  try{
