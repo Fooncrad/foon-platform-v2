@@ -63,7 +63,7 @@ test("storefront and menu remain width-stable during mobile booking and checkout
  assert.match(stableStorefrontCss,/\.publicMenu :is\(input:not\([\s\S]*font-size: 16px !important/);
  assert.match(stableStorefrontCss,/max-inline-size: calc\(100dvw - 24px\)/);
  assert.match(stableStorefrontCss,/max-block-size: calc\(100dvh - 24px\)/);
- assert.match(stableStorefrontCss,/\.publicMenu:has\(:is\(input, textarea, select\):focus\) \.publicMenuMobileDock/);
+ assert.match(stableStorefrontCss,/\.publicMenu:has\(\.publicMenuCart :is\(input, textarea, select\):focus\) \.publicMenuMobileDock/);
  assert.doesNotMatch(publicMenu,/categoryDialog\.current\?\.close\(\);document\.getElementById\('menu-items'\)\?\.scrollIntoView/);
  assert.doesNotMatch(stableCart,/scrollIntoView/);
 });
