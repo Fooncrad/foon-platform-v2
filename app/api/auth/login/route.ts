@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { dispatchNotifications } from "@/lib/notifications/dispatch";
+import { queueLoginAlert } from "@/lib/auth/login-alert";
 import type { RowDataPacket } from "mysql2/promise";
 import { database } from "@/lib/db/mysql";
 import { verifyPassword } from "@/lib/auth/password";
@@ -18,6 +20,8 @@ export async function POST(request:Request){
   const user=rows[0]; const valid=!!user?.password_hash && user.status==="active" && await verifyPassword(password,String(user.password_hash));
   await recordLogin(email,ip,valid);
   if(!valid)return NextResponse.json({ok:false,code:"INVALID_CREDENTIALS"},{status:401});
-  await createSession(String(user.id)); return NextResponse.json({ok:true,emailVerificationRequired:!user.email_verified_at});
+  await createSession(String(user.id));
+  if(await queueLoginAlert(database(),String(user.id),request,"password"))dispatchNotifications();
+  return NextResponse.json({ok:true,emailVerificationRequired:!user.email_verified_at});
  }catch{return NextResponse.json({ok:false,code:"LOGIN_UNAVAILABLE"},{status:503});}
 }
