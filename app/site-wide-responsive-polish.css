@@ -1,0 +1,427 @@
+/*
+ * FOON cloud responsive foundation.
+ * Presentation only — never broadens access, changes ordering/checkout, or
+ * overrides the identity/colour tokens of a merchant or activity.
+ * Every dashboard root owns its CSS; scoped selectors avoid POS/print output.
+ */
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart){
+ max-inline-size:100%;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+ :is(main,section,article,aside,header,footer,form,fieldset,nav){
+ min-inline-size:0;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+ :is(input,select,textarea){
+ max-inline-size:100%;
+}
+/* Native RTL/LTR direction is inherited. Keep numeric controls in Latin digits. */
+:where(.restaurantApp,.adminShell,.customerDashboard,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+ :is(input[type="number"],input[type="tel"],input[type="date"],input[type="time"],input[type="datetime-local"]){
+ direction:ltr;
+ font-variant-numeric:lining-nums tabular-nums;
+}
+/* Prevent the language label from becoming a one-character-wide vertical column. */
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket) .foonLanguageSelector{
+ display:inline-flex;
+ align-items:center;
+ justify-content:flex-start;
+ flex:0 0 auto;
+ min-inline-size:max-content;
+ max-inline-size:100%;
+ writing-mode:horizontal-tb;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket) .foonLanguageSelector select{
+ writing-mode:horizontal-tb;
+ white-space:nowrap;
+ text-overflow:ellipsis;
+ inline-size:auto;
+ min-inline-size:104px;
+ max-inline-size:144px;
+ min-block-size:44px;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard) .foonWorkspaceThemeControl{
+ flex:0 0 auto;
+ min-inline-size:0;
+ max-inline-size:100%;
+ writing-mode:horizontal-tb;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard) .foonWorkspaceThemeControl > span{
+ display:block;
+ white-space:nowrap;
+ overflow-wrap:normal;
+ writing-mode:horizontal-tb;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard) .foonWorkspaceThemeControl select{
+ writing-mode:horizontal-tb;
+ min-block-size:44px;
+ min-inline-size:96px;
+ max-inline-size:142px;
+}
+/* Every text control should be reachable by keyboard, also on dark themes. */
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+ :is(button,a,input,select,textarea,summary):focus-visible{
+ outline:3px solid var(--foon-focus-accent,#dd963a);
+ outline-offset:3px;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+ :is(button,input,select,textarea):disabled{
+ cursor:not-allowed;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+ :is([role="alert"],[role="status"]){
+ max-inline-size:100%;
+ overflow-wrap:anywhere;
+}
+/* All horizontal data grids scroll inside their own work areas, not the page. */
+:where(.restaurantApp,.adminShell,.customerDashboard) :is(.adminOpsTableWrap,.adminTranslationTable,.restaurantTableScroll,.restaurantTableWrap){
+ max-inline-size:100%;
+ overflow-x:auto;
+ overscroll-behavior-inline:contain;
+ -webkit-overflow-scrolling:touch;
+}
+:where(.restaurantApp,.adminShell,.customerDashboard) :is(.restaurantPanel,.adminPanel,.customerOrderCard,.workspace-card) {
+ min-inline-size:0;
+}
+/* Longer French titles do not compress into vertical letters. */
+.restaurantApp .restaurantTopbar{
+ min-inline-size:0;
+}
+.restaurantApp .restaurantBreadcrumb{
+ flex:0 1 190px;
+ min-inline-size:0;
+ max-inline-size:190px;
+}
+.restaurantApp .restaurantBreadcrumb small{
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ overflow-wrap:normal;
+ word-break:normal;
+}
+.restaurantApp .restaurantTopActions{
+ display:flex;
+ flex:1 1 auto;
+ min-inline-size:0;
+ align-items:center;
+ justify-content:flex-end;
+ flex-wrap:wrap;
+ gap:8px;
+}
+.restaurantApp .restaurantTopActions > :is(label,.restaurantPopoverAnchor,button){
+ min-inline-size:0;
+ max-inline-size:100%;
+}
+.restaurantApp .restaurantTopActions :is(.restaurantTenantSelector,.restaurantBranchSelector){
+ flex:0 1 auto;
+ min-inline-size:0;
+ max-inline-size:240px;
+}
+.restaurantApp .restaurantTopActions :is(.restaurantTenantSelector,.restaurantBranchSelector) select{
+ inline-size:100%;
+ min-inline-size:0;
+ max-inline-size:200px;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+.restaurantApp .restaurantTopActions :is(.restaurantIconButton,.restaurantAvatar){
+ flex:0 0 auto;
+ min-inline-size:40px;
+ min-block-size:40px;
+}
+.restaurantApp .restaurantPopover{
+ max-inline-size:min(320px,calc(100vw - 24px));
+ max-block-size:min(75dvh,600px);
+ overflow-y:auto;
+ overscroll-behavior:contain;
+}
+.restaurantApp .restaurantRoleBadge{
+ white-space:normal;
+ text-align:center;
+ overflow-wrap:break-word;
+}
+.restaurantApp :is(.restaurantPanel,.restaurantContent) :is(h2,h3,legend){
+ overflow-wrap:break-word;
+}
+/* Admin: keep action buttons, language, and theme on usable rows. */
+.adminShell .adminTop{
+ min-inline-size:0;
+ gap:12px;
+ block-size:auto;
+}
+.adminShell .adminTop > div:first-child{
+ min-inline-size:0;
+}
+.adminShell .adminTop > div:first-child b,
+.adminShell .adminTop > div:first-child small{
+ overflow-wrap:normal;
+ word-break:normal;
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+.adminShell .adminTopActions{
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ justify-content:flex-end;
+ gap:8px;
+ min-inline-size:0;
+ max-inline-size:100%;
+}
+.adminShell .adminTopActions form{
+ min-inline-size:0;
+}
+.adminShell .adminTopActions :is(.adminIconButton,button){
+ min-block-size:44px;
+}
+.adminShell .adminStage :is(.workspace,.adminDashboard,.adminPanel,.adminModules,.adminOperationGrid){
+ min-inline-size:0;
+ max-inline-size:100%;
+}
+.adminShell .adminSide nav a[aria-current="page"],
+.adminShell .adminDrawer a[aria-current="page"]{
+ font-weight:800;
+}
+/* Customer cards and account navigation retain their own page theme. */
+.customerDashboard :is(.customerHeader,.customerOverview,.customerOrderList,.customerOrderCard,.customerPinnedStore){
+ min-inline-size:0;
+ max-inline-size:100%;
+}
+.customerDashboard .customerHeader nav{
+ min-inline-size:0;
+}
+.customerDashboard .customerHeader nav a{
+ overflow-wrap:break-word;
+ text-align:center;
+}
+.customerDashboard :is(.customerOrderCard,.customerPinnedStore) :is(strong,b,small){
+ overflow-wrap:anywhere;
+}
+.customerDashboard .customerMobileNavigation{
+ padding-block-end:max(9px,env(safe-area-inset-bottom,0px));
+}
+.customerDashboard [id^="customer-"]{
+ scroll-margin-block-start:100px;
+ scroll-margin-block-end:calc(96px + env(safe-area-inset-bottom,0px));
+}
+/* Public pages, marketplace, and storefront: avoid clipping controls/long names. */
+.foonPublic .foonPublicHeader,
+.foonPublicMarket .foonPublicHeader{
+ min-inline-size:0;
+ gap:12px;
+}
+.foonPublic :is(.foonPublicControls,.foonPublicHeader nav,.foonPublicFooter nav){
+ min-inline-size:0;
+ flex-wrap:wrap;
+}
+.foonPublic :is(.foonFeatureCard,.foonPlanCard,.foonMarketCard),
+.foonPublicMarket :is(article,.foonMarketCard){
+ min-inline-size:0;
+}
+.foonPublic :is(.foonFeatureCard,.foonPlanCard,.foonMarketCard) :is(h2,h3,p),
+.foonPublicMarket :is(article,.foonMarketCard) :is(h2,h3,p){
+ overflow-wrap:break-word;
+}
+.publicMenu .publicMenuCart,
+.foonStorefrontCart{
+ scroll-margin-block-end:calc(110px + env(safe-area-inset-bottom,0px));
+}
+.publicMenu .publicMenuCheckoutNotice,
+.foonStorefrontCart .foonCheckoutNotice{
+ line-height:1.7;
+ max-inline-size:100%;
+ overflow-wrap:anywhere;
+}
+/* Layout is allowed to wrap; never shrink labels character-by-character. */
+@media(max-width:1440px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb{
+  flex:0 0 1px;
+  min-inline-size:1px;
+  max-inline-size:1px;
+  overflow:visible;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb small{display:none}
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{justify-content:flex-start}
+}
+@media(max-width:1023px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopbar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantMobileTrigger{flex:0 0 auto}
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{
+  flex:1 1 calc(100% - 58px);
+  min-inline-size:0;
+  justify-content:flex-start;
+  flex-wrap:wrap;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantSearchButton kbd{display:none}
+ .adminShell .adminTopActions{justify-content:flex-start}
+}
+@media(max-width:680px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopbar{
+  display:grid;
+  grid-template-columns:minmax(44px,auto) minmax(0,1fr);
+  padding:8px 10px;
+  gap:7px;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantMobileTrigger{
+  grid-column:1;
+  grid-row:1;
+  justify-self:start;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{
+  grid-column:1/-1;
+  grid-row:2;
+  display:flex;
+  flex-wrap:wrap;
+  width:100%;
+  gap:7px;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions :is(.restaurantTenantSelector,.restaurantBranchSelector){
+  flex:1 1 130px;
+  max-inline-size:100%;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantLanguageSelector{
+  flex:0 0 auto;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantSearchButton{
+  min-block-size:44px;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantContent{
+  padding-inline:10px;
+  padding-block-end:calc(18px + env(safe-area-inset-bottom,0px));
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantPageHeading{
+  align-items:flex-start;
+  flex-wrap:wrap;
+ }
+ /* Use one header row for the page title and a second for controls. */
+ .adminShell .adminTop{
+  display:flex!important;
+  flex-direction:column;
+  align-items:stretch!important;
+  justify-content:flex-start;
+  gap:10px;
+  padding:10px 12px!important;
+  block-size:auto!important;
+  min-block-size:0!important;
+ }
+ .adminShell .adminTop > div:first-child{
+  direction:inherit!important;
+  text-align:start!important;
+  width:100%;
+ }
+ .adminShell .adminTopActions{
+  direction:inherit!important;
+  width:100%;
+  display:flex!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  gap:7px!important;
+ }
+ .adminShell .adminTopActions :is(.foonLanguageSelector,.foonWorkspaceThemeControl,.adminIconButton,form){
+  order:initial!important;
+  flex:0 0 auto!important;
+ }
+ .adminShell .adminTopActions .foonLanguageSelector select{
+  min-inline-size:108px;
+ }
+ .adminShell .adminStage > .workspace{
+  min-inline-size:0;
+ }
+ .customerDashboard .customerHeader nav a{
+  flex:1 1 125px;
+  min-inline-size:0;
+ }
+}
+@media(max-width:360px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions :is(.restaurantTenantSelector,.restaurantBranchSelector){
+  flex-basis:calc(50% - 5px);
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantLanguageSelector select{
+  min-inline-size:96px;
+ }
+ .adminShell .adminTopActions .foonWorkspaceThemeControl{
+  gap:3px;
+ }
+ .adminShell .adminTopActions .foonWorkspaceThemeControl select{
+  min-inline-size:96px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ :where(.restaurantApp,.adminShell,.customerDashboard,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart)
+  :is(button,a,input,select,textarea){
+  scroll-behavior:auto;
+ }
+}
+@media print{
+ .restaurantApp .restaurantTopbar,.adminShell .adminTop{position:static;box-shadow:none}
+ .restaurantApp .restaurantPopover{display:none}
+}
+
+/* All non-food storefront templates: groceries, retail, gifts, hotels and services. */
+.foonActivityStorefront :is(.foonActivityHeader,.foonActivityHeaderActions,.foonActivityContent,.foonActivityProducts,.foonActivityCartRail){
+ min-inline-size:0;
+ max-inline-size:100%;
+}
+.foonActivityStorefront .foonActivityHeader{
+ display:flex;
+ align-items:center;
+ flex-wrap:wrap;
+ gap:12px;
+}
+.foonActivityStorefront .foonActivityHeaderBrand,
+.foonActivityStorefront .foonActivityHeaderActions{
+ min-inline-size:0;
+}
+.foonActivityStorefront .foonActivityStoreName{
+ min-inline-size:0;
+ overflow-wrap:break-word;
+}
+.foonActivityStorefront .foonActivityHeaderActions{
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ gap:8px;
+}
+.foonActivityStorefront .foonActivityHeaderActions :is(a,button,select){
+ min-block-size:44px;
+ max-inline-size:100%;
+}
+.foonActivityStorefront .foonActivityCategories{
+ max-inline-size:100%;
+ overscroll-behavior-inline:contain;
+ scroll-padding-inline:12px;
+}
+.foonActivityStorefront .foonActivityProducts > *,
+.foonActivityStorefront .foonActivityProductInfo{
+ min-inline-size:0;
+}
+.foonActivityStorefront .foonActivityProductInfo :is(h2,h3,p){
+ overflow-wrap:break-word;
+}
+.foonActivityStorefront .foonActivityMobileDock{
+ padding-block-end:max(10px,env(safe-area-inset-bottom,0px));
+}
+@media(max-width:680px){
+ .foonActivityStorefront .foonActivityHeader{
+  align-items:flex-start;
+  padding-inline:12px;
+ }
+ .foonActivityStorefront .foonActivityHeaderBrand{
+  flex:1 1 140px;
+ }
+ .foonActivityStorefront .foonActivityHeaderActions{
+  flex:1 1 100%;
+  justify-content:flex-start;
+ }
+ .foonActivityStorefront .foonActivityContent{
+  padding-inline:12px;
+  padding-block-end:calc(92px + env(safe-area-inset-bottom,0px));
+ }
+}
