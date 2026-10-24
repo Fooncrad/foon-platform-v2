@@ -24,6 +24,7 @@ export async function POST(request:Request){
     try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
     const body=await request.json().catch(()=>null);
     if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+    if(body.legalAccepted!==true)return NextResponse.json({ok:false,code:"LEGAL_CONSENT_REQUIRED"},{status:400});
     const email=String(body.email??"").trim().toLowerCase();
     const password=String(body.password??"");
     const name=String(body.name??"").trim().slice(0,180);
@@ -45,6 +46,7 @@ export async function POST(request:Request){
     try{
       await db.beginTransaction();
       await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?,?)",[id,email,hash,name||null,"active"]);
+      await db.execute("UPDATE users SET legal_accepted_at=NOW() WHERE id=?",[id]);
       stage="store";
       const workspace=await provisionStore(db,{ownerId:id,name:storeName,slug,kind:restaurantActivities.has(activity)?"restaurant":"store"});
       await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
