@@ -59,7 +59,7 @@ test("all merchant activities explain add-on setup, availability and preview in 
   assert.match(ui,/price/,label+" provides price setup");
  }
  assert.match(menu,/activeValues\(g\.id\)/);
- assert.match(menu,/stockQuantity===null\|\|v\.data\.stockQuantity===undefined/);
+ assert.match(menu,/v\.data\.stockQuantity==null\|\|Number\(v\.data\.stockQuantity\)>0/);
  assert.match(catalog,/v\.enabled&&\(v\.stock_quantity===null\|\|Number\(v\.stock_quantity\)>0\)/);
  assert.match(catalog,/if\(!checkGroupDraft\(\)\)return/);
  assert.match(catalog,/if\(!checkValueDraft\(\)\)return/);
