@@ -137,3 +137,34 @@
 @media(max-width:660px){.customerDashboard .customerActionMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.customerDashboard .customerQuickActions{grid-template-columns:repeat(2,minmax(0,1fr))}.customerDashboard .customerActionHub{margin:12px 12px 22px;padding:15px}.customerDashboard .customerOrderFilterButtons button{flex:1 1 calc(50% - 8px);justify-content:space-between}}
 @media(max-width:340px){.customerDashboard .customerQuickActions{grid-template-columns:1fr}.customerDashboard .customerNextAction>a{width:100%}}
 @media(prefers-reduced-motion:reduce){.customerDashboard .customerActionHub *{scroll-behavior:auto;transition:none!important}}
+
+/* Personal favorite stores: compact, touch-friendly and 320px-safe. */
+.customerDashboard .customerFavoriteStores{min-width:0;overflow:hidden}
+.customerDashboard .customerFavoriteStores>header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center}
+.customerDashboard .customerFavoriteStores>header>div{flex:1 1 200px;min-width:0}
+.customerDashboard .customerFavoriteStores>header small{font-size:12px;color:#e2a93b;font-weight:750}
+.customerDashboard .customerFavoriteStores>header h2{margin:6px 0;font-size:clamp(18px,2vw,23px)}
+.customerDashboard .customerFavoriteStores>header p{font-size:13px;line-height:1.7;margin:3px 0 10px}
+.customerDashboard .customerFavoriteStores>header>strong{font-size:23px;color:#e2a93b;font-variant-numeric:tabular-nums}
+.customerDashboard .customerFavoriteSearch{display:grid;gap:8px;margin-block:10px}
+.customerDashboard .customerFavoriteSearch span{font-size:12px}
+.customerDashboard .customerFavoriteSearch input{box-sizing:border-box;max-width:100%;width:100%;min-height:44px;padding:10px 13px;border:1px solid var(--customer-line,#ffffff30);border-radius:12px;background:var(--customer-bg,#171613);color:inherit;font:inherit}
+.customerDashboard .customerFavoriteGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr));gap:12px;margin-block:12px;min-width:0}
+.customerDashboard .customerFavoriteCard{display:grid;align-content:start;gap:10px;min-width:0;padding:14px;border:1px solid var(--customer-line,#ffffff30);border-radius:15px}
+.customerDashboard .customerFavoriteCard[data-favorite="true"]{border-color:#e2a93b}
+.customerDashboard .customerFavoriteCardHead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center}
+.customerDashboard .customerFavoriteCardHead strong{font-size:15px;overflow-wrap:anywhere}
+.customerDashboard .customerFavoriteMark{font-size:11px;font-weight:750;color:#e2a93b}
+.customerDashboard .customerFavoriteCard>small{font-size:12px;line-height:1.6;opacity:.8}
+.customerDashboard .customerFavoriteActions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.customerDashboard .customerFavoriteActions a,.customerDashboard .customerFavoriteActions button{display:inline-flex;justify-content:center;align-items:center;min-height:44px;border-radius:11px;padding:10px 13px;text-decoration:none;font:inherit;font-size:13px;font-weight:800}
+.customerDashboard .customerFavoriteActions a{background:#e2a93b;color:#171613}
+.customerDashboard .customerFavoriteActions button{background:transparent;color:inherit;border:1px solid var(--customer-line,#ffffff30);cursor:pointer}
+.customerDashboard .customerFavoriteActions button[aria-pressed="true"]{color:#e2a93b;border-color:#e2a93b}
+.customerDashboard .customerFavoriteActions button:disabled{opacity:.55;cursor:not-allowed}
+.customerDashboard .customerFavoritePrivacy{font-size:12px;line-height:1.8;opacity:.85}
+.customerDashboard .customerFavoriteStores [role="alert"]{padding:10px;border-radius:9px;border:1px solid #eab29d}
+.customerDashboard .customerFavoriteStores :is(button,a,input):focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+.customerDashboard[data-theme="light"] .customerFavoriteSearch input{background:#fff;color:#232323}
+.customerDashboard[data-theme="light"] .customerFavoriteMark,.customerDashboard[data-theme="light"] .customerFavoriteActions button[aria-pressed="true"]{color:#865b13}
+@media(max-width:400px){.customerDashboard .customerFavoriteActions>*{flex:1 1 100%}.customerDashboard .customerFavoriteCard{padding:11px}}
