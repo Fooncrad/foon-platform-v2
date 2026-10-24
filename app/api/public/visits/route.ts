@@ -32,7 +32,7 @@ export async function POST(request:Request){
    if(kind==="product"){
     if(!validId(body.productId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
     resourceId=String(body.productId);
-    const [products]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND id=? LIMIT 1",[tenantId,resourceId]);
+    const [products]=await database().execute<RowDataPacket[]>("SELECT id FROM catalog_products WHERE tenant_id=? AND id=? UNION ALL SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='menu' AND status='active' AND archived=FALSE LIMIT 1",[tenantId,resourceId,tenantId,resourceId]);
     if(!products.length)return NextResponse.json({ok:false,code:"NOT_FOUND"},{status:404});
    }
   }
