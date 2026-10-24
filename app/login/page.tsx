@@ -1,11 +1,12 @@
 "use client";
 import {useLanguagePreference} from "@/lib/i18n/ui-language";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
-import {type FormEvent,useState} from "react";
+import {type FormEvent,useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
 import {getSystemMessage} from "@/lib/ui/system-messages";
 import RequiredLegalConsent from "@/app/components/required-legal-consent";
+import {ACCOUNT_HELP_CODES,accountHelpCode} from "@/lib/auth/public-login-url.mjs";
 type Lang="ar"|"en"|"fr";
 type Theme="light"|"dark";
 const strings={
@@ -16,12 +17,13 @@ const strings={
 export default function LoginPage(){
  const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [googleBusy,setGoogleBusy]=useState(false);const [googleAccepted,setGoogleAccepted]=useState(false);const [googleFailure,setGoogleFailure]=useState("");const [lang]=useLanguagePreference();const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=strings[lang]; const googleError=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("error"):null;
+ useEffect(()=>{const code=new URLSearchParams(window.location.search).get("error");if(code&&ACCOUNT_HELP_CODES.has(code))router.replace("/account-status?code="+encodeURIComponent(accountHelpCode(code)));},[router]);
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;setBusy(true);setError("");setErrorCode("");const data=new FormData(e.currentTarget);
   try{
    const res=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:data.get("email"),password:data.get("password")})});
    const body=await res.json().catch(()=>({}));
-   if(!res.ok){const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
+   if(!res.ok){if(ACCOUNT_HELP_CODES.has(String(body.code))){router.replace("/account-status?code="+encodeURIComponent(accountHelpCode(body.code)));return;}const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
    if(body.emailVerificationRequired){router.replace("/verify-email");router.refresh();return;}
    const next=new URLSearchParams(window.location.search).get("next");router.replace(next&&/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)?next:"/account");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
@@ -39,5 +41,5 @@ export default function LoginPage(){
  return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
  <form onSubmit={submit} className="auth-form"><label>{t.email}<input name="email" type="email" inputMode="email" autoComplete="email" required dir="ltr" placeholder="name@example.com"/></label><label>{t.password}<input name="password" type="password" autoComplete="current-password" required minLength={9} dir="ltr" placeholder="•••••••••"/></label><Link href="/forgot-password">{t.forgot}</Link>{error&&<div className="form-error" role="alert"><strong>{getSystemMessage(errorCode,lang).title}</strong><p>{error}</p><small dir="ltr">{errorCode}</small></div>}<button disabled={busy} aria-busy={busy}>{busy?t.busy:t.submit}</button></form>
  <RequiredLegalConsent language={lang} name="googleLegalConsent" checked={googleAccepted} onChange={setGoogleAccepted}/>
- <button type="button" disabled={!googleAccepted||googleBusy} aria-busy={googleBusy} onClick={googleSignIn} style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,padding:"12px",border:"1px solid var(--border, #999)",borderRadius:12,textDecoration:"none",marginTop:16,fontWeight:600,cursor:"pointer",width:"100%"}}><span aria-hidden="true" style={{fontWeight:800}}>G</span>{lang==="ar"?"المتابعة باستخدام Google":lang==="fr"?"Continuer avec Google":"Continue with Google"}</button>{googleFailure&&<p className="form-error" role="alert">{lang==="ar"?"تعذر بدء تسجيل Google. تحقق من إعداداته وحاول مجددًا.":lang==="fr"?"Impossible de démarrer Google. Vérifiez la configuration.":"Unable to start Google sign-in. Check the settings."} <small dir="ltr">{googleFailure}</small></p>}{googleError&&<p className="form-error" role="alert">{getSystemMessage(googleError,lang).detail} <small dir="ltr">{googleError}</small></p>}<p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
+ <button type="button" disabled={!googleAccepted||googleBusy} aria-busy={googleBusy} onClick={googleSignIn} style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,padding:"12px",border:"1px solid var(--border, #999)",borderRadius:12,textDecoration:"none",marginTop:16,fontWeight:600,cursor:"pointer",width:"100%"}}><span aria-hidden="true" style={{fontWeight:800}}>G</span>{lang==="ar"?"المتابعة باستخدام Google":lang==="fr"?"Continuer avec Google":"Continue with Google"}</button>{googleFailure&&<p className="form-error" role="alert">{lang==="ar"?"تعذر بدء تسجيل Google. تحقق من إعداداته وحاول مجددًا.":lang==="fr"?"Impossible de démarrer Google. Vérifiez la configuration.":"Unable to start Google sign-in. Check the settings."} <small dir="ltr">{googleFailure}</small></p>}{googleError&&<p className="form-error" role="alert">{getSystemMessage(googleError,lang).detail} <small dir="ltr">{googleError}</small> <Link href={"/account-status?code="+encodeURIComponent(accountHelpCode(googleError))}>{lang==="ar"?"شرح المشكلة وخطوات الحل":lang==="fr"?"Comprendre le problème":"How to resolve this issue"}</Link></p>}<p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><p className="auth-switch">{lang==="ar"?"هل أضافك مطعم أو متجر كموظف؟":lang==="fr"?"Un commerce vous a ajouté comme employé ?":"Were you added by a store or restaurant?"} <Link href="/account-status?code=STAFF_ACCOUNT_HELP">{lang==="ar"?"إرشادات دخول الموظفين":lang==="fr"?"Guide du personnel":"Staff sign-in guide"}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
 }
