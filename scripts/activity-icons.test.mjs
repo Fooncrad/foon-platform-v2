@@ -36,6 +36,8 @@ test("non-food stores and services never inherit cutlery, kitchen or restaurant-
   assert.notEqual(activitySectionIcon(activity,"serviceOrders"),"menu",activity);
   assert.notEqual(activitySectionIcon(activity,"serviceOrders"),"chef",activity);
   assert.equal(activitySectionIcon(activity,"reservations"),"calendar",activity);
+  assert.equal(activitySectionIcon(activity,"orders"),"clipboard",activity);
+  assert.equal(activityToolIcon(activity,["orders"]),"clipboard",activity);
  }
  assert.equal(activityIdentityIcon("automotive"),"car");
  assert.equal(activityIdentityIcon("carwash"),"carwash");
