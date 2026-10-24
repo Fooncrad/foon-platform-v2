@@ -119,3 +119,18 @@ test("malformed pull scope and cursor never reach network",async()=>{
  await requestSyncJson({url:base+"?"+new URLSearchParams(valid),method:"GET",authorization,pullQuery:valid,fetchImpl});
  assert.equal(requests,1,"valid pull remains usable");
 });
+
+// A caller must not bypass UUID type validation through URLSearchParams coercion.
+test("pull transport rejects non-string tenant/branch UUIDs before bearer HTTP",async()=>{
+ const base="https://sync.example.com/api/sync/v1/pull";
+ const valid={tenantId:"11111111-1111-4111-8111-111111111111",branchId:"22222222-2222-4222-8222-222222222222",after:0,limit:100};
+ let requests=0;
+ const fetchImpl=async()=>{requests++;return response(200,"application/json")};
+ for(const key of ["tenantId","branchId"]){
+  for(const invalid of [[valid[key]],{toString:()=>valid[key]}]){
+   const pullQuery={...valid,[key]:invalid};
+   await assert.rejects(()=>requestSyncJson({url:base+"?"+new URLSearchParams(pullQuery),method:"GET",authorization,pullQuery,fetchImpl}),/SYNC_UNSAFE_QUERY/);
+  }
+ }
+ assert.equal(requests,0,"malformed scope must not transmit bearer credentials");
+});
