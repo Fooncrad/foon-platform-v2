@@ -209,6 +209,6 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
    </fieldset>):<p>{tr("أنشئ مجموعة لمعاينة خياراتها.","Create a group to preview choices.","Créez un groupe pour prévisualiser.")}</p>}
   </section>
   </div>}
-  {error&&<p role="alert">{error}</p>{message&&<p role="status">{message}</p>}
+  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
  </section>;
 }
