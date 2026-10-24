@@ -82,3 +82,14 @@ test('push route checks bounded stream before database acquisition (source-order
   assert.ok(source.indexOf('readBoundedSyncPushBody(request)') < source.indexOf('database().getConnection()'));
   assert.ok(!source.includes('request.text()'));
 });
+
+test('rejects invalid UTF-8 bytes instead of silently changing signed JSON payload', async () => {
+  const item = streamedRequest([new Uint8Array([0x7b,0x22,0x61,0x22,0x3a,0x22,0xc0,0xaf,0x22,0x7d])]);
+  await assert.rejects(readBoundedSyncPushBody(item.request), {name:'TypeError'});
+  assert.equal(item.cancelled,true);
+});
+
+test('rejects a truncated multibyte UTF-8 sequence at EOF', async () => {
+  const item = streamedRequest([new Uint8Array([0x7b,0x22,0x61,0x22,0x3a,0x22,0xe2,0x82])]);
+  await assert.rejects(readBoundedSyncPushBody(item.request), {name:'TypeError'});
+});
