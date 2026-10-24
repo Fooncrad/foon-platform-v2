@@ -21,3 +21,29 @@
 .manager .bulkToolbar input[type=checkbox],.manager .rowSelection input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:0;accent-color:#a62f28}
 .manager .bulkToolbar button{margin-inline-start:auto;background:#a62f28;color:white;border-color:#a62f28;font-weight:800}
 @media(max-width:420px){.manager .bulkToolbar button{width:100%;margin-inline-start:0}}
+
+/* Unified product workspace: restaurant menu visual system for every commerce vertical. */
+.unified{border:0;background:transparent;padding:0;display:grid;gap:12px;min-width:0;max-width:100%}
+.unified :global(.foonMenuCategoryForm),.unified :global(.foonItemForm){display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));align-items:end;gap:12px;padding:clamp(14px,2vw,22px);margin:0 0 16px;background:var(--surface,#fff);border:1px solid var(--border,#e0e4ec);border-radius:18px;box-shadow:0 3px 15px #11182708}
+.unified :global(.foonMenuCategoryForm) fieldset,.unified :global(.foonItemForm) fieldset{grid-column:1/-1}
+.unified :global(.foonMenuCategoryForm) button[type="submit"],.unified :global(.foonItemForm) button[type="submit"]{background:var(--gold,#e2a93b);border-color:var(--gold,#e2a93b);color:#171613;font-weight:800}
+.unified :global(.foonMenuCategoryList){display:grid;gap:12px;margin:12px 0 22px}
+.unified :global(.foonCatalogRow){display:flex;align-items:center;flex-wrap:wrap;gap:12px;background:var(--surface,#fff);border:1px solid var(--border,#e0e4ec);border-radius:16px;padding:14px 16px;margin:0;box-shadow:0 2px 8px #11182706;overflow-wrap:anywhere}
+.unified :global(.foonCatalogRow)>strong{font-size:1rem}
+.unified :global(.foonCatalogRow) button{font-size:.9rem;font-weight:650;min-height:38px}
+.unified :global(.foonCatalogRow) select{flex:1 1 150px;width:auto}
+.unified :global(.foonCatalogPagination){border-radius:16px;background:var(--surface,#fff);border:1px solid var(--border,#e0e4ec);margin-top:12px}
+.worklist{display:grid;gap:16px}
+.worklist>p{margin:4px 0;color:var(--muted,#64748b);line-height:1.8}
+.productActionGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px}
+.actionCard{display:grid;align-content:start;gap:12px;min-width:0;padding:16px;border-radius:16px;border:1px solid var(--border,#e0e4ec);background:var(--surface,#fff);box-shadow:0 2px 10px #11182708}
+.actionCard strong{overflow-wrap:anywhere;font-size:1rem}
+.actionCard small{opacity:.72;font-variant-numeric:tabular-nums}
+.actionCard>button{justify-self:start;max-width:100%}
+@media(max-width:600px){.unified :global(.foonMenuCategoryForm),.unified :global(.foonItemForm){grid-template-columns:1fr;padding:12px}.unified :global(.foonCatalogRow){padding:12px;gap:8px}.unified :global(.foonCatalogRow) select{flex:1 1 100%;min-width:0}.productActionGrid{grid-template-columns:1fr}.unified :global(.foonCatalogPagination){flex-wrap:wrap}}
+
+.catalogSearch{width:100%;max-width:100%;margin-bottom:14px}
+.unified .catalogSearch :global(.foonItemForm){display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;align-items:end;margin:0}
+.catalogPaging{padding-top:12px}
+.catalogPaging :global(.foonCatalogPagination){margin:0}
+@media(max-width:720px){.unified .catalogSearch :global(.foonItemForm){grid-template-columns:1fr}.catalogPaging{padding-top:8px}}
