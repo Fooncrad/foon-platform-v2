@@ -37,9 +37,10 @@ export async function POST(request:Request){
  try{
   await db.query("SET time_zone='+00:00'");await db.beginTransaction();
   // Serialize submissions by this customer; retries and concurrent clicks cannot create duplicates.
-  const [users]=await db.execute<RowDataPacket[]>("SELECT display_name FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
+  const [users]=await db.execute<RowDataPacket[]>("SELECT display_name,email_verified_at FROM users WHERE id=? AND status='active' FOR UPDATE",[user]);
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? WHERE t.slug=? AND t.status='active' LIMIT 1 LOCK IN SHARE MODE",[user,body.storeSlug]);
   if(!users.length||!stores.length)throw new ResourceError("STORE_CUSTOMER_REQUIRED");
+  if(body.action==="reservation"&&!users[0].email_verified_at)throw new ResourceError("EMAIL_VERIFICATION_REQUIRED");
   const tenant=String(stores[0].id),waiter=body.action==='waiter',serviceModule=waiter?'waiterCalls':'reservations',kind=waiter?'waiter_call':'reservation';
    const publicControls=await tenantPublicControls(tenant,db);
    if(!(waiter?publicControls.waiter:publicControls.reservations))throw new ResourceError("PUBLIC_FEATURE_DISABLED");
