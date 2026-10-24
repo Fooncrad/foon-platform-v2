@@ -356,6 +356,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByRole('button',{name:'إرسال الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByRole('status')).toContainText('وصل النداء');
  await publicPage.getByRole('dialog').getByRole('button',{name:'تم',exact:true}).click();
+ // Waiter calls remain available without email verification; bookings do not.
+ const bookingVerificationDb=await mysql.createConnection(process.env.DATABASE_URL);
+ await bookingVerificationDb.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE email=?",[visualSlug+"-guest@test.example"]);
+ await bookingVerificationDb.end();
  await publicPage.locator('.publicMenuInfoBar .publicMenuServices').getByRole('button',{name:'حجز طاولة',exact:true}).click();
  const bookingDialog=publicPage.getByRole('dialog',{name:'حجز طاولة',exact:true});
  await expect(bookingDialog).toBeVisible();
@@ -848,7 +852,7 @@ test('merchant configures weight options and selling measurements in mobile dial
   const box=await dialog.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(320);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await dialog.getByRole('radio',{name:'نصف كيلو',exact:true}).check();await dialog.getByLabel('SKU',{exact:true}).fill('HALF-KG');await dialog.getByLabel('Combination stock (blank = unlimited)',{exact:true}).fill('0.375');await dialog.getByRole('button',{name:'Add combination',exact:true}).click();await expect(dialog).toContainText('HALF-KG');await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await page.getByRole('button',{name:'Confirm addition',exact:true}).click();await expect(page.locator('.foonStorefrontCart')).toContainText('4.50');await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.375');await page.getByLabel('Quantity (kg)',{exact:true}).fill('0.125');await expect(page.locator('.foonStorefrontCart')).toContainText('1.50');
   const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);expect(attributes.measurements.quantityMode).toBe('measured');
-  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
+  const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug}});expect(customer.status()).toBe(201);const measuredCustomer=(await customer.json()).user;await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[measuredCustomer.id]);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
  }finally{await db.end();await context.close()}
 });
 
@@ -1005,6 +1009,14 @@ test("guest service request drafts remain on storefront through registration and
    await expect(form.getByLabel("Request details")).toHaveValue("Customer journey draft "+activity);
    await expect(form.getByRole("button",{name:"Send request"})).toBeEnabled();
    expect(new URL(page.url()).pathname).toBe("/"+slug);
+   if(index===0){
+    const refused=page.waitForResponse(r=>r.url().endsWith("/api/customer/service-requests")&&r.request().method()==="POST");
+    await form.getByRole("button",{name:"Send request"}).click();
+    const denial=await refused;expect(denial.status()).toBe(403);expect((await denial.json()).code).toBe("EMAIL_VERIFICATION_REQUIRED");
+    await expect(form.getByRole("link",{name:"Verify email or resend link"})).toHaveAttribute("href","/verify-email");
+    await expect(form.getByLabel("Contact phone")).toHaveValue("+966501234567");
+    await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE email=?",[email]);
+   }
    const created=page.waitForResponse(r=>r.url().endsWith("/api/customer/service-requests")&&r.request().method()==="POST");
    await form.getByRole("button",{name:"Send request"}).click();
    const sent=await created;expect(sent.status(),await sent.text()).toBe(201);
