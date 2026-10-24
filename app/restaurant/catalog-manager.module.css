@@ -47,3 +47,20 @@
 .catalogPaging{padding-top:12px}
 .catalogPaging :global(.foonCatalogPagination){margin:0}
 @media(max-width:720px){.unified .catalogSearch :global(.foonItemForm){grid-template-columns:1fr}.catalogPaging{padding-top:8px}}
+
+/* Product setup steps follow the restaurant menu category → item → group → value journey. */
+.catalogJourney{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;margin:0 0 16px;max-width:100%}
+.catalogJourney li{display:flex;align-items:center;gap:8px;min-width:0;border:1px solid var(--border,#dfe4ec);border-radius:14px;background:var(--surface,#fff);padding:10px 12px}
+.catalogJourney li>span{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border-radius:50%;background:color-mix(in srgb,#e2a93b 22%,transparent);font-weight:800;font-size:.85rem;font-variant-numeric:tabular-nums}
+.catalogJourney li>strong{font-size:clamp(.75rem,.9vw,.91rem);overflow-wrap:anywhere}
+.catalogJourney li:not(:last-child){border-inline-end:3px solid #e2a93b}
+.manager :global(.foonCatalogRow).productCard{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px;border-inline-start:3px solid #e2a93b}
+.productCardTitle{display:grid;gap:4px;flex:1 1 160px;min-width:0}
+.productCardTitle strong{font-size:1rem;overflow-wrap:anywhere}
+.productCardTitle small{width:fit-content;max-width:100%;font-size:.75rem;padding:3px 9px;border-radius:100px;font-weight:750}
+.productVisible{background:color-mix(in srgb,#16a34a 12%,var(--surface,#fff));color:var(--text,#166534);border:1px solid #16a34a55}
+.productHidden{background:color-mix(in srgb,#64748b 12%,var(--surface,#fff));color:var(--text,#475569);border:1px solid #64748b66}
+.productPrice{font-size:1rem;font-weight:800;white-space:nowrap}
+.productCard[data-product-status="hidden"]{border-inline-start-color:#94a3b8}
+@media(max-width:700px){.catalogJourney{grid-template-columns:repeat(2,minmax(0,1fr))}.productCardTitle{flex:1 1 100px}}
+@media(max-width:380px){.catalogJourney li{padding:7px 8px}.catalogJourney li>span{width:23px;height:23px;flex-basis:23px}}
