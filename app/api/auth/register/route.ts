@@ -55,7 +55,7 @@ export async function POST(request:Request){
    await queueVerificationMail(db,{userId:id,email,locale:(locale==="en"||locale==="fr"?locale:"ar") as VerificationLocale,origin:process.env.APP_URL||"https://nfoodz.com"});
    await createSession(id,db);
       await db.commit();dispatchNotifications();
-      return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free"},{status:201});
+      return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free",emailVerificationRequired:true},{status:201});
     }catch(error){
       await db.rollback();
       if((error as Error).message==="REFERRAL_INVALID")return NextResponse.json({ok:false,code:"REFERRAL_INVALID"},{status:400});
