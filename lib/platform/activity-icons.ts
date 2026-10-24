@@ -47,12 +47,14 @@ export function activityIdentityIcon(activity:string):string{
 }
 export function activitySectionIcon(activity:string,section:string,fallback="dashboard"):string{
  if(section==="menu")return activityIdentityIcon(activity);
+ if(section==="orders"&&isActivityType(activity)&&SERVICE_ORDER_ICONS[activity])return "clipboard";
  if(section==="serviceOrders"&&isActivityType(activity))return SERVICE_ORDER_ICONS[activity]??"clipboard";
  return SHARED_SECTIONS[section]??fallback;
 }
 export function activityToolIcon(activity:string,codes:readonly string[]):string{
  const primary=codes[0]??"";
  if(primary==="catalog"||primary==="services")return activityIdentityIcon(activity);
+ if(primary==="orders"&&isActivityType(activity)&&SERVICE_ORDER_ICONS[activity])return "clipboard";
  if(primary==="serviceOrders"&&isActivityType(activity))return SERVICE_ORDER_ICONS[activity]??"clipboard";
  return TOOLS[primary]??"dashboard";
 }
