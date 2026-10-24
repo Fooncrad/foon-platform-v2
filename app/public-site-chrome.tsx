@@ -25,7 +25,7 @@ export function PublicSiteHeader({home=false,plans=false,languageOverride}:{home
 }
 export function PublicSiteFooter({pages=[],languageOverride}:{pages?:PublicPageLink[];languageOverride?:Locale}){
  const savedLanguage=useUiLanguage(),language=languageOverride??savedLanguage,t=labels[language];
- return <footer className="foonPublicFooter"><div><strong>FOON</strong><p>{t.footer}</p></div><nav aria-label={t.footerNav}><Link href="/market">{t.market}</Link><Link href="/customer">{t.customer}</Link>{localizedPublicFooterPages(pages,language).map(p=><Link href={publicContentPageHref(p.slug,languageOverride)} key={p.slug}>{p.title}</Link>)}</nav><small>© FOON</small></footer>;
+ return <footer className="foonPublicFooter"><div><strong>FOON</strong><p>{t.footer}</p></div><nav aria-label={t.footerNav}><Link href="/market">{t.market}</Link><Link href="/customer">{t.customer}</Link><Link href="/terms">{language==="ar"?"الشروط والأحكام":language==="fr"?"Conditions générales":"Terms and Conditions"}</Link><Link href="/privacy">{language==="ar"?"سياسة الخصوصية":language==="fr"?"Politique de confidentialité":"Privacy Policy"}</Link>{localizedPublicFooterPages(pages,language).filter(p=>p.slug!=="terms"&&p.slug!=="privacy").map(p=><Link href={publicContentPageHref(p.slug,languageOverride)} key={p.slug}>{p.title}</Link>)}</nav><small>© FOON</small></footer>;
 }
 export function PublicMarketShell({children,languageOverride,className=""}:{children:React.ReactNode;languageOverride?:Locale;className?:string}){
  const savedLanguage=useUiLanguage(),language=languageOverride??savedLanguage;
