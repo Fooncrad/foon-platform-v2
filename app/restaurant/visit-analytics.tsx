@@ -1,11 +1,10 @@
 "use client";
 import {useEffect,useState} from "react";
 type Counts={total:number;today:number;last7Days:number;last30Days:number};
-const empty:Counts={total:0,today:0,last7Days:0,last30Days:0};
 export default function VisitAnalytics({tenantId,language="ar",profile=false}:{tenantId?:string;language?:"ar"|"en"|"fr";profile?:boolean}){
  const [visits,setVisits]=useState<Counts|null>(null),[products,setProducts]=useState<Counts|null>(null),[error,setError]=useState(false);
  useEffect(()=>{
-  let live=true;setVisits(null);setProducts(null);setError(false);
+  let live=true;
   const load=async(kind:"profile"|"storefront"|"product")=>{
    const params=new URLSearchParams({kind});
    if(!profile&&tenantId)params.set("tenantId",tenantId);
@@ -22,7 +21,7 @@ export default function VisitAnalytics({tenantId,language="ar",profile=false}:{t
  const translate=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
  const locale=language==="ar"?"en-US":language==="fr"?"fr-FR":"en-US";
  const format=(n:number|undefined)=>n===undefined?"—":new Intl.NumberFormat(locale).format(n);
- const stats=visits??empty;
+ 
  return <section className="restaurantPanel" aria-label={translate("إحصائيات الزيارات","Visit analytics","Statistiques des visites")} style={{marginBlock:"16px"}}>
   <header><div><h3>{translate("إحصائيات الزيارات","Visit analytics","Statistiques des visites")}</h3><p>{translate("زيارات فريدة يومياً، دون احتساب زيارات المالك","Daily unique visits, excluding owner views","Visites uniques quotidiennes, hors propriétaire")}</p></div></header>
   {error?<p role="status">{translate("إحصائيات الزيارات غير متاحة حالياً","Visit statistics unavailable","Statistiques momentanément indisponibles")}</p>:<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:12,padding:12}}>
