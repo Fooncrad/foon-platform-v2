@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {createRequire} from "node:module";
 import {mailConfiguration} from "./mail-provider.mjs";
 import {defaultEmailTemplates,renderEmailTemplate,validateEmailTemplate,renderQueuedEmail} from "./email-templates.mjs";
+const addressparser=createRequire(import.meta.url)("nodemailer/lib/addressparser");
+test("address parsing preserves recipients across nested comments and quoted delimiters",()=>{
+ assert.deepEqual(addressparser("Victim (x(y) <evil@evil.com>) <v@victim.com>").map(x=>x.address),["v@victim.com"]);
+ const grouped=addressparser("G: (a; <evil@evil.com>) <v@victim.com>;");
+ assert.deepEqual(grouped.flatMap(x=>x.group||[x]).map(x=>x.address),["v@victim.com"]);
+ assert.deepEqual(addressparser('<"a@evil.com>"@good.com>').map(x=>x.address),['"a@evil.com>"@good.com']);
+});
 test("shared identity requires encrypted SMTP and has no tenant credentials",()=>{
  const c=mailConfiguration({SMTP_PASSWORD:"test-only"});
  assert.equal(c.from,"info@nfoodz.com");assert.equal(c.options.port,465);
