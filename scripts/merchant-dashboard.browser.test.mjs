@@ -780,8 +780,16 @@ test('storefront carts support retail variants and laundry collection without le
    const bounds=await cart.boundingBox();expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(320);
   }
   await cart.getByRole('button',{name:'إنشاء حساب سريع',exact:true}).click();
-  const auth=cart.locator('.publicMenuInlineAuth form');await auth.getByLabel('الاسم',{exact:true}).fill('Cart customer');await auth.getByLabel('البريد الإلكتروني',{exact:true}).fill(randomUUID()+'@test.example');await auth.getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+  const auth=cart.locator('.publicMenuInlineAuth form');await auth.getByLabel('الاسم',{exact:true}).fill('Cart customer');const cartCustomerEmail=randomUUID()+'@test.example';await auth.getByLabel('البريد الإلكتروني',{exact:true}).fill(cartCustomerEmail);await auth.getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
   await auth.getByRole('button',{name:'متابعة الطلب',exact:true}).click();await expect(cart.getByRole('button',{name:'تسجيل الطلب',exact:true})).toBeVisible();await expect(cart).toContainText('19.50 USD');
+  const unverifiedOrder=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');
+  await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
+  const verificationResponse=await unverifiedOrder;
+  expect(verificationResponse.status()).toBe(403);
+  expect((await verificationResponse.json()).code).toBe('EMAIL_VERIFICATION_REQUIRED');
+  await expect(cart.getByRole('link',{name:'تأكيد البريد أو إعادة إرسال الرابط'})).toHaveAttribute('href','/verify-email');
+  await expect(cart).toContainText('19.50 USD');
+  await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE email=?",[cartCustomerEmail]);
   const result=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await cart.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
   const response=await result;expect(response.status(),await response.text()).toBe(201);const order=await response.json();expect(order.total).toBe(19.5);expect(order.currency).toBe('USD');await expect(cart.getByRole('status')).toContainText('19.50 USD');
   const [[stock]]=await db.execute('SELECT stock_quantity FROM catalog_products WHERE id=?',[grocery.id]);expect(Number(stock.stock_quantity)).toBe(3);
