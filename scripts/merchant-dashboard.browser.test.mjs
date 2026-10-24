@@ -276,11 +276,18 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
   await expect(publicPage.locator('.publicMenuHeader .publicMenuCategoryTrigger')).toBeHidden();
   await expect(mobileDock.locator('.publicMenuServices')).toHaveCount(0);
   await expect(mobileDock.locator('a[href$="/login"]')).toHaveCount(1);
+  // Clear the synthetic cart through the same UI customers use; cart persistence
+  // across template navigation is intentional and must not break empty-state checks.
+  const previousCoffee=publicPage.getByLabel("كمية قهوة المعاينة",{exact:true});
+  if(await previousCoffee.count())await previousCoffee.fill("0");
+  await expect(publicPage.locator(".publicMenuCart")).toHaveCount(0);
   await mobileDock.getByRole('button',{name:'السلة',exact:false}).click();
   const emptyCart=publicPage.getByRole('dialog',{name:'السلة',exact:true});await expect(emptyCart).toContainText('سلتك فارغة');await emptyCart.press('Escape');
   await mobileDock.getByRole('button',{name:'الأقسام',exact:true}).click();await expect(publicPage.getByRole('dialog').getByRole('heading',{name:'أقسام المنيو',exact:true})).toBeVisible();await publicPage.getByRole('dialog').press('Escape');
   await publicPage.setViewportSize({width:1440,height:1000});
   await publicPage.getByRole("button",{name:"إضافة قهوة المعاينة إلى السلة",exact:true}).click();
+  await expect(publicPage.getByLabel("كمية قهوة المعاينة",{exact:true})).toHaveValue("1");
+  await publicPage.reload();
   await expect(publicPage.getByLabel("كمية قهوة المعاينة",{exact:true})).toHaveValue("1");
   await publicPage.evaluate(()=>window.scrollTo(0,0));
   await captureScreenshot(publicPage,{path:"work/menu-"+template+"-desktop.png",fullPage:true});
@@ -387,7 +394,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.locator('#menu-cart').getByLabel('رقم الطاولة',{exact:true}).selectOption(tableId);
  await publicPage.locator('#menu-cart').getByRole('spinbutton',{name:/^عدد الأشخاص/}).fill('3');
  await publicPage.getByRole('button',{name:'تسجيل الطلب',exact:true}).click();
- await expect(publicPage.locator('.publicMenuMessage')).toContainText('تم تسجيل طلبك');
+ await expect(publicPage.locator('.publicMenuCheckoutSuccess')).toContainText('تم تسجيل طلبك');
  await page.setViewportSize({width:1440,height:1000});
  await page.getByRole('navigation',{name:'أقسام النشاط'}).getByRole('button',{name:'الحجوزات والانتظار',exact:true}).click();
  await expect(page.getByRole('heading',{name:'تقويم الحجوزات',exact:true})).toBeVisible();
