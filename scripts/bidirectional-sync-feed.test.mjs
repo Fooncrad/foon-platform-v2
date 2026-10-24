@@ -45,3 +45,22 @@ test("signed inventory feed accepts case-only movement identity but rejects anot
  const wrong={...movement,entityId:ids[4]};
  assert.throws(()=>prepareSyncPullEvents([{...movementRow,entity_id:wrong.entityId,payload_digest:digestChange(wrong)}],scope),/SYNC_CORRUPT_JOURNAL_VERSION/);
 });
+
+test("feed rejects coerced journal cursor and source device identity before signing",()=>{
+ for(const invalidId of [[7],{valueOf:()=>7},"7e0"]){
+  assert.throws(()=>prepareSyncPullEvents([{...row,id:invalidId}],scope),/SYNC_FEED_SCOPE_MISMATCH/);
+ }
+ for(const invalidDevice of [[ids[4]],{toString:()=>ids[4]}]){
+  assert.throws(()=>prepareSyncPullEvents([{...row,source_device_id:invalidDevice}],scope),/SYNC_FEED_SCOPE_MISMATCH/);
+ }
+ assert.equal(prepareSyncPullEvents([{...row,id:"7"}],scope)[0].id,7);
+ assert.equal(prepareSyncPullEvents([{...row,source_device_id:ids[4].toUpperCase()}],scope)[0].source_device_id,ids[4].toUpperCase());
+});
+test("feed requires literal tenant and branch scope strings",()=>{
+ for(const field of ["tenantId","branchId"]){
+  const value=scope[field];
+  for(const forged of [[value],{toString:()=>value,toLowerCase:()=>value.toLowerCase()}]){
+   assert.throws(()=>prepareSyncPullEvents([row],{...scope,[field]:forged}),/SYNC_INVALID_FEED/);
+  }
+ }
+});
