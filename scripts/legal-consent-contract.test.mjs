@@ -4,10 +4,12 @@ import {readFileSync} from "node:fs";
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 test("platform, customer, inline and business forms require explicit legal acceptance",()=>{
+ assert.match(read("app/terms/page.tsx"),/LegalPublicPage/);
+ assert.match(read("app/privacy/page.tsx"),/LegalPublicPage/);
  const component=read("app/components/required-legal-consent.tsx");
  assert.match(component,/type="checkbox" name=\{name\} required/);
- assert.match(component,/href="\/p\/terms"/);
- assert.match(component,/href="\/p\/privacy"/);
+ assert.match(component,/href="\/terms"/);
+ assert.match(component,/href="\/privacy"/);
  const forms=[
   "app/register/page.tsx",
   "app/[slug]/register/customer-form.tsx",
