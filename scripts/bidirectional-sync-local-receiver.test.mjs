@@ -179,3 +179,17 @@ test("signed inventory pull accepts casing-only movement UUID but rejects foreig
  await assert.rejects(()=>applyVerifiedPullBatch({db:rejected,batch:invalid,scope,...signed(invalid),applyEvent:async()=>{throw Error("SHOULD_NOT_APPLY");}}),/SYNC_CORRUPT_REMOTE_VERSION/);
  assert.deepEqual(rejected.calls,[]);
 });
+
+test("signed pull rejects coerced persisted cursors without applying events",async()=>{
+ for(const invalid of [null,[],[4],{valueOf:()=>4},"4e0"," 4 ","04"]){
+  const db=fixture({cursor:invalid});let writes=0;
+  await assert.rejects(()=>applyVerifiedPullBatch({db,...signed(),batch,scope,applyEvent:async()=>{writes++;return true;}}),/SYNC_CURSOR_CONFLICT/);
+  assert.equal(writes,0);
+  assert.equal(db.calls.at(-1),"rollback");
+  assert.ok(!db.calls.some(x=>x.startsWith("UPDATE foon_sync_device_cursors")));
+ }
+ const db=fixture({cursor:"4"});
+ const result=await applyVerifiedPullBatch({db,...signed(),batch,scope,applyEvent:async()=>true});
+ assert.equal(result.nextCursor,5);
+ assert.equal(db.calls.at(-1),"commit");
+});
