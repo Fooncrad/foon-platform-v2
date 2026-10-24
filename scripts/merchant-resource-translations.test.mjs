@@ -73,3 +73,25 @@ test("all merchant resource labels have actual English and French UI translation
  const missing=[...labels].filter(label=>/[\u0600-\u06ff]/u.test(label)&&(!uiCopy[label]||uiCopy[label].length!==2||uiCopy[label].some(text=>!text.trim()||/[\u0600-\u06ff]/u.test(text))));
  assert.deepEqual(missing,[],`Untranslated resource labels: ${missing.join(", ")}`);
 });
+
+test("restaurant menu taxonomy is distinguishable from option groups and add-ons",()=>{
+ const workspace=sourceFile("app/restaurant/service-workspace.tsx");
+ const manager=sourceFile("app/restaurant/resource-manager.tsx");
+ const styles=sourceFile("app/restaurant/merchant-experience.css");
+ assert.match(workspace,/menuTabNames:Record/);
+ assert.match(workspace,/categories:\{ar:"أقسام المنيو"/);
+ assert.match(workspace,/menuGroups:\{ar:"مجموعات خيارات الصنف"/);
+ assert.match(workspace,/menuValues:\{ar:"الإضافات وقيم الخيارات"/);
+ assert.match(workspace,/restaurantMenuHierarchyGuide/);
+ assert.match(workspace,/restaurantMenuSectionTabs/);
+ assert.match(manager,/menuCategoryFilter/);
+ assert.match(manager,/module!=="menu"\|\|!menuCategoryFilter\|\|String\(row\.data\.categoryId/);
+ assert.match(manager,/associatedName\("categories",row\.data\.categoryId\)/);
+ assert.match(manager,/associatedName\("menu",row\.data\.itemId\)/);
+ assert.match(manager,/associatedName\("menuGroups",row\.data\.groupId\)/);
+ assert.match(styles,/\.restaurantMenuCategoryBadge/);
+ assert.match(styles,/@media\(max-width:420px\)/);
+ for(const [module,ref] of [["menu","categories"],["menuGroups","menu"],["menuValues","menuGroups"]]){
+  assert.ok(resourceModules[module].fields.some(field=>field.type==="ref"&&field.ref===ref),module+" still references "+ref);
+ }
+});
