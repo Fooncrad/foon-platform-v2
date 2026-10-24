@@ -1,4 +1,5 @@
-import {randomBytes,randomUUID,timingSafeEqual} from "node:crypto";
+import {randomBytes,randomUUID} from "node:crypto";
+import {GOOGLE_OAUTH_COOKIE_PATH,validGoogleOauthState,canUseGoogleLinkedAccount} from "@/lib/auth/google-oauth-security.mjs";
 import {cookies} from "next/headers";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
@@ -11,8 +12,8 @@ const fail=(request:Request,code:string)=>NextResponse.redirect(new URL("/login?
 export async function GET(request:Request){
  const url=new URL(request.url),code=url.searchParams.get("code"),incoming=url.searchParams.get("state");
  const jar=await cookies(),saved=jar.get("foon_google_oauth_state")?.value;
- jar.delete("foon_google_oauth_state");
- if(!code||!incoming||!saved||incoming.length!==saved.length||!timingSafeEqual(Buffer.from(incoming),Buffer.from(saved)))return fail(request,"GOOGLE_STATE_INVALID");
+ jar.set("foon_google_oauth_state","",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:GOOGLE_OAUTH_COOKIE_PATH,maxAge:0});
+ if(!code||!validGoogleOauthState(incoming,saved))return fail(request,"GOOGLE_STATE_INVALID");
  const clientId=process.env.GOOGLE_CLIENT_ID,secret=process.env.GOOGLE_CLIENT_SECRET,appUrl=process.env.APP_URL;
  if(!clientId||!secret||!appUrl)return fail(request,"GOOGLE_NOT_CONFIGURED");
  try{
@@ -33,17 +34,17 @@ export async function GET(request:Request){
    const [linked]=await db.execute<RowDataPacket[]>("SELECT user_id FROM auth_google_identities WHERE google_sub=? LIMIT 1 FOR UPDATE",[identity.sub]);
    if(linked[0]){
     userId=String(linked[0].user_id);
-    const [valid]=await db.execute<RowDataPacket[]>("SELECT status FROM users WHERE id=? LIMIT 1",[userId]);
-    if(valid[0]?.status!=="active"){await db.rollback();return fail(request,"GOOGLE_ACCOUNT_DISABLED");}
+    const [valid]=await db.execute<RowDataPacket[]>("SELECT status,email_verified_at FROM users WHERE id=? LIMIT 1 FOR UPDATE",[userId]);
+    if(!canUseGoogleLinkedAccount(valid[0])){await db.rollback();return fail(request,"GOOGLE_ACCOUNT_DISABLED");}
    }else{
-    const [matched]=await db.execute<RowDataPacket[]>("SELECT id,status FROM users WHERE email=? LIMIT 1 FOR UPDATE",[email]);
+    const [matched]=await db.execute<RowDataPacket[]>("SELECT id,status,email_verified_at FROM users WHERE email=? LIMIT 1 FOR UPDATE",[email]);
     if(matched[0]){
-     if(matched[0].status!=="active"){await db.rollback();return fail(request,"GOOGLE_ACCOUNT_DISABLED");}
+     if(!canUseGoogleLinkedAccount(matched[0])){await db.rollback();return fail(request,"GOOGLE_ACCOUNT_DISABLED");}
      userId=String(matched[0].id);
     }else{
      userId=randomUUID();
      const passwordHash=await hashPassword(randomBytes(48).toString("base64url"));
-     await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?,?)",[userId,email,passwordHash,(identity.name??email.split("@")[0]).slice(0,180),"active"]);
+     await db.execute("INSERT INTO users(id,email,password_hash,display_name,status,email_verified_at) VALUES (?,?,?,?,?,NOW())",[userId,email,passwordHash,(identity.name??email.split("@")[0]).slice(0,180),"active"]);
     }
     await db.execute("INSERT INTO auth_google_identities(google_sub,user_id,email_at_link) VALUES (?,?,?)",[identity.sub,userId,email]);
    }
