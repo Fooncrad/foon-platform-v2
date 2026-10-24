@@ -14,7 +14,7 @@ const strings={
 } as const;
 export default function LoginPage(){
  const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [lang]=useLanguagePreference();const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
- const t=strings[lang];
+ const t=strings[lang]; const googleError=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("error"):null;
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;setBusy(true);setError("");setErrorCode("");const data=new FormData(e.currentTarget);
   try{
@@ -26,5 +26,5 @@ export default function LoginPage(){
  }
  return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
  <form onSubmit={submit} className="auth-form"><label>{t.email}<input name="email" type="email" inputMode="email" autoComplete="email" required dir="ltr" placeholder="name@example.com"/></label><label>{t.password}<input name="password" type="password" autoComplete="current-password" required minLength={9} dir="ltr" placeholder="•••••••••"/></label><Link href="/forgot-password">{t.forgot}</Link>{error&&<div className="form-error" role="alert"><strong>{getSystemMessage(errorCode,lang).title}</strong><p>{error}</p><small dir="ltr">{errorCode}</small></div>}<button disabled={busy} aria-busy={busy}>{busy?t.busy:t.submit}</button></form>
- <p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
+ <a href="/api/auth/google/start" style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,padding:"12px",border:"1px solid var(--border, #999)",borderRadius:12,textDecoration:"none",marginTop:16,fontWeight:600}}><span aria-hidden="true" style={{fontWeight:800}}>G</span>{lang==="ar"?"المتابعة باستخدام Google":lang==="fr"?"Continuer avec Google":"Continue with Google"}</a>{googleError&&<p className="form-error" role="alert">{lang==="ar"?"تعذر تسجيل الدخول بواسطة Google. تحقق من الإعدادات وحاول مجددًا.":lang==="fr"?"Connexion Google impossible. Vérifiez la configuration.":"Google sign-in failed. Check configuration and try again."} <small dir="ltr">{googleError}</small></p>}<p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
 }
