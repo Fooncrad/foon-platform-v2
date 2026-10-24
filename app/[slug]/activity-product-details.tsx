@@ -4,6 +4,7 @@ import type {MenuGroup} from "@/lib/restaurant/menu";
 import {choicePrice,choicesValid} from "../restaurant/menu-choices";
 import {findSelectedVariant,selectedCatalogStockLimit,type CartVariant} from "@/lib/catalog/variant-selection";
 import {StorefrontAddButton} from "./storefront-cart";
+import {recordProductDetailsVisit} from "@/app/components/public-visit-tracker";
 type Language="ar"|"en"|"fr";
 type VariantPreview={id:string;sku:string|null;images:string[]};
 type ChoicesResponse={item:{price:number;currency:string;measured?:boolean;stock:number|null;variants:CartVariant[]};groups:MenuGroup[]};
@@ -45,6 +46,7 @@ export default function ActivityProductDetails({name,description="",imageUrl,ima
   setGroup(basePhotos.length?"product":variants[0]?.id??"product");
   setSelected(0);setChosen([]);setChoiceData(null);setError(false);
   dialog.current?.showModal();
+  recordProductDetailsVisit("catalog",slug,id);
   if(canAdd)void loadChoices();
  }
  function chooseGroup(next:string){setGroup(next);setSelected(0);}
