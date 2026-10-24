@@ -44,7 +44,12 @@ export async function POST(request:Request){
  if(!deleting&&b.action!=="variant"&&!b.action.startsWith("toggle")){
   for(const key of ["name","nameEn","nameFr"]){if(typeof (b[key]??"")!=="string"||String(b[key]??"").trim().length>180)return fail("INVALID_NAME")}
   if(typeof b.name!=="string"||b.name.trim().length<1)return fail("INVALID_NAME");
-  if(["group","updateGroup"].includes(b.action)&&(typeof b.required!=="boolean"||!["single","multiple"].includes(b.type)||!Number.isInteger(b.max)||b.max<1||b.max>50||!Number.isInteger(b.min)||b.min<0||b.min>b.max||b.required&&b.min<1||b.type==="single"&&b.min>1))return fail("INVALID_SELECTION");
+  if(["group","updateGroup"].includes(b.action)){
+   // Existing CSV, POS and API clients predate the explicit min field.
+   // Keep their original required?1:0 default; reject invalid explicit minima.
+   if(b.min===undefined)b.min=b.required?1:0;
+   if(typeof b.required!=="boolean"||!["single","multiple"].includes(b.type)||!Number.isInteger(b.max)||b.max<1||b.max>50||!Number.isInteger(b.min)||b.min<0||b.min>b.max||b.required&&b.min<1||b.type==="single"&&b.min>1)return fail("INVALID_SELECTION");
+  }
   if(["value","updateValue"].includes(b.action)&&b.imageUrl!==undefined&&b.imageUrl!==null&&!validAddonImage(b.imageUrl))return fail("INVALID_IMAGE_URL");
   if(["group","updateGroup","value","updateValue"].includes(b.action)&&(b.sortOrder!==undefined&&(!Number.isInteger(b.sortOrder)||b.sortOrder<0||b.sortOrder>1000000)))return fail("INVALID_SORT_ORDER");
   if(["value","updateValue"].includes(b.action)&&(typeof b.group!=="string"||typeof b.price!=="number"||!Number.isFinite(b.price)||b.price<0||b.price>9999999999||(b.stock!==null&&(!(b.stock===0||validCatalogQuantity(b.stock,999999999))||b.stock<0||b.stock>999999999))))return fail("INVALID_VALUE");
