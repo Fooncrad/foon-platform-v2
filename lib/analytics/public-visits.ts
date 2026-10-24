@@ -4,7 +4,7 @@ import {database} from "@/lib/db/mysql";
 
 export type PublicVisitKind="storefront"|"product"|"profile";
 export function visitorFingerprint(request:Request,viewerId:string|null){
- const secret=process.env.AUTH_SECRET||process.env.NEXTAUTH_SECRET||process.env.SESSION_SECRET;
+ const secret=process.env.AUTH_SECRET||process.env.NEXTAUTH_SECRET||process.env.SESSION_SECRET||process.env.DATABASE_URL;
  if(!secret)throw new Error("VISIT_SECRET_UNAVAILABLE");
  // Prefer authenticated ID. Anonymous users are deduplicated daily using a
  // keyed digest; do not save the underlying network headers.
