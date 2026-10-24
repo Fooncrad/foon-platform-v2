@@ -60,6 +60,13 @@ export async function GET(request:Request){
   if(!validId(tenantId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400,headers:noStore});
   const [membership]=await database().execute<RowDataPacket[]>("SELECT 1 FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' AND role IN ('owner','manager') LIMIT 1",[tenantId,viewer]);
   if(!membership.length)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403,headers:noStore});
+  if(kind==="product"&&url.searchParams.get("top")==="1"){
+   const [rows]=await database().execute<RowDataPacket[]>(
+    "SELECT v.resource_id AS id,COALESCE(p.name_ar,r.name,v.resource_id) AS name,COUNT(*) AS views FROM public_visit_daily v LEFT JOIN catalog_products p ON p.id=v.resource_id AND p.tenant_id=v.tenant_id LEFT JOIN restaurant_resources r ON r.id=v.resource_id AND r.tenant_id=v.tenant_id AND r.kind='menu' WHERE v.kind='product' AND v.tenant_id=? GROUP BY v.resource_id,p.name_ar,r.name ORDER BY views DESC LIMIT 10",
+    [tenantId]
+   );
+   return NextResponse.json({ok:true,products:rows.map(row=>({id:String(row.id),name:String(row.name),views:Number(row.views)}))},{headers:noStore});
+  }
   const productId=kind==="product"?(url.searchParams.get("productId")||""):"";
   if(kind==="product"&&!productId){
    const [rows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total, SUM(visit_date=UTC_DATE()) AS today, SUM(visit_date>=UTC_DATE()-INTERVAL 6 DAY) AS last7Days, SUM(visit_date>=UTC_DATE()-INTERVAL 29 DAY) AS last30Days FROM public_visit_daily WHERE kind='product' AND tenant_id=?",[tenantId]);
