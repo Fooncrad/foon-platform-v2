@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {database} from "@/lib/db/mysql";
+import {validCreatorHandle} from "@/lib/creator/profile-policy";
 import {currentUserId} from "@/lib/auth/session";
 import type {RowDataPacket} from "mysql2/promise";
 import {PUBLIC_VISIT_KINDS,isLikelyRobot,validAnalyticsId,validAnalyticsSlug,visitFingerprint,visitorCookieName,visitorCookieOptions,visitorToken,type PublicVisitKind} from "@/lib/analytics/public-visits";
@@ -27,7 +28,7 @@ export async function POST(request:NextRequest){
  let tenantId="",subject="";
  try{
   if(kind==="creator_profile"){
-   if(!validAnalyticsSlug(body.handle))return NextResponse.json({ok:false,error:"INVALID_HANDLE"},{status:400});
+   if(!validCreatorHandle(body.handle))return NextResponse.json({ok:false,error:"INVALID_HANDLE"},{status:400});
    const [rows]=await db.execute<RowDataPacket[]>(
     "SELECT p.user_id FROM customer_creator_profiles p JOIN users u ON u.id=p.user_id AND u.status='active' WHERE p.handle=? AND p.visibility='public' AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=p.user_id) AND NOT EXISTS (SELECT 1 FROM platform_admins a WHERE a.user_id=p.user_id) LIMIT 1",
     [body.handle]);
