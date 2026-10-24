@@ -357,6 +357,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await publicPage.getByRole('dialog').getByLabel('الاسم',{exact:true}).fill('ضيف المعاينة');
  await publicPage.getByRole('dialog').getByLabel('البريد الإلكتروني',{exact:true}).fill(visualSlug+"-guest@test.example");
  await publicPage.getByRole('dialog').getByLabel('كلمة المرور',{exact:true}).fill('a-strong-test-password');
+ await publicPage.getByRole('dialog').locator('input[name="legalConsent"]').check();
  await publicPage.getByRole('dialog').getByRole('button',{name:'متابعة الطلب',exact:true}).click();
  await expect(publicPage.getByRole('dialog').getByLabel('رقم الطاولة',{exact:true})).toBeVisible();
  await captureScreenshot(publicPage.getByRole('dialog'),{path:'work/menu-waiter-mobile.png'});
@@ -877,6 +878,7 @@ test("existing accounts create activity-specific businesses without administrato
    await page.locator('select[name="activity"]').selectOption(activity);
    await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+   await page.locator('input[name="legalConsent"]').check();
    const response=page.waitForResponse(r=>r.url().endsWith("/api/restaurant/onboard")&&r.request().method()==="POST");
    await page.locator('button[type="submit"],form button:not([type])').click();const result=await response;expect(result.status()).toBe(201);const body=await result.json();expect(body.activity).toBe(activity);
    const routeSlug=({clothing:"fashion",automotive:"car",publicworks:"contracting"})[activity]??activity;
