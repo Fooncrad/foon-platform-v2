@@ -51,3 +51,26 @@ test("checkout interfaces offer localized verification link without discarding c
   assert.match(source,/href="\/verify-email"/);
  }
 });
+
+test("menu and commerce checkout keep visible auth and verification actions beside order buttons",()=>{
+ const inline=read("app/[slug]/inline-customer-auth.tsx");
+ const menu=read("app/[slug]/public-menu.tsx");
+ const cart=read("app/[slug]/storefront-cart.tsx");
+ const googleStart=read("app/api/auth/google/start/route.ts");
+ const googleCallback=read("app/api/auth/google/callback/route.ts");
+ const availability=read("app/api/auth/google/availability/route.ts");
+ assert.match(inline,/api\/auth\/google\/availability/);
+ assert.match(inline,/api\/auth\/google\/start\?store=/);
+ assert.match(inline,/onVerificationRequired/);
+ assert.match(menu,/publicMenuCheckoutNotice/);
+ assert.match(cart,/foonCheckoutNotice/);
+ assert.match(menu,/foon-menu-cart:/);
+ assert.match(menu,/checkout=google/);
+ assert.match(cart,/checkout=google/);
+ assert.match(menu,/EMAIL_VERIFICATION_REQUIRED/);
+ assert.match(cart,/EMAIL_VERIFICATION_REQUIRED/);
+ assert.match(googleStart,/\^\[a-z0-9\]/);
+ assert.match(googleCallback,/checkoutStore\?"\/"/);
+ assert.match(availability,/no-store/);
+ assert.doesNotMatch(availability,/GOOGLE_CLIENT_SECRET\s*:/);
+});
