@@ -179,3 +179,12 @@
 .restaurantApp .restaurantMenuBulkActions button:disabled{opacity:.45;cursor:not-allowed}
 .restaurantApp .restaurantMenuItemSelection{display:inline-flex;align-items:center;justify-content:center;max-width:36px;margin-inline-end:4px}
 @media(max-width:420px){.restaurantApp .restaurantMenuBulkActions button.restaurantMenuDeleteSelected{width:100%;margin:0}}
+
+/* Contextual add-on guide in the main restaurant dashboard. */
+.restaurantApp .restaurantAddonsQuickGuide{padding:16px;border:1px solid var(--rc-border,#d5dce5);border-inline-start:4px solid #aa6430;border-radius:14px;background:var(--rc-surface,#fff);margin-block:12px;min-width:0}
+.restaurantApp .restaurantAddonsQuickGuide h3{margin:0 0 9px;font-size:17px}
+.restaurantApp .restaurantAddonsQuickGuide p{line-height:1.85;margin:8px 0;overflow-wrap:anywhere}
+.restaurantApp .restaurantAddonsQuickStats{display:flex;flex-wrap:wrap;gap:9px}
+.restaurantApp .restaurantAddonsQuickStats>span{display:inline-flex;gap:6px;align-items:center;padding:7px 11px;border:1px solid var(--rc-border,#d5dce5);border-radius:10px;font-size:13px}
+.restaurantApp .restaurantAddonsQuickStats strong{font-variant-numeric:tabular-nums}
+@media(max-width:420px){.restaurantApp .restaurantAddonsQuickGuide{padding:11px}.restaurantApp .restaurantAddonsQuickStats>span{flex:1 1 110px}}
