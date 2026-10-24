@@ -29,3 +29,14 @@ test("different device, branch or missing signature fails closed",()=>{
  assert.throws(()=>verifyCommittedPushReceipt({payload:{...signed,receipt:{...signed.receipt,signature:undefined}},expected,deviceId:ids[0],publicKey}),/SYNC_RECEIPT_SIGNATURE_REQUIRED/);
  assert.throws(()=>verifyCommittedPushReceipt({payload:signed,expected:{...expected,branchId:ids[0]},deviceId:ids[0],publicKey}),/SYNC_RECEIPT_MISMATCH/);
 });
+
+
+test("signed ACK accepts case-only UUID differences but rejects tampering and foreign scope",()=>{
+ const mixed={...receipt,deviceId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",eventId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantId:"cccccccc-cccc-4ccc-8ccc-cccccccccccc",branchId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd"};
+ const signed=signOne(mixed);
+ const upper={eventId:mixed.eventId.toUpperCase(),tenantId:mixed.tenantId.toUpperCase(),branchId:mixed.branchId.toUpperCase(),digest:mixed.digest};
+ assert.equal(verifyCommittedPushReceipt({payload:signed,expected:upper,deviceId:mixed.deviceId.toUpperCase(),publicKey}).status,"verified");
+ assert.throws(()=>verifyCommittedPushReceipt({payload:signed,expected:{...upper,tenantId:ids[0]},deviceId:mixed.deviceId,publicKey}),/SYNC_RECEIPT_MISMATCH/);
+ assert.throws(()=>verifyCommittedPushReceipt({payload:signed,expected:upper,deviceId:ids[0],publicKey}),/SYNC_RECEIPT_DEVICE_MISMATCH/);
+ assert.throws(()=>verifyCommittedPushReceipt({payload:{...signed,receipt:{...signed.receipt,tenantId:mixed.tenantId.toUpperCase()}},expected:upper,deviceId:mixed.deviceId,publicKey}),/SYNC_RECEIPT_SIGNATURE_INVALID/);
+});
