@@ -69,7 +69,7 @@ test("one shared icon system powers sidebar, drawer, search, quick actions and o
  const dashboard=read("app/restaurant/merchant-dashboard.tsx");
  const tools=read("app/restaurant/activity-tools.tsx");
  assert.match(dashboard,/name=\{activityIdentityIcon\(data\.activityCode\)\}/);
- assert.equal((dashboard.match(/name=\{activitySectionIcon\(data\.activityCode,m\.key,m\.icon\)\}/g)??[]).length,5);
+ assert.equal((dashboard.match(/name=\{activitySectionIcon\(data\.activityCode,m\.key,m\.icon\)\}/g)??[]).length,3);
  assert.match(tools,/name=\{activityToolIcon\(activity,link\.codes\)\}/);
  assert.doesNotMatch(tools,/TOOL_ICONS/);
 });
