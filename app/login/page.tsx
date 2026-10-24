@@ -5,6 +5,7 @@ import {type FormEvent,useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
 import {getSystemMessage} from "@/lib/ui/system-messages";
+import RequiredLegalConsent from "@/app/components/required-legal-consent";
 type Lang="ar"|"en"|"fr";
 type Theme="light"|"dark";
 const strings={
@@ -13,7 +14,7 @@ const strings={
  fr:{tag:"Connexion sécurisée",title:"Bon retour",intro:"Connectez-vous pour accéder à votre espace de travail.",email:"Adresse e-mail",password:"Mot de passe",forgot:"Mot de passe oublié ?",busy:"Connexion…",submit:"Se connecter",noAccount:"Pas encore de compte ?",register:"Créer un compte",home:"Retour à l'accueil",invalid:"Adresse e-mail ou mot de passe incorrect.",rate:"Trop de tentatives. Réessayez plus tard.",failure:"Connexion impossible. Réessayez.",network:"Connexion au serveur impossible. Réessayez.",language:"Langue"}
 } as const;
 export default function LoginPage(){
- const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [lang]=useLanguagePreference();const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
+ const router=useRouter();const [error,setError]=useState("");const [errorCode,setErrorCode]=useState("");const [busy,setBusy]=useState(false);const [googleBusy,setGoogleBusy]=useState(false);const [googleAccepted,setGoogleAccepted]=useState(false);const [googleFailure,setGoogleFailure]=useState("");const [lang]=useLanguagePreference();const [theme]=useSavedPreference<Theme>("foon-public-theme",["light","dark"],"light",true);
  const t=strings[lang]; const googleError=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("error"):null;
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;setBusy(true);setError("");setErrorCode("");const data=new FormData(e.currentTarget);
@@ -25,7 +26,18 @@ export default function LoginPage(){
    const next=new URLSearchParams(window.location.search).get("next");router.replace(next&&/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)?next:"/account");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
  }
+ async function googleSignIn(){
+  if(!googleAccepted||googleBusy)return;
+  setGoogleBusy(true);setGoogleFailure("");
+  try{
+   const response=await fetch("/api/auth/google/start",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({legalAccepted:googleAccepted})});
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok||typeof result.url!=="string"||!result.url.startsWith("https://accounts.google.com/o/oauth2/v2/auth?")){setGoogleFailure(String(result.code||"GOOGLE_NOT_CONFIGURED"));return;}
+   window.location.assign(result.url);
+  }catch{setGoogleFailure("NETWORK_ERROR");}finally{setGoogleBusy(false);}
+ }
  return <main className="auth-shell foonAuthPage" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}><section className="auth-card"><div className="auth-heading"><span className="foonAuthTag">✦ {t.tag}</span></div><h1>{t.title}</h1><p>{t.intro}</p>
  <form onSubmit={submit} className="auth-form"><label>{t.email}<input name="email" type="email" inputMode="email" autoComplete="email" required dir="ltr" placeholder="name@example.com"/></label><label>{t.password}<input name="password" type="password" autoComplete="current-password" required minLength={9} dir="ltr" placeholder="•••••••••"/></label><Link href="/forgot-password">{t.forgot}</Link>{error&&<div className="form-error" role="alert"><strong>{getSystemMessage(errorCode,lang).title}</strong><p>{error}</p><small dir="ltr">{errorCode}</small></div>}<button disabled={busy} aria-busy={busy}>{busy?t.busy:t.submit}</button></form>
- <button type="button" onClick={()=>{window.location.assign("/api/auth/google/start");}} style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,padding:"12px",border:"1px solid var(--border, #999)",borderRadius:12,textDecoration:"none",marginTop:16,fontWeight:600,cursor:"pointer",width:"100%"}}><span aria-hidden="true" style={{fontWeight:800}}>G</span>{lang==="ar"?"المتابعة باستخدام Google":lang==="fr"?"Continuer avec Google":"Continue with Google"}</button>{googleError&&<p className="form-error" role="alert">{lang==="ar"?"تعذر تسجيل الدخول بواسطة Google. تحقق من الإعدادات وحاول مجددًا.":lang==="fr"?"Connexion Google impossible. Vérifiez la configuration.":"Google sign-in failed. Check configuration and try again."} <small dir="ltr">{googleError}</small></p>}<p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
+ <RequiredLegalConsent language={lang} name="googleLegalConsent" checked={googleAccepted} onChange={setGoogleAccepted}/>
+ <button type="button" disabled={!googleAccepted||googleBusy} aria-busy={googleBusy} onClick={googleSignIn} style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,padding:"12px",border:"1px solid var(--border, #999)",borderRadius:12,textDecoration:"none",marginTop:16,fontWeight:600,cursor:"pointer",width:"100%"}}><span aria-hidden="true" style={{fontWeight:800}}>G</span>{lang==="ar"?"المتابعة باستخدام Google":lang==="fr"?"Continuer avec Google":"Continue with Google"}</button>{googleFailure&&<p className="form-error" role="alert">{lang==="ar"?"تعذر بدء تسجيل Google. تحقق من إعداداته وحاول مجددًا.":lang==="fr"?"Impossible de démarrer Google. Vérifiez la configuration.":"Unable to start Google sign-in. Check the settings."} <small dir="ltr">{googleFailure}</small></p>}{googleError&&<p className="form-error" role="alert">{getSystemMessage(googleError,lang).detail} <small dir="ltr">{googleError}</small></p>}<p className="auth-switch">{t.noAccount} <Link href="/register">{t.register}</Link></p><Link className="auth-home" href="/">{t.home}</Link></section></main>
 }

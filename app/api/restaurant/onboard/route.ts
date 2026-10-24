@@ -16,6 +16,7 @@ export async function POST(request:Request){
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const body=await request.json().catch(()=>null);
  if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ if(body.legalAccepted!==true)return NextResponse.json({ok:false,code:"LEGAL_CONSENT_REQUIRED"},{status:400});
  const name=typeof body.name==="string"?body.name.trim():"";
  const slug=typeof body.slug==="string"?body.slug.trim().toLowerCase():"";
  const activity=typeof body.activity==="string"?body.activity:"";
@@ -31,6 +32,7 @@ export async function POST(request:Request){
   await db.beginTransaction();
   const [users]=await db.execute<import("mysql2/promise").RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' LIMIT 1",[userId]);
   if(!users.length){await db.rollback();return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+  await db.execute("UPDATE users SET legal_accepted_at=COALESCE(legal_accepted_at,NOW()) WHERE id=?",[userId]);
   const workspace=await provisionStore(db,{ownerId:userId,name,slug,kind});
   await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
   await recordCreatorReferral(db,workspace.tenant.id,userId,body.referralHandle);
