@@ -81,3 +81,10 @@ test("movement UUID casing is accepted, but foreign and malformed movement IDs a
   assert.throws(()=>validateInventoryMovement({...mixed,entityId:bad}),/SYNC_INVENTORY_EVENT_ID_MISMATCH/);
  }
 });
+
+test("inventory item identity rejects UUID arrays and coercible objects before DB access",()=>{
+ for(const invalid of [[ids[4]],{toString(){return ids[4];}},new String(ids[4]),null,123]){
+  assert.throws(()=>validateInventoryMovement({...change,payload:{...change.payload,itemId:invalid}}),/SYNC_INVENTORY_ITEM_REQUIRED/);
+ }
+ assert.deepEqual(validateInventoryMovement(change),{itemId:ids[4],delta:-3});
+});
