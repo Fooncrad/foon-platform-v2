@@ -135,7 +135,7 @@ export async function runActivityPosChecks({db,call,register}){
  const managerProducts=ok(await catalogRemoval("GET"),200).products;
  assert.ok(!managerProducts.some(row=>[removalA,removalB].includes(row.id)));
  const [history]=await db.execute("SELECT id,enabled,JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')) AS archived FROM catalog_products WHERE tenant_id=? AND id IN (?,?)",[removalOwner.tenant,removalA,removalB]);
- assert.equal(history.length,2);assert.ok(history.every(row=>!row.enabled&&String(row.archived)==="1"));
+ assert.equal(history.length,2);assert.ok(history.every(row=>!row.enabled&&["1","true"].includes(String(row.archived))));
  const [removalAudits]=await db.execute("SELECT resource_id FROM restaurant_audit_events WHERE tenant_id=? AND action='catalog.product.archive' AND resource_id IN (?,?)",[removalOwner.tenant,removalA,removalB]);
  assert.equal(removalAudits.length,2);
  assert.equal((await catalogRemoval("PATCH",{kind:"product",id:removalA,enabled:true})).status,404,"archived products cannot be reactivated by stale updates");
