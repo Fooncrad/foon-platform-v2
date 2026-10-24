@@ -19,6 +19,10 @@ export async function GET(request:Request){
  if(base.protocol!=="https:" && process.env.NODE_ENV==="production")return NextResponse.redirect(new URL("/login?error=GOOGLE_NOT_CONFIGURED",request.url));
  const state=randomBytes(32).toString("base64url");
  const jar=await cookies();
+ // A return target is always a single store slug, never an arbitrary URL.
+ const store=new URL(request.url).searchParams.get("store")??"";
+ const checkoutStore=/^[a-z0-9][a-z0-9-]{0,79}$/.test(store)?store:"";
+ jar.set("foon_google_checkout_store",checkoutStore,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/auth/google",maxAge:checkoutStore?600:0});
  jar.set("foon_google_oauth_state",state,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/api/auth/google",maxAge:600});
  const target=new URL("https://accounts.google.com/o/oauth2/v2/auth");
  target.searchParams.set("client_id",clientId);
