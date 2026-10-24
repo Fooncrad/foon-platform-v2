@@ -3,6 +3,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {countPublicVisits,recordPublicVisit,visitorFingerprint,type PublicVisitKind} from "@/lib/analytics/public-visits";
+import {validCreatorHandle} from "@/lib/creator/profile-policy";
 
 export const runtime="nodejs";
 const noStore={"Cache-Control":"no-store"};
@@ -15,9 +16,15 @@ export async function POST(request:Request){
   const viewer=await currentUserId();
   let tenantId="",resourceId="",ownerUserId="";
   if(kind==="profile"){
-   ownerUserId=String(body.id);
-   const [owners]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? LIMIT 1",[ownerUserId]);
-   if(!owners.length)return NextResponse.json({ok:false,code:"NOT_FOUND"},{status:404});
+   // Public callers supply only a public handle, never an internal user ID.
+   // Do not record visits to hidden, staff-owned, or suspended profiles.
+   if(!validCreatorHandle(String(body.id)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400,headers:noStore});
+   const [owners]=await database().execute<RowDataPacket[]>(
+    "SELECT p.user_id AS id FROM customer_creator_profiles p JOIN users u ON u.id=p.user_id AND u.status='active' WHERE p.handle=? AND p.visibility='public' AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=p.user_id) AND NOT EXISTS (SELECT 1 FROM platform_admins a WHERE a.user_id=p.user_id) LIMIT 1",
+    [String(body.id)]
+   );
+   if(!owners.length)return NextResponse.json({ok:false,code:"NOT_FOUND"},{status:404,headers:noStore});
+   ownerUserId=String(owners[0].id);
    if(viewer===ownerUserId)return NextResponse.json({ok:true,counted:false},{headers:noStore});
   }else{
    const [tenants]=await database().execute<RowDataPacket[]>("SELECT id FROM tenants WHERE slug=? AND status='active' LIMIT 1",[String(body.id)]);
