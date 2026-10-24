@@ -65,8 +65,8 @@ test("menu and commerce checkout keep visible auth and verification actions besi
  assert.match(menu,/publicMenuCheckoutNotice/);
  assert.match(cart,/foonCheckoutNotice/);
  assert.match(menu,/foon-menu-cart:/);
- assert.match(menu,/checkout=google/);
- assert.match(cart,/checkout=google/);
+ assert.match(menu,/get\("checkout"\)!=="google"/);
+ assert.match(cart,/get\("checkout"\)!=="google"/);
  assert.match(menu,/EMAIL_VERIFICATION_REQUIRED/);
  assert.match(cart,/EMAIL_VERIFICATION_REQUIRED/);
  assert.match(googleStart,/\^\[a-z0-9\]/);
