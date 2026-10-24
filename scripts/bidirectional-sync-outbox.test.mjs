@@ -62,3 +62,20 @@ test("idempotent replay accepts the same MariaDB UUID scope with different casin
  assert.equal(result.status,"duplicate");
  assert.equal(inserts,0);
 });
+
+test("outbox scope UUIDs must be strings before any SQL",async()=>{
+ const badIds=[[ids[3]],{toString:()=>ids[3]}];
+ for(const bad of badIds){
+  for(const field of ["deviceId","tenantId","branchId"]){
+   let sqlCalls=0;
+   const db={async execute(){sqlCalls++;return [[]];}};
+   const scope={deviceId:ids[3],tenantId:ids[1],branchId:ids[2],[field]:bad};
+   await assert.rejects(()=>readPendingSyncEvents(db,scope),/SYNC_INVALID_OUTBOX_CONTEXT/);
+   assert.equal(sqlCalls,0,"invalid scope must not query outbox");
+  }
+  let sqlCalls=0;
+  const db={async execute(){sqlCalls++;return [[]];}};
+  await assert.rejects(()=>enqueueScopedSyncEvent(db,{change,deviceId:bad}),/SYNC_INVALID_OUTBOX_CONTEXT/);
+  assert.equal(sqlCalls,0,"invalid device must not enqueue");
+ }
+});
