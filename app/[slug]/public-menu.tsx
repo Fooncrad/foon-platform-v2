@@ -89,7 +89,7 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
  const categoryDialog=useRef<HTMLDialogElement>(null);
  const qrDialog=useRef<HTMLDialogElement>(null);
  const emptyCartDialog=useRef<HTMLDialogElement>(null);
- const categoryButtons=<>{[{id:"",name:t.all,imageUrl:null},...categories].map(c=><button key={c.id} aria-pressed={category===c.id} onClick={()=>{setCategory(c.id);setSearch("");setVisibleLimit(24);categoryDialog.current?.close();document.getElementById('menu-items')?.scrollIntoView({block:'start'});}}><span style={{display:"flex",alignItems:"center",gap:8}}>{c.imageUrl&&<Image src={c.imageUrl} alt="" width={40} height={40} unoptimized style={{objectFit:"cover",borderRadius:8,aspectRatio:"1"}}/>}{localizedName(c)}</span><small>{items.filter(item=>(!item.branchId||item.branchId===branch)&&(!c.id||item.categoryId===c.id)).length}</small></button>)}</>;
+ const categoryButtons=<>{[{id:"",name:t.all,imageUrl:null},...categories].map(c=><button key={c.id} aria-pressed={category===c.id} onClick={()=>{setCategory(c.id);setSearch("");setVisibleLimit(24);categoryDialog.current?.close();}}><span style={{display:"flex",alignItems:"center",gap:8}}>{c.imageUrl&&<Image src={c.imageUrl} alt="" width={40} height={40} unoptimized style={{objectFit:"cover",borderRadius:8,aspectRatio:"1"}}/>}{localizedName(c)}</span><small>{items.filter(item=>(!item.branchId||item.branchId===branch)&&(!c.id||item.categoryId===c.id)).length}</small></button>)}</>;
  const requestRef=useRef<{payload:string;key:string}|null>(null);
  const [selectedItem,setSelectedItem]=useState<MenuItem|null>(null);
  const [activePhoto,setActivePhoto]=useState(0);
