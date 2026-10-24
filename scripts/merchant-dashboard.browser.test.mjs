@@ -195,7 +195,13 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const categoryRoute=/\/api\/restaurant\/operations\/categories(?:\?|$)/;
  await page.route(categoryRoute,async route=>{if(route.request().method()==='GET')await categoriesReady;await route.continue();});
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"المنيو والأصناف",exact:true}).click();
- await page.getByRole("button",{name:"التصنيفات",exact:true}).click();
+ await expect(page.locator(".restaurantMenuHierarchyGuide")).toContainText("قسم المنيو ← الصنف ← مجموعة الخيارات ← قيمة الإضافة");
+ const menuTabs=page.getByRole("group",{name:"تبويبات إدارة المنيو"});
+ await expect(menuTabs.getByRole("button",{name:"أقسام المنيو",exact:true})).toBeVisible();
+ await expect(menuTabs.getByRole("button",{name:"مجموعات خيارات الصنف",exact:true})).toBeVisible();
+ await expect(menuTabs.getByRole("button",{name:"الإضافات وقيم الخيارات",exact:true})).toBeVisible();
+ await menuTabs.getByRole("button",{name:"أقسام المنيو",exact:true}).click();
+ await expect(menuTabs.getByRole("button",{name:"أقسام المنيو",exact:true})).toHaveAttribute("aria-pressed","true");
  await expect(page.getByRole('button',{name:'إضافة قسم جديد',exact:true})).toBeDisabled();releaseCategories();
  await expect(page.getByRole('button',{name:'إضافة قسم جديد',exact:true})).toBeEnabled();await page.unroute(categoryRoute);
  await page.getByRole("button",{name:"إضافة قسم جديد",exact:true}).click();
