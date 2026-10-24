@@ -6,7 +6,7 @@ import type {RowDataPacket} from "mysql2/promise";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const noStore={"Cache-Control":"private, no-store"};
-const validId=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+const validId=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 async function counts(where:string,args:string[]){
  const today="DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR)";
  const [rows]=await database().execute<RowDataPacket[]>(
