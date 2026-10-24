@@ -49,22 +49,25 @@ export default function PublicMenu({name,slug,branding,controls=defaultPublicCon
  const [cartRestored,setCartRestored]=useState(false);
  const menuCartStorage="foon-menu-cart:"+slug;
  useEffect(()=>{
+  let live=true;
+  let restored:Record<string,CartLine>|null=null;
   try{
    const saved=JSON.parse(sessionStorage.getItem(menuCartStorage)??"null");
    if(saved&&typeof saved==="object"&&!Array.isArray(saved)){
     const entries=Object.entries(saved);
     if(entries.length<=40){
-     const restored:Record<string,CartLine>={};
+     restored={};
      for(const [key,value] of entries){
       const line=value as Partial<CartLine>;
       if(typeof line.itemId!=="string"||!items.some(item=>item.id===line.itemId)||!Number.isInteger(line.quantity)||Number(line.quantity)<1||Number(line.quantity)>1000||!Array.isArray(line.options)||line.options.length>30||!line.options.every(id=>typeof id==="string")||key!==cartKey(line.itemId,line.options))continue;
       restored[key]={itemId:line.itemId,quantity:Number(line.quantity),options:line.options};
      }
-     setCart(restored);
     }
    }
   }catch{}
-  setCartRestored(true);
+  // Restore after mount without cascading synchronously through a React effect.
+  queueMicrotask(()=>{if(!live)return;if(restored)setCart(restored);setCartRestored(true);});
+  return()=>{live=false};
  // Only restore a small anonymous cart draft. Never persist customer contact details.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[menuCartStorage]);
