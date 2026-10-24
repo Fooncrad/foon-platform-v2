@@ -109,3 +109,6 @@
 .customerGrowthStores button[aria-pressed="true"]{border-color:#e2a93b}
 .customerGrowthStores button:focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
 .customerGrowthStores button:disabled{opacity:.6;cursor:wait}
+
+.customerGrowthOffer{display:flex;flex-direction:column;gap:6px;min-width:min(100%,200px);padding:14px;border:1px solid rgba(127,127,127,.3);border-radius:12px}
+.customerGrowthOffer small,.customerGrowthOffer span{font-size:.85rem}
