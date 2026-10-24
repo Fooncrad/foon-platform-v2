@@ -1,4 +1,6 @@
 import {randomBytes,randomUUID} from "node:crypto";
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
+import {queueLoginAlert} from "@/lib/auth/login-alert";
 import {GOOGLE_OAUTH_COOKIE_PATH,validGoogleOauthState,canUseGoogleLinkedAccount} from "@/lib/auth/google-oauth-security.mjs";
 import {cookies} from "next/headers";
 import {NextResponse} from "next/server";
@@ -56,6 +58,7 @@ export async function GET(request:Request){
    await createSession(userId,db);
    await db.commit();
   }catch(error){await db.rollback();throw error;}finally{db.release();}
+  if(await queueLoginAlert(database(),userId,request,"google"))dispatchNotifications();
   return NextResponse.redirect(new URL(checkoutStore?"/"+checkoutStore+"?checkout=google#menu-cart":"/account",appUrl));
  }catch{return fail(request,"GOOGLE_AUTH_UNAVAILABLE");}
 }
