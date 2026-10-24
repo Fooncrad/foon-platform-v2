@@ -12,7 +12,7 @@ const policy = require('../lib/auth/google-oauth-security.mjs');
 const state = 'A'.repeat(43);
 
 function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, checkoutStore = '', consented = true } = {}) {
-  const actions = { sql: [], cookieWrites: [], sessions: [], commits: 0, rollbacks: 0, connections: 0 };
+  const actions = { sql: [], cookieWrites: [], sessions: [], alerts: [], dispatches: 0, commits: 0, rollbacks: 0, connections: 0 };
   const jar = {
     get: (name) => name === 'foon_google_checkout_store' ? (checkoutStore ? {value:checkoutStore} : undefined) : ({value: name === 'foon_google_legal_consent' && !consented ? undefined : state}),
     set: (...args) => actions.cookieWrites.push(args),
@@ -38,6 +38,8 @@ function setup({ linked = null, matched = null, suppliedState = state, googleVer
     '@/lib/db/mysql': { database: () => ({ getConnection: async () => { actions.connections++; return db; } }) },
     '@/lib/auth/password': { hashPassword: async () => 'test-only-hash' },
     '@/lib/auth/session': { createSession: async (id) => actions.sessions.push(id) },
+    '@/lib/auth/login-alert': { queueLoginAlert: async (_db,id,request,method) => {actions.alerts.push({id,method,url:request.url});return true;} },
+    '@/lib/notifications/dispatch': { dispatchNotifications: () => { actions.dispatches++; } },
     '@/lib/auth/google-oauth-security.mjs': policy,
   };
   const context = {
@@ -89,6 +91,8 @@ test('links existing active verified account and creates only its own session', 
   assert.equal((await run()).url, 'https://example.test/account');
   assert.deepEqual(actions.sessions, ['user-4']);
   assert.equal(actions.commits, 1);
+  assert.deepEqual(actions.alerts.map(x=>[x.id,x.method]),[['user-4','google']]);
+  assert.equal(actions.dispatches,1);
   assert.equal(actions.sql.filter(x => x.sql.startsWith('INSERT INTO auth_google_identities')).length, 1);
 });
 
@@ -140,4 +144,11 @@ test('Google checkout returns to safe same-origin store cart',async()=>{
 test('unsafe Google checkout targets are never used as redirect URLs',async()=>{
  const {run}=setup({checkoutStore:'//attacker.example',matched:{id:'user-8',status:'active',email_verified_at:'2026-10-24'}});
  assert.equal((await run()).url,'https://example.test/account');
+});
+
+test('invalid OAuth callback does not email account owner',async()=>{
+ const {run,actions}=setup({suppliedState:'B'.repeat(43)});
+ assert.match((await run()).url,/GOOGLE_STATE_INVALID/);
+ assert.equal(actions.alerts.length,0);
+ assert.equal(actions.dispatches,0);
 });

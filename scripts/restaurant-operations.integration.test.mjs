@@ -18,7 +18,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const r=await fetch(origin+path,{method,headers:{origin,"content-type":"application/json",...(cookie?{cookie}:{}),...(tenant?{"x-foon-tenant":tenant}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
   return{status:r.status,body:await r.json(),cookie:r.headers.get("set-cookie")?.split(";")[0]};
  };
- const register=async(name,activity="restaurant")=>{const r=await call("/api/auth/register","POST",{name,storeName:name,slug:name,email:name+"@test.example",password,kind:"restaurant",activity,countryCode:"SA",currency:"SAR",region:"الرياض"});assert.equal(r.status,201,JSON.stringify(r.body));return{tenant:r.body.tenant.id,branch:r.body.branch.id,user:r.body.user.id,cookie:r.cookie,email:name+"@test.example"};};
+ const register=async(name,activity="restaurant")=>{const r=await call("/api/auth/register","POST",{name,storeName:name,slug:name,email:name+"@test.example",password,kind:"restaurant",activity,countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true});assert.equal(r.status,201,JSON.stringify(r.body));return{tenant:r.body.tenant.id,branch:r.body.branch.id,user:r.body.user.id,cookie:r.cookie,email:name+"@test.example"};};
  const resource=async(owner,module,body,method="POST")=>call("/api/restaurant/operations/"+module,method,body,owner.cookie,owner.tenant);
  const save=async(owner,module,name,data,status="active")=>{const r=await resource(owner,module,{name,status,data,branchId:owner.branch});assert.equal(r.status,201,JSON.stringify(r.body));return r.body.id;};
  const resourceData=(module,data)=>Object.fromEntries(resourceModules[module].fields.map(field=>[field.key,data[field.key]]));
@@ -166,7 +166,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const option=await save(a,"menuValues","Large",{groupId:group,priceDelta:2});
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1}]})).status,400);
   assert.equal((await resource(a,"pos",{branchId:a.branch,channel:"takeaway",items:[{id:item,quantity:1,options:[categoryB]}]})).status,400);
-  const customer=await call("/api/customer/register","POST",{email:"operations-customer@test.example",name:"Customer",password,storeSlug:"operations-owner-a"});assert.equal(customer.status,201);
+  const customer=await call("/api/customer/register","POST",{email:"operations-customer@test.example",name:"Customer",password,storeSlug:"operations-owner-a",legalAccepted:true});assert.equal(customer.status,201);
   assert.equal((await call("/api/customer/services?storeSlug=operations-owner-a","GET")).status,401);
   const waiterPayload={storeSlug:"operations-owner-a",branchId:a.branch,action:"waiter",tableId:table,notes:"Water please",requestKey:randomUUID()};
   assert.equal((await call("/api/customer/services","POST",waiterPayload)).status,401);
@@ -189,7 +189,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   await save(a,"settings","No-show grace",{noShowGraceMinutes:5});
   const [[graceRow]]=await db.execute("SELECT data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='branch_config' AND archived=FALSE AND JSON_TYPE(JSON_EXTRACT(data,'$.noShowGraceMinutes')) IN ('INTEGER','DOUBLE') ORDER BY updated_at DESC,created_at DESC LIMIT 1",[a.tenant,a.branch]);
   assert.equal((typeof graceRow.data==="string"?JSON.parse(graceRow.data):graceRow.data).noShowGraceMinutes,5);
-  const autoCustomer=await call("/api/customer/register","POST",{email:"operations-auto-customer@test.example",name:"Auto Customer",password,storeSlug:"operations-owner-a"});assert.equal(autoCustomer.status,201,JSON.stringify(autoCustomer.body));
+  const autoCustomer=await call("/api/customer/register","POST",{email:"operations-auto-customer@test.example",name:"Auto Customer",password,storeSlug:"operations-owner-a",legalAccepted:true});assert.equal(autoCustomer.status,201,JSON.stringify(autoCustomer.body));
   await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[autoCustomer.body.user.id]);
   const autoBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},autoCustomer.cookie);assert.equal(autoBooking.status,201,JSON.stringify(autoBooking.body));
   const pendingAuto=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===autoBooking.body.id);assert.ok(pendingAuto);
@@ -200,7 +200,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const [[noShowNotice]]=await db.execute("SELECT COUNT(*) AS n FROM customer_notifications WHERE user_id=? AND tenant_id=? AND event_key='reservation_no_show' AND resource_id=?",[autoCustomer.body.user.id,a.tenant,autoBooking.body.id]);assert.equal(Number(noShowNotice.n),1);
   const [[noShowAudit]]=await db.execute("SELECT actor_user_id,action FROM restaurant_audit_events WHERE tenant_id=? AND resource_id=? AND action='reservation.auto_no_show'",[a.tenant,autoBooking.body.id]);assert.equal(noShowAudit.actor_user_id,null);assert.equal(noShowAudit.action,"reservation.auto_no_show");
   assert.equal((await markOverdueReservationsNoShow(workerPool)).marked,0,"repeated worker runs must not duplicate transitions or notices");
-  const manualCustomer=await call("/api/customer/register","POST",{email:"operations-manual-customer@test.example",name:"Manual Customer",password,storeSlug:"operations-owner-a"});assert.equal(manualCustomer.status,201,JSON.stringify(manualCustomer.body));
+  const manualCustomer=await call("/api/customer/register","POST",{email:"operations-manual-customer@test.example",name:"Manual Customer",password,storeSlug:"operations-owner-a",legalAccepted:true});assert.equal(manualCustomer.status,201,JSON.stringify(manualCustomer.body));
   await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[manualCustomer.body.user.id]);
   const manualBooking=await call("/api/customer/services","POST",{...bookingPayload,requestKey:randomUUID(),scheduledAt:new Date(Date.now()+30*60000).toISOString()},manualCustomer.cookie);assert.equal(manualBooking.status,201,JSON.stringify(manualBooking.body));
   const pendingManual=(await resource(a,"reservations",undefined,"GET")).body.resources.find(row=>row.id===manualBooking.body.id);assert.ok(pendingManual);
@@ -214,7 +214,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const reservationOrder=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationOrder.status,201,JSON.stringify(reservationOrder.body));
   const reservationReplay=await call("/api/customer/orders","POST",reservationOrderPayload,customer.cookie);assert.equal(reservationReplay.status,201);assert.equal(reservationReplay.body.id,reservationOrder.body.id);
   const [[linkedReservationOrder]]=await db.execute("SELECT reservation_id,table_id,party_size FROM restaurant_orders WHERE id=?",[reservationOrder.body.id]);assert.equal(linkedReservationOrder.reservation_id,booking.body.id);assert.equal(linkedReservationOrder.table_id,null);assert.equal(linkedReservationOrder.party_size,3);
-  const otherCustomer=await call("/api/customer/register","POST",{email:"operations-other-customer@test.example",name:"Other customer",password,storeSlug:"operations-owner-a"});assert.equal(otherCustomer.status,201);
+  const otherCustomer=await call("/api/customer/register","POST",{email:"operations-other-customer@test.example",name:"Other customer",password,storeSlug:"operations-owner-a",legalAccepted:true});assert.equal(otherCustomer.status,201);
   const preverificationTheft=await call("/api/customer/orders","POST",{...reservationOrderPayload,requestKey:randomUUID()},otherCustomer.cookie);assert.equal(preverificationTheft.status,403);assert.equal(preverificationTheft.body.code,"EMAIL_VERIFICATION_REQUIRED");
   await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[otherCustomer.body.user.id]);
   const stolenReservationOrder=await call("/api/customer/orders","POST",{...reservationOrderPayload,requestKey:randomUUID()},otherCustomer.cookie);assert.equal(stolenReservationOrder.body.code,"RESERVATION_NOT_AVAILABLE");
