@@ -99,3 +99,16 @@ test("pull lock stays held while the local transaction is committing",async()=>{
  assert.equal(networkRequests,2,"lock is released after commit finishes");
  assert.equal(commitCalls,2);
 });
+
+test("pull worker rejects coerced stored cursors before network",async()=>{
+ for(const invalid of [null,[],[0],{valueOf:()=>0},"0e0"," 0 ","01"]){
+  const db=fixture();let requests=0;
+  db.execute=async(sql)=>{db.calls.push(sql);return [[{last_pulled_id:invalid}]];};
+  await assert.rejects(()=>pullAndApplyNextSyncBatch({db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,fetchImpl:async()=>{requests++;return response(signedBatch());}}),/SYNC_INVALID_CURSOR/);
+  assert.equal(requests,0);
+  assert.equal(db.calls.includes("begin"),false);
+ }
+ const db=fixture();db.execute=async(sql)=>{db.calls.push(sql);if(sql.startsWith("SELECT last_pulled_id"))return [[{last_pulled_id:"0"}]];return [{affectedRows:1}];};
+ const result=await pullAndApplyNextSyncBatch({db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,fetchImpl:async()=>response(signedBatch())});
+ assert.equal(result.nextCursor,0);
+});
