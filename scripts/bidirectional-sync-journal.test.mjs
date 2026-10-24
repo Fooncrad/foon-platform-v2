@@ -139,3 +139,23 @@ test("journal idempotent replay accepts MariaDB UUID casing but rejects differen
   await assert.rejects(()=>appendScopedChange(denied,{change:replayChange,sourceDeviceId}),/SYNC_IDEMPOTENCY_CONFLICT/);
  }
 });
+
+test("pull refuses corrupt, duplicate, unordered or unsafe journal IDs before cursor advancement",async()=>{
+ const malformed=[
+  [{id:8},{id:8}], // duplicate
+  [{id:9},{id:8}], // out of order
+  [{id:7}], // stale
+  [{id:"9007199254740992"}], // unsafe BIGINT string
+  [{id:"8.0"}], // noncanonical numeric text
+  [{id:8},{id:9},{id:10}], // DB exceeded requested bound
+  null // unexpected DB response
+ ];
+ for(const rows of malformed){
+  const db={async execute(){return [rows]}};
+  await assert.rejects(()=>pullScopedChanges(db,{tenantId:ids[1],branchId:ids[2],after:7,limit:2}),/SYNC_INVALID_JOURNAL_CURSOR/);
+ }
+ const db={async execute(){return [[{id:"8"},{id:9}]]}};
+ const valid=await pullScopedChanges(db,{tenantId:ids[1],branchId:ids[2],after:7,limit:2});
+ assert.equal(valid.nextCursor,9,"mysql2 BIGINT strings remain supported");
+ assert.equal((await pullScopedChanges({async execute(){return [[]]}},{tenantId:ids[1],branchId:ids[2],after:7,limit:2})).nextCursor,7);
+});
