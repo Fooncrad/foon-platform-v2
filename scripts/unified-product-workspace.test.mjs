@@ -63,3 +63,27 @@ test("shared search and pagination are outside the tabs to reach products on oth
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(css,/\.panel\[hidden\]/);
 });
+
+test("product cards mirror restaurant category-to-choice flow without discarding store-specific operations",()=>{
+ const css=read("app/restaurant/catalog-manager.module.css");
+ for(const key of ["catalogJourney","productCard","productCardTitle","productVisible","productHidden","productPrice"]){
+  assert.ok(editor.includes("styles."+key),key);
+  assert.ok(css.includes("."+key),key);
+ }
+ for(const stage of ["القسم","المنتج","مجموعة الخيارات","قيمة الإضافة"])
+  assert.ok(editor.includes(stage),stage);
+ assert.match(editor,/data-product-status=\{p\.enabled\?"active":"hidden"\}/);
+ assert.match(editor,/language==="en"\?p\.name_en\|\|p\.name_ar/);
+ assert.match(editor,/language==="fr"\?p\.name_fr\|\|p\.name_ar/);
+ assert.match(editor,/<CatalogDetails tenantId=\{tenantId\} product=\{p\}/);
+ assert.match(editor,/<CatalogImages key=\{tenantId\+":"\+p\.id\}/);
+ assert.match(editor,/removeSelectedProducts\(ids\)/);
+ assert.match(css,/@media\(max-width:380px\)/);
+});
+
+test("all six tabs support keyboard and RTL arrow navigation",()=>{
+ for(const marker of ['"ArrowRight"','"ArrowLeft"','"Home"','"End"','role="tablist"','role="tabpanel"','aria-controls=','tabIndex={active.id===tab.id?0:-1}','tabIndex={0}'])
+  assert.ok(tabs.includes(marker),marker);
+ assert.match(tabs,/closest\('\[dir="rtl"\]'\)/);
+ assert.match(tabs,/buttons\.current\[next\]\?\.focus\(\)/);
+});
