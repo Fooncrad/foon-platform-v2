@@ -43,20 +43,23 @@ export async function POST(request:NextRequest){
    if(actor){
     const [owner]=await db.execute<RowDataPacket[]>(
      "SELECT 1 FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,actor]);
-    if(owner.length)return NextResponse.json({ok:true,recorded:false});
+    const [admin]=await db.execute<RowDataPacket[]>("SELECT 1 FROM platform_admins WHERE user_id=? LIMIT 1",[actor]);
+    if(owner.length||admin.length)return NextResponse.json({ok:true,recorded:false});
    }
    if(kind==="storefront")subject=tenantId;
    else{
     if(!validAnalyticsId(body.id))return NextResponse.json({ok:false,error:"INVALID_PRODUCT"},{status:400});
     const source=kind==="restaurant_item"?"restaurant_menu_items":"catalog_products";
+    const category=kind==="restaurant_item"?"restaurant_menu_categories":"catalog_categories";
     const [products]=await db.execute<RowDataPacket[]>(
-     "SELECT 1 FROM "+source+" WHERE tenant_id=? AND id=? AND enabled=TRUE LIMIT 1",
+     "SELECT 1 FROM "+source+" p JOIN "+category+" c ON c.id=p.category_id AND c.tenant_id=p.tenant_id AND c.enabled=TRUE WHERE p.tenant_id=? AND p.id=? AND p.enabled=TRUE LIMIT 1",
      [tenantId,body.id]);
     if(!products.length)return NextResponse.json({ok:true,recorded:false});
     subject=String(body.id);
    }
   }
-  const day=new Date().toISOString().slice(0,10);
+  // Match the platform dashboard calendar: Saudi Arabia UTC+03:00.
+  const day=new Date(Date.now()+3*60*60*1000).toISOString().slice(0,10);
   const token=visitorToken(request.cookies.get(visitorCookieName)?.value);
   const visitorHash=visitFingerprint(token,kind as PublicVisitKind,subject,day);
   const [result]=await db.execute("INSERT IGNORE INTO public_page_visits(target_kind,tenant_id,target_id,visit_day,visitor_hash) VALUES (?,?,?,?,?)",
