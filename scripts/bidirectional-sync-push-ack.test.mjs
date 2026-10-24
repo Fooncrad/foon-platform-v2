@@ -84,3 +84,28 @@ test("MariaDB UUID casing does not block signed ACK, but foreign scopes roll bac
   assert.ok(!denied.calls.some(sql=>sql.startsWith("INSERT INTO foon_sync_push_acknowledgments")||sql.startsWith("UPDATE foon_sync_pending_events")));
  }
 });
+
+test("malformed persisted ACK versions fail closed before any write",async()=>{
+ const invalid=[null,[],[1],{toString(){return "1"}},true,"1e0"," 1 ","01",-1,1.5];
+ for(const version of invalid){
+  const queued={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:version};
+  const acknowledged=dbFixture([{payload_digest:receipt.digest,next_version:1,signature:payload.receipt.signature}],queued);
+  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db:acknowledged,payload,expected,deviceId:ids[0],publicKey}),/SYNC_OUTBOX_ACK_CONFLICT/);
+  assert.equal(acknowledged.calls.at(-1),"rollback");
+  assert.ok(!acknowledged.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+  const ledger=dbFixture([{payload_digest:receipt.digest,next_version:version,signature:payload.receipt.signature}]);
+  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db:ledger,payload,expected,deviceId:ids[0],publicKey}),/SYNC_ACK_CONFLICT/);
+  assert.equal(ledger.calls.at(-1),"rollback");
+  assert.ok(!ledger.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+ }
+});
+test("safe integer and canonical decimal-string ACK versions remain idempotent",async()=>{
+ for(const version of [1,"1"]){
+  const queued={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:version};
+  const db=dbFixture([{payload_digest:receipt.digest,next_version:version,signature:payload.receipt.signature}],queued);
+  const result=await persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey});
+  assert.equal(result.status,"acknowledged");
+  assert.equal(db.calls.at(-1),"commit");
+  assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+ }
+});
