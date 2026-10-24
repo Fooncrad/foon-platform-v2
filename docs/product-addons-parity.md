@@ -28,7 +28,7 @@ Source of requirements: `Fooncrad/nfood-saas-v2/client/src/components/MenuAddons
 
 - The **shared full-detail CSV export** preserves enabled flags, sorting, group minimums, image paths and other management metadata; it is an **archive/export** and is NOT directly accepted by `BulkImport`.
 - The **shared import-ready exports** separately generate `groups` and `values` CSVs using precisely the columns accepted by `lib/catalog/import-csv.ts`. Import these in that order. The existing generic importer does not currently accept a minimum-selection or availability column; restore these advanced settings from the editor after import as needed.
-- Restaurant import/export uses its own legacy-oriented CSV schema; it is scoped to one selected item, limited to 500 rows / 1 MB. It creates new entries rather than rewriting existing matches; prevent duplicates by reviewing the file before import.
+- Restaurant import/export uses its own legacy-oriented CSV schema; it is scoped to one selected item, limited to 500 rows / 1 MB. It creates missing entries and skips exact existing group/value-name matches on retry; it does not overwrite existing add-on prices or statuses. Review CSV contents before import.
 - Export does not migrate **images as binary objects**. Existing URLs remain available; ensure the referenced image asset is reachable.
 - Existing restaurant options start with `stock_quantity=NULL` (unlimited), so historical menu items never become unexpectedly unavailable.
 
