@@ -1,4 +1,5 @@
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
+import {queueLoginAlert} from "@/lib/auth/login-alert";
 import {recordCreatorReferral} from "@/lib/creator/subscription-commission";
 import {cookies} from "next/headers";
 import {notifyCustomer} from "@/lib/notifications/customer";
@@ -56,7 +57,9 @@ export async function POST(request:Request){
    await notifyCustomer(db,{userId:id,tenantId:workspace.tenant.id,event:"account_welcome",resourceId:id});
    await queueVerificationMail(db,{userId:id,email,locale:(locale==="en"||locale==="fr"?locale:"ar") as VerificationLocale,origin:process.env.APP_URL||"https://nfoodz.com"});
    await createSession(id,db);
-      await db.commit();dispatchNotifications();
+      await db.commit();
+      await queueLoginAlert(database(),id,request,"registration");
+      dispatchNotifications();
       return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free",emailVerificationRequired:true},{status:201});
     }catch(error){
       await db.rollback();
