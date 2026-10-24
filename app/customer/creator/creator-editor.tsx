@@ -4,6 +4,7 @@ import {useUiLanguage} from "@/lib/i18n/ui-language";
 import Link from "next/link";
 import CreatorSocialLinksEditor from "./social-links-editor";
 import CreatorQr from "./creator-qr";
+import CreatorProfileVisitStats from "./profile-visit-stats";
 import CreatorReferralEarnings from "./referral-earnings";
 type Profile={handle:string;display_name:string;bio:string;visibility:"public"|"private"};
 type Portfolio={id:string;media_id:string;caption:string;file_name:string};
@@ -69,7 +70,8 @@ export default function CreatorEditor(){
    <CreatorSocialLinksEditor ready={Boolean(saved)}/>
    {saved&&<CreatorReferralEarnings handle={saved.handle}/>}
    {saved?.visibility==="public"&&<CreatorQr handle={saved.handle}/>}
-   {saved&&<section className="creatorPortfolio">
+   {saved&&<CreatorProfileVisitStats/>}
+  {saved&&<section className="creatorPortfolio">
     <h2>{t("معرض أعمالي","My portfolio","Mon portfolio")}</h2>
     <p>{t("اختر صورًا من مكتبتك لإظهارها في ملفك العام، بحد أقصى 24 صورة.","Select up to 24 images from your library for your public profile.","Choisissez jusqu’à 24 images de votre bibliothèque.")}</p>
     <label>{t("الصورة","Image","Image")}<select value={selected} onChange={e=>setSelected(e.target.value)} disabled={busy||portfolio.length>=24}><option value="">{t("اختر صورة","Choose image","Choisir une image")}</option>{library.filter(i=>!portfolio.some(p=>p.media_id===i.id)).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
