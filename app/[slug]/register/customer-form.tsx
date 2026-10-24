@@ -15,7 +15,7 @@ export default function CustomerForm({slug,name}:{slug:string;name:string}){
   try{
    const r=await fetch("/api/customer/register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({storeSlug:slug,name:data.get("name"),email:data.get("email"),password:data.get("password"),legalAccepted:data.get("legalConsent")==="on"})});
    const body=await r.json().catch(()=>({}));
-   if(!r.ok){setError(body.code==="EMAIL_EXISTS"?"هذا البريد مسجل مسبقًا. استخدم تسجيل الدخول.":body.code==="STORE_NOT_FOUND"?"هذا المتجر غير متاح حالياً.":"تعذر إنشاء حساب العميل. راجع البيانات وحاول مجدداً.");return;}
+   if(!r.ok){setError(body.code==="EMAIL_EXISTS"?"هذا البريد مسجل مسبقًا. استخدم تسجيل الدخول.":body.code==="STORE_NOT_FOUND"?"هذا المتجر غير متاح حالياً.":body.code==="LEGAL_CONSENT_REQUIRED"?"يلزم قبول الشروط والأحكام وسياسة الخصوصية.":"تعذر إنشاء حساب العميل. راجع البيانات وحاول مجدداً.");return;}
    router.replace("/verify-email?sent=1");router.refresh();
   }catch{setError(translateUi("تعذر الاتصال بالخادم."));}finally{setBusy(false);}
  }
