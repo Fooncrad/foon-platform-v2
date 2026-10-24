@@ -27,7 +27,7 @@ test("creator referral: merchant registration -> pending transfer -> verified mo
   const unique=randomUUID().slice(0,10),slug="ref-test-"+unique;
   const registered=await req("/api/auth/register","POST",{
    name:"Merchant test",storeName:"Referral "+unique,slug,email:slug+"@test.example",
-   password:pwd,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0],
+   password:pwd,activity:"grocery",countryCode:"SA",currency:"SAR",region:countryRegions.SA[0],legalAccepted:true,
    ...(referralHandle?{referralHandle}:{})
   });
   assert.equal(registered.status,201,JSON.stringify(registered.data));
@@ -41,7 +41,7 @@ test("creator referral: merchant registration -> pending transfer -> verified mo
   const admin=await createMerchant();
   await db.execute("INSERT INTO platform_admins(user_id,role,enabled) VALUES (?,'super_admin',TRUE)",[admin.user]);
   const customer=await req("/api/customer/register","POST",{
-   name:"Customer creator",email:"creator-ref-"+randomUUID()+"@test.example",password:pwd,storeSlug:admin.slug
+   name:"Customer creator",email:"creator-ref-"+randomUUID()+"@test.example",password:pwd,storeSlug:admin.slug,legalAccepted:true
   });
   assert.equal(customer.status,201,JSON.stringify(customer.data));
   const creatorCookie=customer.cookie,handle="maker-"+randomUUID().replaceAll("-","").slice(0,14);
