@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {generateKeyPairSync} from "node:crypto";
+import {signAuthorizedPullBatch} from "../lib/platform/bidirectional-sync-server-signer.mjs";
+import {verifySignedPullBatch} from "../lib/platform/bidirectional-sync-signature.mjs";
 import {validatePushReceipt,validatePullBatch} from "../lib/platform/bidirectional-sync-wire-contract.mjs";
 const ids=["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222","33333333-3333-4333-8333-333333333333"];
 const hash="a".repeat(64),scope={eventId:ids[0],tenantId:ids[1],branchId:ids[2],digest:hash};
@@ -55,4 +58,44 @@ test("pull rejects cursor regression and over-limit batch before adapter executi
  const payload={ok:true,tenantId:ids[1],branchId:ids[2],nextCursor:6,events:[first,second]};
  assert.throws(()=>validatePullBatch(payload,query),/SYNC_BATCH_SCOPE_MISMATCH/);
  assert.throws(()=>validatePullBatch({...payload,events:[first],nextCursor:3},query),/SYNC_BATCH_SCOPE_MISMATCH/);
+});
+
+test("signed pull header and Ed25519 scope accept equivalent UUID casing",()=>{
+ const deviceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+ const tenantId="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+ const branchId="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+ const serverScope={deviceId,tenantId,branchId,after:0,limit:100};
+ const clientScope={...serverScope,deviceId:deviceId.toUpperCase(),tenantId:tenantId.toUpperCase(),branchId:branchId.toUpperCase()};
+ const batch={ok:true,tenantId,branchId,events:[],nextCursor:0};
+ const keys=generateKeyPairSync("ed25519");
+ const privateKey=keys.privateKey.export({type:"pkcs8",format:"pem"});
+ const publicKey=keys.publicKey.export({type:"spki",format:"pem"});
+ const signed=signAuthorizedPullBatch({batch,scope:serverScope,privateKey});
+ assert.equal(validatePullBatch(signed,clientScope).candidateCursor,0);
+ assert.equal(verifySignedPullBatch({batch:signed,scope:clientScope,signature:signed.signature,publicKey}),true);
+ for(const changed of [
+  {tenantId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd"},
+  {branchId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd"}
+ ]){
+  assert.throws(()=>verifySignedPullBatch({batch:signed,scope:{...clientScope,...changed},signature:signed.signature,publicKey}),/SYNC_BATCH_SCOPE_MISMATCH/);
+ }
+ assert.throws(()=>verifySignedPullBatch({batch:signed,scope:{...clientScope,deviceId:"dddddddd-dddd-4ddd-8ddd-dddddddddddd"},signature:signed.signature,publicKey}),/SYNC_SIGNATURE_INVALID/);
+ assert.throws(()=>verifySignedPullBatch({batch:{...signed,nextCursor:1},scope:clientScope,signature:signed.signature,publicKey}),/SYNC_SIGNATURE_INVALID/);
+ assert.throws(()=>signAuthorizedPullBatch({batch,scope:{...serverScope,deviceId:"not-a-uuid"},privateKey}),/SYNC_INVALID_DEVICE/);
+});
+
+test("mixed-case signed pull event remains byte-bound to its digest and signature",()=>{
+ const deviceId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+ const tenantId="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+ const branchId="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+ const scope={deviceId,tenantId,branchId,after:0,limit:100};
+ const event={id:1,event_id:deviceId,tenant_id:tenantId.toUpperCase(),branch_id:branchId.toUpperCase(),payload_digest:"a".repeat(64)};
+ const batch={ok:true,tenantId,branchId,events:[event],nextCursor:1};
+ const keys=generateKeyPairSync("ed25519");
+ const privateKey=keys.privateKey.export({type:"pkcs8",format:"pem"});
+ const publicKey=keys.publicKey.export({type:"spki",format:"pem"});
+ const signed=signAuthorizedPullBatch({batch,scope,privateKey});
+ const uppercaseScope={...scope,deviceId:deviceId.toUpperCase(),tenantId:tenantId.toUpperCase(),branchId:branchId.toUpperCase()};
+ assert.equal(verifySignedPullBatch({batch:signed,scope:uppercaseScope,signature:signed.signature,publicKey}),true);
+ assert.throws(()=>verifySignedPullBatch({batch:{...signed,events:[{...event,payload_digest:"b".repeat(64)}]},scope:uppercaseScope,signature:signed.signature,publicKey}),/SYNC_SIGNATURE_INVALID/);
 });
