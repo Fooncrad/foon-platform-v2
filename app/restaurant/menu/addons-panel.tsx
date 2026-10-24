@@ -182,22 +182,33 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
    <label>{tr("رابط صورة الإضافة HTTPS","Add-on image HTTPS URL","Image HTTPS de l’option")}<input type="url" maxLength={1024} value={draftValue.imageUrl} onChange={e=>setDraftValue(p=>({...p,imageUrl:e.target.value}))}/></label>
    <div><button type="submit" disabled={busy||!itemGroups.some(g=>g.id===activeGroup&&g.status==="active")}>{tr("حفظ الإضافة","Save add-on","Enregistrer")}</button> {editingValue&&<button type="button" onClick={()=>{setEditingValue(null);setDraftValue(emptyValue)}}>{tr("إلغاء التعديل","Cancel edit","Annuler")}</button>}</div>
   </form>}
-  {visibleGroups.map(g=><section key={g.id} style={{border:"1px solid #8885",padding:12,borderRadius:12,minWidth:0}}>
+  {visibleGroups.length===0&&<p className="foonAddonsEmpty">{itemGroups.length?tr("لا توجد نتائج؛ امسح البحث.","No matching results. Clear search.","Aucun résultat. Effacez la recherche."):tr("لا توجد مجموعات. أنشئ مجموعة ثم أضف القيم.","No groups yet. Create a group, then add choices.","Aucun groupe. Créez un groupe puis les choix.")}</p>}
+  {visibleGroups.map(g=><section key={g.id} className="foonAddonsGroup">
    <h3>{g.name} — {g.data.requiredFlag==="yes"?tr("إلزامية","Required","Requis"):tr("اختيارية","Optional","Facultatif")} ({g.data.minSelect??0}–{g.data.maxSelect??1})</h3>
+   <p className="foonAddonsHint">{g.status!=="active"?tr("المجموعة متوقفة ولا تظهر للعملاء.","Group disabled and hidden from customers.","Groupe désactivé et masqué."):g.data.requiredFlag==="yes"&&activeValues(g.id).length<Math.max(1,Number(g.data.minSelect??0))?tr("تحتاج إصلاحًا: القيم المتاحة أقل من المطلوب.","Needs attention: too few available choices.","À corriger : choix insuffisants."):tr("جاهزة للعرض عند توفر الصنف.","Ready when product is available.","Prêt si l’article est disponible.")}</p>
    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
     <button disabled={busy} onClick={()=>editGroup(g)}>{tr("تعديل","Edit","Modifier")}</button>
     <button disabled={busy} onClick={()=>void perform(()=>api("menuGroups","PATCH",{id:g.id,version:g.version,name:g.name,status:g.status==="active"?"inactive":"active",data:g.data}),tr("تم تغيير الحالة","Status updated","Statut modifié"))}>{g.status==="active"?tr("إيقاف","Disable","Désactiver"):tr("تفعيل","Enable","Activer")}</button>
     <button disabled={busy} onClick={()=>{if(window.confirm(tr("حذف المجموعة وإضافاتها؟","Delete group and its values?","Supprimer le groupe et ses choix ?")))void perform(()=>api("menuGroups","DELETE",{id:g.id,version:g.version}),tr("تم حذف المجموعة","Group deleted","Groupe supprimé"))}}>{tr("حذف","Delete","Supprimer")}</button>
    </div>
    {values.filter(v=>v.data.groupId===g.id&&(v.name+" "+String(v.data.nameEn??"")+" "+String(v.data.nameFr??"")+" "+g.name).toLowerCase().includes(query.toLowerCase())).sort((a,b)=>Number(a.data.sortOrder??0)-Number(b.data.sortOrder??0)||a.name.localeCompare(b.name)).map(v=><div key={v.id} style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:8,paddingBlock:8,borderBottom:"1px solid #8883"}}>
-    <strong>{v.name}</strong><span dir="ltr">+{Number(v.data.priceDelta??0).toFixed(2)} SAR</span><span>{v.data.stockQuantity==null?"∞":v.data.stockQuantity}</span><span>{v.status==="active"?tr("متاح","Available","Disponible"):tr("متوقف","Inactive","Inactif")}</span>
+    <strong>{v.name}</strong><span dir="ltr">+{money(Number(v.data.priceDelta??0))}</span><span>{tr("المخزون: ","Stock: ","Stock : ")}{v.data.stockQuantity==null?tr("غير محدود","Unlimited","Illimité"):v.data.stockQuantity}</span><span>{v.status!=="active"?tr("متوقفة","Disabled","Désactivée"):v.data.stockQuantity!=null&&Number(v.data.stockQuantity)<=0?tr("نافدة","Out of stock","Rupture"):tr("متاحة","Available","Disponible")}</span>
     <button disabled={busy} onClick={()=>editValue(v)}>{tr("تعديل","Edit","Modifier")}</button>
     <button disabled={busy} onClick={()=>editValue(v,true)}>{tr("نسخ","Copy","Copier")}</button>
     <button disabled={busy} onClick={()=>void perform(()=>api("menuValues","PATCH",{id:v.id,version:v.version,name:v.name,status:v.status==="active"?"inactive":"active",data:v.data}),tr("تم تغيير الحالة","Availability updated","Disponibilité modifiée"))}>{v.status==="active"?tr("إيقاف","Disable","Désactiver"):tr("تفعيل","Enable","Activer")}</button>
     <button disabled={busy} onClick={()=>{if(window.confirm(tr("حذف الإضافة؟","Delete this add-on?","Supprimer cette option ?")))void perform(()=>api("menuValues","DELETE",{id:v.id,version:v.version}),tr("تم حذف الإضافة","Add-on deleted","Option supprimée"))}}>{tr("حذف","Delete","Supprimer")}</button>
    </div>)}
   </section>)}
+  <section className="foonAddonsPreview" aria-label={tr("معاينة إضافات العميل","Customer add-ons preview","Aperçu des suppléments")}>
+   <h3>{tr("معاينة إضافات العميل","Customer add-ons preview","Aperçu des suppléments")}</h3>
+   <p className="foonAddonsHint">{tr("معاينة تعليمية لا تنشئ طلبًا؛ القيم المتوقفة أو النافدة مستبعدة.","Informational preview; no order is placed. Disabled or out-of-stock values are excluded.","Aperçu sans commande : les choix indisponibles sont exclus.")}</p>
+   {activeGroups.length?activeGroups.map(g=><fieldset key={g.id} disabled={!activeValues(g.id).length}>
+    <legend>{g.name} · {g.data.requiredFlag==="yes"?tr("مطلوب","Required","Obligatoire"):tr("اختياري","Optional","Facultatif")}</legend>
+    <p className="foonAddonsHint">{g.data.selectionType==="multiple"?tr("متعدد","Multiple","Multiple"):tr("واحد","Single","Unique")} · {tr("أدنى: ","Min: ","Min : ")}{g.data.minSelect??0} · {tr("أقصى: ","Max: ","Max : ")}{g.data.maxSelect??1}</p>
+    {activeValues(g.id).length?activeValues(g.id).map(v=><div key={v.id}>{v.name} <span dir="ltr">+{money(Number(v.data.priceDelta??0))}</span></div>):<p>{tr("لا توجد اختيارات متاحة.","No choices available.","Aucun choix disponible.")}</p>}
+   </fieldset>):<p>{tr("أنشئ مجموعة لمعاينة خياراتها.","Create a group to preview choices.","Créez un groupe pour prévisualiser.")}</p>}
+  </section>
   </div>}
-  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+  {error&&<p role="alert">{error}</p>{message&&<p role="status">{message}</p>}
  </section>;
 }
