@@ -5,7 +5,7 @@ type ProductView={id:string;name:string;views:number};
 export default function VisitAnalytics({tenantId,language="ar",profile=false}:{tenantId?:string;language?:"ar"|"en"|"fr";profile?:boolean}){
  const [visits,setVisits]=useState<Counts|null>(null),[products,setProducts]=useState<Counts|null>(null),[top,setTop]=useState<ProductView[]>([]),[error,setError]=useState(false);
  useEffect(()=>{
-  let live=true;setVisits(null);setProducts(null);setTop([]);setError(false);
+  let live=true;
   const load=async(kind:"profile"|"storefront"|"product")=>{
    const params=new URLSearchParams({kind});
    if(!profile&&tenantId)params.set("tenantId",tenantId);
