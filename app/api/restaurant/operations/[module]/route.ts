@@ -253,6 +253,9 @@ async function mutate(request:Request,module:string,method:string){
    const items=entries as {id:string;version:string}[];
    if(items.some(item=>item.id.length>64||item.id.length<3||item.version.length!==64)||new Set(items.map(item=>item.id)).size!==items.length)throw new ResourceError("INVALID_INPUT");
    for(const item of items){
+    // The record's real branch, not the caller's header, decides PIN enforcement.
+    const [target]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='menu_item' LIMIT 1",[ctx.tenantId,item.id]);
+    if(target[0]?.branch_id)await requireAdditionalBranchUnlock(ctx.tenantId,String(target[0].branch_id),ctx.user);
     // saveResource verifies tenant ownership and optimistic row version, and audits each archive.
     await saveResource(db,ctx.tenantId,ctx.user,ctx.role,"menu",{id:item.id,version:item.version},true);
    }
