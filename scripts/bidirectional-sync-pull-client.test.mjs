@@ -22,3 +22,15 @@ test("invalid pull cursor and injected URL query fail before transport",async()=
 test("generic transport rejects unapproved pull query",async()=>{
  await assert.rejects(()=>requestSyncJson({url:baseUrl+"?tenantId=other",authorization,fetchImpl:async()=>ok()}),/SYNC_UNSAFE_QUERY/);
 });
+
+// UUID regexps coerce arrays and custom objects; reject before constructing a URL.
+test("pull client rejects non-string tenant/branch UUIDs before sending credentials",async()=>{
+ let requests=0;
+ const fetchImpl=async()=>{requests++;return ok()};
+ for(const key of ["tenantId","branchId"]){
+  for(const invalid of [[scope[key]],{toString:()=>scope[key]}]){
+   await assert.rejects(()=>requestScopedSyncPull({baseUrl,scope:{...scope,[key]:invalid},authorization,fetchImpl}),/SYNC_INVALID_PULL_SCOPE/);
+  }
+ }
+ assert.equal(requests,0,"malformed scope must not reach HTTP");
+});
