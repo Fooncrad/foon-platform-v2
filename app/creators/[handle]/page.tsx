@@ -6,6 +6,7 @@ import {database} from "@/lib/db/mysql";
 import {validCreatorHandle} from "@/lib/creator/profile-policy";
 import {normalizeCreatorSocialLink} from "@/lib/creator/social-links";
 import CreatorSocialIcon from "@/app/components/creator-social-icon";
+import PublicVisitTracker from "@/app/components/public-visit-tracker";
 import "./creator-public.css";
 
 export const dynamic="force-dynamic";
@@ -51,7 +52,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
   const parsed=normalizeCreatorSocialLink(row.platform,row.url);
   return parsed?[parsed]:[];
  });
- return <main className="creatorPublic">
+ return <main className="creatorPublic"><PublicVisitTracker kind="creator_profile" handle={handle}/>
   <nav><Link href="/">FOON</Link><Link href="/market">استكشاف المتاجر</Link></nav>
   <section className="creatorPublicHeader">
    <div className="creatorPublicCover">{Number(profile.has_cover)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar?type=cover"} alt={"غلاف ملف "+String(profile.display_name)} width={1000} height={230}/>}</div>
