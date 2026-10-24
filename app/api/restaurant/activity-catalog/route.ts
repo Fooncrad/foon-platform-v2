@@ -33,7 +33,7 @@ export async function GET(request:Request){
  const pageSize=50,offset=(page-1)*pageSize;
  const categoryId=params.get("category")?.slice(0,36)??"";
  const q=params.get("q")?.trim().slice(0,100)??"";
- const where=["p.tenant_id=?","COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.attributes,'$.__foon_archived')),'0')<>'1'"],values:(string|number)[]=[ctx.tenantId!];
+ const where=["p.tenant_id=?","COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.attributes,'$.__foon_archived')),'0') NOT IN ('1','true')"],values:(string|number)[]=[ctx.tenantId!];
  if(categoryId){where.push("p.category_id=?");values.push(categoryId)}
  if(q){where.push("(p.name_ar LIKE ? OR p.name_en LIKE ? OR p.name_fr LIKE ?)");values.push("%"+q+"%","%"+q+"%","%"+q+"%")}
  try{
@@ -115,7 +115,7 @@ export async function PATCH(request:Request){
  }
  if(!columns.length)return NextResponse.json({ok:false,code:"NO_CHANGES"},{status:400});
  try{
-  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?"+(body.kind==="product"?" AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,\'$.__foon_archived\')),\'0\')<>\'1\'":""),[...values,ctx.tenantId,body.id]);
+  const [result]=await database().execute("UPDATE "+table+" SET "+columns.join(",")+" WHERE tenant_id=? AND id=?"+(body.kind==="product"?" AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,\'$.__foon_archived\')),\'0\') NOT IN (\'1\',\'true\')":""),[...values,ctx.tenantId,body.id]);
   const changed=(result as {affectedRows?:number}).affectedRows??0;
   if(!changed)return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND"},{status:404});
   return NextResponse.json({ok:true,changed});
@@ -144,7 +144,7 @@ export async function DELETE(request:Request){
    // product from every public catalog through enabled=FALSE and from the manager
    // catalog through a JSON tombstone (no destructive foreign-key cascades).
    const [rows]=await db.execute<RowDataPacket[]>(
-    "SELECT id FROM catalog_products WHERE tenant_id=? AND id IN ("+placeholders+") AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0')<>'1' FOR UPDATE",
+    "SELECT id FROM catalog_products WHERE tenant_id=? AND id IN ("+placeholders+") AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0') NOT IN ('1','true') FOR UPDATE",
     [ctx.tenantId,...ids]
    );
    if(rows.length!==ids.length){await db.rollback();return NextResponse.json({ok:false,code:"CATALOG_ITEM_NOT_FOUND",missing:ids.length-rows.length},{status:409});}
