@@ -1,3 +1,4 @@
+import CreatorVisitTracker from "./creator-visit-tracker";
 import Link from "next/link";
 import type {Metadata} from "next";
 import {notFound} from "next/navigation";
@@ -51,7 +52,7 @@ export default async function CreatorPublicPage({params}:CreatorParams){
   const parsed=normalizeCreatorSocialLink(row.platform,row.url);
   return parsed?[parsed]:[];
  });
- return <main className="creatorPublic">
+ return <><CreatorVisitTracker handle={handle}/><main className="creatorPublic">
   <nav><Link href="/">FOON</Link><Link href="/market">استكشاف المتاجر</Link></nav>
   <section className="creatorPublicHeader">
    <div className="creatorPublicCover">{Number(profile.has_cover)===1&&<img src={"/api/creators/"+encodeURIComponent(handle)+"/avatar?type=cover"} alt={"غلاف ملف "+String(profile.display_name)} width={1000} height={230}/>}</div>
@@ -77,5 +78,5 @@ export default async function CreatorPublicPage({params}:CreatorParams){
     {item.caption&&<figcaption>{String(item.caption)}</figcaption>}
    </figure>)}</div>:<p>لم ينشر صانع المحتوى أعمالًا بعد.</p>}
   </section>
- </main>;
+ </main></>;
 }
