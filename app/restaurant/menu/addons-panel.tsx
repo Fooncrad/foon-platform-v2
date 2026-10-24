@@ -92,6 +92,7 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
    const field=(line:string[],key:string,fallback="")=>line[header.indexOf(key.toLowerCase())]??fallback;
    if(!header.includes("name")||!header.includes("groupname"))throw Error("CSV_HEADERS_REQUIRED");
    const existingGroups=new Map(itemGroups.map(g=>[g.name.trim().toLowerCase(),g.id]));
+   const existingValues=new Set(values.filter(v=>v.data.groupId).map(v=>String(v.data.groupId)+":"+v.name.trim().toLowerCase()));
    for(const line of rows){
     const productId=field(line,"menuItemId"),productName=field(line,"menuItem");
     if(productId&&productId!==itemId||productName&&productName!==nameOfItem(itemId))continue;
@@ -109,8 +110,10 @@ export default function MenuAddonsPanel({tenantId}:{tenantId:string}){
     }
     if(!id||!id36.test(id))throw Error("INVALID_GROUP_ID");
     if(!optionName)continue;
+    const valueKey=id+":"+optionName.toLowerCase();
+    if(existingValues.has(valueKey))continue; // Resume and repeated imports must not duplicate add-ons.
     await api("menuValues","POST",{name:optionName,status:field(line,"isAvailable","true")==="false"?"inactive":"active",data:{groupId:id,priceDelta:price,stockQuantity:stock,nameEn:field(line,"valueEn"),nameFr:field(line,"valueFr"),sortOrder:Number(field(line,"sortOrder","0")),imageUrl:field(line,"imageUrl")||null}});
-    done++;
+    existingValues.add(valueKey);done++;
    }
    await refresh();setMessage(tr("تم استيراد ","Imported ","Importés : ")+done);
   }catch(e){setError(tr("تعذر إكمال استيراد CSV بعد ","CSV import stopped after ","Import CSV interrompu après ")+done+": "+(e instanceof Error?e.message:"UNKNOWN"));await refresh().catch(()=>{})}
