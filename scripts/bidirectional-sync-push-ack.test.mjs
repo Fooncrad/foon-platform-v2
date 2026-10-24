@@ -66,3 +66,21 @@ test("failed conflict persistence rolls back and stays retryable",async()=>{
  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:conflict,expected,deviceId:ids[0],publicKey}),/SYNC_OUTBOX_CONFLICT_WRITE_FAILED/);
  assert.equal(db.calls.at(-1),"rollback");
 });
+
+test("MariaDB UUID casing does not block signed ACK, but foreign scopes roll back",async()=>{
+ const scoped={...receipt,tenantId:"a3333333-3333-4333-8333-333333333333",branchId:"b4444444-4444-4444-8444-444444444444"};
+ const signed=signCommittedPushReceipt({receipt:scoped,privateKey});
+ const expectedScoped={eventId:scoped.eventId,tenantId:scoped.tenantId,branchId:scoped.branchId,digest:scoped.digest};
+ const queued={tenant_id:scoped.tenantId.toUpperCase(),branch_id:scoped.branchId.toUpperCase(),payload_digest:scoped.digest,state:"pending",acknowledged_version:null};
+ const db=dbFixture([],queued);
+ const result=await persistVerifiedPushAcknowledgment({db,payload:signed,expected:expectedScoped,deviceId:scoped.deviceId,publicKey});
+ assert.equal(result.status,"acknowledged");
+ assert.equal(db.calls.at(-1),"commit");
+ assert.ok(db.calls.some(sql=>sql.startsWith("INSERT INTO foon_sync_push_acknowledgments")));
+ for(const override of [{tenant_id:"c3333333-3333-4333-8333-333333333333"},{branch_id:"c4444444-4444-4444-8444-444444444444"},{tenant_id:"not-a-uuid"}]){
+  const denied=dbFixture([],{...queued,...override});
+  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db:denied,payload:signed,expected:expectedScoped,deviceId:scoped.deviceId,publicKey}),/SYNC_OUTBOX_SCOPE_MISMATCH/);
+  assert.equal(denied.calls.at(-1),"rollback");
+  assert.ok(!denied.calls.some(sql=>sql.startsWith("INSERT INTO foon_sync_push_acknowledgments")||sql.startsWith("UPDATE foon_sync_pending_events")));
+ }
+});
