@@ -7,6 +7,10 @@ export async function runCustomerCartChecks({db,call,fixtures}){
   const [[business]]=await db.execute('SELECT country_code FROM tenant_business_profiles WHERE tenant_id=?',[owner.tenant]);
   const customer=await call('/api/customer/register','POST',{name:'Cart customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug});
   assert.equal(customer.status,201,JSON.stringify(customer.body));
+  const unverified=await call('/api/customer/orders','POST',{storeSlug:slug},customer.cookie);
+  assert.equal(unverified.status,403,'unverified customers cannot place any order');
+  assert.equal(unverified.body.code,'EMAIL_VERIFICATION_REQUIRED');
+  await db.execute('UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?',[customer.body.user.id]);
   const category=await fixture.catalog('POST',{kind:'category',name:'Public cart category'});
   assert.equal(category.status,201);
   const saved=await fixture.catalog('POST',{kind:'product',name:'Public cart product',categoryId:category.body.id,price:7.25});assert.equal(saved.status,201);
