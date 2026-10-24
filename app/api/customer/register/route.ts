@@ -19,6 +19,7 @@ export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const body=await request.json().catch(()=>null);
  if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ if(body.legalAccepted!==true)return NextResponse.json({ok:false,code:"LEGAL_CONSENT_REQUIRED"},{status:400});
  const email=typeof body.email==="string"?body.email.trim().toLowerCase():"";
  const password=typeof body.password==="string"?body.password:"";
  const name=typeof body.name==="string"?body.name.trim():"";
@@ -32,6 +33,7 @@ export async function POST(request:Request){
   try{
    await db.beginTransaction();
    const {tenantId}=await registerCustomer(db,{id,email,passwordHash:hash,name,storeSlug});
+   await db.execute("UPDATE users SET legal_accepted_at=NOW() WHERE id=?",[id]);
    const locale=(await cookies()).get("foon_language")?.value;
    await db.execute("UPDATE users SET default_locale=? WHERE id=?",[locale==="en"||locale==="fr"?locale:"ar",id]);
    await notifyCustomer(db,{userId:id,tenantId:tenantId,event:"account_welcome",resourceId:id});
