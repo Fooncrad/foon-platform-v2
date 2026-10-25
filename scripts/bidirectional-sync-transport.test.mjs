@@ -134,3 +134,17 @@ test("pull transport rejects non-string tenant/branch UUIDs before bearer HTTP",
  }
  assert.equal(requests,0,"malformed scope must not transmit bearer credentials");
 });
+
+test("offline sync transport provides a bounded default AbortSignal",async()=>{
+ let options;
+ await requestSyncJson({url,authorization,method:"POST",body:{events:[]},fetchImpl:async(_,opts)=>{options=opts;return response(200,"application/json")}});
+ assert.ok(options.signal instanceof AbortSignal,"stalled HTTPS must be abortable by default");
+ assert.equal(options.signal.aborted,false);
+});
+
+test("caller-supplied timeout signal is preserved for sync requests",async()=>{
+ const controller=new AbortController();
+ let signal;
+ await requestSyncJson({url,authorization,method:"POST",body:{events:[]},timeoutSignal:controller.signal,fetchImpl:async(_,opts)=>{signal=opts.signal;return response(200,"application/json")}});
+ assert.equal(signal,controller.signal);
+});
