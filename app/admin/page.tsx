@@ -15,6 +15,7 @@ const modules=[
  {href:"/admin/notifications",icon:"♧",title:"الإشعارات والرسائل",description:"التنبيهات وقنوات التواصل"},
  {href:"/admin/translations",icon:"文",title:"الترجمات",description:"العربية والإنجليزية والفرنسية"},
  {href:"/admin/pages",icon:"▧",title:"صفحات الموقع",description:"إدارة المحتوى العام"},
+ {href:"/admin/landing-editor",icon:"✎",title:"محرر واجهة الموقع",description:"النصوص والصور والأقسام بكل اللغات"},
  {href:"/admin/media",icon:"▧",title:"مكتبة الصور والمساحات",description:"تخصيص سعة الصور لجميع الحسابات"},
  {href:"/admin/settings",icon:"⚙",title:"إعدادات المنصة",description:"الهوية والإعدادات العامة"},
  {href:"/admin/audit",icon:"≡",title:"سجل العمليات",description:"مراجعة الأنشطة والتغييرات"}
@@ -35,6 +36,8 @@ const adminTranslations:Record<string,{en:string;fr:string}>={
  "الترجمات":{en:"Translations",fr:"Traductions"},
  "العربية والإنجليزية والفرنسية":{en:"Arabic, English and French",fr:"Arabe, anglais et français"},
  "صفحات الموقع":{en:"Website pages",fr:"Pages du site"},
+ "محرر واجهة الموقع":{en:"Homepage editor",fr:"Éditeur d’accueil"},
+ "النصوص والصور والأقسام بكل اللغات":{en:"Text, images and sections in all languages",fr:"Textes, images et sections dans toutes les langues"},
  "إدارة المحتوى العام":{en:"Manage public content",fr:"Gérer le contenu public"},
  "مكتبة الصور والمساحات":{en:"Media library and storage",fr:"Médiathèque et stockage"},
  "تخصيص سعة الصور لجميع الحسابات":{en:"Manage image storage for all accounts",fr:"Gérer le stockage des images des comptes"},
