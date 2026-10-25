@@ -1,3 +1,4 @@
+import MarketEmergencySettings from "./market-emergency-settings";
 import PlatformQrIdentitySettings from "./platform-qr-identity";
 import {cookies as uiCookies} from "next/headers";
 import {uiText} from "@/lib/i18n/ui-copy";
@@ -12,5 +13,5 @@ export default async function SettingsPage(){
 
  const user=await currentActiveAdminUserId();if(!user)redirect("/login");
  const {role}=await requirePlatformRole(user,["super_admin","admin","support"]);
- return <main className="workspace"><header className="workspace-head"><div><h1>{translateUi("إعدادات المنصة")}</h1><p>{translateUi("إدارة الهوية والتواصل واللغة الافتراضية من قاعدة البيانات.")}</p></div></header><SettingsEditor canEdit={role!=="support"}/><PlatformQrIdentitySettings canEdit={role!=="support"}/><IntegrationSettings canEdit={role!=="support"}/></main>;
+ return <main className="workspace"><header className="workspace-head"><div><h1>{translateUi("إعدادات المنصة")}</h1><p>{translateUi("إدارة الهوية والتواصل واللغة الافتراضية من قاعدة البيانات.")}</p></div></header><SettingsEditor canEdit={role!=="support"}/><PlatformQrIdentitySettings canEdit={role!=="support"}/><MarketEmergencySettings canEdit={role!=="support"}/><IntegrationSettings canEdit={role!=="support"}/></main>;
 }
