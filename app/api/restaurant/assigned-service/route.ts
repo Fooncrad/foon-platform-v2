@@ -5,6 +5,7 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {onlyUnlockedBranchRows} from "@/lib/restaurant/branch-pin";
 export const runtime="nodejs";
 export async function GET(request:Request){
@@ -51,8 +52,13 @@ export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const user=await currentUserId();
  if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null) as {tenantId?:string;callId?:string;action?:string}|null;
- if(!body||!body.tenantId||!body.callId||!["accept","complete"].includes(body.action??""))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ let body:{tenantId?:string;callId?:string;action?:string}|null;
+ try{body=await readLimitedJson(request,1024) as {tenantId?:string;callId?:string;action?:string}|null;}
+ catch(error){
+  const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";
+  return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400,headers:{"Cache-Control":"no-store"}});
+ }
+ if(!body||typeof body!=="object"||Array.isArray(body)||typeof body.tenantId!=="string"||!body.tenantId||typeof body.callId!=="string"||!body.callId||!["accept","complete"].includes(body.action??""))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{
   const url=new URL(request.url);
   url.searchParams.set("tenantId",body.tenantId);
