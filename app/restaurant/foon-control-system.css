@@ -1,0 +1,49 @@
+/* FOON shared control foundations: predictable SaaS controls and keyboard access.
+   Scoped to dashboards to avoid modifying customer storefront checkout widgets. */
+:where(.restaurantApp,.customerDashboard){
+ --foon-control-height:44px;
+ --foon-control-radius:12px;
+ --foon-panel-radius:16px;
+ --foon-focus-ring:#c58b31;
+}
+:where(.restaurantApp,.customerDashboard) :is(button,[role="button"],a,input,select,textarea):focus-visible{
+ outline:3px solid var(--foon-focus-ring);
+ outline-offset:3px;
+}
+:where(.restaurantApp,.customerDashboard) :is(button,[role="button"]){
+ font:inherit;
+ min-height:var(--foon-control-height);
+ border-radius:var(--foon-control-radius);
+ touch-action:manipulation;
+ transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+:where(.restaurantApp,.customerDashboard) :is(button,[role="button"]):disabled,
+:where(.restaurantApp,.customerDashboard) [aria-disabled="true"]{
+ cursor:not-allowed;
+ opacity:.55;
+}
+:where(.restaurantApp,.customerDashboard) :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+ min-height:var(--foon-control-height);
+ max-width:100%;
+ border-radius:10px;
+ font:inherit;
+}
+:where(.restaurantApp,.customerDashboard) :is(.restaurantPanel,.customerPortalDetails,.customerOrderCard){
+ min-width:0;
+ overflow-wrap:anywhere;
+ border-radius:var(--foon-panel-radius);
+}
+:where(.restaurantApp,.customerDashboard) :is(button,a,input,select,textarea){-webkit-tap-highlight-color:transparent}
+:where(.restaurantApp,.customerDashboard) :is(button,a){overflow-wrap:anywhere}
+:where(.restaurantApp,.customerDashboard) :is(button,a):active:not(:disabled){transform:translateY(1px)}
+@media(hover:hover){
+ :where(.restaurantApp,.customerDashboard) :is(button,a):hover:not(:disabled){text-decoration-thickness:2px}
+}
+@media(max-width:420px){
+ :where(.restaurantApp,.customerDashboard){--foon-panel-radius:14px}
+ :where(.restaurantApp,.customerDashboard) :is(button,[role="button"]){min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+ :where(.restaurantApp,.customerDashboard) :is(button,[role="button"]){transition:none}
+ :where(.restaurantApp,.customerDashboard) :is(button,a):active:not(:disabled){transform:none}
+}
