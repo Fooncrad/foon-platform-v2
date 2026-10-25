@@ -67,6 +67,32 @@ test("optional public creator profile keeps privacy barriers, multilingual visit
  assert.doesNotMatch(publicPage,/SELECT.*customer_user_id|SELECT.*restaurant_orders/);
 });
 
+test("creator public visits use public handle, verify visibility and hide visitor identities",()=>{
+ const api=read("app/api/public/visits/route.ts");
+ const tracker=read("app/creators/[handle]/creator-visit-tracker.tsx");
+ const page=read("app/creators/[handle]/page.tsx");
+ const stats=read("app/customer/creator/creator-profile-insights.tsx");
+ const editor=read("app/customer/creator/creator-editor.tsx");
+ const logic=read("lib/analytics/public-visits.ts");
+ assert.match(api,/validCreatorHandle\(String\(body\.id\)\)/);
+ assert.match(api,/p\.handle=\? AND p\.visibility='public'/);
+ assert.match(api,/u\.status='active'/);
+ assert.match(api,/NOT EXISTS \(SELECT 1 FROM memberships/);
+ assert.match(api,/NOT EXISTS \(SELECT 1 FROM platform_admins/);
+ assert.match(api,/if\(viewer===ownerUserId\)/);
+ assert.match(api,/owner!==viewer/);
+ assert.match(api,/countPublicVisits\("profile"/);
+ assert.match(logic,/createHmac\("sha256"/);
+ assert.match(logic,/INSERT IGNORE INTO public_visit_daily/);
+ assert.match(tracker,/kind:"profile",id:handle/);
+ assert.match(page,/CreatorVisitTracker handle=\{handle\}/);
+ assert.match(editor,/CreatorProfileInsights publicProfile=\{saved.visibility==="public"\}/);
+ assert.match(stats,/last7Days/);
+ assert.match(stats,/last30Days/);
+ assert.match(stats,/deduplicated once per visitor per day/);
+ assert.doesNotMatch(stats,/visitor_hash|token_hash|x-forwarded-for/);
+});
+
 test("customer session security API never discloses tokens and only revokes owned other sessions",()=>{
  const api=read("app/api/customer/security/sessions/route.ts");
  const ui=read("app/customer/customer-security-center.tsx");
