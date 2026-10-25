@@ -1,0 +1,17 @@
+"use client";
+import {useEffect,useState} from "react";
+export function MarketFavorite({tenantId,language}:{tenantId:string;language:"ar"|"en"|"fr"}){
+ const [saved,setSaved]=useState(false),[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const t={ar:{add:"أضف للمفضلة",remove:"إزالة من المفضلة",login:"سجّل الدخول أولًا",link:"افتح المتجر واربط حسابك به قبل إضافته للمفضلة",error:"تعذر تعديل المفضلة"},en:{add:"Add favorite",remove:"Remove favorite",login:"Sign in first",link:"Visit this store and link your account before saving it",error:"Could not update favorites"},fr:{add:"Ajouter aux favoris",remove:"Retirer des favoris",login:"Connectez-vous d’abord",link:"Visitez cette boutique et associez votre compte avant de l’enregistrer",error:"Modification impossible"}}[language];
+ useEffect(()=>{let active=true;fetch("/api/customer/favorite-stores",{credentials:"same-origin",cache:"no-store"}).then(async r=>r.ok?r.json():null).then(d=>{if(active&&d?.ok){setReady(true);setSaved(d.tenantIds.includes(tenantId));}}).catch(()=>{});return()=>{active=false}},[tenantId]);
+ const toggle=async()=>{if(!ready){setMessage(t.login);return;}setBusy(true);setMessage("");try{const r=await fetch("/api/customer/favorite-stores",{method:saved?"DELETE":"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({tenantId})});if(!r.ok){setMessage(r.status===404?t.link:r.status===401?t.login:t.error);return;}setSaved(!saved)}catch{setMessage(t.error)}finally{setBusy(false)}};
+ return <div className="foonMarketFavorite"><button type="button" disabled={busy} onClick={toggle} aria-pressed={saved} aria-label={saved?t.remove:t.add}>{saved?"♥":"♡"}</button>{message&&<span role="status">{message}</span>}</div>;
+}
+export function MarketNearby({branches,language}:{branches:{id:string;name:string;latitude:number|null;longitude:number|null}[];language:"ar"|"en"|"fr"}){
+ const [coords,setCoords]=useState<{lat:number;lng:number}|null>(null),[message,setMessage]=useState("");
+ const t={ar:{action:"اعرض الأقرب لموقعي",no:"لم تتوفر إحداثيات فروع معلنة",deny:"تعذر تحديد موقعك أو لم تمنح الإذن",unit:"كم"},en:{action:"Find nearby",no:"No published branch locations",deny:"Location permission denied or unavailable",unit:"km"},fr:{action:"Autour de moi",no:"Aucune coordonnée de succursale publiée",deny:"Position indisponible ou non autorisée",unit:"km"}}[language];
+ const km=(a:number,b:number,c:number,d:number)=>{const r=(v:number)=>v*Math.PI/180;const q=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 6371*2*Math.asin(Math.min(1,Math.sqrt(q)))};
+ const near=coords?branches.filter(b=>b.latitude!==null&&b.longitude!==null).map(b=>({...b,distance:km(coords.lat,coords.lng,b.latitude!,b.longitude!)})).sort((a,b)=>a.distance-b.distance).slice(0,3):[];
+ function request(){if(typeof navigator==="undefined"||!navigator.geolocation){setMessage(t.deny);return;}navigator.geolocation.getCurrentPosition(p=>{setCoords({lat:p.coords.latitude,lng:p.coords.longitude});setMessage("");},()=>setMessage(t.deny),{timeout:10000,maximumAge:300000,enableHighAccuracy:false});}
+ return <div className="foonMarketNearby"><button type="button" onClick={request}>{t.action} ◎</button>{coords&&<small>{near.length?near.map(b=>b.name+" "+b.distance.toFixed(1)+" "+t.unit).join(" · "):t.no}</small>}{message&&<small role="status">{message}</small>}</div>;
+}
