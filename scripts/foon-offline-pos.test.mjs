@@ -103,8 +103,11 @@ test("background POS sync checks do not overwrite order feedback when nothing is
  assert.match(manual.messages[0],/المزامنة القديمة متوقفة/);
  const pending=makeSync(2);
  await pending.sync();
- assert.match(pending.messages[0],/المزامنة القديمة متوقفة/);
+ assert.deepEqual(pending.messages,[],"pending-order warning belongs in the sync panel until manually requested");
  assert.equal(pending.states.at(-1),"failed");
+ const manualPending=makeSync(2);
+ await manualPending.sync(true);
+ assert.match(manualPending.messages[0],/المزامنة القديمة متوقفة/);
  const readError=makeSync(0,{throwOnRead:true});
  await readError.sync();
  assert.deepEqual(readError.messages,[],"automatic storage errors must not replace checkout feedback");
