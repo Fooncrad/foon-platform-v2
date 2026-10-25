@@ -45,44 +45,45 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
  const chosenName=chosen?(chosen[language]??chosen.ar):"";
  const pages=marketPageCount(total);
  const footerPages=await publicFooterPages();
+ const l={ar:{hero:"اكتشف المتاجر والمطاعم",intro:"تسوّق من الأنشطة المحلية على منصة FOON",search:"ابحث عن مطعم أو متجر",searchBtn:"بحث",results:"الأنشطة المتاحة",browse:"تصفح المتجر",menu:"عرض المنيو",services:"عرض المنتجات والخدمات",all:"الكل",restaurants:"مطاعم",shops:"متاجر",coffee:"قهوة",sweets:"حلويات",kind:"نوع النشاط",specialty:"التخصص",allKinds:"جميع الأنشطة",allSpecialties:"كل التخصصات",trust:"أنشطة منشورة في السوق",local:"دعم الأنشطة المحلية",choice:"تصفح ما يناسبك",error:"تعذر تحميل السوق حاليًا",empty:"لا توجد أنشطة مطابقة حاليًا؛ جرّب تغيير البحث أو الدولة",select:"اختر الدولة لعرض الأنشطة",count:"نتيجة",page:"صفحة",previous:"السابق",next:"التالي"},en:{hero:"Discover local stores and restaurants",intro:"Explore businesses available on FOON",search:"Search restaurants and stores",searchBtn:"Search",results:"Available businesses",browse:"Browse store",menu:"View menu",services:"Browse products and services",all:"All",restaurants:"Restaurants",shops:"Stores",coffee:"Coffee",sweets:"Sweets",kind:"Business type",specialty:"Specialty",allKinds:"All businesses",allSpecialties:"All specialties",trust:"Businesses listed on FOON",local:"Support local businesses",choice:"Find what suits you",error:"Marketplace is temporarily unavailable",empty:"No matching businesses; try another search or country",select:"Choose a country to browse",count:"results",page:"Page",previous:"Previous",next:"Next"},fr:{hero:"Découvrez les boutiques et restaurants",intro:"Explorez les commerces disponibles sur FOON",search:"Rechercher un restaurant ou une boutique",searchBtn:"Rechercher",results:"Établissements disponibles",browse:"Voir la boutique",menu:"Voir le menu",services:"Voir les produits et services",all:"Tous",restaurants:"Restaurants",shops:"Boutiques",coffee:"Cafés",sweets:"Pâtisseries",kind:"Type d’activité",specialty:"Spécialité",allKinds:"Toutes les activités",allSpecialties:"Toutes les spécialités",trust:"Commerces présents sur FOON",local:"Soutenir les commerces locaux",choice:"Explorez à votre rythme",error:"Le marché est temporairement indisponible",empty:"Aucun commerce correspondant. Modifiez les filtres",select:"Choisissez un pays",count:"résultats",page:"Page",previous:"Précédent",next:"Suivant"}}[language];
  const label=(code:string)=>{
   const activity=registrationActivities.find(a=>a.id===code);
   return activity?.[language]??activity?.ar??translateUi("متجر");
  };
+ const activityIcons:Record<string,string>={restaurant:"🍽️",cafe:"☕",sweets:"🧁",grocery:"🛒",clothing:"👗",perfume:"🧴",accessories:"💍",watches:"⌚",gifts:"🎁",ecommerce:"🛍️",carwash:"🚗",automotive:"🔧",laundry:"🧺",salon:"✂️",publicworks:"🏗️"};
+ const categories=[{id:"",kind:"",activity:"",name:l.all,icon:"▦"},{id:"restaurant",kind:"restaurant",activity:"",name:l.restaurants,icon:"🍽️"},{id:"cafe",kind:"",activity:"cafe",name:l.coffee,icon:"☕"},{id:"sweets",kind:"",activity:"sweets",name:l.sweets,icon:"🧁"},{id:"store",kind:"store",activity:"",name:l.shops,icon:"🛍️"}];
+ const categoryUrl=(kind:string,activity:string)=>marketPageUrl({...filters,kind:kind as typeof filters.kind,activity,page:1},1);
+ const categoryActive=(kind:string,activity:string)=>filters.kind===kind&&filters.activity===activity;
  return <PublicMarketShell><PublicSiteHeader/><main className="foonMarket" dir={language==="ar"?"rtl":"ltr"}>
-  <section className="foonMarketHero">
-   <span>FOON MARKETPLACE</span><h1>{translateUi("اكتشف المتاجر والمطاعم")}</h1>
-   <p>{translateUi("استكشف الأنشطة المتاحة على منصة FOON، وانتقل مباشرة إلى صفحة النشاط.")}</p>
-   <CountryPicker selected={filters.country}/>
-   {!filters.country&&<p role="status">{translateUi("اختر دولتك لعرض المتاجر المحلية فقط.")}</p>}
+ <section className="foonMarketHero">
+  <div className="foonMarketHeroContent"><span className="foonMarketEyebrow">FOON MARKETPLACE</span><h1>{l.hero}</h1><p>{l.intro}</p>
+   <div className="foonMarketCountry"><CountryPicker selected={filters.country}/></div>
    <form method="get" action="/market" className="foonMarketSearch">
     <input type="hidden" name="country" value={filters.country}/>
-    <label>{translateUi("ابحث عن نشاط")}<input name="q" type="search" maxLength={80} defaultValue={filters.q} placeholder={translateUi("اسم المتجر أو المطعم")}/></label>
-    <label>{translateUi("نوع النشاط")}<select name="kind" defaultValue={filters.kind}>
-      <option value="">{translateUi("جميع الأنشطة")}</option>
-      <option value="restaurant">{translateUi("مطاعم")}</option>
-      <option value="store">{translateUi("متاجر")}</option>
-    </select></label>
-    <label>{translateUi("تخصص النشاط")}<select name="activity" defaultValue={filters.activity}>
-      <option value="">{translateUi("كل التخصصات")}</option>
-      {registrationActivities.map(a=><option key={a.id} value={a.id}>{a[language]}</option>)}
-    </select></label>
-    <button type="submit">{translateUi("بحث")}</button>
+    <input type="hidden" name="kind" value={filters.kind}/>
+    <input type="hidden" name="activity" value={filters.activity}/>
+    <label className="foonMarketSearchInput"><span className="foonSearchIcon" aria-hidden="true">⌕</span><span className="sr-only">{l.search}</span><input name="q" type="search" maxLength={80} defaultValue={filters.q} placeholder={l.search}/></label>
+    <button type="submit">{l.searchBtn}</button>
    </form>
-  </section>
-  <section className="foonMarketResults">
-   <h2>{translateUi("الأنشطة المتاحة")} {chosenName?language==="en"?"in "+chosenName:language==="fr"?"en "+chosenName:"في "+chosenName:""}</h2>
-   {error?<p role="alert">{translateUi("تعذر تحميل السوق الآن. حاول مرة أخرى لاحقًا.")}</p>:!filters.country?<p>{translateUi("اختر دولتك لعرض المتاجر المحلية فقط.")}</p>:stores.length===0?<p>{translateUi("لا توجد أنشطة مطابقة للبحث حاليًا.")}</p>:
-   <><p role="status">{language==="ar"?"النتائج":language==="en"?"Results":"Résultats"}: {total.toLocaleString("en")} · {language==="ar"?"صفحة":language==="en"?"Page":"Page"} {page.toLocaleString("en")} / {pages.toLocaleString("en")}</p>
-   <div className="foonMarketGrid">{stores.map(store=><Link key={store.id} href={publicStorefrontUrl(String(store.slug))} className="foonMarketCard">
-    <span className="foonMarketCardIcon" aria-hidden="true">{({restaurant:"🍽️",cafe:"☕",sweets:"🍰",grocery:"🛒",clothing:"👗",perfume:"🧴",accessories:"💍",watches:"⌚",gifts:"🎁",ecommerce:"🛍️",carwash:"🚗",automotive:"🔧",laundry:"🧺",salon:"✂️",publicworks:"🏗️"} as Record<string,string>)[store.activity_code]??"🏬"}</span>
-    <div><span className="foonMarketType">{label(store.activity_code)}</span><h3>{store.name}</h3><span className="foonMarketVisit">{store.kind==="restaurant"?translateUi("عرض المنيو"):translateUi("تصفح المنتجات والخدمات")} <span aria-hidden="true">←</span></span></div>
-   </Link>)}</div>
-   {pages>1&&<nav className="foonMarketPagination" aria-label={translateUi("صفحات النتائج")}>
-    {page>1&&<Link href={marketPageUrl(filters,page-1)}>{translateUi("السابق")}</Link>}
-    <span>{page.toLocaleString("en")} / {pages.toLocaleString("en")}</span>
-    {page<pages&&<Link href={marketPageUrl(filters,page+1)}>{translateUi("التالي")}</Link>}
-   </nav>}</>}
-  </section>
- </main><PublicSiteFooter pages={footerPages}/></PublicMarketShell>;
+   <div className="foonMarketTrust"><span>◇ {l.trust}</span><span>♡ {l.local}</span><span>✦ {l.choice}</span></div>
+  </div><div className="foonMarketHeroArt" aria-hidden="true"><span>FOON</span><strong>☕</strong><i>✦</i></div>
+ </section>
+ <section className="foonMarketResults">
+  <header className="foonMarketResultsHead"><div><h2>⌖ {l.results}{chosenName?" · "+chosenName:""}</h2><p>{total.toLocaleString("en")} {l.count}</p></div></header>
+  <nav className="foonMarketCategories" aria-label={l.kind}>{categories.map(c=><Link key={c.id} href={categoryUrl(c.kind,c.activity)} className={categoryActive(c.kind,c.activity)?"active":""} aria-current={categoryActive(c.kind,c.activity)?"page":undefined}><span aria-hidden="true">{c.icon}</span> {c.name}</Link>)}</nav>
+  <form method="get" action="/market" className="foonMarketFilters">
+   <input type="hidden" name="country" value={filters.country}/><input type="hidden" name="q" value={filters.q}/>
+   <label><span className="sr-only">{l.kind}</span><select name="kind" defaultValue={filters.kind}><option value="">{l.allKinds}</option><option value="restaurant">{l.restaurants}</option><option value="store">{l.shops}</option></select></label>
+   <label><span className="sr-only">{l.specialty}</span><select name="activity" defaultValue={filters.activity}><option value="">{l.allSpecialties}</option>{registrationActivities.map(a=><option value={a.id} key={a.id}>{a[language]}</option>)}</select></label>
+   <button type="submit">{l.searchBtn}</button>
+  </form>
+  {error?<p role="alert" className="foonMarketEmpty">{l.error}</p>:!filters.country?<p className="foonMarketEmpty">{l.select}</p>:stores.length===0?<p className="foonMarketEmpty">{l.empty}</p>:
+  <><div className="foonMarketGrid">{stores.map(store=><article key={store.id} className="foonMarketCard">
+   <div className="foonMarketCardCover" data-activity={store.activity_code}><span className="foonMarketCoverMark" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><span className="foonMarketCoverBrand" aria-hidden="true">FOON</span></div>
+   <div className="foonMarketCardBody"><div className="foonMarketCardTop"><span className="foonMarketCardIcon" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><div><h3>{store.name}</h3><p>{label(store.activity_code)}</p></div></div>
+    <p className="foonMarketCardDescription">{language==="ar"?"استكشف المنتجات والخدمات التي يقدمها هذا النشاط.":language==="en"?"Explore this business’s products and services.":"Découvrez les produits et services de cet établissement."}</p>
+    <Link href={publicStorefrontUrl(String(store.slug))} className="foonMarketVisit">{store.kind==="restaurant"?l.menu:store.kind==="store"?l.services:l.browse} <span aria-hidden="true">←</span></Link></div>
+  </article>)}</div>
+  {pages>1&&<nav className="foonMarketPagination" aria-label={translateUi("صفحات النتائج")}>{page>1&&<Link href={marketPageUrl(filters,page-1)}>{l.previous}</Link>}<span>{l.page} {page.toLocaleString("en")} / {pages.toLocaleString("en")}</span>{page<pages&&<Link href={marketPageUrl(filters,page+1)}>{l.next}</Link>}</nav>}</>}
+ </section></main><PublicSiteFooter pages={footerPages}/></PublicMarketShell>;
 }
