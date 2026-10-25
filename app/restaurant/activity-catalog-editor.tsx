@@ -10,6 +10,7 @@ import CatalogOptions from "./catalog-options";
 import CatalogImages from "./catalog-images";
 import {catalogText} from "@/lib/platform/catalog-copy";
 import ProductWorkspaceTabs from "./product-workspace-tabs";
+import PlanUpgradeNotice,{isUpgradeError} from "./plan-upgrade-notice";
 import ActivityTemplateEditor from "./activity-template-editor";
 type Category={id:string;name_ar:string;name_en?:string;name_fr?:string;enabled:boolean;description_ar?:string|null;description_en?:string|null;description_fr?:string|null;image_url?:string|null};
 type Product={id:string;name_ar:string;price:number;currency:string;category_id:string;enabled:boolean;stock_quantity:number|null;name_en:string|null;name_fr:string|null;image_url?:string|null};
@@ -29,6 +30,7 @@ export default function ActivityCatalogEditor({tenantId,service,activityCode,sto
  const [translations,setTranslations]=useState<Record<string,string>>({});
  const [page,setPage]=useState(1),[total,setTotal]=useState(0),[query,setQuery]=useState(""),[filterCategory,setFilterCategory]=useState("");
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const [upgradeCode,setUpgradeCode]=useState("");
  async function load(nextPage=page,nextQuery=query,nextCategory=filterCategory){
   const params=new URLSearchParams({page:String(nextPage)});
   if(nextQuery)params.set("q",nextQuery);
@@ -41,7 +43,7 @@ export default function ActivityCatalogEditor({tenantId,service,activityCode,sto
   setCategoryId(v=>d.categories.some((c:Category)=>c.id===v)?v:d.categories[0]?.id??"");
  }
  useEffect(()=>{let active=true;const params=new URLSearchParams({page:"1"});fetch("/api/restaurant/activity-catalog?"+params,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(async r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{if(!active)return;if(!Array.isArray(d.categories)||!Array.isArray(d.products)||!Number.isFinite(Number(d.total)))throw Error("INVALID_CATALOG_RESPONSE");setCurrency(typeof d.currency==="string"?d.currency:"SAR");setCategories(d.categories);setProducts(d.products);setTotal(d.total);setSelectedProductIds(new Set());setCategoryId(d.categories[0]?.id??"");setLoading(false)}).catch(()=>{if(active){setMessage(translateUi("تعذر تحميل الكتالوج. حاول مجددًا."));setLoading(false)}});return()=>{active=false}},[tenantId]);
- async function add(kind:"category"|"product"){if(kind==="product"&&(!Number.isFinite(Number(price))||price.trim()===""||(Number(price)<0||Number(price)>9999999999))){setMessage(translateUi("أدخل سعرًا صالحًا لا يقل عن الصفر."));return}setBusy(true);setMessage("");try{const r=await fetch("/api/restaurant/activity-catalog",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify(kind==="category"?{kind,name:categoryName,nameEn:translations.categoryEn??"",nameFr:translations.categoryFr??"",description:translations.categoryDescription??"",descriptionEn:translations.categoryDescriptionEn??"",descriptionFr:translations.categoryDescriptionFr??""}:{kind,name:productName,categoryId,price:Number(price),description,nameEn:translations.productEn??"",nameFr:translations.productFr??"",descriptionEn:translations.productDescriptionEn??"",descriptionFr:translations.productDescriptionFr??""})});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.code??"SAVE_FAILED")}setTranslations(previous=>Object.fromEntries(Object.entries(previous).filter(([key])=>!key.startsWith(kind))));if(kind==="category")setCategoryName("");else {setProductName("");setDescription("")}await load();setMessage(translateUi("تمت الإضافة بنجاح."))}catch(e){setMessage(translateUi("تعذر الحفظ:")+" "+(e instanceof Error?e.message:translateUi("خطأ غير معروف")))}finally{setBusy(false)}}
+ async function add(kind:"category"|"product"){setUpgradeCode("");if(kind==="product"&&(!Number.isFinite(Number(price))||price.trim()===""||(Number(price)<0||Number(price)>9999999999))){setMessage(translateUi("أدخل سعرًا صالحًا لا يقل عن الصفر."));return}setBusy(true);setMessage("");try{const r=await fetch("/api/restaurant/activity-catalog",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify(kind==="category"?{kind,name:categoryName,nameEn:translations.categoryEn??"",nameFr:translations.categoryFr??"",description:translations.categoryDescription??"",descriptionEn:translations.categoryDescriptionEn??"",descriptionFr:translations.categoryDescriptionFr??""}:{kind,name:productName,categoryId,price:Number(price),description,nameEn:translations.productEn??"",nameFr:translations.productFr??"",descriptionEn:translations.productDescriptionEn??"",descriptionFr:translations.productDescriptionFr??""})});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.code??"SAVE_FAILED")}setTranslations(previous=>Object.fromEntries(Object.entries(previous).filter(([key])=>!key.startsWith(kind))));if(kind==="category")setCategoryName("");else {setProductName("");setDescription("")}await load();setMessage(translateUi("تمت الإضافة بنجاح."))}catch(e){const code=e instanceof Error?e.message:"";if(isUpgradeError(code))setUpgradeCode(code);setMessage(translateUi("تعذر الحفظ:")+" "+(e instanceof Error?e.message:translateUi("خطأ غير معروف")))}finally{setBusy(false)}}
  async function update(kind:"category"|"product",id:string,changes:Record<string,unknown>){setBusy(true);setMessage("");try{const r=await fetch("/api/restaurant/activity-catalog",{method:"PATCH",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({kind,id,...changes})});if(!r.ok)throw Error((await r.json().catch(()=>({}))).code??"UPDATE_FAILED");await load();setMessage(translateUi("تم تحديث العنصر."))}catch(e){setMessage(translateUi("تعذر التحديث:")+" "+(e instanceof Error?e.message:translateUi("خطأ")))}finally{setBusy(false)}}
  async function addImage(product:string,url:string){
   if(!url)return;
@@ -110,6 +112,7 @@ export default function ActivityCatalogEditor({tenantId,service,activityCode,sto
 </div>
    {action&&<CatalogAction title={action.title} initial={action.initial} confirmOnly={action.confirmOnly} url={action.url} translations={action.translations} onConfirm={action.run} onClose={()=>setAction(null)}/>}
 
+   {upgradeCode&&<PlanUpgradeNotice activity={activityCode??"restaurant"} code={upgradeCode}/>}
    {message&&<p role="status">{t(message)}</p>}
 
  </section>;
