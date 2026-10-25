@@ -70,8 +70,8 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   try{
    const pending=await updateQueueCounts();
    setSyncLastAt(new Date().toISOString());setSyncState(pending>0?"failed":"idle");
-   // Background connectivity checks must never overwrite order/payment feedback.
-   if(notify||pending>0)setMessage("المزامنة القديمة متوقفة لحماية بيانات العملاء. افتح نقطة البيع المحلية المشفرة واسترد الطلبات القديمة بصلاحية المالك أو المدير.");
+   // Background checks must not overwrite checkout feedback; pending orders remain visible in the sync panel.
+   if(notify)setMessage("المزامنة القديمة متوقفة لحماية بيانات العملاء. افتح نقطة البيع المحلية المشفرة واسترد الطلبات القديمة بصلاحية المالك أو المدير.");
   }catch{
    setSyncState("failed");
    if(notify)setMessage("تعذر فحص الطلبات المحلية. حاول مجددًا من أدوات المزامنة.");
