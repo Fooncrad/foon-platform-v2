@@ -126,3 +126,22 @@ test("pull scope rejects coercible UUID values before SQL or network",async()=>{
   }
  }
 });
+
+test("pull without a local business adapter never reads cursor or contacts cloud",async()=>{
+ const db=fixture();let networkCalls=0;
+ await assert.rejects(()=>pullAndApplyNextSyncBatch({
+  db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,
+  fetchImpl:async()=>{networkCalls++;return response(signedBatch());}
+ }),/SYNC_LOCAL_ADAPTER_REQUIRED/);
+ assert.deepEqual(db.calls,[],"no cursor read or transaction before adapter preflight");
+ assert.equal(networkCalls,0,"no cloud request without local adapter");
+});
+test("pull without a transactional database never reads cursor or contacts cloud",async()=>{
+ const db=fixture();delete db.beginTransaction;let networkCalls=0;
+ await assert.rejects(()=>pullAndApplyNextSyncBatch({
+  db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,
+  applyEvent:async()=>true,fetchImpl:async()=>{networkCalls++;return response(signedBatch());}
+ }),/SYNC_TRANSACTION_REQUIRED/);
+ assert.deepEqual(db.calls,[],"no cursor read without transaction support");
+ assert.equal(networkCalls,0,"no cloud request without transaction support");
+});
