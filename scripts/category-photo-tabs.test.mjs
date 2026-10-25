@@ -8,7 +8,7 @@ test("category cover is shared across Arabic English French with tenant scoped a
  assert.match(api,/AS imageUrl FROM restaurant_menu_categories/);
  assert.match(api,/body\.imageUrl!==undefined/);
  assert.match(api,/restaurant_assets WHERE tenant_id=\?/);
- assert.match(api,/imageUrl:imageUrl/);
+ assert.match(api,/imageUrl!==undefined\?\{imageUrl\}/);
  const editor=read("app/restaurant/menu/category-editor.tsx");
  const picker=read("app/restaurant/menu/category-image-editor.tsx");
  assert.match(editor,/MenuCategoryImageEditor tenantId=\{tenantId\}/);
