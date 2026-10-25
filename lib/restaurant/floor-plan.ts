@@ -1,6 +1,12 @@
 export type FloorTable={id:string;number:string;seats:number;x:number;y:number;zone:string};
 export type FloorPlan={width:number;height:number;tables:FloorTable[]};
 export const defaultFloorPlan:FloorPlan={width:24,height:18,tables:[]};
+export function nextFloorTableNumber(tables:readonly FloorTable[]):string{
+ const used=new Set(tables.map(table=>table.number.trim()));
+ let candidate=1;
+ while(used.has(String(candidate)))candidate++;
+ return String(candidate);
+}
 export function validFloorPlan(x:unknown):x is FloorPlan{
  if(!x||typeof x!=="object")return false;const p=x as Record<string,unknown>;
  if(typeof p.width!=="number"||!Number.isFinite(p.width)||p.width<2||p.width>200||typeof p.height!=="number"||!Number.isFinite(p.height)||p.height<2||p.height>200||!Array.isArray(p.tables)||p.tables.length>500)return false;
