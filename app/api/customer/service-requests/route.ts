@@ -2,6 +2,7 @@ import {createHash,randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
+import {activeCustomerAccount} from "@/lib/auth/active-customer-account.mjs";
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
@@ -28,7 +29,9 @@ export async function GET(request:Request){
  const slug=new URL(request.url).searchParams.get("storeSlug")?.trim().toLowerCase()??"";
  if(!validStoreSlug(slug))return fail("INVALID_INPUT");
  try{
-  const db=database(),ctx=await customerScope(db,user,slug);
+  const db=database();
+  if(!await activeCustomerAccount(db,user))return fail("UNAUTHENTICATED",401);
+  const ctx=await customerScope(db,user,slug);
   if(!ctx)return fail("STORE_CUSTOMER_REQUIRED",403);
   const [rows]=await db.execute<RowDataPacket[]>(
    "SELECT id,name,status,data,created_at,updated_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 50",
