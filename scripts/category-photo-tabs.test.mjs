@@ -6,7 +6,7 @@ const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 test("category cover is shared across Arabic English French with tenant scoped asset validation",()=>{
  const api=read("app/api/restaurant/menu/categories/route.ts");
  assert.match(api,/AS imageUrl FROM restaurant_menu_categories/);
- assert.match(api,/body\.imageUrl!==undefined/);
+ assert.match(api,/body\?\.imageUrl!==undefined/);
  assert.match(api,/restaurant_assets WHERE tenant_id=\?/);
  assert.match(api,/imageUrl!==undefined\?\{imageUrl\}/);
  const editor=read("app/restaurant/menu/category-editor.tsx");
