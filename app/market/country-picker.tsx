@@ -32,3 +32,4 @@ export default function CountryPicker({selected}:{selected:string}){
  <div className="foonCountryChoices">{list.length?list.map(c=><button key={c.code} type="button" aria-pressed={country===c.code} onClick={()=>change(c.code)}>{c[lang]} ({c.code})</button>):<p>{copy.none}</p>}</div>
  </div>}
  </div>;
+}
