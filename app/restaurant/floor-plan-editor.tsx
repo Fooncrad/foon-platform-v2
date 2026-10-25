@@ -8,7 +8,8 @@ export default function RestaurantFloorPlan({tenantId,branch,onReservations}:{te
  const [selected,setSelected]=useState("");
  const [message,setMessage]=useState("");
  const [saving,setSaving]=useState(false);
- const [loaded,setLoaded]=useState(false);
+ const [loadedScope,setLoadedScope]=useState("");
+ const loaded=loadedScope===tenantId+":"+branch;
  const [dirty,setDirty]=useState(false);
  const [zoom,setZoom]=useState(100);
  const [zoneFilter,setZoneFilter]=useState("all");
@@ -19,11 +20,11 @@ export default function RestaurantFloorPlan({tenantId,branch,onReservations}:{te
  useEffect(()=>{
   editRevision.current+=1;
   let active=true;
-  setLoaded(false);setPlan(defaultFloorPlan);setDirty(false);setSelected("");setMessage("");
+  setLoadedScope("");setPlan(defaultFloorPlan);setDirty(false);setSelected("");setMessage("");
   fetch(endpoint,{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
    .then(r=>r.ok?r.json():Promise.reject())
-   .then(j=>{if(!j?.ok||!j.plan)throw Error("INVALID_FLOOR_PLAN_RESPONSE");if(active){setPlan(j.plan);setLoaded(true);setDirty(false);setSelected("");setZoneFilter("all");}})
-   .catch(()=>{if(active){setLoaded(false);setMessage("تعذر تحميل مخطط الفرع؛ الحفظ معطّل لحماية الطاولات الموجودة");}});
+   .then(j=>{if(!j?.ok||!j.plan)throw Error("INVALID_FLOOR_PLAN_RESPONSE");if(active){setPlan(j.plan);setLoadedScope(tenantId+":"+branch);setDirty(false);setSelected("");setZoneFilter("all");}})
+   .catch(()=>{if(active){setLoadedScope("");setMessage("تعذر تحميل مخطط الفرع؛ الحفظ معطّل لحماية الطاولات الموجودة");}});
   return()=>{active=false};
  },[tenantId,endpoint]);
  const zones=useMemo(()=>Array.from(new Set(plan.tables.map(t=>t.zone).filter(Boolean))),[plan.tables]);
