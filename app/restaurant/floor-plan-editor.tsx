@@ -1,11 +1,11 @@
 "use client";
 import {useEffect,useState} from "react";
-import {defaultFloorPlan,type FloorPlan} from "@/lib/restaurant/floor-plan";
+import {defaultFloorPlan,nextFloorTableNumber,type FloorPlan} from "@/lib/restaurant/floor-plan";
 export default function RestaurantFloorPlan({tenantId,branch}:{tenantId:string;branch:string}){
  const [plan,setPlan]=useState<FloorPlan>(defaultFloorPlan),[selected,setSelected]=useState(""),[message,setMessage]=useState(""),[saving,setSaving]=useState(false);
  const endpoint="/api/restaurant/floor-plan?branch="+encodeURIComponent(branch);
  useEffect(()=>{let active=true;fetch(endpoint,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{if(active)setPlan(j.plan)}).catch(()=>{if(active)setMessage("تعذر تحميل مخطط الفرع")});return()=>{active=false}},[tenantId,endpoint]);
- function add(){const id="table-"+Date.now().toString(36);setPlan(p=>({...p,tables:[...p.tables,{id,number:String(p.tables.length+1),seats:4,x:Math.min(2,p.width),y:Math.min(2,p.height),zone:"الصالة"}]}));setSelected(id)}
+ function add(){const id="table-"+crypto.randomUUID();setPlan(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,x:Math.min(2,p.width),y:Math.min(2,p.height),zone:"الصالة"}]}));setSelected(id)}
  function edit(patch:Record<string,string|number>){setPlan(p=>({...p,tables:p.tables.map(t=>t.id===selected?{...t,...patch}:t)}))}
  const active=plan.tables.find(t=>t.id===selected);
  async function save(){setSaving(true);setMessage("");try{const r=await fetch(endpoint,{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({plan})});if(!r.ok)throw Error();setMessage("تم حفظ مخطط الطاولات للفرع")}catch{setMessage("تعذر حفظ المخطط؛ تحقق من الأرقام أو الترحيل")}finally{setSaving(false)}}
