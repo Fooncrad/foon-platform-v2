@@ -4,6 +4,7 @@ import {database} from "@/lib/db/mysql";
 import {currentSessionId,currentUserId} from "@/lib/auth/session";
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
@@ -31,9 +32,11 @@ export async function GET(){
 export async function DELETE(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
  const ctx=await access();if(ctx.error)return ctx.error;
- const body=await request.json().catch(()=>null);
- const allOthers=body?.allOthers===true&&body?.id===undefined;
- const id=!allOthers&&typeof body?.id==="string"?body.id:"";
+ let body:unknown;
+ try{body=await readLimitedJson(request,1024);}catch(e){return e instanceof Error&&e.message==='BATCH_TOO_LARGE'?fail("BODY_TOO_LARGE",413):fail("INVALID_INPUT",400);}
+ const data=body&&typeof body==='object'&&!Array.isArray(body)?body as {allOthers?:unknown;id?:unknown}:null;
+ const allOthers=data?.allOthers===true&&data?.id===undefined;
+ const id=!allOthers&&typeof data?.id==="string"?data.id:"";
  if(!allOthers&&!validId.test(id))return fail("INVALID_INPUT",400);
  if(id===ctx.sessionId)return fail("CURRENT_SESSION_PROTECTED",409);
  try{
