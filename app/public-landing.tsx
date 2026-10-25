@@ -1,5 +1,5 @@
-import type {LandingSettings} from "@/lib/platform/landing-content";
 "use client";
+import type {LandingSettings} from "@/lib/platform/landing-fields";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {PublicSiteHeader,PublicSiteFooter} from "./public-site-chrome";
 import {useSavedPreference} from "@/lib/ui/saved-preference";
