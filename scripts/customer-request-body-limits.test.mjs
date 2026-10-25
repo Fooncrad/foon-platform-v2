@@ -80,7 +80,7 @@ test('chunked reverse geocode overflow returns 413 without provider calls',async
   assert.equal(response.status,413);assert.equal((await response.json()).code,'BODY_TOO_LARGE');
   assert.ok(upload.consumed<upload.total);assert.equal(calls.geocode,0);
 });
-test('reverse geocode rejects malformed input and suspended surface access',async()=>{
+test('reverse geocode rejects malformed input and employee or anonymous access',async()=>{
   assert.equal((await handler(geocode).POST(req('api/customer/reverse-geocode','{bad'))).status,400);
   assert.equal((await handler(geocode,{employee:true}).POST(req('api/customer/reverse-geocode',geoBody))).status,403);
   assert.equal((await handler(geocode,{anonymous:true}).POST(req('api/customer/reverse-geocode',geoBody))).status,401);
