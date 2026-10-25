@@ -49,7 +49,7 @@ export async function GET(request:Request){
  const ctx=await scope(request);if(ctx.error)return ctx.error;
  try{
   const [categories]=await database().execute<RowDataPacket[]>(
-   "SELECT c.id,c.name,c.sort_order,c.enabled,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameEn')),'') AS nameEn,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameFr')),'') AS nameFr,JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.imageUrl')) AS imageUrl FROM restaurant_menu_categories c LEFT JOIN restaurant_resources r ON r.id=c.id AND r.tenant_id=c.tenant_id AND r.kind='menu_category' AND r.archived=FALSE WHERE c.tenant_id=? ORDER BY c.sort_order,c.name",
+   "SELECT c.id,c.name,c.sort_order,c.enabled,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameEn')),'') AS nameEn,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameFr')),'') AS nameFr,NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.imageUrl')),'null') AS imageUrl FROM restaurant_menu_categories c LEFT JOIN restaurant_resources r ON r.id=c.id AND r.tenant_id=c.tenant_id AND r.kind='menu_category' AND r.archived=FALSE WHERE c.tenant_id=? ORDER BY c.sort_order,c.name",
    [ctx.tenantId]
   );
   return NextResponse.json({ok:true,categories});
