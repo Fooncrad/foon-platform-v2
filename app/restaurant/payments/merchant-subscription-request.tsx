@@ -3,7 +3,7 @@ import {useEffect,useState,type FormEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import Link from "next/link";
 type Price={plan_id:string;name_ar:string;name_en:string;name_fr:string;billing_cycle:"monthly"|"yearly";currency:string;price:string;catalog_enabled:number|string;catalog_limit:number|null};
-type Quota={used:number;limit:number|null;enabled:boolean;feature:string};
+type Quota={used:number;productUsed:number;limit:number|null;enabled:boolean;feature:string};
 type Receipt={payment_request_id:string;receipt_number:string;amount:string;currency:string;issued_at:string;billing_cycle:string;name_ar:string;name_en:string;name_fr:string};
 type Request={id:string;amount:string;currency:string;billing_cycle:string;status:string;transfer_reference:string;review_note:string|null};
 export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}){
@@ -45,26 +45,27 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
   }catch(e){setError(String(e instanceof Error?e.message:e));}finally{setBusy(false);}
  }
  const pending=requests.some(r=>r.status==="pending");
- const atLimit=Boolean(quota?.enabled&&quota.limit!==null&&quota.used>=quota.limit);
- const expandsLimit=(price:Price)=>Number(price.catalog_enabled)===1&&(price.catalog_limit===null||quota?.limit!==null&&Number(price.catalog_limit)>Math.max(quota?.limit??0,quota?.used??0));
+ const atLimit=Boolean(quota?.enabled&&quota.limit!==null&&Math.max(quota.used,quota.productUsed)>=quota.limit);
+ const expandsLimit=(price:Price)=>Number(price.catalog_enabled)===1&&(price.catalog_limit===null||quota?.limit!==null&&Number(price.catalog_limit)>Math.max(quota?.limit??0,quota?.used??0,quota?.productUsed??0));
  const availablePlans=prices.filter(p=>!atLimit||expandsLimit(p));
  return <section className="adminPanel" style={{padding:16,marginBlock:22,border:"1px solid var(--border, #777)",borderRadius:16}}>
   <h2>{t("الاشتراك المدفوع للمنصة","Platform paid subscription","Abonnement payant FOON")}</h2>
   <p>{t("هذا القسم لرسوم اشتراك FOON، وهو منفصل عن مدفوعات طلبات عملائك. التحويل لا يُعتمد آليًا: تأكد من بيانات حساب المنصة البنكي، ثم أرسل مرجع التحويل لتراجعه الإدارة.","FOON subscription fees are separate from customer checkout. Verify platform bank details, transfer, then submit the reference for manual verification.","Les abonnements FOON sont distincts des paiements clients. Vérifiez le compte bancaire et transmettez la référence pour examen.")}</p>
   {loading?<p role="status">{t("جارٍ التحميل…","Loading…","Chargement…")}</p>:<>
   {quota&&<div role="status" style={{padding:12,border:"1px solid var(--border,#d6dde4)",borderRadius:12,marginBlock:14,background:"var(--surface,#fff)"}}>
-    <strong>{t("استخدام الأقسام في الباقة الحالية","Category usage under your current plan","Utilisation des catégories de votre formule")}</strong>
-    <p dir="ltr" style={{margin:"8px 0",fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{quota.used.toLocaleString("en-US")} / {quota.enabled?(quota.limit===null?"∞":quota.limit.toLocaleString("en-US")):"—"}</p>
-    <p style={{margin:0}}>{atLimit?t("وصلت إلى الحد. اختر باقة تسمح بأقسام أكثر.","Limit reached. Choose a paid plan with a higher category allowance.","Limite atteinte. Choisissez une formule avec davantage de catégories."):t("اختر الباقة المناسبة لنشاطك وقارن الحد المتاح للأقسام.","Compare the category allowance of plans available for your activity.","Comparez les limites de catégories des formules proposées.")}</p>
+    <strong>{t("حدود الأقسام والمنتجات في الباقة الحالية","Current category and product allowance","Limite actuelle des catégories et produits")}</strong>
+    <p dir="ltr" style={{margin:"8px 0",fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{t("الأقسام","Categories","Catégories")}: {quota.used.toLocaleString("en-US")} / {quota.enabled?(quota.limit===null?"∞":quota.limit.toLocaleString("en-US")):"—"}</p>
+    <p dir="ltr" style={{margin:"8px 0",fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{t("المنتجات","Products","Produits")}: {quota.productUsed.toLocaleString("en-US")} / {quota.enabled?(quota.limit===null?"∞":quota.limit.toLocaleString("en-US")):"—"}</p>
+    <p style={{margin:0}}>{atLimit?t("وصلت إلى حد الأقسام أو المنتجات. اختر باقة بسعة أكبر.","Category or product limit reached. Choose a paid plan with higher capacity.","Limite de catégories ou de produits atteinte. Choisissez une formule supérieure."):t("اختر الباقة المناسبة لنشاطك وقارن حد الأقسام والمنتجات.","Compare the category and product allowance of plans available for your activity.","Comparez les limites des catégories et des produits.")}</p>
   </div>}
   {!prices.length&&<p role="status">{t("لا توجد باقات مدفوعة مفعّلة بعملة نشاطك حاليًا. تواصل مع إدارة FOON لإتاحة الباقات والأسعار.","No paid plans are published in this business currency yet. Contact FOON administration for plan availability.","Aucune formule payante disponible dans cette devise. Contactez l’administration FOON.")} <Link href="/contact">{t("تواصل معنا","Contact us","Nous contacter")}</Link></p>}
-  {atLimit&&prices.length>0&&availablePlans.length===0&&<p role="status">{t("لا توجد باقة منشورة ترفع الحد الحالي للأقسام؛ لا يمكن تقديم ترقية فعالة الآن. تواصل مع الإدارة لضبط حد باقة أعلى.","No published paid plan increases your category limit. Contact administration to configure a suitable plan.","Aucune formule publiée ne relève votre limite. Contactez l’administration pour une formule adaptée.")} <Link href="/contact">{t("طلب المساعدة","Request help","Demander de l’aide")}</Link></p>}
+  {atLimit&&prices.length>0&&availablePlans.length===0&&<p role="status">{t("لا توجد باقة منشورة ترفع الحد الحالي للأقسام أو المنتجات. تواصل مع الإدارة لإعداد باقة أعلى.","No published paid plan increases your category or product limit. Contact administration to configure a suitable plan.","Aucune formule publiée ne relève ces limites. Contactez l’administration pour une offre adaptée.")} <Link href="/contact">{t("طلب المساعدة","Request help","Demander de l’aide")}</Link></p>}
   {availablePlans.length>0&&<form onSubmit={submit} style={{display:"grid",gap:12,maxWidth:640}}>
    <label>{t("الباقة والدورة","Plan and cycle","Formule et période")}
     <select required value={chosen} disabled={pending||busy} onChange={e=>setChosen(e.target.value)}>
      <option value="">{t("اختر باقة مدفوعة","Choose a paid plan","Choisir une offre")}</option>
      {availablePlans.map(p=><option key={p.plan_id+":"+p.billing_cycle} value={p.plan_id+":"+p.billing_cycle}>
-      {lang==="en"?p.name_en:lang==="fr"?p.name_fr:p.name_ar} — {p.price} {p.currency} / {p.billing_cycle==="yearly"?t("سنوي","year","an"):t("شهري","month","mois")} — {Number(p.catalog_enabled)===1?t("حد الأقسام: ","Categories: ","Catégories : ")+(p.catalog_limit===null?t("غير محدود","Unlimited","Illimité"):p.catalog_limit):t("الكتالوج غير مشمول","Catalog not included","Catalogue non inclus")}
+      {lang==="en"?p.name_en:lang==="fr"?p.name_fr:p.name_ar} — {p.price} {p.currency} / {p.billing_cycle==="yearly"?t("سنوي","year","an"):t("شهري","month","mois")} — {Number(p.catalog_enabled)===1?t("حد الأقسام والمنتجات: ","Categories/products: ","Catégories/produits : ")+(p.catalog_limit===null?t("غير محدود","Unlimited","Illimité"):p.catalog_limit):t("الكتالوج غير مشمول","Catalog not included","Catalogue non inclus")}
      </option>)}
     </select>
    </label>
