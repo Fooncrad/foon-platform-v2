@@ -81,3 +81,28 @@ test("invalid UUID push scope fails before reading outbox or sending network req
  assert.equal(x.db.calls.length,0);
  assert.equal(networkCalls,0);
 });
+
+test("case-variant UUID replay is rejected within one push pass",async()=>{
+ const x=fixture();
+ let readCount=0;
+ const original=x.db.execute.bind(x.db);
+ x.db.execute=async(sql,...args)=>{
+  if(sql.startsWith("SELECT event_id,payload_digest,event_payload")){
+   readCount++;
+   const event=readCount===1?{...change,eventId:change.eventId.toUpperCase()}:change;
+   return [[{event_id:event.eventId,payload_digest:digestChange(event),event_payload:JSON.stringify(event)}]];
+  }
+  if(sql.startsWith("SELECT tenant_id,branch_id,payload_digest,state")){
+   const event=readCount===1?{...change,eventId:change.eventId.toUpperCase()}:change;
+   return [[{tenant_id:ids[1],branch_id:ids[2],payload_digest:digestChange(event),state:"pending"}]];
+  }
+  return original(sql,...args);
+ };
+ const fetchImpl=async()=>{
+  const event=readCount===1?{...change,eventId:change.eventId.toUpperCase()}:change;
+  const signed=signCommittedPushReceipt({receipt:{deviceId:ids[0],eventId:event.eventId,tenantId:ids[1],branchId:ids[2],digest:digestChange(event),status:"recorded",nextVersion:1},privateKey});
+  return {ok:true,status:200,redirected:false,headers:{get:()=>"application/json"},json:async()=>signed};
+ };
+ await assert.rejects(()=>pushBoundedPendingSyncEvents({...params,db:x.db,fetchImpl}),/SYNC_PUSH_REPEATED_EVENT/);
+ assert.equal(readCount,2);
+});
