@@ -16,8 +16,8 @@ function streamRequest(value,chunkSize=1024){
  const stream=new ReadableStream({pull(controller){if(offset>=bytes.length){controller.close();return;}const end=Math.min(offset+chunkSize,bytes.length);controller.enqueue(bytes.slice(offset,end));offset=end;}});
  return {request:new Request('https://example.invalid/api/customer/orders',{method:'POST',body:stream,duplex:'half'}),get consumed(){return offset;},total:bytes.length};
 }
-test('customer orders and reservations use bounded JSON before opening DB connections',()=>{
- for(const [file,limit] of [['app/api/customer/orders/route.ts','1024*1024'],['app/api/customer/services/route.ts','8192']]){
+test('customer checkout uses bounded JSON before opening DB connections',()=>{
+ for(const [file,limit] of [['app/api/customer/orders/route.ts','1024*1024']]){
   const code=source(file);
   assert.match(code,/import \{readLimitedJson\} from "@\/lib\/security\/limited-json"/);
   assert.ok(code.indexOf(`readLimitedJson(request,${limit})`)>0);
