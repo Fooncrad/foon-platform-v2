@@ -74,7 +74,7 @@ export async function PATCH(request:Request){
   if(update.affectedRows!==1)throw Error("COMMISSION_CONFLICT");
   await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?)",
    [id,"creator.commission."+body.status,"creator_commission",body.id,JSON.stringify({reference:body.reference.trim(),amount:String(rows[0].amount),currency:rows[0].currency})]);
-  await queueCommissionNotice(db,body.id,body.status);
+  await queueCommissionNotice(db,body.id,body.status==="paid"?"paid":"reversed");
   await db.commit();dispatchNotifications();return reply({ok:true});
  }catch{await db.rollback();return reply({ok:false,code:"COMMISSION_REVIEW_FAILED"},503);}finally{db.release();}
 }
