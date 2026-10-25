@@ -24,6 +24,7 @@ import OrderWorkspace from "./order-workspace";
 import PaymentEditor from "./payments/payment-editor";
 import ReportsWorkspace from "./reports-workspace";
 import "./merchant-experience.css";
+import "../restaurant/foon-control-system.css";
 import "./shared-dashboard-legibility.css";
 import "./reference-dashboard-layout.css";
 import StaffHelpPanel from "./staff-help-panel";
