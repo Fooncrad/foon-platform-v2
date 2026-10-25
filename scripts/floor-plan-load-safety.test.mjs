@@ -50,10 +50,11 @@ test("database errors remain service errors, not an empty plan",async()=>{
  const r=await loadPlan([],true);assert.equal(r.status,503);assert.equal(r.body.code,"FLOOR_PLAN_UNAVAILABLE");
 });
 test("editor cannot save before a successful load or after a failed load",()=>{
- assert.match(editorSource,/const \[loaded,setLoaded\]=useState\(false\)/);
- assert.match(editorSource,/setLoaded\(false\);setPlan\(defaultFloorPlan\)/);
- assert.match(editorSource,/setPlan\(j\.plan\);setLoaded\(true\)/);
- assert.match(editorSource,/catch\(\(\)=>\{if\(active\)\{setLoaded\(false\)/);
+ assert.match(editorSource,/const \[loadedScope,setLoadedScope\]=useState\(""\)/);
+ assert.match(editorSource,/setLoadedScope\(""\);setPlan\(defaultFloorPlan\)/);
+ assert.match(editorSource,/setPlan\(j\.plan\);setLoadedScope\(tenantId\+":"\+branch\)/);
+ assert.match(editorSource,/catch\(\(\)=>\{if\(active\)\{setLoadedScope\(""\)/);
+ assert.match(editorSource,/const loaded=loadedScope===tenantId\+":"\+branch/);
  assert.match(editorSource,/async function save\(\)\{if\(!loaded\|\|saving\|\|!branch\)return/);
  assert.match(editorSource,/onClick=\{save\} disabled=\{!loaded\|\|!branch\|\|saving\}/);
 });
