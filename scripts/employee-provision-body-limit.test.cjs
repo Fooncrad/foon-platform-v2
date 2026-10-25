@@ -67,6 +67,9 @@ test('both POST and PATCH use bounded parsing while origin and tenant guards rem
  assert.equal((source.match(/employeePayload\(request\)/g)||[]).length,2);
  assert.doesNotMatch(source,/request\.json\(\)/);
  assert.equal((source.match(/assertSameOrigin\(request\)/g)||[]).length,2);
- assert.equal((source.match(/requireTenantMembership\(actor,tenantId,\["owner","manager"\]/g)||[]).length,2);
+ const postSource=source.slice(source.indexOf("export async function POST("),source.indexOf("export async function PATCH("));
+ const patchSource=source.slice(source.indexOf("export async function PATCH("),source.indexOf("export async function GET(" )>0?source.indexOf("export async function GET("):undefined);
+ assert.match(postSource,/requireTenantMembership\(actor,tenantId,\["owner","manager"\]/);
+ assert.match(patchSource,/requireTenantMembership\(actor,tenantId,\["owner","manager"\]/);
  assert.match(source,/requireAdditionalBranchUnlock\(/);
 });
