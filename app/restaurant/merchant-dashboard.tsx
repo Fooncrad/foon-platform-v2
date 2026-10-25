@@ -1,5 +1,5 @@
-import QrIdentitySettings from "./qr-identity-settings";
 "use client";
+import QrIdentitySettings from "./qr-identity-settings";
 import VisitAnalytics from "./visit-analytics";
 import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {activityWorkspaceUrl,activityPaymentsUrl,activityMediaStudioUrl,activitySectionUrl} from "@/lib/tenant/workspace-routes";
