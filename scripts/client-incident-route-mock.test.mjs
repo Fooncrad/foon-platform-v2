@@ -10,18 +10,18 @@ const path=new URL('../app/api/system/client-incident/route.ts',import.meta.url)
 const source=readFileSync(path,'utf8');
 const compiled=ts.transpileModule(source,{fileName:'route.ts',compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 function route(){
- const module={exports:{}},logged=[];
+ const cjsModule={exports:{}},logged=[];
  const dependencies={
   'next/server':{NextResponse:{json:(body,options={})=>({status:options.status??200,body,headers:options.headers??{}})}},
   '@/lib/security/origin':{assertSameOrigin:request=>{if(request.headers.get('origin')!=='https://nfoodz.com')throw Error('ORIGIN_DENIED');}},
   '@/lib/security/limited-json':{readLimitedJson},
   '@/lib/platform/incidents':{logIncident:entry=>logged.push(entry)}
  };
- vm.runInNewContext(compiled,{module,exports:module.exports,require:id=>{
+ vm.runInNewContext(compiled,{module:cjsModule,exports:cjsModule.exports,require:id=>{
   if(!(id in dependencies))throw Error('Unexpected import '+id);
   return dependencies[id];
  },Map,Date,Number,Error,Request,URL});
- return {POST:module.exports.POST,logged};
+ return {POST:cjsModule.exports.POST,logged};
 }
 const request=(body,headers={})=>new Request('https://nfoodz.com/api/system/client-incident',{method:'POST',body,headers:{origin:'https://nfoodz.com',...headers}});
 
