@@ -42,7 +42,7 @@ test("public landing and marketplace share language, theme, footer and safe coun
   await header.getByRole("button",{name:"تبديل المظهر"}).click();
   await expect(landing).toHaveAttribute("data-theme","dark");
   await assertReadableSurface(page.locator(".foonFeatureCard").first(),"Public landing feature");
-  await page.locator(".foonHeroActions").getByRole("link",{name:"استكشف السوق"}).click();
+  await page.locator(".foonHeroActions").getByRole("link",{name:"شاهد متاجر على FOON"}).click();
   const market=page.locator(".foonPublicMarket"),marketHeader=market.locator(".foonPublicHeader"),marketFooter=market.locator(".foonPublicFooter");
   await expect(market).toHaveAttribute("data-theme","dark");
   await expect(marketHeader).toHaveCount(1);
