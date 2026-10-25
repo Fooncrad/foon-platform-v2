@@ -18,3 +18,11 @@ test("drag and keyboard never place tables on the invalid outer boundary",()=>{
  assert.match(editor,/x:clampFloorCoordinate\(x\.x\+dx,p\.width\)/);
  assert.match(editor,/y:clampFloorCoordinate\(x\.y\+dy,p\.height\)/);
 });
+
+test("edits during an in-flight save stay marked unsaved",()=>{
+ const editor=read("app/restaurant/floor-plan-editor.tsx");
+ assert.match(editor,/editRevision\.current\+=1;setPlan/);
+ assert.match(editor,/const savedRevision=editRevision\.current/);
+ assert.match(editor,/if\(savedRevision===editRevision\.current\)\{setDirty\(false\)/);
+ assert.match(editor,/توجد تعديلات أحدث تحتاج الحفظ/);
+});
