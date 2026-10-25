@@ -88,3 +88,19 @@ test("inventory item identity rejects UUID arrays and coercible objects before D
  }
  assert.deepEqual(validateInventoryMovement(change),{itemId:ids[4],delta:-3});
 });
+
+test("movement event identities reject coercible non-strings before projection SQL",async()=>{
+ const id="a1b2c3d4-e5f6-4a1b-8c2d-123456789abc";
+ const valid={...change,eventId:id,entityId:id.toUpperCase()};
+ let sqlCalls=0;
+ const db={async execute(){sqlCalls++;throw Error("SQL_MUST_NOT_RUN");}};
+ for(const field of ["eventId","entityId"]){
+  for(const invalid of [[id],{toString(){return id;},toLowerCase(){return id;}},new String(id),null,123]){
+   const malformed={...valid,[field]:invalid};
+   assert.throws(()=>validateInventoryMovement(malformed),/SYNC_INVENTORY_EVENT_ID_MISMATCH/);
+   await assert.rejects(()=>applyScopedInventoryMovement(db,malformed),/SYNC_INVENTORY_EVENT_ID_MISMATCH/);
+  }
+ }
+ assert.equal(sqlCalls,0);
+ assert.deepEqual(validateInventoryMovement(valid),{itemId:ids[4],delta:-3});
+});
