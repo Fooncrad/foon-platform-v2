@@ -9,8 +9,10 @@ const noStore={"Cache-Control":"no-store"};
 async function customer(){const denied=await employeePersonalAccessDenied();if(denied)return {denied};const id=await currentUserId();return {id};}
 export async function GET(){
  const auth=await customer();if(auth.denied)return auth.denied;if(!auth.id)return NextResponse.json({ok:false,code:"LOGIN_REQUIRED"},{status:401,headers:noStore});
- const [rows]=await database().execute<RowDataPacket[]>(`SELECT f.tenant_id FROM customer_favorite_stores f JOIN tenants t ON t.id=f.tenant_id AND t.status='active' WHERE f.user_id=? ORDER BY f.created_at DESC LIMIT 100`,[auth.id]);
- return NextResponse.json({ok:true,tenantIds:rows.map(row=>String(row.tenant_id))},{headers:noStore});
+ try{
+  const [rows]=await database().execute<RowDataPacket[]>(`SELECT f.tenant_id FROM customer_favorite_stores f JOIN tenants t ON t.id=f.tenant_id AND t.status='active' JOIN tenant_customers tc ON tc.tenant_id=f.tenant_id AND tc.user_id=f.user_id WHERE f.user_id=? ORDER BY f.created_at DESC LIMIT 100`,[auth.id]);
+  return NextResponse.json({ok:true,tenantIds:rows.map(row=>String(row.tenant_id))},{headers:noStore});
+ }catch{return NextResponse.json({ok:false,code:"FAVORITES_UNAVAILABLE"},{status:503,headers:noStore});}
 }
 async function change(request:Request,remove:boolean){
  const auth=await customer();if(auth.denied)return auth.denied;if(!auth.id)return NextResponse.json({ok:false,code:"LOGIN_REQUIRED"},{status:401,headers:noStore});
