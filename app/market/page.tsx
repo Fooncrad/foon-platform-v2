@@ -1,6 +1,6 @@
 import MarketSearchInput from "./market-search-input";
 import {MarketFavorite,MarketNearby,MarketOffers} from "./market-card-actions";
-import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
+import {marketPublicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {cookies as uiCookies} from "next/headers";
 import {uiText} from "@/lib/i18n/ui-copy";
 import Link from "next/link";
@@ -101,7 +101,7 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
    <div className="foonMarketCardCover" data-activity={store.activity_code}>{media.get(String(store.id))?.cover&&<img className="foonMarketRealCover" src={media.get(String(store.id))!.cover} alt="" loading="lazy" referrerPolicy="no-referrer"/>}<MarketFavorite tenantId={String(store.id)} language={language}/><span className="foonMarketCoverMark" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><span className="foonMarketCoverBrand" aria-hidden="true">FOON</span></div>
    <div className="foonMarketCardBody"><div className="foonMarketCardTop"><span className="foonMarketCardIcon" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><div><h3>{store.name}</h3><p>{label(store.activity_code)}{media.get(String(store.id))?.city?" · "+media.get(String(store.id))!.city:""}</p></div></div>
     <p className="foonMarketCardDescription">{language==="ar"?"استكشف المنتجات والخدمات التي يقدمها هذا النشاط.":language==="en"?"Explore this business’s products and services.":"Découvrez les produits et services de cet établissement."}</p>
-    <MarketOffers tenantId={String(store.id)} language={language}/><Link href={publicStorefrontUrl(String(store.slug))} className="foonMarketVisit">{store.kind==="restaurant"?l.menu:store.kind==="store"?l.services:l.browse} <span aria-hidden="true">←</span></Link></div>
+    <MarketOffers tenantId={String(store.id)} language={language}/><Link href={marketPublicStorefrontUrl(String(store.slug))} className="foonMarketVisit">{store.kind==="restaurant"?l.menu:store.kind==="store"?l.services:l.browse} <span aria-hidden="true">←</span></Link></div>
   </article>)}</div>
   {pages>1&&<nav className="foonMarketPagination" aria-label={translateUi("صفحات النتائج")}>{page>1&&<Link href={marketPageUrl(filters,page-1)}>{l.previous}</Link>}<span>{l.page} {page.toLocaleString("en")} / {pages.toLocaleString("en")}</span>{page<pages&&<Link href={marketPageUrl(filters,page+1)}>{l.next}</Link>}</nav>}</>}
  </section></main><PublicSiteFooter pages={footerPages}/></PublicMarketShell>;
