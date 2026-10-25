@@ -10,7 +10,7 @@ test('employees stay in their employer workspace and platform admins never inher
  let serverOutput='';server.stdout.on('data',c=>serverOutput+=c);server.stderr.on('data',c=>serverOutput+=c);
  const request=(path,method='GET',body,cookie='',tenant='')=>fetch(origin+path,{method,redirect:'manual',headers:{origin,'content-type':'application/json',cookie,...(tenant?{'x-foon-tenant':tenant}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
  const password='synthetic-strong-password';
- const register=async()=>{const slug='surface-'+randomUUID().slice(0,8);const r=await request('/api/auth/register','POST',{name:'Owner',email:slug+'@test.example',password,storeName:slug,slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض'});assert.equal(r.status,201);return {...await r.json(),slug,cookie:r.headers.get('set-cookie').split(';')[0]};};
+ const register=async()=>{const slug='surface-'+randomUUID().slice(0,8);const r=await request('/api/auth/register','POST',{name:'Owner',email:slug+'@test.example',password,storeName:slug,slug,activity:'grocery',countryCode:'SA',currency:'SAR',region:'الرياض',legalAccepted:true});assert.equal(r.status,201);return {...await r.json(),slug,cookie:r.headers.get('set-cookie').split(';')[0]};};
  try{
   let ready=false;for(let i=0;i<60;i++){try{await fetch(origin+'/login',{signal:AbortSignal.timeout(2000)});ready=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}assert.ok(ready,serverOutput);
   const owner=await register(),other=await register(),admin=await register();
