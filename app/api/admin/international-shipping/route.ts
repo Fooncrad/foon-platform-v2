@@ -24,7 +24,7 @@ export async function POST(request:Request){
  try{body=await readLimitedJson(request,2048);}catch(error){const code=error instanceof Error?error.message:"";return NextResponse.json({ok:false,code:code==="BATCH_TOO_LARGE"?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:code==="BATCH_TOO_LARGE"?413:400});}
  if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const action=body as {tenantId?:unknown;status?:unknown};
- if(typeof action.tenantId!=="string"||!/^[a-f0-9-]{36}$/i.test(action.tenantId)||!["approved","rejected","disabled"].includes(String(action.status)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ if(typeof action.tenantId!=="string"||!/^[a-f0-9-]{36}$/i.test(action.tenantId)||typeof action.status!=="string"||!["approved","rejected","disabled"].includes(action.status))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=database();
  const [rows]=await db.execute<RowDataPacket[]>("SELECT s.status,s.requested_countries,p.country_code,p.activity_code FROM tenant_international_shipping s JOIN tenant_business_profiles p ON p.tenant_id=s.tenant_id WHERE s.tenant_id=? LIMIT 1",[action.tenantId]);
  if(!rows.length||["restaurant","cafe"].includes(String(rows[0].activity_code)))return NextResponse.json({ok:false,code:"NOT_ELIGIBLE"},{status:403});
