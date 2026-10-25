@@ -44,7 +44,7 @@ export async function POST(request:Request){
   return reply({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},tooLarge?413:400);
  }
  const payload=data&&typeof data==="object"&&!Array.isArray(data)?data as {tenantId?:unknown;planId?:unknown;billingCycle?:unknown;transferReference?:unknown}:null;
- const id=payload?.tenantId;
+ const id=typeof payload?.tenantId==="string"?payload.tenantId:"";
  const auth=await merchant(id);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
  if(!uuid(payload?.planId)||(payload?.billingCycle!=="monthly"&&payload?.billingCycle!=="yearly")||typeof payload?.transferReference!=="string"||!/^[\p{L}\p{N} _.:/-]{8,120}$/u.test(payload.transferReference.trim()))return reply({ok:false,code:"INVALID_INPUT"},400);
  const db=await database().getConnection();
