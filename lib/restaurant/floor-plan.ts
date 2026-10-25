@@ -1,0 +1,10 @@
+export type FloorTable={id:string;number:string;seats:number;x:number;y:number;zone:string};
+export type FloorPlan={width:number;height:number;tables:FloorTable[]};
+export const defaultFloorPlan:FloorPlan={width:24,height:18,tables:[]};
+export function validFloorPlan(x:unknown):x is FloorPlan{
+ if(!x||typeof x!=="object")return false;const p=x as Record<string,unknown>;
+ if(typeof p.width!=="number"||p.width<2||p.width>200||typeof p.height!=="number"||p.height<2||p.height>200||!Array.isArray(p.tables)||p.tables.length>500)return false;
+ const ids=new Set<string>(),names=new Set<string>();
+ return p.tables.every((raw:unknown)=>{if(!raw||typeof raw!=="object")return false;const t=raw as Record<string,unknown>;
+ if(typeof t.id!=="string"||!/^[a-z0-9-]{1,60}$/i.test(t.id)||ids.has(t.id)||typeof t.number!=="string"||t.number.length>20||names.has(t.number)||typeof t.zone!=="string"||t.zone.length>60||!Number.isInteger(t.seats)||Number(t.seats)<1||Number(t.seats)>30||typeof t.x!=="number"||typeof t.y!=="number"||t.x<0||t.y<0||t.x>p.width!||t.y>p.height!)return false;ids.add(t.id);names.add(t.number);return true});
+}
