@@ -1,5 +1,6 @@
 "use client";
 import "./branded-qr.css";
+import {parseQrBranding} from "@/lib/platform/qr-branding";
 import {useEffect,useRef,useState} from "react";
 type Locale="ar"|"en"|"fr";
 const clean=(value:unknown,fallback:string)=>typeof value==="string"&&/^#[0-9a-f]{6}$/i.test(value)?value:fallback;
@@ -12,6 +13,7 @@ export default function BrandedQr({scope,slug,title,language="ar",logo}:{scope:"
  const t=text[language];
  const key="foon-qr-style:"+scope+":"+(slug||"global");
  useEffect(()=>{try{const data=JSON.parse(localStorage.getItem(key)||"null");if(data)setColors({ink:clean(data.ink,"#171613"),paper:clean(data.paper,"#ffffff"),size:[200,240,300].includes(data.size)?data.size:240})}catch{}},[key]);
+ useEffect(()=>{if(scope!=="store"||!slug)return;let live=true;fetch("/api/public/qr-branding?slug="+encodeURIComponent(slug),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{const q=parseQrBranding(j?.settings);if(live&&q)setColors({ink:q.ink,paper:q.paper,size:q.size})}).catch(()=>{});return()=>{live=false}},[scope,slug]);
  function update(next:typeof colors){setColors(next);try{localStorage.setItem(key,JSON.stringify(next))}catch{}}
  function open(){const pathname=scope==="platform"?"/":scope==="customer"?"/customer":"/s/"+encodeURIComponent(slug||"");setBase(new URL(pathname,window.location.origin).href);setError("");dialog.current?.showModal()}
  const imageUrl=base?"https://quickchart.io/qr?size="+colors.size+"&margin=2&dark="+colors.ink.slice(1)+"&light="+colors.paper.slice(1)+"&text="+encodeURIComponent(base):"";
