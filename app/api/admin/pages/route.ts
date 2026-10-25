@@ -5,6 +5,8 @@ import {database} from "@/lib/db/mysql";
 import {currentActiveAdminUserId} from "@/lib/auth/session";
 import {requirePlatformRole} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
+const MAX_CMS_BODY_BYTES=2*1024*1024;
 async function auth(write:boolean){const user=await currentActiveAdminUserId();if(!user)return {status:401,user:null};try{await requirePlatformRole(user,write?["super_admin","admin"]:["super_admin","admin","support"]);return {status:200,user};}catch{return {status:403,user:null};}}
 export async function GET(){
  const a=await auth(false);if(a.status!==200)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:a.status});
@@ -14,8 +16,12 @@ export async function GET(){
 export async function PUT(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const a=await auth(true);if(a.status!==200)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:a.status});
- const b=await request.json().catch(()=>null);
- if(!b||typeof b.slug!=="string"||!/^[a-z][a-z0-9-]{1,119}$/.test(b.slug)||!["draft","published"].includes(b.status)||!["title_ar","title_en","title_fr"].every(k=>typeof b[k]==="string"&&b[k].trim().length>=2&&b[k].length<=180)||!["body_ar","body_en","body_fr"].every(k=>typeof b[k]==="string"&&b[k].length<=100000))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ let parsed:unknown;
+ try{parsed=await readLimitedJson(request,MAX_CMS_BODY_BYTES);}
+ catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400});}
+ if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const b=parsed as Record<string,unknown>;
+ if(!b||typeof b.slug!=="string"||!/^[a-z][a-z0-9-]{1,119}$/.test(b.slug)||(b.status!=="draft"&&b.status!=="published")||!["title_ar","title_en","title_fr"].every(k=>typeof b[k]==="string"&&(b[k] as string).trim().length>=2&&(b[k] as string).length<=180)||!["body_ar","body_en","body_fr"].every(k=>typeof b[k]==="string"&&(b[k] as string).length<=100000))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const id=typeof b.id==="string"&&/^[a-f0-9-]{36}$/i.test(b.id)?b.id:randomUUID();
  const db=await database().getConnection();
  try{await db.beginTransaction();
