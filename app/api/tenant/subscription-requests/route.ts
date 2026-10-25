@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
@@ -36,9 +37,16 @@ export async function GET(request:Request){
 }
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
- const data=await request.json().catch(()=>null),id=data?.tenantId;
+ let data:unknown;
+ try{data=await readLimitedJson(request,2048);}
+ catch(error){
+  const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";
+  return reply({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},tooLarge?413:400);
+ }
+ const payload=data&&typeof data==="object"&&!Array.isArray(data)?data as {tenantId?:unknown;planId?:unknown;billingCycle?:unknown;transferReference?:unknown}:null;
+ const id=payload?.tenantId;
  const auth=await merchant(id);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
- if(!uuid(data?.planId)||!["monthly","yearly"].includes(data?.billingCycle)||typeof data?.transferReference!=="string"||!/^[\p{L}\p{N} _.:/-]{8,120}$/u.test(data.transferReference.trim()))return reply({ok:false,code:"INVALID_INPUT"},400);
+ if(!uuid(payload?.planId)||(payload?.billingCycle!=="monthly"&&payload?.billingCycle!=="yearly")||typeof payload?.transferReference!=="string"||!/^[\p{L}\p{N} _.:/-]{8,120}$/u.test(payload.transferReference.trim()))return reply({ok:false,code:"INVALID_INPUT"},400);
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
@@ -50,13 +58,13 @@ export async function POST(request:Request){
    "SELECT pr.price,pr.currency FROM package_plan_prices pr JOIN package_plans p ON p.id=pr.plan_id AND p.enabled=TRUE AND p.code<>'free' "+
    "JOIN tenant_business_profiles b ON b.tenant_id=? AND b.currency=pr.currency "+
    "WHERE pr.plan_id=? AND pr.billing_cycle=? AND pr.enabled=TRUE AND pr.price>0 LIMIT 1",
-   [id,data.planId,data.billingCycle]);
+   [id,payload.planId,payload.billingCycle]);
   if(!prices.length){await db.rollback();return reply({ok:false,code:"PAID_PLAN_NOT_AVAILABLE"},409);}
   const amount=String(prices[0].price),currency=String(prices[0].currency);
   const requestId=randomUUID();
   await db.execute("INSERT INTO platform_payment_requests(id,tenant_id,plan_id,amount,currency,billing_cycle,transfer_reference,status) VALUES (?,?,?,?,?,?,?,'pending')",
-   [requestId,id,data.planId,amount,currency,data.billingCycle,data.transferReference.trim()]);
+   [requestId,id,payload.planId,amount,currency,payload.billingCycle,payload.transferReference.trim()]);
   await db.commit();
-  return reply({ok:true,id:requestId,status:"pending",amount,currency,billingCycle:data.billingCycle},201);
+  return reply({ok:true,id:requestId,status:"pending",amount,currency,billingCycle:payload.billingCycle},201);
  }catch{await db.rollback();return reply({ok:false,code:"SUBSCRIPTION_REQUEST_CREATE_FAILED"},503);}finally{db.release();}
 }
