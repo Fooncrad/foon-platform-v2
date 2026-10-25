@@ -8,6 +8,13 @@ export async function GET(request:Request){
  const denied=await employeePersonalAccessDenied();if(denied)return denied;
  const id=await currentUserId();
  if(!id)return NextResponse.json({ok:false,code:"LOGIN_REQUIRED"},{status:401,headers:{"Cache-Control":"no-store"}});
+ // Do not expose private customer campaigns to suspended accounts with valid cookies.
+ try{
+  const [active]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' LIMIT 1",[id]);
+  if(!active.length)return NextResponse.json({ok:false,code:"LOGIN_REQUIRED"},{status:401,headers:{"Cache-Control":"no-store"}});
+ }catch{
+  return NextResponse.json({ok:false,code:"OFFERS_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});
+ }
  const tenantId=new URL(request.url).searchParams.get("tenantId");
  if(typeof tenantId!=="string"||!/^[a-f0-9-]{36}$/i.test(tenantId))return NextResponse.json({ok:false,code:"INVALID_TENANT"},{status:400,headers:{"Cache-Control":"no-store"}});
  // A visible campaign is not a guaranteed discount. Checkout eligibility is validated separately.
