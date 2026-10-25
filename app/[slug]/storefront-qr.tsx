@@ -1,7 +1,5 @@
 "use client";
-import {useRef,useState} from "react";
+import BrandedQr from "@/app/components/branded-qr";
 export default function StorefrontQr({slug,name,language}:{slug:string;name:string;language:"ar"|"en"|"fr"}){
- const dialog=useRef<HTMLDialogElement>(null),[url,setUrl]=useState("");
- const t=(ar:string,en:string,fr:string)=>language==="ar"?ar:language==="en"?en:fr;
- return <><button type="button" className="foonStorefrontQrAction" aria-label={t("عرض رمز QR للمتجر","Show store QR code","Afficher le QR de la boutique")} onClick={()=>{setUrl(new URL("/"+encodeURIComponent(slug),window.location.origin).href);dialog.current?.showModal();}}><span aria-hidden="true">▦</span><span>QR</span></button><dialog ref={dialog} aria-label={t("رمز واجهة النشاط","Storefront QR code","Code QR de la boutique")} style={{width:"min(360px,calc(100vw - 24px))",border:"1px solid #ddd",borderRadius:20,padding:20,textAlign:"center"}}><h2>{name}</h2>{url&&<><img width={260} height={260} style={{maxWidth:"100%",height:"auto"}} src={"https://quickchart.io/qr?size=360&margin=2&text="+encodeURIComponent(url)} alt={t("رمز رابط النشاط","Storefront link QR","Code du lien de la boutique")}/><p style={{overflowWrap:"anywhere"}} dir="ltr"><a href={url}>{url}</a></p></>}<button type="button" onClick={()=>dialog.current?.close()}>{t("إغلاق","Close","Fermer")}</button></dialog></>;
+ return <BrandedQr scope="store" slug={slug} title={name} language={language}/>;
 }
