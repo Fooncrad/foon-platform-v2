@@ -8,6 +8,7 @@ import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {tenantPublicControls,publicControlAllowed} from "@/lib/tenant/public-controls";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
@@ -43,12 +44,15 @@ export async function POST(request:Request){
  const denied=await employeePersonalAccessDenied();if(denied)return denied;
  try{assertSameOrigin(request)}catch{return fail("FORBIDDEN",403)}
  const user=await currentUserId();if(!user)return fail("UNAUTHENTICATED",401);
- const body=await request.json().catch(()=>null);
+ let parsed:unknown;
+ try{parsed=await readLimitedJson(request,16384);}
+ catch(error){const oversized=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return fail(oversized?"BODY_TOO_LARGE":"INVALID_INPUT",oversized?413:400);}
+ const body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as {storeSlug:string;requestType:string;notes:string;phone:string;serviceId:string;requestKey:string;scheduledAt:string}:null;
  const slug=typeof body?.storeSlug==="string"?body.storeSlug.trim().toLowerCase():"";
  const type=body?.requestType;
  const note=body?.notes;
  const phone=body?.phone;
- if(!validStoreSlug(slug)||!uuid.test(body?.serviceId??"")||!uuid.test(body?.requestKey??"")||
+ if(!body||!validStoreSlug(slug)||!uuid.test(body.serviceId??"")||!uuid.test(body?.requestKey??"")||
   !["inquiry","appointment","quote"].includes(type)||typeof note!=="string"||note.length>1000||
   !validServiceRequestPhone(phone))
   return fail("INVALID_INPUT");
