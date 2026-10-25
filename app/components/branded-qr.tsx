@@ -18,7 +18,24 @@ export default function BrandedQr({scope,slug,title,language="ar",logo}:{scope:"
  function update(next:typeof colors){setColors(next);try{localStorage.setItem(key,JSON.stringify(next))}catch{}}
  function open(){const pathname=scope==="platform"?"/":scope==="customer"?"/customer":"/s/"+encodeURIComponent(slug||"");setBase(new URL(pathname,window.location.origin).href);setError("");dialog.current?.showModal()}
  const imageUrl=base?"https://quickchart.io/qr?size="+colors.size+"&margin=2&dark="+colors.ink.slice(1)+"&light="+colors.paper.slice(1)+"&text="+encodeURIComponent(base):"";
- async function download(){try{const response=await fetch(imageUrl);if(!response.ok)throw Error();const blob=await response.blob();const target=URL.createObjectURL(blob);const a=document.createElement("a");a.href=target;a.download="foon-"+scope+"-qr.png";a.click();URL.revokeObjectURL(target)}catch{setError(t.failed)}}
+ async function download(){try{
+ const response=await fetch(imageUrl);if(!response.ok)throw Error();
+ const bitmap=await createImageBitmap(await response.blob());
+ const padding=28,qrSize=colors.size,caption=identity[language==="ar"?"captionAr":language==="en"?"captionEn":"captionFr"];
+ const logoVisible=Boolean(identity.showLogo&&logo);
+ const canvas=document.createElement("canvas");canvas.width=qrSize+padding*2;canvas.height=qrSize+padding*2+54+(logoVisible?65:0);
+ const ctx=canvas.getContext("2d");if(!ctx)throw Error();
+ ctx.fillStyle=colors.paper;ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(identity.frame==="gold"){ctx.strokeStyle="#d2a33e";ctx.lineWidth=8;ctx.strokeRect(4,4,canvas.width-8,canvas.height-8);}
+ else if(identity.frame==="rounded"){ctx.strokeStyle=colors.ink;ctx.lineWidth=2;ctx.strokeRect(5,5,canvas.width-10,canvas.height-10);}
+ let y=padding;
+ if(logoVisible){try{const picture=await fetch(logo!);if(picture.ok){const img=await createImageBitmap(await picture.blob());const scale=Math.min(100/img.width,52/img.height);const w=img.width*scale,h=img.height*scale;ctx.drawImage(img,(canvas.width-w)/2,y,w,h)}}catch{}y+=65;}
+ ctx.drawImage(bitmap,padding,y,qrSize,qrSize);
+ ctx.fillStyle=colors.ink;ctx.font="bold 16px sans-serif";ctx.textAlign="center";ctx.direction=language==="ar"?"rtl":"ltr";
+ ctx.fillText(caption.slice(0,55),canvas.width/2,y+qrSize+30,canvas.width-padding*2);
+ const file=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error()),"image/png"));
+ const target=URL.createObjectURL(file);const link=document.createElement("a");link.href=target;link.download="foon-"+scope+"-qr.png";link.click();setTimeout(()=>URL.revokeObjectURL(target),1000);
+ }catch{setError(t.failed)}}
  async function share(){if(!base)return;if(navigator.share)try{await navigator.share({title,url:base})}catch{}else if(navigator.clipboard)await navigator.clipboard.writeText(base).catch(()=>setError(t.failed))}
  return <><button type="button" className="foonUnifiedQrButton" onClick={open} aria-label={t.qr+" — "+title}>▦ <span>QR</span></button><dialog ref={dialog} className="foonUnifiedQrDialog" aria-label={t.design} dir={language==="ar"?"rtl":"ltr"}>
  <form method="dialog"><button className="foonUnifiedQrClose" aria-label={t.close}>×</button></form>
