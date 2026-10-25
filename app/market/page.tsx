@@ -1,3 +1,4 @@
+import {readMarketGate} from "@/lib/market/global-gate";
 import MarketSearchInput from "./market-search-input";
 import {MarketFavorite,MarketNearby,MarketOffers} from "./market-card-actions";
 import {marketPublicStorefrontUrl} from "@/lib/tenant/workspace-routes";
@@ -24,6 +25,9 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
  const translationLanguage=(await uiCookies()).get("foon_language")?.value;
  const language=translationLanguage==="en"||translationLanguage==="fr"?translationLanguage:"ar";
  const translateUi=(value:string)=>uiText(value,language);
+ const gate=await readMarketGate();
+ if(gate.closed){const heading=language==="ar"?"السوق قريبًا":language==="en"?"Marketplace coming soon":"Le marché arrive bientôt";return <PublicMarketShell><PublicSiteHeader/><main className="foonMarketSoon" dir={language==="ar"?"rtl":"ltr"}><div className="foonMarketSoonPanel"><span aria-hidden="true">✦ FOON MARKET</span><h1>{heading}</h1><p>{gate.reason[language]}</p><Link href="/">{language==="ar"?"العودة إلى الرئيسية":language==="en"?"Back to home":"Retour à l'accueil"}</Link></div></main><PublicSiteFooter pages={await publicFooterPages()}/></PublicMarketShell>;}
+
  const params=await searchParams;
  const saved=(await cookies()).get("foon-market-country")?.value??"";
  const h=await headers(),geo=(h.get("cf-ipcountry")??h.get("x-vercel-ip-country")??"").toUpperCase();
