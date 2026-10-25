@@ -27,7 +27,8 @@ const ACTIVITY_ATTRIBUTE_GUIDES:Record<string,{ar:string;en:string;fr:string;fie
  salon:{ar:"صالونات التجميل",en:"Salon",fr:"Salon",fields:[["مقدم الخدمة","Service provider","Prestataire"],["مدة الخدمة","Duration","Durée"],["المواعيد والحجز","Appointments","Rendez-vous"]]},
  publicworks:{ar:"المقاولات والخدمات",en:"Contracting and services",fr:"Travaux et services",fields:[["طلب المعاينة","Site visit request","Demande de visite"],["عرض السعر","Quotation","Devis"],["مراحل التنفيذ","Project milestones","Étapes du projet"]]}
 };
-\ntype Category={id:string;name_ar:string;name_en?:string;name_fr?:string;enabled:boolean;description_ar?:string|null;description_en?:string|null;description_fr?:string|null;image_url?:string|null};
+
+type Category={id:string;name_ar:string;name_en?:string;name_fr?:string;enabled:boolean;description_ar?:string|null;description_en?:string|null;description_fr?:string|null;image_url?:string|null};
 type Product={id:string;name_ar:string;price:number;currency:string;category_id:string;enabled:boolean;stock_quantity:number|null;name_en:string|null;name_fr:string|null;image_url?:string|null};
 export default function ActivityCatalogEditor({tenantId,service,activityCode,storeSlug=""}:{tenantId:string;service:boolean;activityCode?:string;storeSlug?:string}){
  const translateUi=useUiText();
