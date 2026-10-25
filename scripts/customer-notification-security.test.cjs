@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- This Node.js CommonJS test intentionally uses require() to load its runtime dependencies. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -8,12 +9,12 @@ const root = path.resolve(__dirname, '..');
 function loadTs(relative, mocks={}) {
   const source = fs.readFileSync(path.join(root, relative), 'utf8');
   const compiled = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});
-  const module = {exports:{}};
+  const cjsModule = {exports:{}};
   new Function('require','module','exports',compiled.outputText)((name)=>{
     if (!(name in mocks)) throw new Error('Unexpected import: '+name);
     return mocks[name];
-  },module,module.exports);
-  return module.exports;
+  },cjsModule,cjsModule.exports);
+  return cjsModule.exports;
 }
 const limited = loadTs('lib/security/limited-json.ts');
 const uuid = '12345678-1234-1234-1234-123456789abc';
