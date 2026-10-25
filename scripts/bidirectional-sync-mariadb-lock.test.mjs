@@ -71,3 +71,12 @@ test("canonical MariaDB string lock results retain normal busy and success behav
  await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:busy.pool,scope}),/SYNC_PUSH_ALREADY_RUNNING/);
  assert.equal(busy.calls.at(-1).sql,"release");
 });
+
+test("caller cannot override the MariaDB connection protected by the advisory lock",async()=>{
+ const x=fixture();
+ const foreignDb={async execute(){throw Error("BYPASS_CONNECTION_USED");}};
+ const result=await pushWithMariaDbDeviceLock({pool:x.pool,scope,db:foreignDb,maxEvents:1});
+ assert.equal(result.status,"idle");
+ assert.equal(x.calls.filter(c=>c.sql==="SELECT RELEASE_LOCK(?) AS released").length,1);
+ assert.equal(x.calls.at(-1).sql,"release");
+});
