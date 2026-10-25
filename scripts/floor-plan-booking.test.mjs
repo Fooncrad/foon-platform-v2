@@ -36,6 +36,11 @@ test("floor plan rejects non-finite dimensions, coordinates and duplicate tables
   {...plan,height:Infinity},
   {...plan,tables:[{...table,x:NaN}]},
   {...plan,tables:[{...table,y:Infinity}]},
+  {...plan,tables:[{...table,x:plan.width}]},
+  {...plan,tables:[{...table,y:plan.height}]},
+  {...plan,tables:[{...table,number:"   "}]},
+  {...plan,tables:[{...table,zone:"   "}]},
+  {...plan,tables:[table,{...table,id:"table-2",number:" 1 "}]},
   {...plan,tables:[table,{...table,id:"table-2"}]},
   {...plan,tables:[table,{...table,number:"2"}]},
   {...plan,tables:Array.from({length:501},(_,i)=>({...table,id:"table-"+i,number:String(i)}))}
