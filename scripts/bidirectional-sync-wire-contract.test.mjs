@@ -99,3 +99,31 @@ test("mixed-case signed pull event remains byte-bound to its digest and signatur
  assert.equal(verifySignedPullBatch({batch:signed,scope:uppercaseScope,signature:signed.signature,publicKey}),true);
  assert.throws(()=>verifySignedPullBatch({batch:{...signed,events:[{...event,payload_digest:"b".repeat(64)}]},scope:uppercaseScope,signature:signed.signature,publicKey}),/SYNC_SIGNATURE_INVALID/);
 });
+
+// Strict wire types prevent implicit RegExp coercion from accepting arrays/objects.
+test("wire expectations require literal UUID and digest strings",()=>{
+ const batch={ok:true,tenantId:ids[1],branchId:ids[2],events:[],nextCursor:0};
+ for(const key of ["eventId","tenantId","branchId","digest"]){
+  for(const wrap of [value=>[value],value=>({toString:()=>value})]){
+   assert.throws(()=>validatePushReceipt(receipt,{...scope,[key]:wrap(scope[key])}),/SYNC_INVALID_EXPECTATION/);
+  }
+ }
+ for(const key of ["tenantId","branchId"]){
+  for(const wrap of [value=>[value],value=>({toString:()=>value})]){
+   assert.throws(()=>validatePullBatch(batch,{tenantId:ids[1],branchId:ids[2],after:0,[key]:wrap(key==="tenantId"?ids[1]:ids[2])}),/SYNC_INVALID_EXPECTATION/);
+  }
+ }
+ assert.equal(validatePushReceipt(receipt,scope).status,"unverified");
+ assert.equal(validatePullBatch(batch,{tenantId:ids[1],branchId:ids[2],after:0}).candidateCursor,0);
+});
+test("pull rejects non-string event UUIDs and digests with a stable error",()=>{
+ const query={tenantId:ids[1],branchId:ids[2],after:0};
+ const event={id:1,event_id:ids[0],tenant_id:ids[1],branch_id:ids[2],payload_digest:hash};
+ const batch={ok:true,tenantId:ids[1],branchId:ids[2],events:[event],nextCursor:1};
+ for(const key of ["event_id","payload_digest"]){
+  for(const wrap of [value=>[value],value=>({toString:()=>value})]){
+   assert.throws(()=>validatePullBatch({...batch,events:[{...event,[key]:wrap(event[key])}]},query),/SYNC_INVALID_BATCH/);
+  }
+ }
+ assert.equal(validatePullBatch(batch,query).candidateCursor,1);
+});
