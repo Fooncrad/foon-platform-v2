@@ -6,6 +6,7 @@ import {NextResponse} from "next/server";
 import type {NextRequest} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
+import {activeCustomerAccount} from "@/lib/auth/active-customer-account.mjs";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
@@ -19,6 +20,7 @@ export async function GET(request:NextRequest){
  const storeSlug=request.nextUrl.searchParams.get("storeSlug");if(!storeSlug||storeSlug.length>120)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
  try{
+  if(!await activeCustomerAccount(db,user))return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401,headers:{"Cache-Control":"no-store"}});
   const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? WHERE t.slug=? AND t.status='active' LIMIT 1",[user,storeSlug]);
   if(!stores.length)return NextResponse.json({ok:false,code:"STORE_CUSTOMER_REQUIRED"},{status:403});
   const tenant=String(stores[0].id);
