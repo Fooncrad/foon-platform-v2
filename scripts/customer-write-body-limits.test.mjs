@@ -46,3 +46,11 @@ test('valid JSON is accepted and invalid JSON returns null',async()=>{
  assert.deepEqual(await readLimitedJson(streamRequest('{"ok":true}').request,8192),{ok:true});
  assert.equal(await readLimitedJson(streamRequest('{broken').request,8192),null);
 });
+test('JSON payload exactly at 1 MiB is accepted by the bounded reader',async()=>{
+ const limit=1024*1024;
+ const base='{"notes":""}';
+ const body='{"notes":"'+'x'.repeat(limit-Buffer.byteLength(base))+'"}';
+ assert.equal(Buffer.byteLength(body),limit);
+ const parsed=await readLimitedJson(streamRequest(body,4096).request,limit);
+ assert.equal(parsed.notes.length,limit-Buffer.byteLength(base));
+});
