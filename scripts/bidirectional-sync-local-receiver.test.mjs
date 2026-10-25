@@ -36,6 +36,17 @@ test("verified batch applies events and cursor in one transaction",async()=>{
  assert.deepEqual(r,{status:"applied",nextCursor:5,count:1});
  assert.equal(count,1);assert.equal(db.calls.at(-1),"commit");assert.equal(db.calls.filter(x=>x==="rollback").length,0);
 });
+test("signed pull rejects non-string source device UUIDs before opening a transaction",async()=>{
+ const malformed=[[scope.deviceId],[remoteDeviceId],{value:remoteDeviceId},null,42];
+ for(const sourceDevice of malformed){
+  const invalid={...batch,events:[{...event(5),source_device_id:sourceDevice}]};
+  const db=fixture();let writes=0;
+  await assert.rejects(()=>applyVerifiedPullBatch({db,batch:invalid,scope,...signed(invalid),applyEvent:async()=>{writes++;return true;}}),/SYNC_CORRUPT_REMOTE_EVENT/);
+  assert.equal(writes,0);
+  assert.deepEqual(db.calls,[],"invalid source device must be rejected before DB access");
+ }
+});
+
 test("signed echo of this device's already-committed event advances cursor without applying twice",async()=>{
  const own={...batch,events:[{...event(5),source_device_id:scope.deviceId}]};
  const db=fixture();let writes=0;
