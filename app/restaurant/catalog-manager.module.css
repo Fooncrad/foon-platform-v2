@@ -64,3 +64,10 @@
 .productCard[data-product-status="hidden"]{border-inline-start-color:#94a3b8}
 @media(max-width:700px){.catalogJourney{grid-template-columns:repeat(2,minmax(0,1fr))}.productCardTitle{flex:1 1 100px}}
 @media(max-width:380px){.catalogJourney li{padding:7px 8px}.catalogJourney li>span{width:23px;height:23px;flex-basis:23px}}
+
+/* One cover for each category and up to four shared photos for each product. */
+.productCardMedia{display:grid;place-items:center;flex:0 0 76px;width:76px;height:76px;border:1px solid var(--border,#dce0e6);border-radius:12px;background:color-mix(in srgb,var(--surface,#fff) 94%,#e2a93b);overflow:hidden}
+.productCardMedia img{width:100%;height:100%;object-fit:cover}
+.noCatalogImage{display:inline-flex;align-items:center;justify-content:center;min-height:48px;min-width:64px;border-radius:10px;padding:6px 8px;background:color-mix(in srgb,#64748b 12%,var(--surface,#fff));border:1px dashed var(--border,#b7c1cf);color:var(--muted,#64748b);font-size:.72rem;line-height:1.35;text-align:center;max-width:100px}
+.imageLanguageHint{padding:12px 15px;border-inline-start:3px solid #e2a93b;background:color-mix(in srgb,#e2a93b 8%,var(--surface,#fff));border-radius:12px;line-height:1.8}
+@media(max-width:400px){.productCardMedia{flex-basis:65px;width:65px;height:65px}.noCatalogImage{min-width:50px;min-height:42px}}

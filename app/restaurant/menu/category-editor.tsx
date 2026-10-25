@@ -1,8 +1,9 @@
 "use client";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
+import MenuCategoryImageEditor from "./category-image-editor";
 
-type Category={id:string;name:string;nameEn:string;nameFr:string;enabled:boolean};
+type Category={id:string;name:string;nameEn:string;nameFr:string;enabled:boolean;imageUrl?:string|null};
 type Names={name:string;nameEn:string;nameFr:string};
 export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
  const language=useUiLanguage();
@@ -57,7 +58,7 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
    <div className="foonMenuCategoryList" style={{display:"grid",gap:12,marginTop:14}}>
     {categories.map(category=><form key={category.id} onSubmit={event=>void save(event,category.id)} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,padding:12,border:"1px solid var(--foon-border, #ddd)",borderRadius:10,alignItems:"end"}}>
      {fields.map(([field,label,dir])=><label key={field} style={{display:"grid",gap:6}}>{label}<input name={field} dir={dir} defaultValue={category[field]??""} maxLength={180} required={field==="name"}/></label>)}
-     <div style={{display:"grid",gap:8}}><small>{category.enabled?tr("مفعّل","Active","Active"):tr("معطّل","Disabled","Désactivée")}</small><button type="submit" disabled={!!busy}>{busy===category.id?tr("جارٍ الحفظ…","Saving…","Enregistrement…"):tr("حفظ الترجمة","Save translations","Enregistrer les traductions")}</button></div>
+     <div style={{display:"grid",gap:8}}>{category.imageUrl?<img src={category.imageUrl} alt={tr("صورة القسم","Category image","Image de catégorie")+": "+category.name} width={84} height={84} loading="lazy" style={{width:84,height:84,objectFit:"cover",borderRadius:10}}/>:<small>{tr("لا توجد صورة للقسم","No category image","Pas d’image")}</small>}<MenuCategoryImageEditor tenantId={tenantId} category={category} onSaved={refresh}/><small>{category.enabled?tr("مفعّل","Active","Active"):tr("معطّل","Disabled","Désactivée")}</small><button type="submit" disabled={!!busy}>{busy===category.id?tr("جارٍ الحفظ…","Saving…","Enregistrement…"):tr("حفظ الترجمة","Save translations","Enregistrer les traductions")}</button></div>
     </form>)}
    </div>}
  </section>;
