@@ -47,3 +47,53 @@
  :where(.restaurantApp,.customerDashboard) :is(button,[role="button"]){transition:none}
  :where(.restaurantApp,.customerDashboard) :is(button,a):active:not(:disabled){transform:none}
 }
+
+/* Form, action and surface states: use native semantics, no changes to business logic. */
+:where(.restaurantApp,.customerDashboard) :is(input,select,textarea)[aria-invalid="true"]{
+ border-color:#c0392b;
+ box-shadow:0 0 0 1px #c0392b;
+}
+:where(.restaurantApp,.customerDashboard) :is(input,select,textarea):disabled{
+ cursor:not-allowed;
+ opacity:.62;
+}
+:where(.restaurantApp,.customerDashboard) :is(button,[role="button"])[aria-busy="true"]{
+ cursor:progress;
+ opacity:.72;
+}
+:where(.restaurantApp,.customerDashboard) :is(button,[role="button"])[data-variant="danger"]{
+ border-color:#b93c37;
+}
+:where(.restaurantApp,.customerDashboard) :is([role="dialog"],dialog){
+ max-width:min(94vw,720px);
+ max-height:calc(100dvh - 32px);
+ overflow:auto;
+ overscroll-behavior:contain;
+ border-radius:var(--foon-panel-radius);
+}
+:where(.restaurantApp,.customerDashboard) :is(table,[role="table"]){
+ max-width:100%;
+ font-variant-numeric:tabular-nums;
+}
+:where(.restaurantApp,.customerDashboard) :is(th,td){
+ vertical-align:middle;
+ overflow-wrap:anywhere;
+}
+:where(.restaurantApp,.customerDashboard) :is([role="alert"],[aria-live="assertive"]){
+ overflow-wrap:anywhere;
+}
+:where(.restaurantApp,.customerDashboard) :is(button,[role="button"],a){
+ -webkit-user-select:none;
+ user-select:none;
+}
+@media(max-width:600px){
+ :where(.restaurantApp,.customerDashboard) :is([role="dialog"],dialog){
+  max-width:calc(100vw - 16px);
+  max-height:calc(100dvh - 16px);
+ }
+}
+@media(forced-colors:active){
+ :where(.restaurantApp,.customerDashboard) :is(button,a,input,select,textarea):focus-visible{
+  outline-color:Highlight;
+ }
+}
