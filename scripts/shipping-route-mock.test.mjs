@@ -70,6 +70,12 @@ test('admin rejects unsupported stored destinations without approving',async()=>
  const {mod,writes}=admin('["ZZ"]');const result=await mod.POST(request({tenantId:uuid,status:'approved'}));
  assert.equal(result.status,400);assert.equal(result.body.code,'INVALID_DESTINATIONS');assert.equal(writes.length,0);
 });
+test('admin rejects non-string approval statuses before database writes',async()=>{
+ for(const status of [null,1,true,{},['approved']]){
+  const {mod,writes}=admin();const result=await mod.POST(request({tenantId:uuid,status}));
+  assert.equal(result.status,400);assert.equal(result.body.code,'INVALID_INPUT');assert.equal(writes.length,0);
+ }
+});
 test('admin rejects corrupt stored JSON without approving',async()=>{
  const {mod,writes}=admin('{broken');const result=await mod.POST(request({tenantId:uuid,status:'approved'}));
  assert.equal(result.status,400);assert.equal(result.body.code,'INVALID_DESTINATIONS');assert.equal(writes.length,0);
