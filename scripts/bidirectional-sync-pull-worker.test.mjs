@@ -145,3 +145,18 @@ test("pull without a transactional database never reads cursor or contacts cloud
  assert.deepEqual(db.calls,[],"no cursor read without transaction support");
  assert.equal(networkCalls,0,"no cloud request without transaction support");
 });
+
+test("pull rejects missing, malformed and wrong-type pinned server keys before cursor read or network",async()=>{
+ const wrongType=generateKeyPairSync("ec",{namedCurve:"prime256v1"}).publicKey.export({type:"spki",format:"pem"});
+ for(const untrusted of [undefined,"not-a-public-key",wrongType]){
+  const db=fixture();let networkCalls=0,localWrites=0;
+  await assert.rejects(()=>pullAndApplyNextSyncBatch({
+   db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey:untrusted,
+   applyEvent:async()=>{localWrites++;return true;},
+   fetchImpl:async()=>{networkCalls++;return response(signedBatch());}
+  }),/SYNC_TRUSTED_KEY_REQUIRED/);
+  assert.deepEqual(db.calls,[],"invalid server key must not read cursor or open a transaction");
+  assert.equal(networkCalls,0,"device bearer must not be sent without a trusted server key");
+  assert.equal(localWrites,0);
+ }
+});
