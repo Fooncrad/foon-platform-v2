@@ -1,4 +1,4 @@
-export type TrafficOrder={status:string;created_at:string;[key:string]:unknown};
+export type TrafficOrder={status:string;created_at:string};
 export const HIGH_VOLUME_PER_MINUTE:number;
 export const HIGH_VOLUME_ACTIVE_COUNT:number;
 export const HIGH_VOLUME_PAGE_SIZE:number;
