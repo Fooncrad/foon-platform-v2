@@ -1,0 +1,23 @@
+/* High-volume presentation only: existing server-authorized actions stay unchanged. */
+.restaurantVolumeToolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0;padding:10px 12px;border:1px solid var(--rc-border,#dce3ee);border-radius:12px;background:var(--rc-surface,#fff)}
+.restaurantVolumeModes{display:flex;flex-wrap:wrap;gap:5px}
+.restaurantVolumeModes button{min-height:42px;padding:8px 12px;border:1px solid var(--rc-border,#cbd5e1);border-radius:9px;background:transparent;cursor:pointer;font-weight:700}
+.restaurantVolumeModes button[aria-pressed="true"]{background:var(--rc-accent,#bd872c);color:#fff;border-color:var(--rc-accent,#bd872c)}
+.restaurantVolumeStats{font-size:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.restaurantOrderShowMore{display:block;margin:14px auto;min-height:44px;padding:9px 22px;border:1px solid var(--rc-accent,#b8862e);border-radius:10px;background:var(--rc-surface,#fff);cursor:pointer}
+.restaurantOrderCardsDense{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr))!important;gap:8px!important}
+.restaurantOrderCardsDense>article{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-content:start;gap:7px 12px!important;padding:11px 13px!important;border-radius:11px!important;min-width:0}
+.restaurantOrderCardsDense>article>header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+.restaurantOrderCardsDense .restaurantOrderIdentity b{font-size:20px}
+.restaurantOrderCardsDense .restaurantOrderGuest{grid-column:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px}
+.restaurantOrderCardsDense .restaurantOrderGuest strong{font-size:13px;overflow-wrap:anywhere}
+.restaurantOrderCardsDense .restaurantOrderTime{grid-column:2;white-space:nowrap;align-self:center;font-variant-numeric:tabular-nums;font-size:11px}
+.restaurantOrderCardsDense .restaurantOrderDining{grid-column:1/-1;margin:0;padding:5px 8px}
+.restaurantOrderCardsDense .restaurantOrderNotes{grid-column:1/-1;margin:0;padding:6px 8px;max-height:100px;overflow:auto;font-size:12px}
+.restaurantOrderCardsDense .restaurantOrderDetailsToggle{grid-column:1/-1;min-height:36px;padding:6px 9px}
+.restaurantOrderCardsDense>article>div[id^="order-details-"]{grid-column:1/-1}
+.restaurantOrderCardsDense>article>footer{grid-column:1/-1;margin:0;display:flex;justify-content:space-between}
+.restaurantOrderCardsDense .restaurantOrderActions{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.restaurantOrderCardsDense .restaurantOrderActions button{min-height:40px;padding:6px 9px}
+.restaurantOrderCardsDense .restaurantOrderAdvance{flex:1 1 100%}
+@media(max-width:650px){.restaurantVolumeToolbar{padding:8px}.restaurantOrderCardsDense{grid-template-columns:minmax(0,1fr)!important}.restaurantOrderCardsDense>article{grid-template-columns:minmax(0,1fr) auto}}
