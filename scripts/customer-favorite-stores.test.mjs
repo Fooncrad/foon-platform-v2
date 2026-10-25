@@ -26,3 +26,21 @@ test("favorites provide account-localized search, explicit pinning and safe stor
  for(const lang of ["ar:{","en:{","fr:{"])assert.ok(ui.includes(lang),"missing "+lang);
  assert.match(css,/@media\(max-width:400px\)/);
 });
+
+test("favorite mutations acknowledge only persisted, authorized records",()=>{
+ const api=read("app/api/customer/favorite-stores/route.ts");
+ assert.match(api,/STORE_NOT_LINKED/);
+ assert.match(api,/FAVORITES_LIMIT_OR_UNAVAILABLE/);
+ assert.match(api,/if\(!saved\.length\)/);
+ assert.match(api,/JOIN tenant_customers tc ON tc\.tenant_id=f\.tenant_id AND tc\.user_id=f\.user_id/);
+ assert.match(api,/status:503/);
+});
+
+test("customer return action prefers pinned stores and timeline localizes statuses",()=>{
+ const page=read("app/customer/page.tsx");
+ const timeline=read("app/customer/customer-journey-timeline.tsx");
+ assert.match(page,/SELECT t\.name,t\.slug FROM customer_favorite_stores f/);
+ assert.match(page,/if\(pinned\[0\]\)returnStore=/);
+ assert.match(timeline,/const states:Record<string/);
+ assert.match(timeline,/localStatus\(item\.status\)/);
+});

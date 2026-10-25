@@ -86,7 +86,13 @@ export default async function CustomerPage(){
   return typeof scheduled==="string"&&Number.isFinite(Date.parse(scheduled))&&Date.parse(scheduled)>=now;
  }).length;
  const profileComplete=String(user.display_name??"").trim().length>=2&&String(profiles[0]?.phone??"").trim().length>0;
- const returnStore=stores[0]?{name:String(stores[0].name),slug:String(stores[0].slug)}:null;
+ let returnStore=stores[0]?{name:String(stores[0].name),slug:String(stores[0].slug)}:null;
+ try{
+  const [pinned]=await database().execute<RowDataPacket[]>(
+   "SELECT t.name,t.slug FROM customer_favorite_stores f JOIN tenants t ON t.id=f.tenant_id AND t.status='active' JOIN tenant_customers tc ON tc.tenant_id=f.tenant_id AND tc.user_id=f.user_id WHERE f.user_id=? ORDER BY f.created_at DESC LIMIT 1",[id]
+  );
+  if(pinned[0])returnStore={name:String(pinned[0].name),slug:String(pinned[0].slug)};
+ }catch(error){console.error("CUSTOMER_PINNED_RETURN_UNAVAILABLE",error);}
  const journeyEvents:CustomerJourneyEntry[]=[
   ...orders.slice(0,12).map((order):CustomerJourneyEntry=>({id:String(order.id),kind:"order",title:String(order.store_name),subtitle:serviceText("طلب رقم ","Order #","Commande n° ")+String(order.order_number),status:String(order.status),at:safeCustomerIsoDate(order.created_at)??"",href:"#customer-order-"+String(order.id)})),
   ...reservations.slice(0,10).map((reservation):CustomerJourneyEntry=>({id:String(reservation.id),kind:"reservation",title:String(reservation.store_name),subtitle:String(reservation.name),status:reservationLabels[String(reservation.status)]??String(reservation.status),at:safeCustomerIsoDate(reservation.created_at)??"",href:"#customer-reservation-"+String(reservation.id)})),
