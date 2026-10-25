@@ -15,3 +15,10 @@ export function MarketNearby({branches,language}:{branches:{id:string;name:strin
  function request(){if(typeof navigator==="undefined"||!navigator.geolocation){setMessage(t.deny);return;}navigator.geolocation.getCurrentPosition(p=>{setCoords({lat:p.coords.latitude,lng:p.coords.longitude});setMessage("");},()=>setMessage(t.deny),{timeout:10000,maximumAge:300000,enableHighAccuracy:false});}
  return <div className="foonMarketNearby"><button type="button" onClick={request}>{t.action} ◎</button>{coords&&<small>{near.length?near.map(b=>b.name+" "+b.distance.toFixed(1)+" "+t.unit).join(" · "):t.no}</small>}{message&&<small role="status">{message}</small>}</div>;
 }
+
+export function MarketOffers({tenantId,language}:{tenantId:string;language:"ar"|"en"|"fr"}){
+ const [offers,setOffers]=useState<{id:string;title_ar:string;title_en:string;title_fr:string}[]>([]);
+ useEffect(()=>{let active=true;fetch("/api/customer/growth-offers?tenantId="+encodeURIComponent(tenantId),{cache:"no-store",credentials:"same-origin"}).then(async r=>r.ok?r.json():null).then(d=>{if(active&&d?.ok&&Array.isArray(d.campaigns))setOffers(d.campaigns.slice(0,2))}).catch(()=>{});return()=>{active=false}},[tenantId]);
+ if(!offers.length)return null;
+ return <div className="foonMarketOffers">{offers.map(offer=><span key={offer.id}>{language==="en"?offer.title_en||offer.title_ar:language==="fr"?offer.title_fr||offer.title_ar:offer.title_ar}</span>)}<small>{language==="ar"?"تخضع العروض لشروط الأهلية عند الدفع":language==="en"?"Offers subject to checkout eligibility":"Offres sous réserve des conditions à la commande"}</small></div>;
+}
