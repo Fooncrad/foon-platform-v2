@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 import {randomUUID} from "node:crypto";
-import type {RowDataPacket} from "mysql2/promise";
+import type {RowDataPacket,ResultSetHeader} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
@@ -8,7 +8,7 @@ import {readLimitedJson} from "@/lib/security/limited-json";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
 import {requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
-import {normalizeEmployeePermissions,validPermissions} from "@/lib/restaurant/employee-permissions";
+import {normalizeEmployeePermissions,parseEmployeeProvisionPatch,validPermissions} from "@/lib/restaurant/employee-permissions";
 import {resolveBoundEmployeeUser} from "@/lib/restaurant/employee-link-scope";
 export const runtime="nodejs";
 // A staff payload can contain the full permission set, but never needs an
@@ -64,9 +64,9 @@ export async function PATCH(request:Request){
  const actor=await currentUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const parsed=await employeePayload(request);if(parsed.error)return parsed.error;
  const body=parsed.body;
- const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??""),password=body?.password;
- const permissions=normalizeEmployeePermissions(body?.permissions);
- if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||(password!==undefined&&(typeof password!=="string"||password.length<9||password.length>128))||permissions===null)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??"");
+ const change=parseEmployeeProvisionPatch(body);
+ if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||change===null)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(actor,tenantId,["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const db=await database().getConnection();
  try{
@@ -80,12 +80,16 @@ export async function PATCH(request:Request){
   const [memberships]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,userId]);
   if(!memberships.length||["owner","manager"].includes(String(memberships[0].role))){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_PERMISSION_CHANGE_FORBIDDEN"},{status:403});}
   const branchId=employee.branch_id??null;
-  await db.execute("DELETE FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND branch_id <=> ?",[tenantId,userId,branchId]);
-  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,FALSE)",[randomUUID(),tenantId,userId,branchId,"policy.enabled"]);
-  for(const permission of permissions)await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,branchId,permission]);
-  if(password!==undefined){
-   const nextHash=await hashPassword(password);
-   await db.execute("UPDATE users SET password_hash=? WHERE id=? AND status='active'",[nextHash,userId]);
+  // Password-only resets must not overwrite the employee's existing grants.
+  if(change.permissions!==undefined){
+   await db.execute("DELETE FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND branch_id <=> ?",[tenantId,userId,branchId]);
+   await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,FALSE)",[randomUUID(),tenantId,userId,branchId,"policy.enabled"]);
+   for(const permission of change.permissions)await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,branchId,permission]);
+  }
+  if(change.password!==undefined){
+   const nextHash=await hashPassword(change.password);
+   const [updated]=await db.execute<ResultSetHeader>("UPDATE users SET password_hash=? WHERE id=? AND status='active'",[nextHash,userId]);
+   if(updated.affectedRows!==1){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_INACTIVE"},{status:409});}
    // Password reset must revoke every previously authenticated employee device.
    await db.execute("DELETE FROM auth_sessions WHERE user_id=?",[userId]);
    await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?, ?, 'employee.password_reset', ?, ?)",[tenantId,actor,resourceId,JSON.stringify({employeeUserId:userId})]);
