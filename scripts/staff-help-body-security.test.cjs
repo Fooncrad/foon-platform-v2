@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS is needed to mock the route module loader in this security test. */
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
