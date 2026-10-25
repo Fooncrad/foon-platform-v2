@@ -10,6 +10,9 @@ function loadRoute(path,context,names){
  const executable=source.replace(/^import .*\n/gm,"")
   .replaceAll("execute<RowDataPacket[]>","execute")
   .replace("change(request:Request,remove:boolean)","change(request,remove)")
+  .replaceAll("GET(request:Request)","GET(request)")
+  .replaceAll("POST(request:Request)","POST(request)")
+  .replaceAll("DELETE(request:Request)","DELETE(request)")
   .replaceAll("export async function ","async function ")
   .replaceAll("export const ","const ");
  return runInNewContext(executable+"\n({"+names+"})",context);
