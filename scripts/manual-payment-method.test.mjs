@@ -17,3 +17,11 @@ test("rejects missing, unexpected, and prototype-related payment methods",()=>{
   assert.equal(validManualPaymentMethod(value),false,String(value));
  }
 });
+
+// The .d.mts contract must not silently omit a payment method accepted at runtime.
+test("TypeScript type guard covers every accepted POS payment method",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const declaration=await readFile(new URL("../lib/restaurant/manual-payment-method.d.mts",import.meta.url),"utf8");
+ const declared=[...declaration.matchAll(/"([^"]+)"/g)].map(match=>match[1]).sort();
+ assert.deepEqual(declared,["cash","card","bank_transfer","other"].sort());
+});
