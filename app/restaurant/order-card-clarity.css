@@ -25,3 +25,13 @@
 .restaurantOrderCards .restaurantOrderNotes{border-inline-start:3px solid #dd8a23;padding:8px 11px;background:#fff9ed;color:#573912}
 .restaurantOrderCards [hidden]{display:none!important}
 @media(max-width:650px){.restaurantOrderCards{grid-template-columns:minmax(0,1fr);gap:10px}.restaurantOrderCards>article{padding:12px;gap:9px}}
+
+/* Critical handoff information stays visible without opening order details. */
+.restaurantOrderCards .restaurantOrderRouting{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.restaurantOrderCards .restaurantOrderRouting>span{display:grid;gap:4px;min-width:115px;flex:1 1 auto;padding:10px 12px;border-radius:10px;background:var(--rc-muted,#f3f6fb);border:1px solid var(--rc-border,#dbe2ec);font-size:14px;font-weight:800}
+.restaurantOrderCards .restaurantOrderRouting strong{display:block;font-size:11px;font-weight:700;opacity:.75}
+.restaurantOrderCards .restaurantOrderTable{border-color:#b78329!important;background:#fff6de!important;color:#633e0c}
+.restaurantOrderCards .restaurantOrderNotes{display:grid;gap:6px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.55}
+.restaurantOrderCards .restaurantOrderNotes p{margin:0;white-space:pre-wrap}
+.restaurantOrderCards .restaurantOrderNotes strong{font-size:13px}
+@media(max-width:400px){.restaurantOrderCards .restaurantOrderRouting>span{min-width:100px}}
