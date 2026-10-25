@@ -38,3 +38,18 @@ test("CSV import recovery allows safe discard of stale browser job without delet
  assert.ok(!importer.includes('DELETE /api/restaurant/catalog-import'));
  assert.match(importer,/Previously imported rows on the server will remain/);
 });
+
+test("main restaurant dashboard renders the four-photo and category-cover managers",()=>{
+ const tabs=read("app/restaurant/service-workspace.tsx");
+ const gallery=read("app/restaurant/menu/images-workspace.tsx");
+ const categories=read("app/restaurant/menu/category-photo-workspace.tsx");
+ const nav=read("lib/tenant/workspace-routes.ts");
+ assert.match(nav,/section==="menu"&&activity==="restaurant"\?path\+"\?section=menu"/);
+ assert.match(tabs,/tab==="menuImages"&&section==="menu"&&fullAccess\?<MenuImagesWorkspace tenantId=\{tenantId\}\/>/);
+ assert.match(tabs,/tab==="categories"&&section==="menu"&&fullAccess/);
+ assert.match(tabs,/MenuCategoryPhotoWorkspace tenantId=\{tenantId\}/);
+ assert.match(gallery,/MenuItemImages tenantId=\{tenantId\}/);
+ assert.match(gallery,/limit\+24|n=>n\+24/);
+ assert.match(categories,/MenuCategoryImageEditor tenantId=\{tenantId\}/);
+ assert.match(categories,/\/api\/restaurant\/menu\/categories/);
+});
