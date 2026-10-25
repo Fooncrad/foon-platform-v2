@@ -13,17 +13,18 @@ export default function RestaurantFloorPlan({tenantId,branch,onReservations}:{te
  const [zoneFilter,setZoneFilter]=useState("all");
  const [drag,setDrag]=useState<string|null>(null);
  const board=useRef<HTMLDivElement>(null);
+ const editRevision=useRef(0);
  const endpoint="/api/restaurant/floor-plan?branch="+encodeURIComponent(branch);
- useEffect(()=>{let active=true;fetch(endpoint,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{if(active){setPlan(j.plan);setDirty(false);setSelected("");setZoneFilter("all")}}).catch(()=>{if(active)setMessage("تعذر تحميل مخطط الفرع")});return()=>{active=false}},[tenantId,endpoint]);
+ useEffect(()=>{editRevision.current+=1;let active=true;fetch(endpoint,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{if(active){setPlan(j.plan);setDirty(false);setSelected("");setZoneFilter("all")}}).catch(()=>{if(active)setMessage("تعذر تحميل مخطط الفرع")});return()=>{active=false}},[tenantId,endpoint]);
  const zones=useMemo(()=>Array.from(new Set(plan.tables.map(t=>t.zone).filter(Boolean))),[plan.tables]);
  const shown=zoneFilter==="all"?plan.tables:plan.tables.filter(t=>t.zone===zoneFilter);
  const active=plan.tables.find(t=>t.id===selected);
- function change(fn:(p:FloorPlan)=>FloorPlan){setPlan(p=>fn(p));setDirty(true);setMessage("")}
+ function change(fn:(p:FloorPlan)=>FloorPlan){editRevision.current+=1;setPlan(p=>fn(p));setDirty(true);setMessage("")}
  function add(){const id="table-"+crypto.randomUUID();change(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,x:Math.min(2+p.tables.length%8*2,p.width-1),y:Math.min(2+Math.floor(p.tables.length/8)*2,p.height-1),zone:zones[0]||"الصالة"}]}));setSelected(id)}
  function edit(patch:Record<string,string|number>){change(p=>({...p,tables:p.tables.map(t=>t.id===selected?{...t,...patch}:t)}))}
  function moveAt(e:PointerEvent<HTMLDivElement>){if(!drag||!board.current)return;const rect=board.current.getBoundingClientRect();const x=clampFloorCoordinate(Math.round((e.clientX-rect.left)/rect.width*plan.width*2)/2,plan.width);const y=clampFloorCoordinate(Math.round((e.clientY-rect.top)/rect.height*plan.height*2)/2,plan.height);change(p=>({...p,tables:p.tables.map(t=>t.id===drag?{...t,x,y}:t)}))}
  function beginDrag(e:PointerEvent<HTMLButtonElement>,id:string){if(e.button!==0)return;setSelected(id);setDrag(id);e.currentTarget.parentElement?.setPointerCapture(e.pointerId)}
- async function save(){setSaving(true);setMessage("");try{const r=await fetch(endpoint,{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({plan})});if(!r.ok)throw Error();setDirty(false);setMessage("تم حفظ مخطط الفرع بنجاح")}catch{setMessage("تعذر حفظ المخطط. تحقق من الأبعاد وأرقام الطاولات المكررة وصلاحيات الفرع.")}finally{setSaving(false)}}
+ async function save(){const savedRevision=editRevision.current;setSaving(true);setMessage("");try{const r=await fetch(endpoint,{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({plan})});if(!r.ok)throw Error();if(savedRevision===editRevision.current){setDirty(false);setMessage("تم حفظ مخطط الفرع بنجاح")}else{setMessage("تم حفظ نسخة سابقة؛ توجد تعديلات أحدث تحتاج الحفظ")}}catch{setMessage("تعذر حفظ المخطط. تحقق من الأبعاد وأرقام الطاولات المكررة وصلاحيات الفرع.")}finally{setSaving(false)}}
  return <section className="restaurantPanel foonFloorPro" dir="rtl">
  <header className="foonFloorProHeader"><div><span className="foonFloorEyebrow">FOON FLOOR PLAN</span><h2>مصمم صالة المطعم</h2><p>توزيع الطاولات على مخطط الفرع الحقيقي. الحجوزات الفعلية تدار من النظام الحالي.</p></div><div className="foonFloorHeaderActions"><span className={dirty?"foonFloorUnsaved":"foonFloorSaved"}>{dirty?"تعديلات غير محفوظة":"آخر حالة محفوظة"}</span><button className="foonFloorPrimary" type="button" onClick={save} disabled={!branch||saving}>{saving?"جار الحفظ…":"حفظ المخطط"}</button></div></header>
  <div className="foonFloorStats"><span><strong>{plan.tables.length}</strong> طاولة على المخطط</span><span><strong>{plan.tables.reduce((n,t)=>n+t.seats,0)}</strong> مقعد</span><span><strong>{zones.length}</strong> قسم</span><span><strong>{plan.width*plan.height}</strong> م²</span></div>
