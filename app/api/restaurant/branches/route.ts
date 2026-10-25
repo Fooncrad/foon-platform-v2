@@ -6,6 +6,7 @@ import { requireTenantMembership } from "@/lib/auth/authorization";
 import { database } from "@/lib/db/mysql";
 import { tenantEntitlement } from "@/lib/plans/entitlements";
 import { assertSameOrigin } from "@/lib/security/origin";
+import {readBranchActionBody} from "@/lib/restaurant/branch-action-body";
 import {branchVersion} from "@/lib/restaurant/branch-version";
 import {branchPinHash,validBranchPin,requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
 
@@ -23,7 +24,9 @@ export async function GET(request:Request){
 export async function PATCH(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ const parsed=await readBranchActionBody(request);
+ if(parsed.error)return NextResponse.json({ok:false,code:parsed.error},{status:parsed.error==="BODY_TOO_LARGE"?413:400});
+ const body=parsed.body;
  if(!body||typeof body.id!=="string"||typeof body.version!=="string")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  let ctx;
  try{ctx=await requireTenantMembership(userId,request.headers.get("x-foon-tenant")??"",["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
@@ -34,7 +37,7 @@ export async function PATCH(request:Request){
    return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});
  }
  if(body.pin!==undefined&&(!validBranchPin(body.pin)||ctx.role!=="owner"))return NextResponse.json({ok:false,code:"INVALID_BRANCH_PIN"},{status:403});
- const pinDetails=body.pin?branchPinHash(body.pin):null;
+ const pinDetails=body.pin?branchPinHash(String(body.pin)):null;
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
@@ -54,7 +57,9 @@ export async function PATCH(request:Request){
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ const parsed=await readBranchActionBody(request);
+ if(parsed.error)return NextResponse.json({ok:false,code:parsed.error},{status:parsed.error==="BODY_TOO_LARGE"?413:400});
+ const body=parsed.body;
  if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  let ctx;try{ctx=await requireTenantMembership(userId,request.headers.get("x-foon-tenant")??"",["owner","manager"]);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const name=typeof body.name==="string"?body.name.trim():"",slug=typeof body.slug==="string"?body.slug.trim().toLowerCase():"";
@@ -68,7 +73,7 @@ export async function POST(request:Request){
   if(count>=1&&!entitlement.enabled){await db.rollback();return NextResponse.json({ok:false,code:"PLAN_FEATURE_REQUIRED"},{status:403});}
   if(entitlement.limit!==null&&count>=entitlement.limit){await db.rollback();return NextResponse.json({ok:false,code:"PLAN_LIMIT_REACHED"},{status:403});}
   if(count>0&&!validBranchPin(body.pin)){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_PIN_REQUIRED"},{status:400});}
-  const hashed=count>0?branchPinHash(body.pin):null;
+  const hashed=count>0?branchPinHash(String(body.pin)):null;
   const id=randomUUID();await db.execute("INSERT INTO branches(id,tenant_id,name,slug,pin_salt,pin_hash) VALUES (?,?,?,?,?,?)",[id,ctx.tenantId,name,slug,hashed?.salt??null,hashed?.hash??null]);
   await db.execute("INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,resource_id,metadata) VALUES (?,?,'branch.create',?,?)",[ctx.tenantId,userId,id,JSON.stringify({name,slug})]);
   await db.commit();return NextResponse.json({ok:true,branch:{id,name,slug,enabled:true,version:branchVersion({name,slug,enabled:true})}},{status:201});
