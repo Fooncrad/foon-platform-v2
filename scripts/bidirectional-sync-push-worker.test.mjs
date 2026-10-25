@@ -46,3 +46,13 @@ test("empty queue has no transport side effects",async()=>{
  const result=await pushNextPendingSyncEvent({db,scope,url,authorization,publicKey,fetchImpl:async()=>{throw Error("must not connect");}});
  assert.deepEqual(result,{status:"idle"});
 });
+
+test("invalid pinned server key rejects before reading the outbox or sending bearer",async()=>{
+ const wrongType=generateKeyPairSync("ec",{namedCurve:"prime256v1"}).publicKey.export({type:"spki",format:"pem"});
+ for(const untrusted of [undefined,"not-a-public-key",wrongType]){
+  const db=fixture();let requests=0;
+  await assert.rejects(()=>pushNextPendingSyncEvent({db,scope,url,authorization,publicKey:untrusted,fetchImpl:async()=>{requests++;return response(signedResponse());}}),/SYNC_TRUSTED_KEY_REQUIRED/);
+  assert.equal(requests,0,"bearer must not be transmitted without a trusted key");
+  assert.deepEqual(db.calls,[],"outbox must not be read without a trusted key");
+ }
+});
