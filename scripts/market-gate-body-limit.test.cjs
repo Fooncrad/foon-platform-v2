@@ -30,7 +30,7 @@ function setup({role='super_admin',user='admin',originValid=true,failDb=false}={
     '@/lib/db/mysql':{database:()=>({getConnection:async()=>{calls.connection++;return connection}})},
     '@/lib/market/global-gate':gate
   };
-  const route=process.env.BASELINE==='1'?'app/api/admin/market-gate/route.ts.baseline':'app/api/admin/market-gate/route.ts';
+  const route='app/api/admin/market-gate/route.ts';
   return {...load(route,mocks),calls};
 }
 const valid={settings:{closed:true,reason:{ar:'السوق مغلق مؤقتًا',en:'Marketplace temporarily closed',fr:'Marché temporairement fermé'}}};
