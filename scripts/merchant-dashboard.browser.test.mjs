@@ -217,9 +217,13 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  },{timeout:15000}).toBe(1);
  await page.getByRole("button",{name:"الأصناف",exact:true}).click();
  await page.getByRole("button",{name:"إضافة صنف جديد",exact:true}).click();
+ // Loading categories can remount the item form. Wait until the newly
+ // persisted category is available before typing into controlled fields.
+ const itemCategory=page.getByLabel("التصنيف",{exact:true});
+ await expect(itemCategory.getByRole("option",{name:"مشروبات المعاينة",exact:true})).toBeAttached();
+ await itemCategory.selectOption({label:"مشروبات المعاينة"});
  await page.getByLabel("اسم الصنف",{exact:true}).fill("قهوة المعاينة");
  await page.getByLabel("السعر",{exact:true}).fill("10");
- await page.getByLabel("التصنيف",{exact:true}).selectOption({label:"مشروبات المعاينة"});
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
