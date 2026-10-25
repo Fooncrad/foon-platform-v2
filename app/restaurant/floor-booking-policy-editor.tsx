@@ -8,6 +8,7 @@ type Props = {tenantId: string; branch: string; language: Language; currency: st
 export default function FloorBookingPolicyEditor({tenantId, branch, language, currency}: Props) {
   const [policy, setPolicy] = useState<FloorBookingPolicy>(defaultFloorBookingPolicy);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const url = "/api/restaurant/floor-booking-policy?branch=" + encodeURIComponent(branch);
@@ -16,6 +17,7 @@ export default function FloorBookingPolicyEditor({tenantId, branch, language, cu
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setLoaded(false);
     setMessage("");
     setPolicy(defaultFloorBookingPolicy);
     fetch(url, {headers: {"x-foon-tenant": tenantId}, cache: "no-store"})
@@ -23,7 +25,7 @@ export default function FloorBookingPolicyEditor({tenantId, branch, language, cu
         if (!response.ok) throw new Error("LOAD_FAILED");
         const data: {settings?: FloorBookingPolicy} = await response.json();
         if (!data.settings) throw new Error("INVALID_RESPONSE");
-        if (active) setPolicy(data.settings);
+        if (active) {setPolicy(data.settings); setLoaded(true);}
       })
       .catch(() => {
         if (active) setMessage(tr("تعذر تحميل سياسة الحجز؛ لن تُحفظ إعدادات غير محمّلة.", "Could not load the booking policy; saving is disabled.", "Impossible de charger la politique de réservation ; l'enregistrement est désactivé."));
@@ -35,7 +37,7 @@ export default function FloorBookingPolicyEditor({tenantId, branch, language, cu
   }, [url, tenantId]);
 
   async function save() {
-    if (loading || saving) return;
+    if (loading || !loaded || saving) return;
     setSaving(true);
     setMessage("");
     try {
@@ -83,7 +85,7 @@ export default function FloorBookingPolicyEditor({tenantId, branch, language, cu
         </select>
       </label>
     </div>
-    <button type="button" disabled={loading || saving || Boolean(message && message.includes("تحميل"))} onClick={save}>
+    <button type="button" disabled={loading || !loaded || saving} onClick={save}>
       {loading ? tr("جارٍ التحميل", "Loading", "Chargement") : saving ? tr("جارٍ الحفظ", "Saving", "Enregistrement") : tr("حفظ سياسة الفرع", "Save branch policy", "Enregistrer la politique")}
     </button>
     {message && <p role="status">{message}</p>}
