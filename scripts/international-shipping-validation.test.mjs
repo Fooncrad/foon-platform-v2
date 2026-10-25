@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
+import {readLimitedJson} from '../lib/security/limited-json.ts';
 import {normalizeForeignCountries,parseRequestedForeignCountries} from '../lib/tenant/international-shipping-validation.mjs';
 const supported=new Set(['SA','AE','KW','EG','US']);
 const normalize=(countries,merchant='SA')=>normalizeForeignCountries(countries,merchant,supported);
@@ -46,4 +47,16 @@ test('both mutation endpoints enforce byte-bounded JSON before database writes',
   assert.match(source,/BODY_TOO_LARGE/);
   assert.doesNotMatch(source,/request\.json\(/);
  }
+});
+
+test('bounded JSON reader rejects a declared oversized request before parsing',async()=>{
+ const req=new Request('https://example.test/',{method:'POST',body:'{}',headers:{'content-length':'2049'}});
+ await assert.rejects(readLimitedJson(req,2048),/BATCH_TOO_LARGE/);
+});
+test('bounded JSON reader rejects chunked uploads without Content-Length',async()=>{
+ let pulled=0;
+ const stream=new ReadableStream({pull(c){pulled++;c.enqueue(new Uint8Array(1024));if(pulled===10)c.close();}});
+ const req=new Request('https://example.test/',{method:'POST',body:stream,duplex:'half'});
+ await assert.rejects(readLimitedJson(req,2048),/BATCH_TOO_LARGE/);
+ assert.ok(pulled<10);
 });
