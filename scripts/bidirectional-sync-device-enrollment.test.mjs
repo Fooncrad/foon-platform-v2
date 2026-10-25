@@ -56,3 +56,34 @@ test("audit failure rolls back enrollment and never returns credential",async()=
  await assert.rejects(()=>enrollSyncDevice({db,authorizeAdmin,session,grants:["sync.read"],expiresAt:"2027-01-01T00:00:00Z"}),/SYNC_AUDIT_WRITE_FAILED/);
  assert.equal(db.calls.at(-1),"rollback");
 });
+
+test("enrollment rejects coercible UUID identities and malformed rate-limit counters",async()=>{
+ const id="44444444-4444-4444-8444-444444444444";
+ for(const invalid of [[id],{toString:()=>id},new String(id)]){
+  const db=fixture();
+  await assert.rejects(()=>enrollSyncDevice({db,authorizeAdmin,session,deviceId:invalid,grants:["sync.read"],expiresAt:"2027-01-01T00:00:00Z"}),/SYNC_INVALID_ENROLLMENT/);
+  assert.deepEqual(db.calls,[],"invalid device ID must not reach rate-limit or enrollment SQL");
+  const revokeDb=fixture();
+  await assert.rejects(()=>revokeSyncDevice({db:revokeDb,authorizeAdmin,session,deviceId:invalid}),/SYNC_ENROLLMENT_FORBIDDEN/);
+  assert.deepEqual(revokeDb.calls,[],"invalid revoke ID must not reach SQL");
+ }
+ for(const key of ["tenantId","branchId","actorId"]){
+  const db=fixture();
+  await assert.rejects(()=>enrollSyncDevice({db,authorizeAdmin:async()=>({...adminScope,[key]:[adminScope[key]]}),session,grants:["sync.read"],expiresAt:"2027-01-01T00:00:00Z"}),/SYNC_ENROLLMENT_FORBIDDEN/);
+  assert.deepEqual(db.calls,[],"coercible admin scope must not reach SQL");
+ }
+ for(const invalid of [null,[],[1],{valueOf:()=>1},"1e0","01","NaN",0,-1,1.5,11,"9007199254740993"]){
+  const db=fixture();
+  const execute=db.execute.bind(db);
+  db.execute=async(sql,args)=>sql.startsWith("SELECT attempt_count")?[[{attempt_count:invalid}]]:execute(sql,args);
+  await assert.rejects(()=>enrollSyncDevice({db,authorizeAdmin,session,deviceId:id,grants:["sync.read"],expiresAt:"2027-01-01T00:00:00Z"}),/SYNC_RATE_LIMITED/);
+  assert.equal(db.calls.includes("begin"),false,"invalid counter must not begin enrollment transaction");
+  assert.equal(db.calls.some(x=>x.sql?.startsWith("INSERT INTO foon_sync_devices")),false);
+ }
+ const db=fixture();
+ const execute=db.execute.bind(db);
+ db.execute=async(sql,args)=>sql.startsWith("SELECT attempt_count")?[[{attempt_count:"10"}]]:execute(sql,args);
+ const accepted=await enrollSyncDevice({db,authorizeAdmin,session,deviceId:id,grants:["sync.read"],expiresAt:"2027-01-01T00:00:00Z"});
+ assert.equal(accepted.deviceId,id,"canonical SQL decimal counters remain accepted");
+ assert.equal(db.calls.at(-1),"commit");
+});
