@@ -34,10 +34,12 @@ test("MariaDB outbox isolates device, tenant, branch and survives network failur
    const pending=await readPendingSyncEvents(db,scopes[i]);
    assert.deepEqual(pending.map(x=>x.eventId),[ids[i]],"scope predicate must include device, tenant and branch");
   }
+  // The push worker validates its pinned Ed25519 key before any network attempt.
+  const offlinePublicKey=generateKeyPairSync("ed25519").publicKey.export({type:"spki",format:"pem"});
   let attempts=0;
   await assert.rejects(()=>pushNextPendingSyncEvent({
    db,scope:scopes[0],url:"https://sync.example.com/api/sync/v1/push",
-   authorization:"Bearer "+"x".repeat(64),publicKey:"unused-on-network-error",
+   authorization:"Bearer "+"x".repeat(64),publicKey:offlinePublicKey,
    fetchImpl:async()=>{attempts++;throw Error("SIMULATED_NETWORK_FAILURE");}
   }),/SIMULATED_NETWORK_FAILURE/);
   assert.equal(attempts,1);
