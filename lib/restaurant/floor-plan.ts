@@ -15,3 +15,9 @@ export function validFloorPlan(x:unknown):x is FloorPlan{
  return p.tables.every((raw:unknown)=>{if(!raw||typeof raw!=="object")return false;const t=raw as Record<string,unknown>;
  if(typeof t.id!=="string"||!/^[a-z0-9-]{1,60}$/i.test(t.id)||ids.has(t.id)||typeof t.number!=="string"||!t.number.trim()||t.number.length>20||names.has(t.number.trim())||typeof t.zone!=="string"||!t.zone.trim()||t.zone.length>60||!Number.isInteger(t.seats)||Number(t.seats)<1||Number(t.seats)>30||typeof t.x!=="number"||!Number.isFinite(t.x)||typeof t.y!=="number"||!Number.isFinite(t.y)||t.x<0||t.y<0||t.x>=width||t.y>=height)return false;ids.add(t.id);names.add(t.number.trim());return true});
 }
+
+/** Keep positions strictly inside the floor dimensions accepted by validFloorPlan. */
+export function clampFloorCoordinate(value:number,dimension:number):number{
+ if(!Number.isFinite(value)||!Number.isFinite(dimension)||dimension<=0)return 0;
+ return Math.max(0,Math.min(value,dimension-0.01));
+}
