@@ -15,11 +15,11 @@ const payBody = JSON.stringify({orderId});
 function compile(path, deps={}, fakeFetch=()=>{throw Error('unexpected fetch');}) {
   const source=readFileSync(resolve(root,path),'utf8');
   const output=ts.transpileModule(source,{fileName:path,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  const module={exports:{}};
+  const cjsModule={exports:{}};
   new Function('require','module','exports','process','fetch',output)(
     name=>{if(Object.hasOwn(deps,name))return deps[name];throw Error('Unexpected import: '+name);},
-    module,module.exports,{env:{GOOGLE_MAPS_GEOCODING_API_KEY:'synthetic',APP_URL:'https://example.invalid'}},fakeFetch);
-  return module.exports;
+    cjsModule,cjsModule.exports,{env:{GOOGLE_MAPS_GEOCODING_API_KEY:'synthetic',APP_URL:'https://example.invalid'}},fakeFetch);
+  return cjsModule.exports;
 }
 const {readLimitedJson}=compile('lib/security/limited-json.ts');
 function handler(path,opts={}) {
@@ -36,8 +36,8 @@ function handler(path,opts={}) {
     '@/lib/tenant/reverse-geocode':{normalizedReverseGeocode:()=>({countryCode:'SA'})},
     '@/lib/payments/customer-checkout':{CheckoutError,startCustomerPayment:async()=>{calls.payment++;return {redirectUrl:'https://example.invalid/pay'};}},
   };
-  const module=compile(path,deps,async()=>{calls.geocode++;return Response.json({results:[]});});
-  return {POST:module.POST,calls};
+  const routeModule=compile(path,deps,async()=>{calls.geocode++;return Response.json({results:[]});});
+  return {POST:routeModule.POST,calls};
 }
 function req(path,body,headers={}) {
   return new Request('https://example.invalid/'+path,{method:'POST',body,headers});
