@@ -4,16 +4,30 @@ import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {database} from "@/lib/db/mysql";
 import {hashPassword} from "@/lib/auth/password";
 import {requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
 import {normalizeEmployeePermissions,validPermissions} from "@/lib/restaurant/employee-permissions";
 import {resolveBoundEmployeeUser} from "@/lib/restaurant/employee-link-scope";
 export const runtime="nodejs";
+// A staff payload can contain the full permission set, but never needs an
+// unbounded body. Check actual streamed bytes, not only Content-Length.
+const MAX_EMPLOYEE_BODY_BYTES=16*1024;
+async function employeePayload(request:Request):Promise<{body:Record<string,unknown>|null;error:Response|null}>{
+ try{
+  const parsed=await readLimitedJson(request,MAX_EMPLOYEE_BODY_BYTES);
+  return {body:parsed!==null&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as Record<string,unknown>:null,error:null};
+ }catch(error){
+  const oversized=error instanceof Error&&error.message==="BATCH_TOO_LARGE";
+  return {body:null,error:NextResponse.json({ok:false,code:oversized?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:oversized?413:400})};
+ }
+}
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ const parsed=await employeePayload(request);if(parsed.error)return parsed.error;
+ const body=parsed.body;
  const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??""),password=String(body?.password??"");
  const permissions=normalizeEmployeePermissions(body?.permissions===undefined?[]:body?.permissions);
  if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||password.length<9||password.length>128||permissions===null)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
@@ -48,7 +62,8 @@ export async function POST(request:Request){
 export async function PATCH(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const actor=await currentUserId();if(!actor)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ const parsed=await employeePayload(request);if(parsed.error)return parsed.error;
+ const body=parsed.body;
  const tenantId=String(body?.tenantId??""),resourceId=String(body?.resourceId??""),password=body?.password;
  const permissions=normalizeEmployeePermissions(body?.permissions);
  if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId)||(password!==undefined&&(typeof password!=="string"||password.length<9||password.length>128))||permissions===null)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
