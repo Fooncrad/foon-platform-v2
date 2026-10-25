@@ -8,6 +8,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {tenantPublicControls} from "@/lib/tenant/public-controls";
 import {saveResource} from "@/lib/restaurant/operations";
@@ -31,7 +32,9 @@ export async function POST(request:Request){
  const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ let body: Awaited<ReturnType<Request["json"]>>;
+ try{body=await readLimitedJson(request,8192) as typeof body;}
+ catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400});}
  if(!body||typeof body.storeSlug!=="string"||!['waiter','reservation'].includes(body.action)||typeof body.branchId!=="string"||typeof body.requestKey!=="string"||!/^[a-f0-9-]{36}$/i.test(body.requestKey))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
  try{
