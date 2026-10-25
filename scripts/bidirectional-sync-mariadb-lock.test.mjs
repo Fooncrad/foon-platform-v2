@@ -47,3 +47,27 @@ test("mixed-case UUID spellings use the same MariaDB advisory lock name",async()
  assert.equal(lower.calls.at(-1).sql,"release");
  assert.equal(upper.calls.at(-1).sql,"release");
 });
+
+test("malformed GET_LOCK results destroy the session before any push",async()=>{
+ for(const grant of [null,false,true,[],[1],{valueOf:()=>1},"1e0"," 1 ",""]){
+  const x=fixture({grant});
+  await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:x.pool,scope,maxEvents:1}),/SYNC_LOCK_STATE_UNKNOWN/);
+  assert.deepEqual(x.calls.map(c=>c.sql),["connection","SELECT GET_LOCK(?,0) AS acquired","destroy"]);
+ }
+});
+test("malformed RELEASE_LOCK results never return an uncertain session to the pool",async()=>{
+ for(const releaseValue of [null,false,true,[],[1],{valueOf:()=>1},"1e0"," 1 ",""]){
+  const x=fixture({releaseValue});
+  await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:x.pool,scope,maxEvents:1}),/SYNC_LOCK_RELEASE_FAILED/);
+  assert.equal(x.calls.at(-1).sql,"destroy");
+  assert.equal(x.calls.some(c=>c.sql==="release"),false);
+ }
+});
+test("canonical MariaDB string lock results retain normal busy and success behavior",async()=>{
+ const acquired=fixture({grant:"1",releaseValue:"1"});
+ assert.equal((await pushWithMariaDbDeviceLock({pool:acquired.pool,scope,maxEvents:1})).status,"idle");
+ assert.equal(acquired.calls.at(-1).sql,"release");
+ const busy=fixture({grant:"0"});
+ await assert.rejects(()=>pushWithMariaDbDeviceLock({pool:busy.pool,scope}),/SYNC_PUSH_ALREADY_RUNNING/);
+ assert.equal(busy.calls.at(-1).sql,"release");
+});
