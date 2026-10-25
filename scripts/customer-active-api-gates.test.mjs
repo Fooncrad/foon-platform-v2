@@ -17,11 +17,11 @@ function loadRoute(path,context,names){
   .replaceAll("export const ","const ");
  return runInNewContext(executable+"\n({"+names+"})",context);
 }
-function harness(kind,{active=true,employee=false,session=true,dbError=false}={}){
+function harness(kind,{active=true,employee=false,session=true,dbError=false,offerQueryError=false}={}){
  const queries=[];
  const database=()=>({execute:async(sql)=>{
   queries.push(sql);
-  if(dbError)throw Error("DATABASE_DOWN");
+  if(dbError||(offerQueryError&&sql.includes("FROM growth_campaigns")))throw Error("DATABASE_DOWN");
   if(sql.includes("FROM users WHERE"))return [active?[{id:"customer-a"}]:[]];
   if(kind==="favorites")return [[{tenant_id:"shop-a"}]];
   return [[{id:"campaign-a"}]];
@@ -81,4 +81,12 @@ test("staff and unauthenticated sessions are denied before private queries",asyn
    assert.equal(queries.length,0);
   }
  }
+});
+
+test("growth-offer campaign query fails closed with a controlled 503",async()=>{
+ const {api,queries}=harness("offers",{offerQueryError:true});
+ const response=await api.GET(request);
+ assert.equal(response.status,503);
+ assert.equal(response.body.code,"OFFERS_UNAVAILABLE");
+ assert.equal(queries.length,2);
 });
