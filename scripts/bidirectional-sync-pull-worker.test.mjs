@@ -112,3 +112,17 @@ test("pull worker rejects coerced stored cursors before network",async()=>{
  const result=await pullAndApplyNextSyncBatch({db,scope,baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),publicKey,applyEvent:async()=>true,fetchImpl:async()=>response(signedBatch())});
  assert.equal(result.nextCursor,0);
 });
+
+test("pull scope rejects coercible UUID values before SQL or network",async()=>{
+ for(const key of ["deviceId","tenantId","branchId"]){
+  for(const invalid of [[scope[key]],{toString(){return scope[key];}},new String(scope[key])]){
+   const db=fixture();let networkCalls=0;
+   await assert.rejects(()=>pullAndApplyNextSyncBatch({
+    db,scope:{...scope,[key]:invalid},baseUrl:endpoint,authorization:"Bearer "+"a".repeat(64),
+    publicKey,applyEvent:async()=>true,fetchImpl:async()=>{networkCalls++;return response(signedBatch());}
+   }),/SYNC_INVALID_PULL_SCOPE/);
+   assert.deepEqual(db.calls,[],"invalid scope must not query the cursor");
+   assert.equal(networkCalls,0,"invalid scope must not reach the network");
+  }
+ }
+});
