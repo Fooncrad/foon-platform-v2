@@ -27,7 +27,8 @@ export async function GET(request:Request){
   const activity=String(profile[0]?.activity_code??"");
   const featureKey=["carwash","automotive","laundry","salon","publicworks"].includes(activity)?"catalog":"digital_menu";
   const categoryTable=activity==="restaurant"?"restaurant_menu_categories":"catalog_categories";
-  const [[prices],[requests],[receipts],[counts],currentGrant]=await Promise.all([
+  const productTable=activity==="restaurant"?"restaurant_menu_items":"catalog_products";
+  const [[prices],[requests],[receipts],[counts],[productCounts],currentGrant]=await Promise.all([
    database().execute<RowDataPacket[]>(
     "SELECT pp.id AS plan_id,pp.name_ar,pp.name_en,pp.name_fr,pr.billing_cycle,pr.currency,pr.price, "+
     "COALESCE(af.enabled,pf.enabled,0) AS catalog_enabled,CASE WHEN af.plan_id IS NOT NULL THEN af.limit_value ELSE pf.limit_value END AS catalog_limit "+
@@ -39,9 +40,10 @@ export async function GET(request:Request){
    database().execute<RowDataPacket[]>("SELECT id,plan_id,amount,currency,billing_cycle,status,transfer_reference,review_note,created_at FROM platform_payment_requests WHERE tenant_id=? ORDER BY created_at DESC LIMIT 30",[id]),
    database().execute<RowDataPacket[]>("SELECT r.payment_request_id,r.receipt_number,r.amount,r.currency,r.issued_at,p.billing_cycle,pl.name_ar,pl.name_en,pl.name_fr FROM platform_payment_receipts r JOIN platform_payment_requests p ON p.id=r.payment_request_id AND p.tenant_id=r.tenant_id AND p.status='approved' JOIN package_plans pl ON pl.id=p.plan_id WHERE r.tenant_id=? ORDER BY r.issued_at DESC LIMIT 50",[id]),
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS used FROM "+categoryTable+" WHERE tenant_id=?",[id]),
+   database().execute<RowDataPacket[]>("SELECT COUNT(*) AS used FROM "+productTable+" WHERE tenant_id=?",[id]),
    tenantEntitlement(String(id),featureKey)
   ]);
-  return reply({ok:true,prices,requests,receipts,quota:{used:Number(counts[0]?.used??0),limit:currentGrant.limit,enabled:currentGrant.enabled,feature:featureKey}});
+  return reply({ok:true,prices,requests,receipts,quota:{used:Number(counts[0]?.used??0),productUsed:Number(productCounts[0]?.used??0),limit:currentGrant.limit,enabled:currentGrant.enabled,feature:featureKey}});
  }catch{return reply({ok:false,code:"SUBSCRIPTION_REQUESTS_UNAVAILABLE"},503);}
 }
 export async function POST(request:Request){
