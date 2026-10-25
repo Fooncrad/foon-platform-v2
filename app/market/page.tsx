@@ -47,7 +47,6 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
   }
  }catch{error=true;}
  const media=new Map<string,MarketMedia>();
- const suggestions:string[]=[];
  const ids=stores.map(s=>String(s.id));
  if(ids.length){
   const inList=ids.map(()=>"?").join(",");
@@ -60,9 +59,6 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
    const [branches]=await database().execute<RowDataPacket[]>("SELECT * FROM branches WHERE enabled=TRUE AND tenant_id IN ("+inList+") ORDER BY created_at LIMIT 150",[...ids]);
    for(const row of branches){const entry=media.get(String(row.tenant_id));if(!entry)continue;const city=typeof row.city==="string"?row.city.trim():"";if(city&&!entry.city)entry.city=city;const lat=Number(row.latitude),lng=Number(row.longitude);entry.branches.push({id:String(row.id),name:String(row.name??city),latitude:row.latitude!=null&&Number.isFinite(lat)&&lat>=-90&&lat<=90?lat:null,longitude:row.longitude!=null&&Number.isFinite(lng)&&lng>=-180&&lng<=180?lng:null});}
   }catch{/* Older installations may not expose city or coordinates */}
- }
- if(filters.country){
-  try{const [hints]=await database().execute<RowDataPacket[]>("SELECT t.name AS name FROM tenants t JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE bp.country_code=? AND t.status='active' AND t.market_enabled=TRUE AND (t.market_visible_from IS NULL OR t.market_visible_from<=UTC_TIMESTAMP()) AND (t.market_visible_until IS NULL OR t.market_visible_until>UTC_TIMESTAMP()) AND t.name LIKE ? ORDER BY t.market_sort_order,t.name LIMIT 8",[filters.country,"%"+filters.q.replace(/[!%_]/g,k=>"!"+k)+"%"]);for(const row of hints)suggestions.push(String(row.name));}catch{}
  }
  const chosen=supportedCountries.find(c=>c.code===filters.country);
  const chosenName=chosen?(chosen[language]??chosen.ar):"";
