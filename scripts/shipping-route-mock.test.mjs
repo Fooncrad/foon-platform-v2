@@ -88,3 +88,13 @@ test('merchant and admin reject oversized request bodies before DB writes',async
   assert.equal(result.status,413);assert.equal(result.body.code,'BODY_TOO_LARGE');assert.equal(writes.length,0);
  }
 });
+test('delivery policy excludes unsupported legacy approved country codes',async()=>{
+ const db={execute:async()=>[[{status:'approved',requested_countries:'["AE"]',approved_countries:'["AE","ZZ"]'}]]};
+ const policy=load('lib/tenant/international-shipping.ts',{
+  '@/lib/db/mysql':{database:()=>db},
+  '@/lib/tenant/country-catalog':{supportedCountries}
+ });
+ const allowed=await policy.allowedDeliveryCountries(uuid,'SA','clothing',db);
+ assert.deepEqual(allowed,['SA','AE']);
+ assert.deepEqual(await policy.allowedDeliveryCountries(uuid,'SA','restaurant',db),['SA']);
+});
