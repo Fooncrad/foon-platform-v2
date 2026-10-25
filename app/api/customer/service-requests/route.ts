@@ -7,7 +7,6 @@ import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {tenantPublicControls,publicControlAllowed} from "@/lib/tenant/public-controls";
 import {assertSameOrigin} from "@/lib/security/origin";
-import {readLimitedJson} from "@/lib/security/limited-json";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
@@ -15,10 +14,9 @@ import {SERVICE_BUSINESSES,serviceRequestTypeAllowed,validServiceAppointmentTime
 export const runtime="nodejs";
 const fail=(code:string,status=400)=>NextResponse.json({ok:false,code},{status,headers:{"Cache-Control":"no-store"}});
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-type ServiceRequestBody={storeSlug:string;serviceId:string;requestKey:string;requestType:string;notes:string;phone:string;scheduledAt:string};
 async function customerScope(db:Pick<ReturnType<typeof database>,"execute">,user:string,slug:string){
  const [rows]=await db.execute<RowDataPacket[]>(
-  "SELECT t.id,p.activity_code FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.slug=? AND t.status='active' LIMIT 1",
+  "SELECT t.id,p.activity_code FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.slug=? AND t.status='active' LIMIT 1",
   [user,slug]);
  if(!rows.length)return null;
  const activity=String(rows[0].activity_code);
@@ -33,8 +31,8 @@ export async function GET(request:Request){
   const db=database(),ctx=await customerScope(db,user,slug);
   if(!ctx)return fail("STORE_CUSTOMER_REQUIRED",403);
   const [rows]=await db.execute<RowDataPacket[]>(
-   "SELECT id,name,status,data,created_at,updated_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? AND EXISTS (SELECT 1 FROM users WHERE id=? AND status='active') ORDER BY created_at DESC LIMIT 50",
-   [ctx.tenantId,user,user]);
+   "SELECT id,name,status,data,created_at,updated_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 50",
+   [ctx.tenantId,user]);
   return NextResponse.json({ok:true,requests:rows.map(r=>{const data=typeof r.data==="string"?JSON.parse(r.data):r.data;return {id:r.id,name:r.name,status:r.status,requestType:data.requestType,scheduledAt:data.scheduledAt,createdAt:r.created_at,updatedAt:r.updated_at};})},{headers:{"Cache-Control":"no-store, private"}});
  }catch{return fail("SERVICE_REQUESTS_UNAVAILABLE",503)}
 }
@@ -42,15 +40,7 @@ export async function POST(request:Request){
  const denied=await employeePersonalAccessDenied();if(denied)return denied;
  try{assertSameOrigin(request)}catch{return fail("FORBIDDEN",403)}
  const user=await currentUserId();if(!user)return fail("UNAUTHENTICATED",401);
- // Limit actual streamed bytes, not only Content-Length, before any DB work.
- let body:ServiceRequestBody|null;
- try{
-  const parsed=await readLimitedJson(request,4096);
-  body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as ServiceRequestBody:null;
- }catch(error){
-  const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";
-  return fail(tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT",tooLarge?413:400);
- }
+ const body=await request.json().catch(()=>null);
  const slug=typeof body?.storeSlug==="string"?body.storeSlug.trim().toLowerCase():"";
  const type=body?.requestType;
  const note=body?.notes;
