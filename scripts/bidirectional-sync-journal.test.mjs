@@ -83,11 +83,11 @@ test("same event replay returns persisted version without reapplying",async()=>{
  let calls=0;
  const db={async execute(sql){
   calls++;
-  if(sql.includes("SELECT payload_digest"))return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3],next_version:4}]];
+  if(sql.includes("SELECT payload_digest"))return [[{payload_digest:digest,tenant_id:change.tenantId,branch_id:change.branchId,source_device_id:ids[3],next_version:"1"}]];
   return [{affectedRows:1}];
  }};
  const result=await appendScopedChange(db,{change,sourceDeviceId:ids[3]});
- assert.deepEqual(result,{status:"duplicate",eventId:change.eventId,nextVersion:4});
+ assert.deepEqual(result,{status:"duplicate",eventId:change.eventId,nextVersion:1});
  assert.equal(calls,2,"replay must not mutate entity or journal");
 });
 test("unsafe persisted version never advances or appends an event",async()=>{
@@ -172,4 +172,29 @@ test("pull rejects non-string tenant and branch UUIDs before database access",as
  assert.equal(calls,0,"invalid scopes must never reach SQL");
  assert.equal((await pullScopedChanges(db,scope)).nextCursor,0,"valid string UUID scope remains accepted");
  assert.equal(calls,1);
+});
+
+// A replay receipt is trusted by offline devices only after the server has
+// proved the durable journal version is canonical and matches the event.
+test("replayed order, reservation and stock events reject corrupt persisted versions",async()=>{
+ const {digestChange}=await import("../lib/platform/bidirectional-sync-contract.mjs");
+ for(const entityType of ["order","reservation","inventory_movement"]){
+  const event={...change,entityType,entityId:entityType==="inventory_movement"?change.eventId:change.entityId,operation:entityType==="inventory_movement"?"movement":"upsert"};
+  const digest=digestChange(event);
+  for(const invalid of [2,"2","1e0","01",[1],{valueOf:()=>1},null,0,"9007199254740992"]){
+   const queries=[];
+   const db={async execute(sql){
+    queries.push(sql);
+    if(sql.includes("SELECT payload_digest"))return [[{payload_digest:digest,tenant_id:event.tenantId,branch_id:event.branchId,source_device_id:ids[3],next_version:invalid}]];
+    return [{affectedRows:1}];
+   }};
+   await assert.rejects(()=>appendScopedChange(db,{change:event,sourceDeviceId:ids[3]}),/SYNC_INVALID_STORED_VERSION/);
+   assert.equal(queries.length,2,"corrupt replay must not update version, business entity or journal");
+  }
+  const db={async execute(sql){
+   if(sql.includes("SELECT payload_digest"))return [[{payload_digest:digest,tenant_id:event.tenantId,branch_id:event.branchId,source_device_id:ids[3],next_version:"1"}]];
+   return [{affectedRows:1}];
+  }};
+  assert.equal((await appendScopedChange(db,{change:event,sourceDeviceId:ids[3]})).nextVersion,1);
+ }
 });
