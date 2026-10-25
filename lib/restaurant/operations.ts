@@ -21,7 +21,7 @@ export const parseData=(value:unknown):Record<string,string|number|null>=>typeof
 async function queueOrderPrintJobs(db:PoolConnection,tenantId:string,orderId:string,triggerEvent:"on_accept"|"on_prepare"|"on_paid"){
  const [[order]]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,order_number,channel,table_id,customer_name,customer_phone,kitchen_notes,order_notes,total,currency FROM restaurant_orders WHERE tenant_id=? AND id=? LIMIT 1",[tenantId,orderId]);if(!order)return 0;
  const [[items],[printers],[assignments]]=await Promise.all([
-  db.execute<RowDataPacket[]>("SELECT oi.menu_item_id,mi.category_id,oi.item_name,oi.quantity,oi.unit_price,oi.line_total,oi.options_snapshot FROM restaurant_order_items oi LEFT JOIN restaurant_menu_items mi ON mi.id=oi.menu_item_id AND mi.tenant_id=oi.tenant_id WHERE oi.tenant_id=? AND oi.order_id=? ORDER BY oi.id",[tenantId,orderId]),
+  db.execute<RowDataPacket[]>("SELECT oi.menu_item_id,COALESCE(cp.category_id,mi.category_id) AS category_id,oi.item_name,oi.quantity,oi.unit_price,oi.line_total,oi.options_snapshot FROM restaurant_order_items oi LEFT JOIN restaurant_menu_items mi ON mi.id=oi.menu_item_id AND mi.tenant_id=oi.tenant_id LEFT JOIN catalog_products cp ON cp.id=oi.menu_item_id AND cp.tenant_id=oi.tenant_id WHERE oi.tenant_id=? AND oi.order_id=? ORDER BY oi.id",[tenantId,orderId]),
   db.execute<RowDataPacket[]>("SELECT id,name,data FROM restaurant_resources WHERE tenant_id=? AND (branch_id=? OR branch_id IS NULL) AND kind='printer' AND status='active' AND archived=FALSE",[tenantId,String(order.branch_id)]),
   db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND kind='department_assignment' AND status='active' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL)",[tenantId,String(order.branch_id)])
  ]);
@@ -35,6 +35,21 @@ async function queueOrderPrintJobs(db:PoolConnection,tenantId:string,orderId:str
   await db.execute("INSERT IGNORE INTO restaurant_print_jobs(id,tenant_id,branch_id,printer_id,source_type,source_id,event_key,payload_json,status) VALUES (?,?,?,?,'order',?,?,?,'pending')",[randomUUID(),tenantId,String(order.branch_id),String(printer.id),orderId,orderId+":"+triggerEvent,JSON.stringify(payload)]);queued++;
  }
  return queued;
+}
+async function queueResourcePrintJobs(db:PoolConnection,tenantId:string,module:string,id:string,branchId:string|null,name:string,status:string,data:Record<string,string|number|null>,previousStatus:string|null){
+ const spec:Record<string,{target:string;event:string;statuses:string[]}>={reservations:{target:"reservation",event:"on_accept",statuses:["confirmed"]},serviceOrders:{target:"service",event:"on_accept",statuses:["scheduled","in_progress"]},customerInvoices:{target:"invoice",event:"on_paid",statuses:["paid"]}};
+ const entry=spec[module];if(!entry||!entry.statuses.includes(status)||previousStatus===status)return;
+ const [rules]=await db.execute<RowDataPacket[]>("SELECT printer_id,template_key,copies,trigger_event,target_type,target_id FROM restaurant_print_rules WHERE tenant_id=? AND enabled=TRUE AND (branch_id=? OR branch_id IS NULL) AND target_type IN ('all',?) AND (target_id IS NULL OR target_id=?) AND trigger_event=? ORDER BY priority,id",[tenantId,branchId,entry.target,id,entry.event]);
+ if(!rules.length)return;
+ const [printers]=await db.execute<RowDataPacket[]>("SELECT id,name,data FROM restaurant_resources WHERE tenant_id=? AND kind='printer' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL)",[tenantId,branchId]);
+ for(const rule of rules){
+  const printer=printers.find(p=>String(p.id)===String(rule.printer_id));if(!printer)continue;
+  const config=parseData(printer.data);
+  if(!printerDispatchAllowed({triggerEvent:entry.event},config))continue;
+  const items=[{name,quantity:1,options:Object.entries(data).filter(([key,value])=>["scheduledAt","roomNumber","serviceType","invoiceNumber","description"].includes(key)&&value!==null).map(([key,value])=>key+": "+String(value))}];
+  const payload={version:1,orderNumber:id.slice(0,8),channel:entry.target,triggerEvent:entry.event,items,printer:{name:String(printer.name),paperWidth:Number(config.paperWidth??80),copies:Number(rule.copies??config.copies??1)},notes:{reference:id}};
+  await db.execute("INSERT IGNORE INTO restaurant_print_jobs(id,tenant_id,branch_id,printer_id,source_type,source_id,event_key,payload_json,status) VALUES (?,?,?,?,?,?,?,?,'pending')",[randomUUID(),tenantId,branchId,String(printer.id),entry.target,id,module+":"+id+":"+status,JSON.stringify(payload)]);
+ }
 }
 export async function resourceRows(db:PoolConnection,tenantId:string,module:string,branchId?:string|null){
  if(canonicalMenuModules.includes(module))return canonicalMenuRows(db,tenantId,module,branchId);
@@ -266,6 +281,7 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
  if(previous)await db.execute("UPDATE restaurant_resources SET name=?,status=?,branch_id=?,data=?,lookup_key=?,version=version+1 WHERE id=? AND tenant_id=?",[input.name,input.status,input.branchId,JSON.stringify(input.data),lookup,id,tenantId]);
  else await db.execute("INSERT INTO restaurant_resources(id,tenant_id,branch_id,kind,name,status,data,lookup_key) VALUES (?,?,?,?,?,?,?,?)",[id,tenantId,input.branchId,config.kind,input.name,input.status,JSON.stringify(input.data),lookup]);
  await audit(db,tenantId,actor,module+".save",id,{status:input.status});
+ await queueResourcePrintJobs(db,tenantId,module,id,input.branchId,input.name,input.status,input.data,previous?String(previous.status):null);
  return {id};
 }
 
