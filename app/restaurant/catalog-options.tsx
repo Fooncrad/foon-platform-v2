@@ -14,6 +14,20 @@ const presets=[
  ["العبوة / القطعة","Pack / piece","Paquet / pièce"],["السعة (لتر / مل)","Capacity (L / ml)","Capacité (L / ml)"],
  ["نوع الخدمة","Service type","Type de service"],["الخامة","Material","Matière"]
 ];
+type QuickOptionValue={ar:string;en:string;fr:string};
+const QUICK_OPTION_VALUES:Record<string,QuickOptionValue[]>={
+ grocery:[{ar:"250 جرام",en:"250 g",fr:"250 g"},{ar:"500 جرام",en:"500 g",fr:"500 g"},{ar:"1 كيلو",en:"1 kg",fr:"1 kg"},{ar:"2 كيلو",en:"2 kg",fr:"2 kg"},{ar:"قطعة",en:"Piece",fr:"Pièce"},{ar:"عبوة",en:"Pack",fr:"Paquet"}],
+ sweets:[{ar:"صغير",en:"Small",fr:"Petit"},{ar:"وسط",en:"Medium",fr:"Moyen"},{ar:"كبير",en:"Large",fr:"Grand"},{ar:"شوكولاتة",en:"Chocolate",fr:"Chocolat"},{ar:"فانيليا",en:"Vanilla",fr:"Vanille"}],
+ accessories:[{ar:"ذهبي",en:"Gold",fr:"Doré"},{ar:"فضي",en:"Silver",fr:"Argenté"},{ar:"أسود",en:"Black",fr:"Noir"},{ar:"صغير",en:"Small",fr:"Petit"},{ar:"وسط",en:"Medium",fr:"Moyen"},{ar:"كبير",en:"Large",fr:"Grand"}],
+ watches:[{ar:"جلد",en:"Leather",fr:"Cuir"},{ar:"ستانلس ستيل",en:"Stainless steel",fr:"Acier inoxydable"},{ar:"سيليكون",en:"Silicone",fr:"Silicone"}],
+ gifts:[{ar:"تغليف عادي",en:"Standard wrapping",fr:"Emballage standard"},{ar:"تغليف فاخر",en:"Premium wrapping",fr:"Emballage premium"},{ar:"بطاقة إهداء",en:"Gift card",fr:"Carte cadeau"}],
+ carwash:[{ar:"سيارة صغيرة",en:"Small car",fr:"Petite voiture"},{ar:"سيارة متوسطة",en:"Medium car",fr:"Voiture moyenne"},{ar:"سيارة كبيرة",en:"Large car",fr:"Grande voiture"},{ar:"تنظيف داخلي",en:"Interior cleaning",fr:"Nettoyage intérieur"}],
+ laundry:[{ar:"قميص",en:"Shirt",fr:"Chemise"},{ar:"بنطال",en:"Trousers",fr:"Pantalon"},{ar:"ثوب",en:"Thobe",fr:"Thobe"},{ar:"غسيل عادي",en:"Standard wash",fr:"Lavage standard"},{ar:"تنظيف جاف",en:"Dry cleaning",fr:"Nettoyage à sec"}],
+ automotive:[{ar:"سيدان",en:"Sedan",fr:"Berline"},{ar:"دفع رباعي",en:"SUV",fr:"SUV"},{ar:"فحص أولي",en:"Initial inspection",fr:"Inspection initiale"}],
+ salon:[{ar:"قص شعر",en:"Haircut",fr:"Coupe de cheveux"},{ar:"تصفيف شعر",en:"Hair styling",fr:"Coiffure"},{ar:"عناية بالأظافر",en:"Nail care",fr:"Soin des ongles"}],
+ publicworks:[{ar:"معاينة",en:"Site inspection",fr:"Visite sur site"},{ar:"زيارة تقييم",en:"Assessment visit",fr:"Visite d’évaluation"}],
+ ecommerce:[{ar:"صغير",en:"Small",fr:"Petit"},{ar:"وسط",en:"Medium",fr:"Moyen"},{ar:"كبير",en:"Large",fr:"Grand"}]
+};
 export default function CatalogOptions({tenantId,product,name,activity,categoryName,stage="groups"}:{tenantId:string;product:string;name:string;activity?:string;categoryName?:string;stage?:"groups"|"values"}){
  const language=useUiLanguage(),i=language==="ar"?0:language==="en"?1:2;
  const l=(ar:string,en:string,fr:string)=>[ar,en,fr][i];
@@ -85,6 +99,7 @@ export default function CatalogOptions({tenantId,product,name,activity,categoryN
  <label>{l("المجموعة","Group","Groupe")}<select aria-label={l("المجموعة","Group","Groupe")} value={selected} onChange={e=>setSelected(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name_ar}</option>)}</select></label>
  {activity==="clothing"&&<div aria-label={l("مقاسات جاهزة","Ready sizes","Tailles prédéfinies")} style={{display:"flex",gap:6,flexWrap:"wrap"}}><strong style={{width:"100%"}}>{l("مقاسات سريعة (اختر ثم احفظ القيمة)","Quick sizes (select, then save)","Tailles rapides (choisir puis enregistrer)")}</strong>{["XS","S","M","L","XL","2XL","3XL","36","38","40","42","44","46"].map(size=><button key={size} type="button" disabled={busy||Boolean(editingValue)} onClick={()=>{setValue(size);setValueEn(size);setValueFr(size)}}>{size}</button>)}</div>}
  {activity==="perfume"&&<div aria-label={l("أحجام عطور جاهزة","Ready perfume volumes","Volumes de parfum")} style={{display:"flex",gap:6,flexWrap:"wrap"}}><strong style={{width:"100%"}}>{l("أحجام سريعة (اختر ثم احفظ القيمة)","Quick volumes (select, then save)","Volumes rapides (choisir puis enregistrer)")}</strong>{[15,30,50,75,100,150,200].map(ml=><button key={ml} type="button" disabled={busy||Boolean(editingValue)} onClick={()=>{setValue(ml+" مل");setValueEn(ml+" ml");setValueFr(ml+" ml")}}>{ml} ml</button>)}</div>}
+ {(QUICK_OPTION_VALUES[activity??""]??[]).length>0&&<div aria-label={l("قيم مقترحة للنشاط","Suggested activity values","Valeurs suggérées")} style={{display:"flex",gap:6,flexWrap:"wrap"}}><strong style={{width:"100%"}}>{l("قيم سريعة (اختر ثم احفظ القيمة)","Quick values (select, then save)","Valeurs rapides (choisir puis enregistrer)")}</strong>{QUICK_OPTION_VALUES[activity??""].map((option,index)=><button key={index} type="button" disabled={busy||Boolean(editingValue)} onClick={()=>{setValue(option.ar);setValueEn(option.en);setValueFr(option.fr)}}>{[option.ar,option.en,option.fr][i]}</button>)}</div>}
  <label>{l("القيمة بالعربية (مثال: 1 كيلو)","Arabic value (e.g. 1 kg)","Valeur arabe (ex. 1 kg)")}<input required maxLength={180} value={value} onChange={e=>setValue(e.target.value)}/></label>
  <label>English<input maxLength={180} value={valueEn} onChange={e=>setValueEn(e.target.value)}/></label><label>Français<input maxLength={180} value={valueFr} onChange={e=>setValueFr(e.target.value)}/></label>
  <label>{l("فرق السعر","Price adjustment","Supplément")}<input required type="number" min="0" max="9999999999" step="0.01" lang="en" dir="ltr" value={price} onChange={e=>setPrice(e.target.value)}/></label>
