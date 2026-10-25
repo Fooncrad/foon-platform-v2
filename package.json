@@ -35,7 +35,7 @@
     "test:media": "node --experimental-strip-types --test scripts/media-studio.test.mjs scripts/media-studio-schema.test.mjs scripts/media-oauth-state.test.mjs scripts/media-token-crypto.test.mjs scripts/media-account-access.test.mjs",
     "audit:translations": "node --experimental-strip-types scripts/audit-ui-translations.mjs --strict",
     "test:i18n": "node --experimental-strip-types --test scripts/ui-copy.test.mjs scripts/responsive-language-ui.test.mjs scripts/translation-leaks.test.mjs scripts/merchant-locale-coverage.test.mjs",
-    "test:system-errors": "node --experimental-strip-types --test scripts/system-errors.test.mjs scripts/account-status-contract.test.mjs",
+    "test:system-errors": "node --experimental-strip-types --test scripts/system-errors.test.mjs scripts/account-status-contract.test.mjs scripts/client-incident-body-limit.test.mjs scripts/client-incident-route-mock.test.mjs",
     "test:catalog-import": "node --experimental-strip-types --test scripts/catalog-import.test.mjs",
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
     "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
