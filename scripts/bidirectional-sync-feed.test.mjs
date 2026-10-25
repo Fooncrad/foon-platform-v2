@@ -84,3 +84,17 @@ test("feed rejects coerced SQL version values before signing orders, stock or re
   }
  }
 });
+
+test("feed refuses noncanonical journal IDs for orders, stock and reservations",()=>{
+ for(const entityType of ["order","inventory_movement","reservation"]){
+  const movement=entityType==="inventory_movement";
+  const candidate={...change,entityType,entityId:movement?change.eventId:change.entityId,operation:movement?"movement":"upsert"};
+  const entry={...row,entity_type:entityType,entity_id:candidate.entityId,operation:candidate.operation,payload_digest:digestChange(candidate)};
+  for(const invalid of ["07","0007","0000000000000007",0,"0",-1,"-1",7.5,[7],{valueOf:()=>7}]){
+   assert.throws(()=>prepareSyncPullEvents([{...entry,id:invalid}],scope),/SYNC_FEED_SCOPE_MISMATCH/);
+  }
+  for(const valid of [7,"7"]){
+   assert.equal(prepareSyncPullEvents([{...entry,id:valid}],scope)[0].id,7);
+  }
+ }
+});
