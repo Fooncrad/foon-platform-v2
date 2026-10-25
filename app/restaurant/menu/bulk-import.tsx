@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
 import {useUiLanguage} from '@/lib/i18n/ui-language';
 import {importHeaders,parseImportCsv,type ImportKind,type ImportRow} from '@/lib/catalog/import-csv';
 import {formatImportError} from '@/lib/catalog/import-errors';
@@ -33,7 +33,6 @@ export default function BulkImport({tenantId,kind,onChanged,canonical=false,cate
    setPaused(job&&Array.isArray(job.rows)&&Number.isInteger(job.next)&&job.next>=0&&job.next<=job.rows.length?{done:job.next,total:job.rows.length}:null);
   }catch{setPaused(null);}
  }
- useEffect(()=>{refreshPaused();},[storage]);
  function discardPaused(){
   if(!window.confirm(t("هل تريد إزالة محاولة الاستيراد المعلّقة من هذا المتصفح فقط؟ الصفوف التي حُفظت سابقًا في الموقع لن تُحذف.","Discard the paused import from this browser only? Previously imported rows on the server will remain.","Supprimer uniquement la reprise locale ? Les lignes déjà importées resteront sur le serveur.")))return;
   localStorage.removeItem(storage);setPaused(null);setPreview(null);setProgress({done:0,total:0});
