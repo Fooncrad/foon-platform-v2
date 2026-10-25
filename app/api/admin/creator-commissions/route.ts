@@ -7,11 +7,24 @@ import type {RowDataPacket,ResultSetHeader} from "mysql2/promise";
 import {currentActiveAdminUserId} from "@/lib/auth/session";
 import {requirePlatformRole} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {percentToBasisPoints} from "@/lib/creator/subscription-commission";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers});
+// These actions only accept a percentage toggle or a commission id/status/reference.
+// Bound the actual stream, not just Content-Length, before JSON parsing.
+const MAX_COMMISSION_ACTION_BYTES=1024;
+async function actionBody(request:Request):Promise<{value:Record<string,unknown>|null;error:Response|null}>{
+ try{
+  const parsed=await readLimitedJson(request,MAX_COMMISSION_ACTION_BYTES);
+  return {value:parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as Record<string,unknown>:null,error:null};
+ }catch(error){
+  const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";
+  return {value:null,error:reply({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},tooLarge?413:400)};
+ }
+}
 async function actor(write:boolean){
  const id=await currentActiveAdminUserId();if(!id)return null;
  try{await requirePlatformRole(id,write?["super_admin"]:["super_admin","admin","support"]);return id;}catch{return null;}
@@ -29,25 +42,27 @@ export async function GET(){
 export async function PUT(request:Request){
  try{assertSameOrigin(request);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
  const id=await actor(true);if(!id)return reply({ok:false,code:"FORBIDDEN"},403);
- const data=await request.json().catch(()=>null);
- const rate=percentToBasisPoints(data?.percentage);
- if(typeof data?.enabled!=="boolean"||rate===null)return reply({ok:false,code:"INVALID_RATE"},400);
+ const {value:data,error:bodyError}=await actionBody(request);
+ if(bodyError)return bodyError;
+ const rate=percentToBasisPoints(data?.percentage),enabled=data?.enabled;
+ if(typeof enabled!=="boolean"||rate===null)return reply({ok:false,code:"INVALID_RATE"},400);
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
   const [before]=await db.execute<RowDataPacket[]>("SELECT enabled,commission_basis_points FROM platform_creator_referral_settings WHERE id=1 FOR UPDATE");
   await db.execute("UPDATE platform_creator_referral_settings SET enabled=?,commission_basis_points=?,updated_by=? WHERE id=1",
-   [data.enabled,rate,id]);
+   [enabled,rate,id]);
   await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?)",
-   [id,"creator.referral.settings.update","creator_referral_settings","1",JSON.stringify({before:before[0]??null,enabled:data.enabled,percentage:data.percentage})]);
-  await db.commit();return reply({ok:true,enabled:data.enabled,commission_basis_points:rate});
+   [id,"creator.referral.settings.update","creator_referral_settings","1",JSON.stringify({before:before[0]??null,enabled,percentage:data?.percentage})]);
+  await db.commit();return reply({ok:true,enabled,commission_basis_points:rate});
  }catch{await db.rollback();return reply({ok:false,code:"COMMISSION_SETTINGS_FAILED"},503);}finally{db.release();}
 }
 export async function PATCH(request:Request){
  try{assertSameOrigin(request);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
  const id=await actor(true);if(!id)return reply({ok:false,code:"FORBIDDEN"},403);
- const body=await request.json().catch(()=>null);
- if(!body||typeof body.id!=="string"||!/^[0-9a-f-]{36}$/i.test(body.id)||!["paid","reversed"].includes(body.status)||typeof body.reference!=="string"||body.reference.trim().length<8||body.reference.trim().length>160)return reply({ok:false,code:"INVALID_INPUT"},400);
+ const {value:body,error:bodyError}=await actionBody(request);
+ if(bodyError)return bodyError;
+ if(!body||typeof body.id!=="string"||!/^[0-9a-f-]{36}$/i.test(body.id)||typeof body.status!=="string"||!["paid","reversed"].includes(body.status)||typeof body.reference!=="string"||body.reference.trim().length<8||body.reference.trim().length>160)return reply({ok:false,code:"INVALID_INPUT"},400);
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
