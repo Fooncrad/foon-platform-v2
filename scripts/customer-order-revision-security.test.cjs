@@ -27,12 +27,12 @@ function setup({user='customer-a',active=true,employee=false,dbError=false,reser
    throw new Error('Unexpected query '+sql);
   }})}
  };
- const module={exports:{}};
+ const loadedModule={exports:{}};
  new Function('require','module','exports',compiled.outputText)(name=>{
   if(!(name in mocks))throw new Error('Unexpected import '+name);
   return mocks[name];
- },module,module.exports);
- return {GET:module.exports.GET,calls};
+ },loadedModule,loadedModule.exports);
+ return {GET:loadedModule.exports.GET,calls};
 }
 
 test('active customer receives own revision and private no-store response',async()=>{
