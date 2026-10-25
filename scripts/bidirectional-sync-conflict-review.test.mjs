@@ -24,3 +24,22 @@ test("invalid scope never queries database",async()=>{
  await assert.rejects(()=>listScopedSyncConflicts(db,{...scope,branchId:"another-branch"}),/SYNC_INVALID_CONFLICT_SCOPE/);
  assert.deepEqual(db.calls,[]);
 });
+
+test("conflict review accepts UUID casing differences without exposing order payload",async()=>{
+ const alpha=["a1b2c3d4-e5f6-4a1b-8c2d-123456789abc","b1b2c3d4-e5f6-4a1b-8c2d-123456789abc","c1b2c3d4-e5f6-4a1b-8c2d-123456789abc"];
+ const mixed={...change,eventId:alpha[0].toUpperCase(),tenantId:alpha[1].toUpperCase(),branchId:alpha[2].toUpperCase()};
+ const mixedScope={...scope,tenantId:alpha[1],branchId:alpha[2]};
+ const db=fixture([{event_id:alpha[0],payload_digest:digestChange(mixed),event_payload:JSON.stringify(mixed),updated_at:"2026-10-23T00:00:00Z"}]);
+ const rows=await listScopedSyncConflicts(db,mixedScope);
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].eventId,mixed.eventId);
+ assert.equal(rows[0].entityType,"order");
+ assert.equal(JSON.stringify(rows).includes("private@example.com"),false);
+});
+test("conflict review rejects foreign UUIDs and coerced event IDs",async()=>{
+ for(const overrides of [{event_id:ids[3]},{event_id:[ids[0]]},{tenantId:ids[3]},{branchId:ids[3]}]){
+  const stored={...change,...(overrides.tenantId?{tenantId:overrides.tenantId}:{}),...(overrides.branchId?{branchId:overrides.branchId}:{})};
+  const db=fixture([{event_id:overrides.event_id??ids[0],payload_digest:digestChange(stored),event_payload:JSON.stringify(stored),updated_at:"2026-10-23T00:00:00Z"}]);
+  await assert.rejects(()=>listScopedSyncConflicts(db,scope),/SYNC_CONFLICT_EVENT_CORRUPT/);
+ }
+});
