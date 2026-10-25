@@ -14,3 +14,16 @@
 @keyframes workspace-in{from{opacity:.85}to{opacity:1}}
 @media(max-width:600px){.tabs{flex-wrap:nowrap;gap:4px;border-radius:12px;margin-bottom:12px;padding:5px}.tabs button{padding:10px 12px;font-size:13px}.panel{width:100%}}
 @media(prefers-reduced-motion:reduce){.panel{animation:none}.tabs button{transition:none}}
+
+/* Tabs must be visually distinguishable across all 15 activities and languages. */
+.tabs{gap:10px;border-radius:18px;position:relative;padding:9px;align-items:stretch}
+.tabs button{display:flex;align-items:center;justify-content:center;gap:9px;position:relative;flex:1 1 150px;line-height:1.4;white-space:normal;text-align:center;font-size:.93rem;font-weight:780;border-color:var(--workspace-outline);background:color-mix(in srgb,var(--surface,#fff) 96%,#e2a93b);min-height:54px;box-shadow:0 1px 5px #10182708}
+.tabs button.active,.tabs button[aria-selected="true"]{background:#e2a93b;color:#201a0d;border:2px solid #946207;box-shadow:0 3px 12px #e2a93b3d;font-weight:900}
+.tabIcon{width:22px;height:22px;flex:0 0 22px;display:inline-flex;align-items:center;justify-content:center;color:inherit}
+.tabIcon svg{display:block;width:100%;height:100%}
+.tabLabel{min-width:0;overflow-wrap:anywhere}
+.selectedMark{position:absolute;bottom:-8px;left:calc(50% - 5px);width:10px;height:10px;background:transparent;transform:rotate(45deg)}
+.tabs button.active .selectedMark{background:#e2a93b;border-inline-end:2px solid #946207;border-bottom:2px solid #946207}
+.activeDescription{display:flex;align-items:flex-start;gap:10px;line-height:1.8;margin:0 0 16px;padding:12px 15px;border:1px solid color-mix(in srgb,#e2a93b 70%,var(--workspace-outline));border-inline-start:4px solid #d6951f;border-radius:12px;background:color-mix(in srgb,#e2a93b 9%,var(--surface,#fff));font-weight:650;overflow-wrap:anywhere}
+.activeDot{display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#c48a18;margin-top:.6rem}
+@media(max-width:600px){.tabs{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;gap:7px;padding:8px 9px 13px}.tabs button{flex:0 0 auto;min-width:125px;max-width:170px;scroll-snap-align:start;min-height:48px;padding:9px 12px;font-size:.85rem}.tabIcon{width:19px;height:19px;flex-basis:19px}.activeDescription{font-size:.88rem;padding:10px 12px;margin-block:0 12px}}
