@@ -1,3 +1,4 @@
+import MarketSearchInput from "./market-search-input";
 import {MarketFavorite,MarketNearby,MarketOffers} from "./market-card-actions";
 import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {cookies as uiCookies} from "next/headers";
@@ -84,7 +85,7 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
     <input type="hidden" name="country" value={filters.country}/>
     <input type="hidden" name="kind" value={filters.kind}/>
     <input type="hidden" name="activity" value={filters.activity}/>
-    <label className="foonMarketSearchInput"><span className="foonSearchIcon" aria-hidden="true">⌕</span><span className="sr-only">{l.search}</span><input name="q" type="search" list="foon-market-search-hints" maxLength={80} defaultValue={filters.q} placeholder={l.search}/><datalist id="foon-market-search-hints">{suggestions.map(name=><option key={name} value={name}/>)}</datalist></label>
+    <label className="foonMarketSearchInput"><span className="foonSearchIcon" aria-hidden="true">⌕</span><span className="sr-only">{l.search}</span><MarketSearchInput country={filters.country} initial={filters.q} label={l.search}/></label>
     <button type="submit">{l.searchBtn}</button>
    </form>
    <div className="foonMarketTrust"><span>◇ {l.trust}</span><span>♡ {l.local}</span><span>✦ {l.choice}</span></div>
