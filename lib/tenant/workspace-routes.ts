@@ -38,3 +38,8 @@ export function publicStorefrontUrl(slug:string):string{
  const safe=encodeURIComponent(slug);
  return Object.values(ACTIVITY_ROUTE_SLUGS).includes(slug)?"/s/"+safe:"/"+safe;
 }
+
+/** Dedicated public route for marketplace visits; never collide with dashboards or auth routes. */
+export function marketPublicStorefrontUrl(slug:string):string{
+ return "/s/"+encodeURIComponent(slug);
+}
