@@ -14,13 +14,15 @@ test("only valid server UUIDs produce customer order tracking links",()=>{
 
 test("ordered stores are pinned in the logged-in customer's own account",()=>{
  const page=source("app/customer/page.tsx");
+ const favorites=source("app/customer/customer-favorite-stores.tsx");
  assert.match(page,/FROM tenant_customers c JOIN tenants t/);
  assert.match(page,/FROM restaurant_orders WHERE customer_user_id=\?/);
  assert.match(page,/history\.last_order_at DESC/);
  assert.match(page,/COALESCE\(history\.order_count,0\)/);
  assert.match(page,/WHERE c\.user_id=\?/);
- assert.match(page,/id="customer-stores"/);
- assert.match(page,/publicStorefrontUrl\(String\(store\.slug\)\)/);
+ assert.match(page,/CustomerFavoriteStores language=\{portalLanguage\}/);
+ assert.match(favorites,/id="customer-stores"/);
+ assert.match(favorites,/publicStorefrontUrl\(store\.slug\)/);
  assert.match(page,/id=\{"customer-order-"\+String\(order\.id\)\}/);
  assert.match(page,/publicStorefrontUrl\(String\(order\.store_slug\)\)/);
 });
