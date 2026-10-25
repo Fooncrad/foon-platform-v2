@@ -1,5 +1,5 @@
-import BrandedQr from "./components/branded-qr";
 "use client";
+import BrandedQr from "./components/branded-qr";
 import Link from "next/link";
 import "./public-site-chrome.css";
 import {setUiLanguage,useUiLanguage} from "@/lib/i18n/ui-language";
