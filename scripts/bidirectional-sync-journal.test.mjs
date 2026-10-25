@@ -198,3 +198,33 @@ test("replayed order, reservation and stock events reject corrupt persisted vers
   assert.equal((await appendScopedChange(db,{change:event,sourceDeviceId:ids[3]})).nextVersion,1);
  }
 });
+
+test("order, reservation and inventory version rows reject coercible SQL values before writes",async()=>{
+ for(const entityType of ["order","reservation","inventory_movement"]){
+  const event={...change,entityType,entityId:entityType==="inventory_movement"?change.eventId:change.entityId,operation:entityType==="inventory_movement"?"movement":"upsert",baseVersion:entityType==="inventory_movement"?0:1};
+  for(const invalid of ["1e0","01",[1],{valueOf:()=>1},null,NaN,"9007199254740992"]){
+   const calls=[];
+   const db={async execute(sql){
+    calls.push(sql);
+    if(sql.includes("foon_sync_scope_locks"))return [{affectedRows:1}];
+    if(sql.includes("SELECT payload_digest"))return [[]];
+    if(sql.includes("SELECT version"))return [[{version:invalid}]];
+    throw Error("UNEXPECTED_WRITE");
+   }};
+   await assert.rejects(()=>appendScopedChange(db,{change:event,sourceDeviceId:ids[3]}),/SYNC_INVALID_STORED_VERSION/);
+   assert.equal(calls.length,3,"invalid version must not update entity or journal");
+  }
+ }
+ for(const [raw,baseVersion] of [["0",0],["1",1]]){
+  let updated=0;
+  const db={async execute(sql){
+   if(sql.includes("SELECT payload_digest"))return [[]];
+   if(sql.includes("SELECT version"))return [[{version:raw}]];
+   if(sql.includes("UPDATE foon_sync_versions"))updated++;
+   return [{affectedRows:1}];
+  }};
+  const result=await appendScopedChange(db,{change:{...change,entityType:"order",baseVersion},sourceDeviceId:ids[3]});
+  assert.equal(result.nextVersion,baseVersion+1);
+  assert.equal(updated,1,"canonical SQL version must remain writable");
+ }
+});
