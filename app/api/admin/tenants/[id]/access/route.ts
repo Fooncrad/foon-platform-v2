@@ -23,8 +23,8 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   if(!tenants.length){await db.rollback();return NextResponse.json({ok:false,code:"TENANT_NOT_FOUND_OR_INACTIVE"},{status:404});}
   await db.execute("UPDATE platform_tenant_support_sessions SET ended_at=UTC_TIMESTAMP() WHERE auth_session_id=? AND ended_at IS NULL",[authSession]);
   const supportId=randomUUID();
-  await db.execute("INSERT INTO platform_tenant_support_sessions(id,auth_session_id,actor_user_id,tenant_id,platform_role,expires_at) VALUES (?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 HOUR))",[supportId,authSession,actor,id,role]);
-  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,accessMode:role==="support"?"read_only":"full",printerSettingsUnaffected:true,expiresInMinutes:120})]);
+  await db.execute("INSERT INTO platform_tenant_support_sessions(id,auth_session_id,actor_user_id,tenant_id,platform_role,expires_at) SELECT ?,?,?,?,?,a.expires_at FROM auth_sessions a WHERE a.id=? AND a.user_id=? AND a.expires_at>UTC_TIMESTAMP()",[supportId,authSession,actor,id,role,authSession,actor]);
+  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,accessMode:role==="support"?"read_only":"full",printerSettingsUnaffected:true,expiresWithLogin:true})]);
   await db.commit();
   const activity=await tenantWorkspaceActivity(id);
   const destination=activity?activityWorkspaceUrl(activity,id):"/business?tenant="+encodeURIComponent(id);
