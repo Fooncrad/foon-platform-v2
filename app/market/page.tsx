@@ -1,3 +1,4 @@
+import {MarketFavorite,MarketNearby} from "./market-card-actions";
 import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
 import {cookies as uiCookies} from "next/headers";
 import {uiText} from "@/lib/i18n/ui-copy";
@@ -14,6 +15,9 @@ import "./market-layout.css";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 type Store=RowDataPacket&{id:string;slug:string;name:string;kind:"restaurant"|"store";activity_code:string};
+type MarketMedia={cover:string;city:string;branches:{id:string;name:string;latitude:number|null;longitude:number|null}[]};
+const validCover=(value:unknown)=>typeof value==="string"&&(value.startsWith("/")&&!value.startsWith("//")||/^https:\/\//i.test(value))&&!/[<>"\s]/.test(value)&&value.length<2048;
+const parseJson=(value:unknown)=>{try{return typeof value==="string"?JSON.parse(value):value}catch{return null}};
 export const dynamic="force-dynamic";
 export default async function MarketPage({searchParams}:{searchParams:Promise<{q?:string;kind?:string;activity?:string;country?:string;page?:string}>}){
  const translationLanguage=(await uiCookies()).get("foon_language")?.value;
@@ -41,6 +45,24 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
    stores=rows;
   }
  }catch{error=true;}
+ const media=new Map<string,MarketMedia>();
+ const suggestions:string[]=[];
+ const ids=stores.map(s=>String(s.id));
+ if(ids.length){
+  const inList=ids.map(()=>"?").join(",");
+  for(const id of ids)media.set(id,{cover:"",city:"",branches:[]});
+  try{
+   const [brands]=await database().execute<RowDataPacket[]>("SELECT tenant_id,data FROM restaurant_resources WHERE kind='storefront_config' AND archived=FALSE AND status='active' AND tenant_id IN ("+inList+")",[...ids]);
+   for(const brand of brands){const entry=media.get(String(brand.tenant_id));const payload=parseJson(brand.data);if(entry&&payload&&typeof payload==="object"&&validCover(payload.coverUrl))entry.cover=payload.coverUrl;}
+  }catch{/* Existing optional storefront resources: fallback art remains visible */}
+  try{
+   const [branches]=await database().execute<RowDataPacket[]>("SELECT * FROM branches WHERE enabled=TRUE AND tenant_id IN ("+inList+") ORDER BY created_at LIMIT 150",[...ids]);
+   for(const row of branches){const entry=media.get(String(row.tenant_id));if(!entry)continue;const city=typeof row.city==="string"?row.city.trim():"";if(city&&!entry.city)entry.city=city;const lat=Number(row.latitude),lng=Number(row.longitude);entry.branches.push({id:String(row.id),name:String(row.name??city),latitude:row.latitude!=null&&Number.isFinite(lat)&&lat>=-90&&lat<=90?lat:null,longitude:row.longitude!=null&&Number.isFinite(lng)&&lng>=-180&&lng<=180?lng:null});}
+  }catch{/* Older installations may not expose city or coordinates */}
+ }
+ if(filters.country){
+  try{const [hints]=await database().execute<RowDataPacket[]>("SELECT t.name AS name FROM tenants t JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE bp.country_code=? AND t.status='active' AND t.market_enabled=TRUE AND (t.market_visible_from IS NULL OR t.market_visible_from<=UTC_TIMESTAMP()) AND (t.market_visible_until IS NULL OR t.market_visible_until>UTC_TIMESTAMP()) AND t.name LIKE ? ORDER BY t.market_sort_order,t.name LIMIT 8",[filters.country,"%"+filters.q.replace(/[!%_]/g,k=>"!"+k)+"%"]);for(const row of hints)suggestions.push(String(row.name));}catch{}
+ }
  const chosen=supportedCountries.find(c=>c.code===filters.country);
  const chosenName=chosen?(chosen[language]??chosen.ar):"";
  const pages=marketPageCount(total);
@@ -62,14 +84,14 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
     <input type="hidden" name="country" value={filters.country}/>
     <input type="hidden" name="kind" value={filters.kind}/>
     <input type="hidden" name="activity" value={filters.activity}/>
-    <label className="foonMarketSearchInput"><span className="foonSearchIcon" aria-hidden="true">⌕</span><span className="sr-only">{l.search}</span><input name="q" type="search" maxLength={80} defaultValue={filters.q} placeholder={l.search}/></label>
+    <label className="foonMarketSearchInput"><span className="foonSearchIcon" aria-hidden="true">⌕</span><span className="sr-only">{l.search}</span><input name="q" type="search" list="foon-market-search-hints" maxLength={80} defaultValue={filters.q} placeholder={l.search}/><datalist id="foon-market-search-hints">{suggestions.map(name=><option key={name} value={name}/>)}</datalist></label>
     <button type="submit">{l.searchBtn}</button>
    </form>
    <div className="foonMarketTrust"><span>◇ {l.trust}</span><span>♡ {l.local}</span><span>✦ {l.choice}</span></div>
   </div><div className="foonMarketHeroArt" aria-hidden="true"><span>FOON</span><strong>☕</strong><i>✦</i></div>
  </section>
  <section className="foonMarketResults">
-  <header className="foonMarketResultsHead"><div><h2>⌖ {l.results}{chosenName?" · "+chosenName:""}</h2><p>{total.toLocaleString("en")} {l.count}</p></div></header>
+  <MarketNearby branches={[...media.values()].flatMap(m=>m.branches)} language={language}/><header className="foonMarketResultsHead"><div><h2>⌖ {l.results}{chosenName?" · "+chosenName:""}</h2><p>{total.toLocaleString("en")} {l.count}</p></div></header>
   <nav className="foonMarketCategories" aria-label={l.kind}>{categories.map(c=><Link key={c.id} href={categoryUrl(c.kind,c.activity)} className={categoryActive(c.kind,c.activity)?"active":""} aria-current={categoryActive(c.kind,c.activity)?"page":undefined}><span aria-hidden="true">{c.icon}</span> {c.name}</Link>)}</nav>
   <form method="get" action="/market" className="foonMarketFilters">
    <input type="hidden" name="country" value={filters.country}/><input type="hidden" name="q" value={filters.q}/>
@@ -79,8 +101,8 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
   </form>
   {error?<p role="alert" className="foonMarketEmpty">{l.error}</p>:!filters.country?<p className="foonMarketEmpty">{l.select}</p>:stores.length===0?<p className="foonMarketEmpty">{l.empty}</p>:
   <><div className="foonMarketGrid">{stores.map(store=><article key={store.id} className="foonMarketCard">
-   <div className="foonMarketCardCover" data-activity={store.activity_code}><span className="foonMarketCoverMark" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><span className="foonMarketCoverBrand" aria-hidden="true">FOON</span></div>
-   <div className="foonMarketCardBody"><div className="foonMarketCardTop"><span className="foonMarketCardIcon" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><div><h3>{store.name}</h3><p>{label(store.activity_code)}</p></div></div>
+   <div className="foonMarketCardCover" data-activity={store.activity_code}>{media.get(String(store.id))?.cover&&<img className="foonMarketRealCover" src={media.get(String(store.id))!.cover} alt="" loading="lazy" referrerPolicy="no-referrer"/>}<MarketFavorite tenantId={String(store.id)} language={language}/><span className="foonMarketCoverMark" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><span className="foonMarketCoverBrand" aria-hidden="true">FOON</span></div>
+   <div className="foonMarketCardBody"><div className="foonMarketCardTop"><span className="foonMarketCardIcon" aria-hidden="true">{activityIcons[store.activity_code]??"🏬"}</span><div><h3>{store.name}</h3><p>{label(store.activity_code)}{media.get(String(store.id))?.city?" · "+media.get(String(store.id))!.city:""}</p></div></div>
     <p className="foonMarketCardDescription">{language==="ar"?"استكشف المنتجات والخدمات التي يقدمها هذا النشاط.":language==="en"?"Explore this business’s products and services.":"Découvrez les produits et services de cet établissement."}</p>
     <Link href={publicStorefrontUrl(String(store.slug))} className="foonMarketVisit">{store.kind==="restaurant"?l.menu:store.kind==="store"?l.services:l.browse} <span aria-hidden="true">←</span></Link></div>
   </article>)}</div>
