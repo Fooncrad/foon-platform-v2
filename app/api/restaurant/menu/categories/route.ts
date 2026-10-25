@@ -91,7 +91,7 @@ export async function PATCH(request:Request){
   if(body?.imageUrl!==undefined){
    if(body.imageUrl!==null&&(typeof body.imageUrl!=="string"||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.imageUrl))){await connection.rollback();return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});}
    if(typeof body.imageUrl==="string"){
-    const [found]=await connection.execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,body.imageUrl.split("/").at(-1)]);
+    const [found]=await connection.execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,body.imageUrl.split("/").at(-1)??""]);
     if(!found.length){await connection.rollback();return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});}
    }
    imageUrl=body.imageUrl;
