@@ -6,7 +6,18 @@ import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {assertSameOrigin} from "@/lib/security/origin";
 export const dynamic="force-dynamic";
 const noStore={"Cache-Control":"no-store"};
-async function customer(){const denied=await employeePersonalAccessDenied();if(denied)return {denied};const id=await currentUserId();return {id};}
+async function customer(){
+ const denied=await employeePersonalAccessDenied();if(denied)return {denied};
+ const id=await currentUserId();if(!id)return {id};
+ // A valid cookie must not restore customer access after account suspension.
+ try{
+  const [active]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' LIMIT 1",[id]);
+  if(!active.length)return {id:null};
+ }catch{
+  return {denied:NextResponse.json({ok:false,code:"FAVORITES_UNAVAILABLE"},{status:503,headers:noStore})};
+ }
+ return {id};
+}
 export async function GET(){
  const auth=await customer();if(auth.denied)return auth.denied;if(!auth.id)return NextResponse.json({ok:false,code:"LOGIN_REQUIRED"},{status:401,headers:noStore});
  try{
