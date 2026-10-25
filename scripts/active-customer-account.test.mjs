@@ -143,3 +143,30 @@ test('delivery preferences: database failure and staff sessions fail closed',asy
   assert.equal((await customerReadRoute('delivery-preferences',{failDb:true})).response.status,503);
   assert.equal((await customerReadRoute('delivery-preferences',{employee:true})).response.status,403);
 });
+
+// Both write endpoints must reject oversized/chunked bodies before reaching MySQL.
+test('oversized customer service bodies fail before database access', async () => {
+  const {readLimitedJson} = await import('../lib/security/limited-json.ts');
+  for (const routeName of ['services', 'service-requests']) {
+    const source = await readFile(new URL('../app/api/customer/'+routeName+'/route.ts', import.meta.url), 'utf8');
+    assert.match(source, /readLimitedJson\(request,16384\)/, routeName);
+    assert.doesNotMatch(source.split('export async function POST')[1], /request\.json\(/, routeName);
+    const js = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+    const mocks = {
+      'next/server': {NextResponse:{json:(body,options={})=>({body,status:options.status??200})}},
+      '@/lib/auth/account-surface': {employeePersonalAccessDenied:async()=>null},
+      '@/lib/auth/session': {currentUserId:async()=> 'customer-a'},
+      '@/lib/security/origin': {assertSameOrigin:()=>{}},
+      '@/lib/security/limited-json': {readLimitedJson},
+      '@/lib/db/mysql': {database:()=>{throw new Error('DB must not be accessed');}}
+    };
+    const cjsModule = {exports:{}};
+    new Function('require','module','exports',js)((id)=>mocks[id]??{},cjsModule,cjsModule.exports);
+    const handler = cjsModule.exports.POST;
+    const oversized = await handler(new Request('https://example.test/api/customer/'+routeName,{method:'POST',body:'x'.repeat(17000)}));
+    assert.equal(oversized.status,413,routeName);
+    assert.equal(oversized.body.code,'BODY_TOO_LARGE',routeName);
+    const malformed = await handler(new Request('https://example.test/api/customer/'+routeName,{method:'POST',body:'{bad'}));
+    assert.equal(malformed.status,400,routeName);
+  }
+});
