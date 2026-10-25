@@ -49,12 +49,12 @@ export async function POST(request:Request){
  catch(error){const oversized=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return fail(oversized?"BODY_TOO_LARGE":"INVALID_INPUT",oversized?413:400);}
  const body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as {storeSlug:string;requestType:string;notes:string;phone:string;serviceId:string;requestKey:string;scheduledAt:string}:null;
  const slug=typeof body?.storeSlug==="string"?body.storeSlug.trim().toLowerCase():"";
- const type=body?.requestType;
- const note=body?.notes;
- const phone=body?.phone;
+ const type=body?.requestType??"";
+ const note=body?.notes??"";
+ const phone=body?.phone??"";
  if(!body||!validStoreSlug(slug)||!uuid.test(body.serviceId??"")||!uuid.test(body?.requestKey??"")||
-  !["inquiry","appointment","quote"].includes(type)||typeof note!=="string"||note.length>1000||
-  !validServiceRequestPhone(phone))
+  typeof body.requestType!=="string"||!["inquiry","appointment","quote"].includes(type)||typeof body.notes!=="string"||note.length>1000||
+  typeof body.phone!=="string"||!validServiceRequestPhone(phone))
   return fail("INVALID_INPUT");
  const scheduled=type==="appointment"?Date.parse(body.scheduledAt):null;
  if(type==="appointment"&&!validServiceAppointmentTime(body.scheduledAt))return fail("INVALID_APPOINTMENT_TIME");
