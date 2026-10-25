@@ -1,47 +1,45 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
+import {useEffect,useMemo,useState} from "react";
 import {publicStorefrontUrl} from "@/lib/tenant/workspace-routes";
-
-type Lang="ar"|"en"|"fr";
-type LinkedStore={id:string;name:string;slug:string;orderCount:number};
-export default function CustomerFavoriteStores({language,stores}:{language:Lang;stores:LinkedStore[]}){
- const t=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
- const [favorites,setFavorites]=useState<string[]>([]);
- const [search,setSearch]=useState("");
- const [loading,setLoading]=useState(true),[busy,setBusy]=useState<string|null>(null),[error,setError]=useState(""),[message,setMessage]=useState("");
+type Store={id:string;name:string;slug:string;orderCount:number};
+type Language="ar"|"en"|"fr";
+const labels={
+ ar:{title:"متاجري المفضلة",subtitle:"ثبّت المتاجر التي تعود إليها كثيرًا، وابحث عنها واطلب مجددًا بسهولة.",search:"بحث باسم المتجر",save:"تثبيت",remove:"إزالة التثبيت",open:"زيارة المتجر",count:"طلبات سابقة",empty:"لا توجد متاجر مرتبطة بحسابك بعد.",noResults:"لا توجد متاجر مطابقة للبحث.",failed:"تعذر تحديث المفضلة؛ حاول مجددًا.",unavailable:"المفضلة غير متاحة حاليًا.",privacy:"المفضلة خاصة بحسابك، ولا تظهر للمتاجر أو على بروفايلك العام.",saved:"تم تحديث المفضلة.",badge:"مفضل"},
+ en:{title:"My favorite stores",subtitle:"Pin your regular stores, search and return to shop again.",search:"Search stores",save:"Pin store",remove:"Unpin",open:"Visit store",count:"Previous orders",empty:"No linked stores yet.",noResults:"No stores match your search.",failed:"Could not update favorites. Try again.",unavailable:"Favorites are unavailable.",privacy:"Only you can view this list; stores and public profiles cannot see your favorites.",saved:"Favorites updated.",badge:"Favorite"},
+ fr:{title:"Mes boutiques favorites",subtitle:"Épinglez vos boutiques habituelles et retrouvez-les rapidement.",search:"Rechercher une boutique",save:"Épingler",remove:"Retirer",open:"Visiter la boutique",count:"Commandes précédentes",empty:"Aucune boutique liée pour le moment.",noResults:"Aucune boutique trouvée.",failed:"Impossible de modifier les favoris. Réessayez.",unavailable:"Favoris indisponibles.",privacy:"Vous seul voyez vos favoris ; ils ne figurent pas sur votre profil public.",saved:"Favoris mis à jour.",badge:"Favori"}
+} as const;
+export default function CustomerFavoriteStores({language,stores}:{language:Language;stores:Store[]}){
+ const t=labels[language];
+ const [selected,setSelected]=useState<string[]>([]),[search,setSearch]=useState(""),[busy,setBusy]=useState<string|null>(null),[error,setError]=useState(""),[message,setMessage]=useState(""),[ready,setReady]=useState(false);
  useEffect(()=>{
   const controller=new AbortController();
   void fetch("/api/customer/favorite-stores",{cache:"no-store",signal:controller.signal})
-   .then(async r=>{const d=await r.json().catch(()=>null);if(!r.ok||!d?.ok||!Array.isArray(d.storeIds))throw Error("LOAD_FAILED");return d;})
-   .then(d=>{if(!controller.signal.aborted){setFavorites(d.storeIds.filter((id:unknown):id is string=>typeof id==="string"));setLoading(false);}})
-   .catch(()=>{if(!controller.signal.aborted){setError(language==="en"?"Could not load favorite stores.":language==="fr"?"Impossible de charger les favoris.":"تعذر تحميل المتاجر المفضلة.");setLoading(false);}});
+   .then(async response=>{const body=await response.json().catch(()=>null);if(!response.ok||!body?.ok||!Array.isArray(body.tenantIds))throw Error("FAVORITES_UNAVAILABLE");return body.tenantIds as string[];})
+   .then(ids=>{if(!controller.signal.aborted){setSelected(ids);setReady(true);}})
+   .catch(()=>{if(!controller.signal.aborted){setError(labels[language].unavailable);setReady(true);}});
   return()=>controller.abort();
  },[language]);
- const sorted=useMemo(()=>stores.filter(s=>s.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).sort((a,b)=>Number(favorites.includes(b.id))-Number(favorites.includes(a.id))||b.orderCount-a.orderCount||a.name.localeCompare(b.name)),[stores,favorites,search]);
+ const matches=useMemo(()=>stores.filter(s=>s.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).sort((a,b)=>Number(selected.includes(b.id))-Number(selected.includes(a.id))||b.orderCount-a.orderCount||a.name.localeCompare(b.name)),[stores,selected,search]);
  async function toggle(id:string){
-  if(busy||loading)return;
-  const saved=favorites.includes(id);
-  setBusy(id);setError("");setMessage("");
+  if(busy||!ready)return;
+  const wasSelected=selected.includes(id);setBusy(id);setError("");setMessage("");
   try{
-   const r=await fetch("/api/customer/favorite-stores",{method:saved?"DELETE":"POST",headers:{"content-type":"application/json"},body:JSON.stringify({storeId:id})});
-   const data=await r.json().catch(()=>null);if(!r.ok||!data?.ok)throw Error(String(data?.code??"FAILED"));
-   setFavorites(current=>saved?current.filter(item=>item!==id):current.includes(id)?current:[id,...current]);
-   setMessage(saved?t("أُزيل المتجر من المفضلة.","Store removed from favorites.","Boutique retirée des favoris."):t("تم تثبيت المتجر في المفضلة.","Store added to favorites.","Boutique ajoutée aux favoris."));
-  }catch{setError(t("تعذر حفظ اختيارك. حاول مجددًا.","Could not save your choice. Try again.","Impossible d’enregistrer le choix. Réessayez."));}
-  finally{setBusy(null);}
+   const response=await fetch("/api/customer/favorite-stores",{method:wasSelected?"DELETE":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tenantId:id})});
+   const body=await response.json().catch(()=>null);if(!response.ok||!body?.ok)throw Error("UPDATE_FAILED");
+   setSelected(previous=>wasSelected?previous.filter(x=>x!==id):previous.includes(id)?previous:[...previous,id]);setMessage(t.saved);
+  }catch{setError(t.failed);}finally{setBusy(null);}
  }
- return <article id="customer-stores" className="customerFavoriteStores" aria-labelledby="customer-favorites-title">
-  <header><div><small>FOON SHORTCUTS</small><h2 id="customer-favorites-title">{t("متاجري المفضلة","My favorite stores","Mes boutiques favorites")}</h2><p>{t("ثبّت المتاجر التي تعود إليها كثيرًا، وابدأ التسوق دون البحث عنها كل مرة.","Pin stores you return to often and shop again without searching.","Épinglez les boutiques habituelles pour les retrouver rapidement.")}</p></div><strong dir="ltr">{favorites.length.toLocaleString("en-US")} ★</strong></header>
-  <label className="customerFavoriteSearch"><span>{t("ابحث في المتاجر المرتبطة بحسابك","Search stores linked to your account","Rechercher parmi vos boutiques")}</span><input value={search} onChange={v=>setSearch(v.target.value)} type="search" placeholder={t("اسم المتجر","Store name","Nom de boutique")} /></label>
-  {loading&&<p role="status">{t("جارٍ تحميل المفضلة...","Loading favorites...","Chargement des favoris...")}</p>}
-  <div className="customerFavoriteGrid">{sorted.map(store=>{const saved=favorites.includes(store.id);return <section key={store.id} className="customerFavoriteCard" data-favorite={saved}>
-   <div className="customerFavoriteCardHead"><strong>{store.name}</strong>{saved&&<span className="customerFavoriteMark">{t("مفضل","Favorite","Favori")}</span>}</div>
-   <small>{store.orderCount>0?t("طلبات سابقة: ","Previous orders: ","Commandes précédentes : ")+store.orderCount.toLocaleString("en-US"):t("متجر مرتبط بحسابك","Linked store","Boutique associée")}</small>
-   <div className="customerFavoriteActions"><Link href={publicStorefrontUrl(store.slug)}>{t("زيارة المتجر","Visit store","Visiter")}</Link><button type="button" disabled={loading||busy!==null} aria-pressed={saved} aria-label={saved?t("إزالة ","Remove ","Retirer ")+store.name:t("إضافة ","Save ","Ajouter ")+store.name} onClick={()=>void toggle(store.id)}>{saved?t("★ إزالة التثبيت","★ Unpin","★ Retirer"):t("☆ تثبيت","☆ Save","☆ Épingler")}</button></div>
-  </section>;})}</div>
-  {!sorted.length&&<p className="customerFavoriteEmpty">{t("لا توجد متاجر مطابقة. امسح البحث لعرض بقية المتاجر.","No matching stores. Clear the search.","Aucune boutique correspondante. Effacez la recherche.")}</p>}
-  <p className="customerFavoritePrivacy">{t("المفضلة خاصة بحسابك، ولا تُعرض لصاحب المتجر أو على البروفايل العام. يمكنك إلغاء التثبيت في أي وقت.","Favorites are private to you; merchants and public profiles cannot see this list. You can unpin anytime.","Vos favoris sont privés et invisibles aux commerçants et au public. Vous pouvez les retirer à tout moment.")}</p>
-  {message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
- </article>;
+ return <section className="customerPortalDetails customerFavoriteStores" id="customer-stores" aria-labelledby="favorite-stores-title">
+  <header><div><small>FOON FAVORITES</small><h2 id="favorite-stores-title">{t.title}</h2><p>{t.subtitle}</p></div><strong dir="ltr">{selected.filter(id=>stores.some(s=>s.id===id)).length.toLocaleString("en-US")} ★</strong></header>
+  <label className="customerFavoriteSearch"><span>{t.search}</span><input type="search" value={search} onChange={event=>setSearch(event.target.value)} placeholder={t.search}/></label>
+  {!ready&&<p role="status">{language==="ar"?"جارٍ تحميل المفضلة...":language==="en"?"Loading favorites...":"Chargement des favoris..."}</p>}
+  {stores.length===0?<p>{t.empty}</p>:<div className="customerFavoriteGrid">{matches.map(store=>{const saved=selected.includes(store.id);return <article key={store.id} className="customerFavoriteCard" data-favorite={saved}>
+    <div className="customerFavoriteCardHead"><strong>{store.name}</strong>{saved&&<span className="customerFavoriteMark">{t.badge}</span>}</div>
+    {store.orderCount>0&&<small>{t.count}: <b dir="ltr">{store.orderCount.toLocaleString("en-US")}</b></small>}
+    <div className="customerFavoriteActions"><Link href={publicStorefrontUrl(store.slug)}>{t.open}</Link><button type="button" disabled={!ready||Boolean(busy)} aria-pressed={saved} onClick={()=>void toggle(store.id)}>{saved?"★":"☆"} {saved?t.remove:t.save}</button></div>
+   </article>})}</div>}
+  {stores.length>0&&matches.length===0&&<p>{t.noResults}</p>}
+  <p className="customerFavoritePrivacy">{t.privacy}</p>{message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
+ </section>;
 }

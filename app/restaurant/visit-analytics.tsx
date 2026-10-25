@@ -6,8 +6,6 @@ export default function VisitAnalytics({tenantId,language="ar",profile=false}:{t
  const [visits,setVisits]=useState<Counts|null>(null),[products,setProducts]=useState<Counts|null>(null),[top,setTop]=useState<ProductView[]>([]),[error,setError]=useState(false);
  useEffect(()=>{
   let live=true;
-  // Reset only after yielding out of the render effect: React effects must not synchronously cascade updates.
-  void Promise.resolve().then(()=>{if(!live)return;setVisits(null);setProducts(null);setTop([]);setError(false);});
   const load=async(kind:"profile"|"storefront"|"product")=>{
    const params=new URLSearchParams({kind});
    if(!profile&&tenantId)params.set("tenantId",tenantId);

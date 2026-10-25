@@ -13,6 +13,12 @@ async function access():Promise<{error:NextResponse;userId?:never;sessionId?:nev
  const denied=await employeePersonalAccessDenied();if(denied)return {error:denied};
  const userId=await currentUserId(),sessionId=await currentSessionId();
  if(!userId||!sessionId)return {error:fail("UNAUTHENTICATED",401)};
+ // A valid session token must not restore access after an account is frozen.
+ // Match the active-user gate used by the customer dashboard and favorites API.
+ try{
+  const [users]=await database().execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' LIMIT 1",[userId]);
+  if(!users.length)return {error:fail("UNAUTHENTICATED",401)};
+ }catch{return {error:fail("SESSIONS_UNAVAILABLE",503)};}
  return {userId,sessionId};
 }
 export async function GET(){
