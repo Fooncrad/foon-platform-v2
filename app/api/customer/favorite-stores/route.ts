@@ -18,15 +18,35 @@ async function change(request:Request,remove:boolean){
  const data=await request.json().catch(()=>null);
  const tenantId=data?.tenantId;
  if(typeof tenantId!=="string"||!/^[a-f0-9-]{36}$/i.test(tenantId))return NextResponse.json({ok:false,code:"INVALID_TENANT"},{status:400,headers:noStore});
- if(remove)await database().execute("DELETE FROM customer_favorite_stores WHERE user_id=? AND tenant_id=?",[auth.id,tenantId]);
- else {
-  // Only already-linked customer stores are eligible; no tenant membership or roles are changed.
+ try{
+  if(remove){
+   await database().execute("DELETE FROM customer_favorite_stores WHERE user_id=? AND tenant_id=?",[auth.id,tenantId]);
+   return NextResponse.json({ok:true},{headers:noStore});
+  }
+  // Never accept arbitrary or inactive shops as customer favorites.
+  const [linked]=await database().execute<RowDataPacket[]>(
+   "SELECT t.id FROM tenant_customers tc JOIN tenants t ON t.id=tc.tenant_id AND t.status='active' WHERE tc.user_id=? AND tc.tenant_id=? LIMIT 1",
+   [auth.id,tenantId]
+  );
+  if(!linked.length)return NextResponse.json({ok:false,code:"STORE_NOT_LINKED"},{status:404,headers:noStore});
+  // An existing favorite remains successful even at the account's 100-store limit.
+  const [existing]=await database().execute<RowDataPacket[]>(
+   "SELECT tenant_id FROM customer_favorite_stores WHERE user_id=? AND tenant_id=? LIMIT 1",[auth.id,tenantId]
+  );
+  if(existing.length)return NextResponse.json({ok:true},{headers:noStore});
   await database().execute(`INSERT IGNORE INTO customer_favorite_stores(user_id,tenant_id)
  SELECT ?,t.id FROM tenants t JOIN tenant_customers tc ON tc.tenant_id=t.id AND tc.user_id=?
  WHERE t.id=? AND t.status='active'
  AND (SELECT COUNT(*) FROM customer_favorite_stores WHERE user_id=?)<100`,[auth.id,auth.id,tenantId,auth.id]);
+  // INSERT IGNORE may do nothing when capacity is exhausted or membership changed.
+  const [saved]=await database().execute<RowDataPacket[]>(
+   "SELECT tenant_id FROM customer_favorite_stores WHERE user_id=? AND tenant_id=? LIMIT 1",[auth.id,tenantId]
+  );
+  if(!saved.length)return NextResponse.json({ok:false,code:"FAVORITES_LIMIT_OR_UNAVAILABLE"},{status:409,headers:noStore});
+  return NextResponse.json({ok:true},{headers:noStore});
+ }catch{
+  return NextResponse.json({ok:false,code:"FAVORITES_UNAVAILABLE"},{status:503,headers:noStore});
  }
- return NextResponse.json({ok:true},{headers:noStore});
 }
 export async function POST(request:Request){return change(request,false);}
 export async function DELETE(request:Request){return change(request,true);}
