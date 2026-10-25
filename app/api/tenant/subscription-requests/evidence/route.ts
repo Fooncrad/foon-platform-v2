@@ -6,6 +6,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedFormData} from "@/lib/security/limited-form-data";
 import {identifyTransferEvidence,TRANSFER_EVIDENCE_MAX_BYTES} from "@/lib/payments/transfer-evidence";
 export const runtime="nodejs";
 const noStore={"Cache-Control":"private, no-store"};
@@ -14,10 +15,12 @@ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
  const actor=await currentUserId();if(!actor)return fail("UNAUTHENTICATED",401);
- const length=Number(request.headers.get("content-length")??"0");
- if(length>TRANSFER_EVIDENCE_MAX_BYTES+16384)return fail("EVIDENCE_TOO_LARGE",413);
  let data:FormData;
- try{data=await request.formData();}catch{return fail("INVALID_INPUT",400);}
+ try{data=await readLimitedFormData(request,TRANSFER_EVIDENCE_MAX_BYTES+16384);}
+ catch(error){
+  const tooLarge=error instanceof Error&&error.message==="BODY_TOO_LARGE";
+  return fail(tooLarge?"EVIDENCE_TOO_LARGE":"INVALID_INPUT",tooLarge?413:400);
+ }
  const id=data.get("paymentRequestId"),tenantId=data.get("tenantId"),attachment=data.get("file");
  if(typeof id!=="string"||!uuid.test(id)||typeof tenantId!=="string"||!uuid.test(tenantId)||!(attachment instanceof File))return fail("INVALID_INPUT",400);
  let membership;
