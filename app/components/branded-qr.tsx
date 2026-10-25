@@ -1,4 +1,5 @@
 "use client";
+import "./branded-qr.css";
 import {useEffect,useRef,useState} from "react";
 type Locale="ar"|"en"|"fr";
 const clean=(value:unknown,fallback:string)=>typeof value==="string"&&/^#[0-9a-f]{6}$/i.test(value)?value:fallback;
