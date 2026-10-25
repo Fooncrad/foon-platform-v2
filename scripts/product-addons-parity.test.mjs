@@ -44,3 +44,38 @@ test("additive migration retains existing options and enables stock accounting",
  assert.match(sql,/ADD COLUMN stock_quantity DECIMAL\(12,3\) NULL DEFAULT NULL/);
  assert.doesNotMatch(sql,/DROP TABLE|TRUNCATE|DELETE FROM/i);
 });
+
+test("all merchant activities explain add-on setup, availability and preview in three languages",()=>{
+ const menu=source("app/restaurant/menu/addons-panel.tsx");
+ const catalog=source("app/restaurant/catalog-options.tsx");
+ const styles=source("app/globals.css");
+ for(const [label,ui] of [["restaurant",menu],["catalog",catalog]]){
+  assert.match(ui,/foonAddonsWorkflow/,label+" explains the setup sequence");
+  assert.match(ui,/foonAddonsStats/,label+" shows group and value counts");
+  assert.match(ui,/foonAddonsWarning/,label+" warns about required groups with no available choices");
+  assert.match(ui,/foonAddonsPreview/,label+" exposes an illustrative customer preview");
+  assert.match(ui,/foonAddonsEmpty/,label+" guides users with empty results");
+  assert.match(ui,/toLocaleLowerCase\(\)/,label+" prevents duplicate choice/group names");
+  assert.match(ui,/price/,label+" provides price setup");
+ }
+ assert.match(menu,/activeValues\(g\.id\)/);
+ assert.match(menu,/v\.data\.stockQuantity==null\|\|Number\(v\.data\.stockQuantity\)>0/);
+ assert.match(catalog,/v\.enabled&&\(v\.stock_quantity===null\|\|Number\(v\.stock_quantity\)>0\)/);
+ assert.match(catalog,/if\(!checkGroupDraft\(\)\)return/);
+ assert.match(catalog,/if\(!checkValueDraft\(\)\)return/);
+ assert.match(catalog,/INVALID_OPTIONS_RESPONSE/);
+ assert.match(styles,/@media\(max-width:420px\)/);
+ assert.match(styles,/\.foonAddonsPreview/);
+});
+
+test("main restaurant dashboard also explains add-on actions and exposes linked fields",()=>{
+ const manager=source("app/restaurant/resource-manager.tsx");
+ const css=source("app/restaurant/merchant-experience.css");
+ assert.match(manager,/restaurantAddonsQuickGuide/);
+ assert.match(manager,/module==="menuGroups"\|\|module==="menuValues"/);
+ assert.match(manager,/associatedName\("menu",row\.data\.itemId\)/);
+ assert.match(manager,/associatedName\("menuGroups",row\.data\.groupId\)/);
+ assert.match(manager,/row\.data\.stockQuantity==null/);
+ assert.match(manager,/restaurantAddonsQuickStats/);
+ assert.match(css,/restaurantAddonsQuickGuide/);
+});

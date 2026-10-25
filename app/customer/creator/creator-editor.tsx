@@ -5,6 +5,7 @@ import Link from "next/link";
 import CreatorSocialLinksEditor from "./social-links-editor";
 import CreatorQr from "./creator-qr";
 import CreatorReferralEarnings from "./referral-earnings";
+import CreatorProfileInsights from "./creator-profile-insights";
 type Profile={handle:string;display_name:string;bio:string;visibility:"public"|"private"};
 type Portfolio={id:string;media_id:string;caption:string;file_name:string};
 type LibraryImage={id:string;name:string};
@@ -14,7 +15,7 @@ export default function CreatorEditor(){
  const [profile,setProfile]=useState<Profile>({handle:"",display_name:"",bio:"",visibility:"private"});
  const [saved,setSaved]=useState<Profile|null>(null),[portfolio,setPortfolio]=useState<Portfolio[]>([]);
  const [library,setLibrary]=useState<LibraryImage[]>([]),[selected,setSelected]=useState(""),[caption,setCaption]=useState("");
- const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState("");
+ const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState(""),[shareMessage,setShareMessage]=useState("");
  const load=useCallback(async()=>{
   const [p,l]=await Promise.all([fetch("/api/account/creator-profile",{cache:"no-store"}),fetch("/api/account/library",{cache:"no-store"})]);
   const d=await p.json(),images=await l.json();
@@ -51,6 +52,18 @@ export default function CreatorEditor(){
   }catch(e){setError(e instanceof Error?e.message:"PORTFOLIO_DELETE_FAILED");}finally{setBusy(false);}
  }
  const publicUrl=saved?.visibility==="public"?"/creators/"+saved.handle:null;
+ const readySteps=[
+  {label:t("معرّف عام صالح","Valid public handle","Identifiant valide"),ready:/^[a-z0-9][a-z0-9_-]{2,38}[a-z0-9]$/.test(profile.handle)},
+  {label:t("اسم ظاهر للزوار","Public display name","Nom public"),ready:profile.display_name.trim().length>=2},
+  {label:t("نبذة تعريفية","Profile introduction","Présentation"),ready:profile.bio.trim().length>=20},
+  {label:t("صورة منشورة واحدة على الأقل","At least one published image","Au moins une image publiée"),ready:portfolio.length>0}
+ ];
+ const completion=Math.round(readySteps.filter(step=>step.ready).length/readySteps.length*100);
+ async function copyPublicLink(){
+  if(!publicUrl)return;
+  try{await navigator.clipboard.writeText(new URL(publicUrl,window.location.origin).href);setShareMessage(t("تم نسخ رابط البروفايل العام.","Public profile link copied.","Lien du profil public copié."));}
+  catch{setShareMessage(t("انسخ الرابط من صفحة البروفايل العام.","Copy the link from your public profile page.","Copiez le lien sur la page du profil public."));}
+ }
  return <section className="creatorEditor">
   <header><h1>{t("ملفي كصانع محتوى","My creator profile","Mon profil créateur")}</h1><p>{t("ملفك مستقل عن المطاعم والمتاجر. حساب العميل نفسه يستخدم للتسوق ولصناعة المحتوى، دون إضافة نشاط تجاري أو دور موظف.","Your creator profile belongs to your customer account, not a merchant or staff role.","Votre profil créateur appartient à votre compte client, pas à un commerce ni à un employé.")}</p><p><Link href="/customer#account-settings">{t("تغيير صورتي الشخصية وصورة الغلاف","Edit my avatar and cover photo","Modifier ma photo et ma couverture")}</Link></p></header>
   {loading?<p role="status">{t("جارٍ التحميل...","Loading...","Chargement...")}</p>:<>
@@ -65,7 +78,15 @@ export default function CreatorEditor(){
     <p className="creatorPrivacyHint">{t("الملف يبدأ خاصًا. لا تُعرض صور مكتبتك الشخصية إلا الصور التي تختار إضافتها إلى المعرض. التحويل إلى خاص يمنع فتح الملف والصور المنشورة عبر الروابط العامة.","Profiles start private. Only explicitly selected library images are published. Switching to private blocks the public profile and image links.","Le profil est privé par défaut. Seules les images choisies sont publiées. Le passage en privé bloque tous les liens publics.")}</p>
     <button type="submit" disabled={busy}>{busy?t("جارٍ الحفظ...","Saving...","Enregistrement..."):t("حفظ الملف والخصوصية","Save profile and visibility","Enregistrer le profil")}</button>
    </form>
-   {publicUrl&&<p className="creatorPublicLink"><a href={publicUrl} target="_blank" rel="noopener noreferrer">{t("عرض ملفي العام","Open my public profile","Voir mon profil public")}</a></p>}
+   <section className="creatorProfileReadiness" aria-label={t("جاهزية البروفايل العام","Public profile readiness","Préparation du profil public")}>
+    <div className="creatorReadinessHeading"><div><h2>{t("استوديو البروفايل العام","Public profile studio","Studio du profil public")}</h2><p>{t("هذه قائمة لتحسين جودة البروفايل، وليست شرطًا لنشره. البيانات الخاصة مثل الطلبات والعناوين لا تظهر للعامة.","A voluntary quality checklist, not a publishing requirement. Orders and addresses remain private.","Liste de qualité facultative. Les commandes et adresses restent privées.")}</p></div><strong dir="ltr">{completion}%</strong></div>
+    <progress value={completion} max={100} aria-label={t("اكتمال معلومات البروفايل","Profile completeness","Complétude du profil")}/>
+    <div className="creatorReadinessList">{readySteps.map(step=><span key={step.label} data-ready={step.ready}>{step.ready?"✓":"○"} {step.label}</span>)}</div>
+    <p className="creatorPrivacyHint">{saved?.visibility==="public"?t("ملفك منشور حاليًا. أي تعديل في الحقول أعلاه لا يظهر للزوار إلا بعد حفظه.","Your profile is currently public. Draft edits appear only after saving.","Votre profil est public. Les modifications ne paraissent qu’après l’enregistrement."):t("ملفك خاص حاليًا. لا يستطيع الزوار فتحه بالرابط المباشر أو رؤية الصور المختارة.","Your profile is private. Visitors cannot view it, even through a direct link.","Votre profil est privé, même avec le lien direct.")}</p>
+    {publicUrl&&<div className="creatorPublicLink creatorShareStrip"><a href={publicUrl} target="_blank" rel="noopener noreferrer">{t("معاينة بروفايلي كما يراه الزوار","Preview as a visitor","Aperçu visiteur")}</a><button type="button" onClick={()=>void copyPublicLink()}>{t("نسخ رابط المشاركة","Copy share link","Copier le lien")}</button></div>}
+    {shareMessage&&<p role="status">{shareMessage}</p>}
+   </section>
+   {saved&&<CreatorProfileInsights publicProfile={saved.visibility==="public"}/>}
    <CreatorSocialLinksEditor ready={Boolean(saved)}/>
    {saved&&<CreatorReferralEarnings handle={saved.handle}/>}
    {saved?.visibility==="public"&&<CreatorQr handle={saved.handle}/>}

@@ -10,6 +10,7 @@ import CountryPicker from "./country-picker";
 import {PublicMarketShell,PublicSiteHeader,PublicSiteFooter} from "@/app/public-site-chrome";
 import {publicFooterPages} from "@/lib/platform/public-footer-pages";
 import "./country-picker.css";
+import "./market-layout.css";
 import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 type Store=RowDataPacket&{id:string;slug:string;name:string;kind:"restaurant"|"store";activity_code:string};
@@ -22,7 +23,7 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
  const saved=(await cookies()).get("foon-market-country")?.value??"";
  const h=await headers(),geo=(h.get("cf-ipcountry")??h.get("x-vercel-ip-country")??"").toUpperCase();
  const requested=parseMarketFilters({country:params.country});
- const fallback=parseMarketFilters({country:saved||geo});
+ const fallback=parseMarketFilters({country:saved||geo||"SA"});
  const filters=parseMarketFilters({...params,country:requested.country||fallback.country});
  const {where,args}=buildMarketWhere(filters);
  let stores:Store[]=[],total=0,page=filters.page,error=false;
@@ -74,8 +75,8 @@ export default async function MarketPage({searchParams}:{searchParams:Promise<{q
    {error?<p role="alert">{translateUi("تعذر تحميل السوق الآن. حاول مرة أخرى لاحقًا.")}</p>:!filters.country?<p>{translateUi("اختر دولتك لعرض المتاجر المحلية فقط.")}</p>:stores.length===0?<p>{translateUi("لا توجد أنشطة مطابقة للبحث حاليًا.")}</p>:
    <><p role="status">{language==="ar"?"النتائج":language==="en"?"Results":"Résultats"}: {total.toLocaleString("en")} · {language==="ar"?"صفحة":language==="en"?"Page":"Page"} {page.toLocaleString("en")} / {pages.toLocaleString("en")}</p>
    <div className="foonMarketGrid">{stores.map(store=><Link key={store.id} href={publicStorefrontUrl(String(store.slug))} className="foonMarketCard">
-    <span className="foonMarketCardIcon" aria-hidden="true">{store.kind==="restaurant"?"♨":"▣"}</span>
-    <div><span className="foonMarketType">{label(store.activity_code)}</span><h3>{store.name}</h3><span className="foonMarketVisit">{translateUi("زيارة النشاط ←")}</span></div>
+    <span className="foonMarketCardIcon" aria-hidden="true">{({restaurant:"🍽️",cafe:"☕",sweets:"🍰",grocery:"🛒",clothing:"👗",perfume:"🧴",accessories:"💍",watches:"⌚",gifts:"🎁",ecommerce:"🛍️",carwash:"🚗",automotive:"🔧",laundry:"🧺",salon:"✂️",publicworks:"🏗️"} as Record<string,string>)[store.activity_code]??"🏬"}</span>
+    <div><span className="foonMarketType">{label(store.activity_code)}</span><h3>{store.name}</h3><span className="foonMarketVisit">{store.kind==="restaurant"?translateUi("عرض المنيو"):translateUi("تصفح المنتجات والخدمات")} <span aria-hidden="true">←</span></span></div>
    </Link>)}</div>
    {pages>1&&<nav className="foonMarketPagination" aria-label={translateUi("صفحات النتائج")}>
     {page>1&&<Link href={marketPageUrl(filters,page-1)}>{translateUi("السابق")}</Link>}

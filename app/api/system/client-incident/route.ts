@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {logIncident} from "@/lib/platform/incidents";
 export const runtime="nodejs";
 
@@ -15,11 +16,13 @@ function allowed(request:Request){
 }
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- if(Number(request.headers.get("content-length")??0)>512)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:413});
  if(!allowed(request))return NextResponse.json({ok:false,code:"RATE_LIMITED"},{status:429});
- const body=await request.json().catch(()=>null);
- const incidentId=body?.incidentId,source=body?.source;
- if(typeof incidentId!=="string"||!/^WEB-[A-F0-9]{12}$/.test(incidentId)||!["app-error","global-error"].includes(source))
+ let body:unknown;
+ try{body=await readLimitedJson(request,512);}
+ catch(error){return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:(error as Error)?.message==="BATCH_TOO_LARGE"?413:400});}
+ const parsed=body&&typeof body==="object"&&!Array.isArray(body)?body as Record<string,unknown>:null;
+ const incidentId=parsed?.incidentId,source=parsed?.source;
+ if(typeof incidentId!=="string"||!/^WEB-[A-F0-9]{12}$/.test(incidentId)||typeof source!=="string"||!["app-error","global-error"].includes(source))
   return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  // Do not receive paths, stack traces, emails, tokens or other user input here.
  logIncident({incidentId,code:"CLIENT_RENDER_ERROR",location:source});

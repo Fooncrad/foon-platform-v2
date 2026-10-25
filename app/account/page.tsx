@@ -1,4 +1,5 @@
 import {isEmployeeAccount} from "@/lib/auth/account-surface";
+import {accountMembershipRestriction} from "@/lib/auth/account-login-policy";
 import {redirect} from "next/navigation";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
@@ -21,6 +22,8 @@ export default async function AccountPage(){
   // An invalid store profile must never be labeled a restaurant.
   redirect("/business?tenant="+encodeURIComponent(tenantId));
  }
- if(await isEmployeeAccount(id))redirect("/login");
+ const restriction=await accountMembershipRestriction(database(),id);
+ if(restriction)redirect("/account-status?code="+encodeURIComponent(restriction));
+ if(await isEmployeeAccount(id))redirect("/account-status?code=EMPLOYEE_OPERATIONAL_ACCESS_ONLY");
  redirect("/customer");
 }

@@ -42,3 +42,19 @@
 
 .publicDiningFields{display:grid;gap:14px}.publicDiningFields small{display:block;line-height:1.7;color:var(--menu-muted)}
 .publicMenuStoreName{margin:0}
+
+
+/* Checkout actions and verification must stay next to the order button, not above the catalog. */
+.publicMenu .publicMenuCheckoutNotice{display:block;min-width:0;max-width:100%;padding:14px;border:2px solid var(--public-brand);border-radius:14px;background:var(--public-surface);color:var(--public-text);font-size:14px;line-height:1.8;overflow-wrap:break-word;scroll-margin-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+.publicMenu .publicMenuCheckoutNotice a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 14px;margin-block:8px;border-radius:10px;background:var(--public-brand);color:var(--public-on-brand);font-weight:800;text-decoration:underline}
+.publicMenu .publicMenuGoogleLogin{display:grid;gap:8px;min-width:0;border-top:1px solid var(--public-line);padding-top:12px}
+.publicMenu .publicMenuGoogleLogin>span{font-size:13px;text-align:center}
+.publicMenu .publicMenuGoogleButton{display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;max-width:100%;width:100%;border:1px solid #aebac4;background:#fff;color:#202124;border-radius:12px;font-weight:750;padding:9px 12px;white-space:normal}
+.publicMenu .publicMenuGoogleButton strong{font-size:20px;color:#4285f4}
+@media(max-width:767px){.publicMenu .publicMenuCart{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}.publicMenu .publicMenuCheckoutNotice{scroll-margin-bottom:calc(112px + env(safe-area-inset-bottom,0px))}}
+
+
+/* A completed order stays visible after the cart clears, above the mobile dock. */
+.publicMenu .publicMenuCheckoutSuccess{position:fixed;z-index:60;inset-inline:clamp(12px,3vw,24px);bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(440px,calc(100vw - 24px));max-width:100%;padding:16px;display:grid;gap:9px;border:2px solid var(--public-brand);border-radius:16px;background:var(--public-surface);color:var(--public-text);box-shadow:0 14px 35px #0004;overflow-wrap:break-word;box-sizing:border-box}
+.publicMenu .publicMenuCheckoutSuccess a{display:inline-flex;min-height:44px;align-items:center;justify-content:center;border-radius:10px;padding:9px 12px;background:var(--public-brand);color:var(--public-on-brand);font-weight:800}
+@media(max-width:767px){.publicMenu .publicMenuCheckoutSuccess{bottom:calc(85px + env(safe-area-inset-bottom,0px))}}

@@ -14,3 +14,60 @@
 
 .manager fieldset { min-width:0; max-width:100%; display:grid; gap:12px; border:1px solid var(--border,#d9e2ee); border-radius:12px; padding:12px; }
 .manager fieldset :is(input,textarea) { width:100%; max-width:100%; box-sizing:border-box; }
+
+/* Multi-select only the current product page; never a hidden search result. */
+.bulkToolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px;border:1px solid var(--border,#d9e2ee);border-radius:14px;margin-block:12px;background:var(--surface,#fff)}
+.manager .bulkToolbar label,.manager .rowSelection{display:inline-flex;flex-direction:row;gap:8px;align-items:center;font-weight:700;cursor:pointer}
+.manager .bulkToolbar input[type=checkbox],.manager .rowSelection input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:0;accent-color:#a62f28}
+.manager .bulkToolbar button{margin-inline-start:auto;background:#a62f28;color:white;border-color:#a62f28;font-weight:800}
+@media(max-width:420px){.manager .bulkToolbar button{width:100%;margin-inline-start:0}}
+
+/* Unified product workspace: restaurant menu visual system for every commerce vertical. */
+.unified{border:0;background:transparent;padding:0;display:grid;gap:12px;min-width:0;max-width:100%}
+.unified :global(.foonMenuCategoryForm),.unified :global(.foonItemForm){display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));align-items:end;gap:12px;padding:clamp(14px,2vw,22px);margin:0 0 16px;background:var(--surface,#fff);border:1px solid var(--border,#e0e4ec);border-radius:18px;box-shadow:0 3px 15px #11182708}
+.unified :global(.foonMenuCategoryForm) fieldset,.unified :global(.foonItemForm) fieldset{grid-column:1/-1}
+.unified :global(.foonMenuCategoryForm) button[type="submit"],.unified :global(.foonItemForm) button[type="submit"]{background:var(--gold,#e2a93b);border-color:var(--gold,#e2a93b);color:#171613;font-weight:800}
+.unified :global(.foonMenuCategoryList){display:grid;gap:12px;margin:12px 0 22px}
+.unified :global(.foonCatalogRow){display:flex;align-items:center;flex-wrap:wrap;gap:12px;background:var(--surface,#fff);border:1px solid var(--border,#e0e4ec);border-radius:16px;padding:14px 16px;margin:0;box-shadow:0 2px 8px #11182706;overflow-wrap:anywhere}
+.unified :global(.foonCatalogRow)>strong{font-size:1rem}
+.unified :global(.foonCatalogRow) button{font-size:.9rem;font-weight:650;min-height:38px}
+.unified :global(.foonCatalogRow) select{flex:1 1 150px;width:auto}
+.unified :global(.foonCatalogPagination){border-radius:16px;background:var(--surface,#fff);border:1px solid var(--border,#e0e4ec);margin-top:12px}
+.worklist{display:grid;gap:16px}
+.worklist>p{margin:4px 0;color:var(--muted,#64748b);line-height:1.8}
+.productActionGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px}
+.actionCard{display:grid;align-content:start;gap:12px;min-width:0;padding:16px;border-radius:16px;border:1px solid var(--border,#e0e4ec);background:var(--surface,#fff);box-shadow:0 2px 10px #11182708}
+.actionCard strong{overflow-wrap:anywhere;font-size:1rem}
+.actionCard small{opacity:.72;font-variant-numeric:tabular-nums}
+.actionCard>button{justify-self:start;max-width:100%}
+@media(max-width:600px){.unified :global(.foonMenuCategoryForm),.unified :global(.foonItemForm){grid-template-columns:1fr;padding:12px}.unified :global(.foonCatalogRow){padding:12px;gap:8px}.unified :global(.foonCatalogRow) select{flex:1 1 100%;min-width:0}.productActionGrid{grid-template-columns:1fr}.unified :global(.foonCatalogPagination){flex-wrap:wrap}}
+
+.catalogSearch{width:100%;max-width:100%;margin-bottom:14px}
+.unified .catalogSearch :global(.foonItemForm){display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;align-items:end;margin:0}
+.catalogPaging{padding-top:12px}
+.catalogPaging :global(.foonCatalogPagination){margin:0}
+@media(max-width:720px){.unified .catalogSearch :global(.foonItemForm){grid-template-columns:1fr}.catalogPaging{padding-top:8px}}
+
+/* Product setup steps follow the restaurant menu category → item → group → value journey. */
+.catalogJourney{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;margin:0 0 16px;max-width:100%}
+.catalogJourney li{display:flex;align-items:center;gap:8px;min-width:0;border:1px solid var(--border,#dfe4ec);border-radius:14px;background:var(--surface,#fff);padding:10px 12px}
+.catalogJourney li>span{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border-radius:50%;background:color-mix(in srgb,#e2a93b 22%,transparent);font-weight:800;font-size:.85rem;font-variant-numeric:tabular-nums}
+.catalogJourney li>strong{font-size:clamp(.75rem,.9vw,.91rem);overflow-wrap:anywhere}
+.catalogJourney li:not(:last-child){border-inline-end:3px solid #e2a93b}
+.manager :global(.foonCatalogRow).productCard{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px;border-inline-start:3px solid #e2a93b}
+.productCardTitle{display:grid;gap:4px;flex:1 1 160px;min-width:0}
+.productCardTitle strong{font-size:1rem;overflow-wrap:anywhere}
+.productCardTitle small{width:fit-content;max-width:100%;font-size:.75rem;padding:3px 9px;border-radius:100px;font-weight:750}
+.productVisible{background:color-mix(in srgb,#16a34a 12%,var(--surface,#fff));color:var(--text,#166534);border:1px solid #16a34a55}
+.productHidden{background:color-mix(in srgb,#64748b 12%,var(--surface,#fff));color:var(--text,#475569);border:1px solid #64748b66}
+.productPrice{font-size:1rem;font-weight:800;white-space:nowrap}
+.productCard[data-product-status="hidden"]{border-inline-start-color:#94a3b8}
+@media(max-width:700px){.catalogJourney{grid-template-columns:repeat(2,minmax(0,1fr))}.productCardTitle{flex:1 1 100px}}
+@media(max-width:380px){.catalogJourney li{padding:7px 8px}.catalogJourney li>span{width:23px;height:23px;flex-basis:23px}}
+
+/* One cover for each category and up to four shared photos for each product. */
+.productCardMedia{display:grid;place-items:center;flex:0 0 76px;width:76px;height:76px;border:1px solid var(--border,#dce0e6);border-radius:12px;background:color-mix(in srgb,var(--surface,#fff) 94%,#e2a93b);overflow:hidden}
+.productCardMedia img{width:100%;height:100%;object-fit:cover}
+.noCatalogImage{display:inline-flex;align-items:center;justify-content:center;min-height:48px;min-width:64px;border-radius:10px;padding:6px 8px;background:color-mix(in srgb,#64748b 12%,var(--surface,#fff));border:1px dashed var(--border,#b7c1cf);color:var(--muted,#64748b);font-size:.72rem;line-height:1.35;text-align:center;max-width:100px}
+.imageLanguageHint{padding:12px 15px;border-inline-start:3px solid #e2a93b;background:color-mix(in srgb,#e2a93b 8%,var(--surface,#fff));border-radius:12px;line-height:1.8}
+@media(max-width:400px){.productCardMedia{flex-basis:65px;width:65px;height:65px}.noCatalogImage{min-width:50px;min-height:42px}}

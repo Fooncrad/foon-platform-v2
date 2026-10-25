@@ -718,7 +718,7 @@
 .foonActivityProductDialog .foonActivityDialogPurchase .foonCartAdd:disabled{opacity:.45;cursor:not-allowed;}
 @media(max-width:360px){.foonActivityProductDialog .foonActivityVariantChoiceForm fieldset{padding:8px}.foonActivityProductDialog .foonActivityVariantChoiceForm label{flex-wrap:wrap;gap:6px}.foonActivityProductDialog .foonActivityVariantChoiceForm label small{margin-inline-start:0}}
 
- 
+
 /* Keep the visual viewport steady throughout ordering, reservations and authentication.
    Only the horizontal category/gallery rails may scroll sideways. */
 html:has(.publicMenu),

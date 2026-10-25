@@ -5,6 +5,8 @@ import {currentActiveAdminUserId,currentSessionId} from "@/lib/auth/session";
 import {requirePlatformRole} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {database} from "@/lib/db/mysql";
+import {tenantWorkspaceActivity} from "@/lib/tenant/workspace-activity";
+import {activityWorkspaceUrl} from "@/lib/tenant/workspace-routes";
 
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
@@ -21,8 +23,11 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   if(!tenants.length){await db.rollback();return NextResponse.json({ok:false,code:"TENANT_NOT_FOUND_OR_INACTIVE"},{status:404});}
   await db.execute("UPDATE platform_tenant_support_sessions SET ended_at=UTC_TIMESTAMP() WHERE auth_session_id=? AND ended_at IS NULL",[authSession]);
   const supportId=randomUUID();
-  await db.execute("INSERT INTO platform_tenant_support_sessions(id,auth_session_id,actor_user_id,tenant_id,platform_role,expires_at) VALUES (?,?,?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 2 HOUR))",[supportId,authSession,actor,id,role]);
-  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,accessMode:role==="support"?"read_only":"full",printerSettingsUnaffected:true,expiresInMinutes:120})]);
-  await db.commit();return NextResponse.json({ok:true,url:"/restaurant?tenant="+encodeURIComponent(id),expiresInMinutes:120,accessMode:role==="support"?"read_only":"full",readOnly:role==="support",printerSettingsUnaffected:true});
+  await db.execute("INSERT INTO platform_tenant_support_sessions(id,auth_session_id,actor_user_id,tenant_id,platform_role,expires_at) SELECT ?,?,?,?,?,a.expires_at FROM auth_sessions a WHERE a.id=? AND a.user_id=? AND a.expires_at>UTC_TIMESTAMP()",[supportId,authSession,actor,id,role,authSession,actor]);
+  await db.execute("INSERT INTO platform_audit_events(actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,'admin.tenant.support.start','tenant',?,?)",[actor,id,JSON.stringify({supportSessionId:supportId,platformRole:role,accessMode:role==="support"?"read_only":"full",printerSettingsUnaffected:true,expiresWithLogin:true})]);
+  await db.commit();
+  const activity=await tenantWorkspaceActivity(id);
+  const destination=activity?activityWorkspaceUrl(activity,id):"/business?tenant="+encodeURIComponent(id);
+  return NextResponse.json({ok:true,url:destination,expiresInMinutes:120,accessMode:role==="support"?"read_only":"full",readOnly:role==="support",printerSettingsUnaffected:true});
  }catch{await db.rollback();return NextResponse.json({ok:false,code:"SUPPORT_ACCESS_FAILED"},{status:503});}finally{db.release();}
 }

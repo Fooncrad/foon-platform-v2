@@ -1,4 +1,5 @@
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
+import {queueLoginAlert} from "@/lib/auth/login-alert";
 import {recordCreatorReferral} from "@/lib/creator/subscription-commission";
 import {cookies} from "next/headers";
 import {notifyCustomer} from "@/lib/notifications/customer";
@@ -24,6 +25,7 @@ export async function POST(request:Request){
     try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
     const body=await request.json().catch(()=>null);
     if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+    if(body.legalAccepted!==true)return NextResponse.json({ok:false,code:"LEGAL_CONSENT_REQUIRED"},{status:400});
     const email=String(body.email??"").trim().toLowerCase();
     const password=String(body.password??"");
     const name=String(body.name??"").trim().slice(0,180);
@@ -45,6 +47,7 @@ export async function POST(request:Request){
     try{
       await db.beginTransaction();
       await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?,?)",[id,email,hash,name||null,"active"]);
+      await db.execute("UPDATE users SET legal_accepted_at=NOW() WHERE id=?",[id]);
       stage="store";
       const workspace=await provisionStore(db,{ownerId:id,name:storeName,slug,kind:restaurantActivities.has(activity)?"restaurant":"store"});
       await db.execute("INSERT INTO tenant_business_profiles(tenant_id,activity_code,country_code,currency,region,tax_number) VALUES (?,?,?,?,?,?)",[workspace.tenant.id,activity,countryCode,currency,region,taxNumber||null]);
@@ -54,7 +57,9 @@ export async function POST(request:Request){
    await notifyCustomer(db,{userId:id,tenantId:workspace.tenant.id,event:"account_welcome",resourceId:id});
    await queueVerificationMail(db,{userId:id,email,locale:(locale==="en"||locale==="fr"?locale:"ar") as VerificationLocale,origin:process.env.APP_URL||"https://nfoodz.com"});
    await createSession(id,db);
-      await db.commit();dispatchNotifications();
+      await db.commit();
+      await queueLoginAlert(database(),id,request,"registration");
+      dispatchNotifications();
       return NextResponse.json({ok:true,user:{id,email},...workspace,activity,activityModules,plan:"free",emailVerificationRequired:true},{status:201});
     }catch(error){
       await db.rollback();

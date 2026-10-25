@@ -3,6 +3,7 @@ import {useUiText} from "@/lib/i18n/ui-language";
 import {useState,type FormEvent} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
+import {ACCOUNT_HELP_CODES,accountHelpCode} from "@/lib/auth/public-login-url.mjs";
 export default function CustomerLoginForm({slug,name}:{slug:string;name:string}){
  const translateUi=useUiText();
 
@@ -13,7 +14,7 @@ export default function CustomerLoginForm({slug,name}:{slug:string;name:string})
   try{
    const response=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:form.get("email"),password:form.get("password")})});
    const body=await response.json().catch(()=>({}));
-   if(!response.ok){setError(body.code==="TOO_MANY_ATTEMPTS"?"محاولات كثيرة، حاول لاحقًا.":"تعذر الدخول. تحقق من البريد وكلمة المرور.");return}
+   if(!response.ok){if(ACCOUNT_HELP_CODES.has(String(body.code))){router.replace("/account-status?code="+encodeURIComponent(accountHelpCode(body.code)));return;}setError(body.code==="TOO_MANY_ATTEMPTS"?"محاولات كثيرة، حاول لاحقًا.":"تعذر الدخول. تحقق من البريد وكلمة المرور.");return}
    const join=await fetch("/api/customer/join-store",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({storeSlug:slug})});
    if(!join.ok){setError("تم تسجيل الدخول، لكن تعذر ربط هذا المتجر بحسابك. حاول مجددًا.");return}
    router.replace("/customer");router.refresh();

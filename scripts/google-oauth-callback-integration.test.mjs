@@ -9,12 +9,13 @@ const ts = require('typescript');
 const source = readFileSync(new URL('../app/api/auth/google/callback/route.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 const policy = require('../lib/auth/google-oauth-security.mjs');
+const guidance = require('../lib/auth/public-login-url.mjs');
 const state = 'A'.repeat(43);
 
-function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true } = {}) {
-  const actions = { sql: [], cookieWrites: [], sessions: [], commits: 0, rollbacks: 0, connections: 0 };
+function setup({ linked = null, matched = null, suppliedState = state, googleVerified = 'true', googleEnabled = true, checkoutStore = '', consented = true } = {}) {
+  const actions = { sql: [], cookieWrites: [], sessions: [], alerts: [], dispatches: 0, commits: 0, rollbacks: 0, connections: 0 };
   const jar = {
-    get: () => ({ value: state }),
+    get: (name) => name === 'foon_google_checkout_store' ? (checkoutStore ? {value:checkoutStore} : undefined) : ({value: name === 'foon_google_legal_consent' && !consented ? undefined : state}),
     set: (...args) => actions.cookieWrites.push(args),
   };
   const db = {
@@ -38,7 +39,11 @@ function setup({ linked = null, matched = null, suppliedState = state, googleVer
     '@/lib/db/mysql': { database: () => ({ getConnection: async () => { actions.connections++; return db; } }) },
     '@/lib/auth/password': { hashPassword: async () => 'test-only-hash' },
     '@/lib/auth/session': { createSession: async (id) => actions.sessions.push(id) },
+    '@/lib/auth/login-alert': { queueLoginAlert: async (_db,id,request,method) => {actions.alerts.push({id,method,url:request.url});return true;} },
+    '@/lib/notifications/dispatch': { dispatchNotifications: () => { actions.dispatches++; } },
     '@/lib/auth/google-oauth-security.mjs': policy,
+    '@/lib/auth/public-login-url.mjs': guidance,
+    '@/lib/auth/account-login-policy': { accountMembershipRestriction: async () => null },
   };
   const context = {
     exports: {},
@@ -80,7 +85,7 @@ test('blocks automatic email linking to an unverified local account', async () =
 
 test('blocks inactive matched user even with verified email', async () => {
   const { run, actions } = setup({ matched: { id: 'user-3', status: 'suspended', email_verified_at: '2026-10-24' } });
-  assert.match((await run()).url, /GOOGLE_ACCOUNT_DISABLED/);
+  assert.match((await run()).url, /ACCOUNT_SUSPENDED/);
   assert.equal(actions.sessions.length, 0);
 });
 
@@ -89,6 +94,8 @@ test('links existing active verified account and creates only its own session', 
   assert.equal((await run()).url, 'https://example.test/account');
   assert.deepEqual(actions.sessions, ['user-4']);
   assert.equal(actions.commits, 1);
+  assert.deepEqual(actions.alerts.map(x=>[x.id,x.method]),[['user-4','google']]);
+  assert.equal(actions.dispatches,1);
   assert.equal(actions.sql.filter(x => x.sql.startsWith('INSERT INTO auth_google_identities')).length, 1);
 });
 
@@ -100,6 +107,14 @@ test('creates verified local user only after Google token verification', async (
   assert.match(insert.sql, /email_verified_at\) VALUES \(\?,\?,\?,\?,\?,NOW\(\)\)/);
   assert.equal(actions.commits, 1);
   assert.equal(actions.sessions.length, 1);
+});
+
+test('rejects new Google account without explicit legal consent', async () => {
+ const {run,actions}=setup({consented:false});
+ assert.match((await run()).url,/GOOGLE_LEGAL_CONSENT_REQUIRED/);
+ assert.equal(actions.sessions.length,0);
+ assert.equal(actions.commits,0);
+ assert.equal(actions.sql.some(x=>x.sql.startsWith('INSERT INTO users')),false);
 });
 
 test('rejects Google identity with unverified email before database access', async () => {
@@ -121,4 +136,27 @@ test('platform administrator disabling Google prevents identity linking and sess
   assert.equal(actions.sessions.length,0);
   assert.equal(actions.sql.some(x=>x.sql.includes('INSERT INTO auth_google_identities')),false);
   assert.equal(actions.commits,0);
+});
+
+test('Google checkout returns to safe same-origin store cart',async()=>{
+ const {run,actions}=setup({checkoutStore:'nasser',matched:{id:'user-7',status:'active',email_verified_at:'2026-10-24'}});
+ assert.equal((await run()).url,'https://example.test/nasser?checkout=google#menu-cart');
+ assert.deepEqual(actions.sessions,['user-7']);
+ assert.ok(actions.cookieWrites.some(([name,,options])=>name==='foon_google_checkout_store'&&options.path==='/api/auth/google'&&options.maxAge===0));
+});
+test('unsafe Google checkout targets are never used as redirect URLs',async()=>{
+ const {run}=setup({checkoutStore:'//attacker.example',matched:{id:'user-8',status:'active',email_verified_at:'2026-10-24'}});
+ assert.equal((await run()).url,'https://example.test/account');
+});
+
+test('Hostinger internal callback origin redirects to canonical public guidance',async()=>{
+ const configured=guidance.accountHelpUrl('https://nfoodz.com','http://0.0.0.0:3000/api/auth/google/callback','GOOGLE_ACCOUNT_DISABLED',true);
+ assert.equal(configured,'https://nfoodz.com/account-status?code=GOOGLE_ACCOUNT_DISABLED');
+});
+
+test('invalid OAuth callback does not email account owner',async()=>{
+ const {run,actions}=setup({suppliedState:'B'.repeat(43)});
+ assert.match((await run()).url,/GOOGLE_STATE_INVALID/);
+ assert.equal(actions.alerts.length,0);
+ assert.equal(actions.dispatches,0);
 });

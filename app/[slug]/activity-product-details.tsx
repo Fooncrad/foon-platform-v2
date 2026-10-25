@@ -45,6 +45,7 @@ export default function ActivityProductDetails({name,description="",imageUrl,ima
   setGroup(basePhotos.length?"product":variants[0]?.id??"product");
   setSelected(0);setChosen([]);setChoiceData(null);setError(false);
   dialog.current?.showModal();
+  void fetch("/api/public/visits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:"product",id:slug,productId:id}),keepalive:true}).catch(()=>{});
   if(canAdd)void loadChoices();
  }
  function chooseGroup(next:string){setGroup(next);setSelected(0);}

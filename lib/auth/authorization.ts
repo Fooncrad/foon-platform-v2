@@ -6,7 +6,7 @@ import type { PlatformRole, TenantRole } from "./roles";
 
 export async function requireTenantMembership(userId:string, rawTenantId:string, allowed:readonly TenantRole[],touchAdminSession=true){
   const id:TenantId=tenantId(rawTenantId);
- // Admin access is explicit, tenant-scoped, audited, time-limited, and tied to
+ // Admin access is explicit, tenant-scoped, audited, limited by the login session, and tied to
  // the current login session. Platform roles alone never grant tenant access.
  const sessionId=await currentSessionId();
  const [platformAdmins]=await database().execute<RowDataPacket[]>(
@@ -20,8 +20,9 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
   );
   if(support.length){
    const role=String(support[0].platform_role)==="support"||String(support[0].effective_role)==="support"?"support":"admin";
-   if(!allowed.includes("manager")||touchAdminSession&&role==="support")throw new Error("FORBIDDEN");
-   return {tenantId:id,role:"manager" as TenantRole,adminAccess:true,platformRole:role};
+   if(role==="support" && (!allowed.includes("manager")||touchAdminSession))throw new Error("FORBIDDEN");
+   if(role==="admin" && !allowed.includes("owner") && !allowed.includes("manager"))throw new Error("FORBIDDEN");
+   return {tenantId:id,role:(role==="admin"&&allowed.includes("owner")?"owner":"manager") as TenantRole,adminAccess:true,platformRole:role};
   }
   throw new Error("FORBIDDEN");
  }
