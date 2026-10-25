@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
-import {defaultMarketGate,type MarketGate} from "@/lib/market/global-gate";
+import type {MarketGate} from "@/lib/market/global-gate";
+const defaultMarketGate:MarketGate={closed:false,reason:{ar:"السوق قريبًا",en:"Marketplace coming soon",fr:"Le marché arrive bientôt"}};
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 export default function MarketEmergencySettings({canEdit}:{canEdit:boolean}){
  const lang=useUiLanguage(),[settings,setSettings]=useState<MarketGate>(defaultMarketGate),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
