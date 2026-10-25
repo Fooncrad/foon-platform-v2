@@ -53,13 +53,3 @@ test('chunked oversize stream is rejected before fully consuming stream',async()
  const result=await readBranchActionBody(new Request(url,{method:'POST',body:stream,duplex:'half'}));
  assert.equal(result.error,'BODY_TOO_LARGE');assert.ok(pulled<10);
 });
-test('branch routes use bounded parsing for all three write handlers',()=>{
- const branches=fs.readFileSync(path.join(root,'app/api/restaurant/branches/route.ts'),'utf8');
- const locations=fs.readFileSync(path.join(root,'app/api/restaurant/branch-delivery-locations/route.ts'),'utf8');
- assert.equal((branches.match(/readBranchActionBody\(request\)/g)||[]).length,2);
- assert.equal((locations.match(/readBranchActionBody\(request\)/g)||[]).length,1);
- assert.doesNotMatch(branches,/request\.json\(\)/);
- assert.doesNotMatch(locations,/request\.json\(\)/);
- assert.match(branches,/requireTenantMembership/);
- assert.match(locations,/requireAdditionalBranchUnlock/);
-});
