@@ -77,11 +77,11 @@ async function mutate(request:Request){
   if(request.method==="POST"){
    if(order.length>=4){await db.rollback();return fail("IMAGE_LIMIT_REACHED",409);}
    const id=randomUUID();
-   await db.execute("INSERT INTO restaurant_menu_item_images(id,tenant_id,item_id,image_url,sort_order) VALUES (?,?,?,?,?)",[id,ctx.tenantId,body.item,body.url,order.length]);
+   await db.execute("INSERT INTO restaurant_menu_item_images(id,tenant_id,item_id,image_url,sort_order) VALUES (?,?,?,?,?)",[id,ctx.tenantId,body.item,String(body.url),order.length]);
    order.push(id);
   }else if(request.method==="DELETE"){
    if(!order.includes(String(body.id))){await db.rollback();return fail("IMAGE_NOT_FOUND",404);}
-   await db.execute("DELETE FROM restaurant_menu_item_images WHERE tenant_id=? AND item_id=? AND id=?",[ctx.tenantId,body.item,body.id]);
+   await db.execute("DELETE FROM restaurant_menu_item_images WHERE tenant_id=? AND item_id=? AND id=?",[ctx.tenantId,body.item,String(body.id)]);
    order=order.filter(id=>id!==body.id);
   }else{
    const ids=body.ids as string[];
