@@ -16,3 +16,12 @@ test("both portals load shared design tokens without forcing storefront",()=>{
  assert.match(customer,/import "\.\.\/restaurant\/foon-control-system\.css";/);
  assert.doesNotMatch(css,/\.publicMenu|\.storefrontCart/);
 });
+
+test("forms and dialogs provide accessible error, busy and viewport behavior",()=>{
+ assert.match(css,/aria-invalid/);
+ assert.match(css,/aria-busy/);
+ assert.match(css,/\[role="dialog"\],dialog/);
+ assert.match(css,/100dvh/);
+ assert.match(css,/forced-colors:active/);
+ assert.match(css,/overflow-wrap:anywhere/);
+});
