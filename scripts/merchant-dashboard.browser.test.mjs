@@ -228,7 +228,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await assertReadableSurface(page.locator(".restaurantPosProduct").filter({hasText:"قهوة المعاينة"}),"POS product");
  await page.getByRole("combobox",{name:"المظهر"}).selectOption("light");
  await page.locator(".restaurantPosMenu article").filter({hasText:"قهوة المعاينة"}).getByRole("button").click();
- const firstQuantity=page.locator('.restaurantCart input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
+ const firstQuantity=page.locator('.restaurantPosCartLineActions input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
