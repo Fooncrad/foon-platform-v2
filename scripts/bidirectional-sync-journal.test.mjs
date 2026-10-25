@@ -147,6 +147,10 @@ test("pull refuses corrupt, duplicate, unordered or unsafe journal IDs before cu
   [{id:7}], // stale
   [{id:"9007199254740992"}], // unsafe BIGINT string
   [{id:"8.0"}], // noncanonical numeric text
+  [{id:"0008"}], // noncanonical padded cursor would otherwise normalize to 8
+  [{id:"08"}], // padded cursor must be rejected before feed serialization
+  [{id:" 8 "}], // whitespace must not coerce into a cursor
+  [{id:"8e0"}], // exponent notation must not coerce into a cursor
   [{id:8},{id:9},{id:10}], // DB exceeded requested bound
   null // unexpected DB response
  ];
