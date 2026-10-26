@@ -4,6 +4,7 @@ import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,ro
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {canRoleTransitionOrder} from "./order-role-channel-policy";
 import {assignedWaiterTableIds} from "./waiter-assignments";
+import {activeDeliveryDriverIds,assignedActiveDeliveryDriver,activeDeliveryDriverEmployeeId} from "./delivery-driver-scope";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
@@ -402,9 +403,9 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  }
  if(role==="driver"){
   if(!actorUserId||!branchId)return [];
-  const [employees]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' LIMIT 2",[tenantId,branchId,actorUserId]);
-  if(employees.length!==1)return [];
-  filter+=" AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=?";values.push(String(employees[0].id));
+  const employeeId=await activeDeliveryDriverEmployeeId(db,tenantId,branchId,actorUserId);
+  if(!employeeId)return [];
+  filter+=" AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=?";values.push(employeeId);
  }
  const [orders]=await db.execute<RowDataPacket[]>("SELECT id,order_number,branch_id,table_id,reservation_id,dining_section_id,party_size,dining_snapshot,channel,status,payment_status,subtotal,discount,total,checkout_snapshot,currency,version,customer_name,customer_phone,kitchen_notes,order_notes,created_at FROM restaurant_orders WHERE tenant_id=?"+filter+" ORDER BY created_at DESC LIMIT 200",values);
  if(!orders.length)return [];
@@ -471,15 +472,12 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  let assignedDriverId:string|null=null;
  if(body.channel==="delivery"){
   // Availability is server-enforced: a branch must have an active assigned driver.
-  const [drivers]=await db.execute<RowDataPacket[]>(
-   "SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' ORDER BY e.id FOR UPDATE",
-   [branchId,tenantId,branchId]
-  );
+  const drivers=await activeDeliveryDriverIds(db,tenantId,branchId);
   // One active delivery per driver. Locking the eligible driver rows serializes
   // concurrent checkouts so the same available driver cannot be double-booked.
-  for(const driver of drivers){
-   const [active]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=? AND status NOT IN ('completed','cancelled') LIMIT 1 FOR UPDATE",[tenantId,String(driver.id)]);
-   if(!active.length){assignedDriverId=String(driver.id);break;}
+  for(const driverId of drivers){
+   const [active]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_orders WHERE tenant_id=? AND channel='delivery' AND JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot,'$.assignedDriverId'))=? AND status NOT IN ('completed','cancelled') LIMIT 1 FOR UPDATE",[tenantId,driverId]);
+   if(!active.length){assignedDriverId=driverId;break;}
   }
   if(!assignedDriverId)throw new ResourceError("DELIVERY_DRIVER_UNAVAILABLE");
  }
@@ -579,8 +577,8 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  }
  if(role==="driver"){
   const snapshot=order.checkout_snapshot?parseData(order.checkout_snapshot):{};
-  const [assigned]=await db.execute<RowDataPacket[]>("SELECT e.id FROM restaurant_resources e JOIN memberships m ON m.tenant_id=e.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND m.role='driver' AND m.status='active' JOIN employee_branch_assignments a ON a.tenant_id=e.tenant_id AND a.user_id=m.user_id AND a.branch_id=e.branch_id AND a.enabled=TRUE WHERE e.tenant_id=? AND e.branch_id=? AND e.kind='employee' AND e.archived=FALSE AND e.status='active' AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='driver' AND e.id=? LIMIT 1 FOR UPDATE",[tenantId,String(order.branch_id),actor,String(snapshot.assignedDriverId??"")]);
-  if(order.channel!=="delivery"||!assigned.length)throw new ResourceError("FORBIDDEN");
+  const assigned=await assignedActiveDeliveryDriver(db,tenantId,String(order.branch_id),actor,String(snapshot.assignedDriverId??""));
+  if(order.channel!=="delivery"||!assigned)throw new ResourceError("FORBIDDEN");
  }
  let status=String(order.status),payment=String(order.payment_status);
  if(body.status!==undefined){
