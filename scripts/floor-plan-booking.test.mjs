@@ -12,7 +12,7 @@ test("floor plan is scoped to branch and tenant and requires authorized writes",
 });
 test("floor plan is embedded in tables management without replacing reservation engine",()=>{
  const dashboard=read("app/restaurant/merchant-dashboard.tsx");
- assert.match(dashboard,/active==="tables"\?<><RestaurantFloorPlan/);
+ assert.match(dashboard,/active==="tables"\?<><SectionFloorLayouts/);
  assert.match(dashboard,/<ServiceWorkspace key=\{active/);
 });
 test("floor plan migration and validation bound layout size and entries",()=>{
