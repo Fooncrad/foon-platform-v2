@@ -1,9 +1,11 @@
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const {readFileSync}=require('node:fs');
-const {resolve}=require('node:path');
-const ts=require('typescript');
-const root=resolve(__dirname,'..');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import * as crypto from 'node:crypto';
+import ts from 'typescript';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const receiptPath='app/api/restaurant/receipts/route.ts';
 const locationPath='app/api/restaurant/location-settings/route.ts';
 const orderId='12345678-1234-1234-1234-123456789abc';
@@ -14,7 +16,7 @@ function compile(path,deps={}){
  const mod={exports:{}};
  new Function('require','module','exports',js)(name=>{
   if(Object.hasOwn(deps,name))return deps[name];
-  if(name==='node:crypto')return require(name);
+  if(name==='node:crypto')return crypto;
   throw Error('Unexpected dependency: '+name);
  },mod,mod.exports);
  return mod.exports;
@@ -26,7 +28,7 @@ function handlers(opts={}){
  const calls={getConnection:0,begin:0,commit:0,rollback:0,release:0,execute:0,unlock:0,membership:0,staffReceipt:0};
  const conn={
   beginTransaction:async()=>{calls.begin++;},commit:async()=>{calls.commit++;},rollback:async()=>{calls.rollback++;},release:()=>{calls.release++;},
-  execute:async(sql,args)=>{calls.execute++;
+  execute:async(sql)=>{calls.execute++;
    if(sql.includes('FROM restaurant_orders'))return [[{id:orderId,branch_id:'branch-1',customer_user_id:'customer-1',status:'completed',payment_status:'paid',checkout_snapshot:null}]];
    if(sql.includes('FROM tenants'))return [[{slug:'store-1',data:{receiptQrDestination:'receipt'}}]];
    return [[]];
