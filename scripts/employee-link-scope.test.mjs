@@ -13,7 +13,7 @@ function mockDB({role="waiter",assignedBranch=branch,memberActive=true,enabled=t
   queries++;
   for(const expected of [
    "a.tenant_id=m.tenant_id","a.user_id=m.user_id","a.branch_id=?",
-   "a.enabled=TRUE","a.role=m.role","u.status='active'",
+   "a.enabled=TRUE","a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci","u.status='active'",
    "m.tenant_id=?","m.user_id=?","m.role=?","m.status='active'",
    "NOT EXISTS","customer.role='customer'","customer.status='active'",
    "tenant_customers tc","tc.user_id=m.user_id","platform_admins pa","pa.user_id=m.user_id"
@@ -56,4 +56,14 @@ test("unknown ID or missing branch fails before SQL, supervisor maps to waiter o
  assert.equal(employeeMembershipRole("supervisor"),"waiter");
  assert.equal(employeeMembershipRole("driver"),"driver");
  assert.equal(employeeMembershipRole("customer"),null);
+});
+
+test("mixed MariaDB collations cannot fall back to implicit role equality",async()=>{
+ const db={async execute(sql,params){
+  assert.match(sql,/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/);
+  assert.doesNotMatch(sql,/a\.role\s*=\s*m\.role/);
+  assert.deepEqual(params,[branch,tenant,user,"waiter"]);
+  return [[{user_id:user}]];
+ }};
+ assert.equal(await resolveBoundEmployeeUser(db,tenant,branch,linked),user);
 });
