@@ -51,12 +51,40 @@ export async function GET(req:Request){const c=await scope(req,false);if(c.error
   console.error("[floor-plan-layouts] read failed",raw||"UNKNOWN",error instanceof Error?error.message:"");
   return NextResponse.json({ok:false,code},{status:503,headers:{"Cache-Control":"no-store"}});
  }}
+
+function canonicalTableNumber(value:string):string{
+ const raw=value.trim();
+ return /^\d+$/.test(raw)?String(BigInt(raw)):raw.toLocaleLowerCase("en");
+}
+async function duplicateSectionTableNumber(db:import("mysql2/promise").PoolConnection,tenant:string,branch:string,section:string,plan:{tables:{number:string}[]},excludeId?:string):Promise<string|null>{
+ // Writers lock the branch row before this query, serializing edits to every
+ // layout of the same branch (including concurrent POST and PUT requests).
+ const numbers=new Set(plan.tables.map(t=>canonicalTableNumber(t.number)));
+ if(numbers.size!==plan.tables.length){
+  const seen=new Set<string>();
+  for(const table of plan.tables){const normalized=canonicalTableNumber(table.number);if(seen.has(normalized))return table.number;seen.add(normalized)}
+ }
+ const [existing]=await db.execute<RowDataPacket[]>("SELECT id,layout_json FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? AND section_id=?"+(excludeId?" AND id<>?":"")+" FOR UPDATE",excludeId?[tenant,branch,section,excludeId]:[tenant,branch,section]);
+ for(const row of existing){
+  const other=decode(row.layout_json);
+  if(!other)throw Error("INVALID_SAVED_LAYOUT");
+  for(const t of other.tables)if(numbers.has(canonicalTableNumber(t.number)))return t.number;
+ }
+ return null;
+}
 export async function POST(req:Request){try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
  if(!input||typeof input!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const b=input as Record<string,unknown>;if(typeof b.sectionId!=="string"||!uuid.test(b.sectionId)||typeof b.name!=="string"||!b.name.trim()||b.name.length>120||!validFloorPlan(b.plan))return NextResponse.json({ok:false,code:"INVALID_LAYOUT"},{status:400});
  try{if(!await sectionExists(c.tenant!,c.branch!,b.sectionId))return NextResponse.json({ok:false,code:"SECTION_NOT_FOUND"},{status:404});
- const id=randomUUID();await database().execute("INSERT INTO restaurant_floor_plan_layouts(id,tenant_id,branch_id,section_id,name,layout_json) VALUES (?,?,?,?,?,?)",[id,c.tenant,c.branch,b.sectionId,b.name.trim(),JSON.stringify(b.plan)]);return NextResponse.json({ok:true,id},{status:201})
+ const db=await database().getConnection();try{
+  await db.beginTransaction();
+  await db.execute("SELECT id FROM branches WHERE id=? AND tenant_id=? FOR UPDATE",[c.branch,c.tenant]);
+  const collision=await duplicateSectionTableNumber(db,c.tenant!,c.branch!,b.sectionId,b.plan as {tables:{number:string}[]});
+  if(collision!==null){await db.rollback();return NextResponse.json({ok:false,code:"SECTION_TABLE_NUMBER_EXISTS",number:collision},{status:409})}
+  const id=randomUUID();await db.execute("INSERT INTO restaurant_floor_plan_layouts(id,tenant_id,branch_id,section_id,name,layout_json) VALUES (?,?,?,?,?,?)",[id,c.tenant,c.branch,b.sectionId,b.name.trim(),JSON.stringify(b.plan)]);
+  await db.commit();return NextResponse.json({ok:true,id},{status:201});
+ }catch(error){await db.rollback();throw error}finally{db.release()}
  }catch{return NextResponse.json({ok:false,code:"LAYOUT_SAVE_FAILED"},{status:503})}}
 export async function PUT(req:Request){try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
@@ -67,6 +95,9 @@ export async function PUT(req:Request){try{assertSameOrigin(req)}catch{return Ne
   const db=await database().getConnection();
   try{
    await db.beginTransaction();
+   await db.execute("SELECT id FROM branches WHERE id=? AND tenant_id=? FOR UPDATE",[c.branch,c.tenant]);
+   const collision=await duplicateSectionTableNumber(db,c.tenant!,c.branch!,b.sectionId,b.plan as {tables:{number:string}[]},b.id);
+   if(collision!==null){await db.rollback();return NextResponse.json({ok:false,code:"SECTION_TABLE_NUMBER_EXISTS",number:collision},{status:409})}
    // Serialize layout edits with table-link/status writes; old links must never
    // reserve a real table after its drawn table was removed or moved to a new section.
    const [existing]=await db.execute<RowDataPacket[]>("SELECT section_id FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=? FOR UPDATE",[b.id,c.tenant,c.branch]);
