@@ -7,7 +7,7 @@ const ids=["11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-22222
 const pair=generateKeyPairSync("ed25519"),privateKey=pair.privateKey.export({type:"pkcs8",format:"pem"}),publicKey=pair.publicKey.export({type:"spki",format:"pem"});
 const receipt={deviceId:ids[0],eventId:ids[1],tenantId:ids[2],branchId:ids[3],digest:"a".repeat(64),status:"recorded",nextVersion:1};
 const payload=signCommittedPushReceipt({receipt,privateKey}),expected={eventId:ids[1],tenantId:ids[2],branchId:ids[3],digest:receipt.digest};
-function dbFixture(existing=[],queued={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"pending",acknowledged_version:null}){const calls=[];return {calls,async beginTransaction(){calls.push("begin")},async commit(){calls.push("commit")},async rollback(){calls.push("rollback")},async execute(sql){calls.push(sql);if(sql.startsWith("SELECT tenant_id,branch_id"))return [queued?[queued]:[]];if(sql.startsWith("SELECT payload_digest"))return [existing];return [{affectedRows:1}]}}}
+function dbFixture(existing=[],queued={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"pending",acknowledged_version:null}){const calls=[];return {calls,async beginTransaction(){calls.push("begin")},async commit(){calls.push("commit")},async rollback(){calls.push("rollback")},async execute(sql){calls.push(sql);if(sql.startsWith("SELECT tenant_id,branch_id"))return [queued?[queued]:[]];if(sql.startsWith("SELECT payload_digest"))return [existing.map(row=>({tenant_id:ids[2],branch_id:ids[3],...row}))];return [{affectedRows:1}]}}}
 test("valid receipt is durably recorded before acknowledging",async()=>{
  const db=dbFixture();
  const r=await persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey});
@@ -140,4 +140,16 @@ test("a forged but well-formed stored signature cannot be laundered by a new sig
  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:replay,expected,deviceId:ids[0],publicKey}),/SYNC_ACK_CONFLICT/);
  assert.equal(db.calls.at(-1),"rollback");
  assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+});
+
+test("stored ACK ledger scope must match signed tenant and branch, even on replay",async()=>{
+ for(const forged of [{tenant_id:ids[1]},{branch_id:ids[1]},{tenant_id:null},{branch_id:[] }]){
+  const db=dbFixture([{payload_digest:receipt.digest,next_version:1,signature:payload.receipt.signature,...forged}],{tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:1});
+  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey}),/SYNC_ACK_CONFLICT/);
+  assert.equal(db.calls.at(-1),"rollback");
+  assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+ }
+ const db=dbFixture([{tenant_id:ids[2].toUpperCase(),branch_id:ids[3].toUpperCase(),payload_digest:receipt.digest,next_version:1,signature:payload.receipt.signature}],{tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:1});
+ assert.equal((await persistVerifiedPushAcknowledgment({db,payload,expected,deviceId:ids[0],publicKey})).status,"acknowledged");
+ assert.equal(db.calls.at(-1),"commit");
 });
