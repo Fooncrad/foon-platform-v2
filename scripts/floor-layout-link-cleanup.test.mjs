@@ -54,7 +54,8 @@ function setup(previousSection=id,failDelete=false,otherLayouts=[]){
   "@/lib/restaurant/branch-pin":{requireAllAdditionalBranchesUnlocked:async()=>{}},
   "@/lib/security/origin":{assertSameOrigin:()=>{}},
   "@/lib/security/limited-json":{readLimitedJson},
-  "@/lib/restaurant/floor-plan":{validFloorPlan:()=>true}
+  "@/lib/restaurant/floor-plan":{validFloorPlan:()=>true},
+  "@/lib/restaurant/operations":{saveResource:async()=>{throw Error("UNEXPECTED_TABLE_CREATION")}}
  };
  return {PUT:compile("app/api/restaurant/floor-plan-layouts/route.ts",deps).PUT,calls};
 }
