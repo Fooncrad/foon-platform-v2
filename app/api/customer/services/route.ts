@@ -81,9 +81,10 @@ export async function POST(request:Request){
    // Lock the real table row; concurrent cash-floor submissions serialize here.
    const [locked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status<>'inactive' FOR UPDATE",[tenant,selectedTableId]);
    if(!locked.length)throw new ResourceError("TABLE_NOT_AVAILABLE");
-   const [prior]=await db.execute<RowDataPacket[]>("SELECT id,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND (branch_id=? OR branch_id IS NULL) AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=? FOR UPDATE",[tenant,body.branchId,selectedTableId]);
+   const [prior]=await db.execute<RowDataPacket[]>("SELECT id,data,lookup_key FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND (branch_id=? OR branch_id IS NULL) AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=? FOR UPDATE",[tenant,body.branchId,selectedTableId]);
    const start=Date.parse(body.scheduledAt),duration=90;
    for(const old of prior){
+    if(String(old.lookup_key||"")===user+":"+body.requestKey)continue; // handled by fingerprint-based replay below
     let previous:Record<string,unknown>;try{previous=typeof old.data==="string"?JSON.parse(old.data):old.data}catch{throw new ResourceError("RESERVATION_DATA_INVALID")}
     const from=Date.parse(String(previous.scheduledAt??"")),minutes=Number(previous.durationMinutes??90);
     if(!Number.isFinite(from)||!Number.isFinite(minutes))throw new ResourceError("RESERVATION_DATA_INVALID");
