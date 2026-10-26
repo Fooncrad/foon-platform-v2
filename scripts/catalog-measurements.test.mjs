@@ -13,3 +13,13 @@ test('measured quantity precision is bounded and explicitly enabled',()=>{
  assert.equal(catalogQuantityPolicy('{invalid').measured,false);
  assert.throws(()=>parseCatalogMeasurements({unit:'piece',quantityMode:'measured',weightKg:null,lengthCm:null,widthCm:null,heightCm:null}));
 });
+
+test('quantityMode rejects coercible JSON arrays and non-string values before persistence',()=>{
+ const base={unit:'kg',weightKg:1,lengthCm:null,widthCm:null,heightCm:null};
+ for(const quantityMode of [['measured'],['whole'],new String('measured'),{toString:()=> 'whole'},null,true,1]){
+  assert.throws(()=>parseCatalogMeasurements({...base,quantityMode}),undefined,String(quantityMode));
+ }
+ assert.equal(parseCatalogMeasurements({...base,quantityMode:'measured'}).quantityMode,'measured');
+ assert.equal(parseCatalogMeasurements({...base,quantityMode:'whole'}).quantityMode,'whole');
+ assert.equal(catalogQuantityPolicy({measurements:parseCatalogMeasurements({...base,quantityMode:'measured'})}).measured,true);
+});
