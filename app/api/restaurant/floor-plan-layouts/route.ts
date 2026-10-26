@@ -128,6 +128,8 @@ export async function PATCH(req:Request){
   const db=await database().getConnection();
   try{
    await db.beginTransaction();
+   // Match PUT lock order: branch before layout to avoid deadlocks.
+   if(b.action==="createAndLink")await db.execute("SELECT id FROM branches WHERE tenant_id=? AND id=? FOR UPDATE",[c.tenant,c.branch]);
    const [layouts]=await db.execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=? FOR UPDATE",[b.id,c.tenant,c.branch]);
    if(!layouts.length){await db.rollback();return NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})}
    if(b.action==="createAndLink"&&typeof b.tableId==="string"&&/^[a-z0-9-]{1,60}$/i.test(b.tableId)){
@@ -136,12 +138,10 @@ export async function PATCH(req:Request){
     const [sections]=await db.execute<RowDataPacket[]>("SELECT p.section_id FROM restaurant_floor_plan_layouts p JOIN restaurant_resources s ON s.tenant_id=p.tenant_id AND s.id=p.section_id AND s.kind='dining_section' AND s.status='active' AND s.archived=FALSE AND (s.branch_id=p.branch_id OR s.branch_id IS NULL) WHERE p.id=? AND p.tenant_id=? AND p.branch_id=? LIMIT 1",[b.id,c.tenant,c.branch]);
     if(!drawn||!sections.length){await db.rollback();return NextResponse.json({ok:false,code:"SECTION_OR_TABLE_NOT_FOUND"},{status:404})}
     const number=Number(drawn.number);
-    if(!/^\\d+$/.test(drawn.number)||!Number.isSafeInteger(number)||number<1||number>100000){await db.rollback();return NextResponse.json({ok:false,code:"REGISTERED_TABLE_NUMBER_INVALID"},{status:400})}
+    if(!/^\d+$/.test(drawn.number)||!Number.isSafeInteger(number)||number<1||number>100000){await db.rollback();return NextResponse.json({ok:false,code:"REGISTERED_TABLE_NUMBER_INVALID"},{status:400})}
     // One-to-one mapping is authoritative. Never create another real table on replay.
     const [previousLink]=await db.execute<RowDataPacket[]>("SELECT dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND layout_id=? AND floor_table_id=? FOR UPDATE",[c.tenant,c.branch,b.id,b.tableId]);
     if(previousLink.length){await db.commit();return NextResponse.json({ok:true,diningTableId:String(previousLink[0].dining_table_id),alreadyLinked:true})}
-    // Serialize table creation across all floor plans in this branch.
-    await db.execute("SELECT id FROM branches WHERE tenant_id=? AND id=? FOR UPDATE",[c.tenant,c.branch]);
     // Reject duplicates in the same branch+section, including old tables.
     const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.sectionId'))=? AND CAST(JSON_UNQUOTE(JSON_EXTRACT(data,'$.number')) AS UNSIGNED)=? LIMIT 1 FOR UPDATE",[c.tenant,c.branch,String(sections[0].section_id),number]);
     if(existing.length){await db.rollback();return NextResponse.json({ok:false,code:"REGISTERED_TABLE_NUMBER_EXISTS",diningTableId:String(existing[0].id)},{status:409})}

@@ -4,7 +4,7 @@ import {readFileSync} from "node:fs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
 test("public seat map uses active plans and real linked tables only",()=>{
  const api=read("app/api/customer/floor-map/route.ts");
- for(const token of ["p.is_active=TRUE","restaurant_floor_table_links","t.kind='dining_table'","if(!link)return []","availabilityVerified:false","bookingFee"])assert.ok(api.includes(token),token);
+ for(const token of ["p.is_active=TRUE","restaurant_floor_table_links","t.kind='dining_table'",'const real=link?String(link.real_status):"unlinked"',"availabilityVerified:false","bookingFee"])assert.ok(api.includes(token),token);
 });
 test("cash booking locks a real table, rejects overlap and never marks paid",()=>{
  const api=read("app/api/customer/services/route.ts");
