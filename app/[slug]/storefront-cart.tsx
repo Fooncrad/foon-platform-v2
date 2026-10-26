@@ -129,7 +129,13 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
    try{
     const r=await fetch("/api/customer/cart?store="+encodeURIComponent(slug)+"&product="+encodeURIComponent(detail.id),{cache:"no-store"}),body=await r.json();
     if(!r.ok||!body.ok)throw Error(body.code??"CART_UNAVAILABLE");
-    if(active){setPending({item:body.item,groups:body.groups});setSelected(validPreselectedOptions(detail.options,body.groups,body.item.variants??[]));panel.current?.scrollIntoView({block:"nearest"});}
+    if(active){
+      setPending({item:body.item,groups:body.groups});
+      setSelected(validPreselectedOptions(detail.options,body.groups,body.item.variants??[]));
+      // Reveal an entirely off-screen cart once, without moving an already visible menu.
+      const rect=panel.current?.getBoundingClientRect();
+      if(rect&&(rect.top>=window.innerHeight||rect.bottom<=0))panel.current?.scrollIntoView({block:"nearest",behavior:"auto"});
+     }
    }catch(e){if(active)setMessage(error(e instanceof Error?e.message:""));}finally{if(active)setWorking(false);}
   };
   window.addEventListener("foon:storefront-cart-add",handler);return()=>{active=false;window.removeEventListener("foon:storefront-cart-add",handler);};

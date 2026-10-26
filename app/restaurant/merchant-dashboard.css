@@ -156,3 +156,91 @@
 .restaurantSidebar nav .restaurantNavGroupItems>button span,.restaurantDrawer nav .restaurantNavGroupItems>button span{min-width:0;overflow-wrap:anywhere}
 .restaurantNavContext{margin:4px 22px 12px;color:#e0e6ef;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
 @media (prefers-reduced-motion:reduce){.restaurantNavChevron{transition:none}}
+
+
+/*
+ * Merchant header: prevent translated breadcrumb titles from collapsing into
+ * one-character-wide vertical columns when the language, theme, tenant,
+ * branch and utility controls compete for a single row.
+ *
+ * This is presentation-only: do not hide controls or change staff access.
+ */
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopbar{
+ flex-wrap:wrap;
+ align-content:center;
+ min-width:0;
+}
+.restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb{
+ flex:0 0 auto;
+ min-width:0;
+ max-width:100%;
+}
+.restaurantApp .restaurantBreadcrumb small{
+ display:block;
+ max-width:100%;
+ overflow:hidden;
+ white-space:nowrap;
+ overflow-wrap:normal;
+ word-break:normal;
+ writing-mode:horizontal-tb;
+ text-orientation:mixed;
+ text-overflow:ellipsis;
+}
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{
+ display:flex;
+ flex:1 1 auto;
+ min-width:0;
+ max-width:100%;
+ flex-wrap:wrap;
+ justify-content:flex-end;
+ align-items:center;
+ row-gap:8px;
+}
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopActions>*{max-width:100%}
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantTenantSelector{
+ min-width:110px;
+ max-width:170px;
+}
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantTenantSelector select{
+ width:100%;
+ min-width:0;
+ max-width:100%;
+}
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantBranchSelector{
+ flex:0 1 230px;
+ min-width:140px;
+ max-width:min(240px,100%);
+}
+.restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantBranchSelector select{
+ min-width:0;
+ width:100%;
+ max-width:100%;
+}
+/* Give the long action group its own row on ordinary desktop widths. */
+@media (min-width:1024px) and (max-width:1200px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{
+  flex:1 1 100%;
+  width:100%;
+ }
+}
+@media (max-width:1023px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantBreadcrumb{
+  flex:1 1 0%;
+  min-width:0;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions{
+  flex:1 1 100%;
+  width:100%;
+  justify-content:flex-start;
+ }
+}
+@media (max-width:680px){
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantTenantSelector{
+  flex:1 1 140px;
+  max-width:100%;
+ }
+ .restaurantApp:not(.restaurantPosFocus) .restaurantTopActions .restaurantBranchSelector{
+  flex:1 1 150px;
+  max-width:100%;
+ }
+}

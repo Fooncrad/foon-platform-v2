@@ -717,3 +717,51 @@
 .foonActivityProductDialog .foonActivityVariantChoiceForm [role=alert]{font-weight:600;overflow-wrap:anywhere;}
 .foonActivityProductDialog .foonActivityDialogPurchase .foonCartAdd:disabled{opacity:.45;cursor:not-allowed;}
 @media(max-width:360px){.foonActivityProductDialog .foonActivityVariantChoiceForm fieldset{padding:8px}.foonActivityProductDialog .foonActivityVariantChoiceForm label{flex-wrap:wrap;gap:6px}.foonActivityProductDialog .foonActivityVariantChoiceForm label small{margin-inline-start:0}}
+
+
+/* Keep the visual viewport steady throughout ordering, reservations and authentication.
+   Only the horizontal category/gallery rails may scroll sideways. */
+html:has(.publicMenu),
+html:has(.foonActivityStorefront) {
+  scrollbar-gutter: stable;
+}
+.publicMenu,
+.foonActivityStorefront {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+.publicMenu :is(.publicMenuLayout, .publicMenuItems, .publicMenuCart, .publicMenuProductScroll),
+.foonActivityStorefront :is(.foonActivityCatalog, .foonActivityCatalogProducts, .foonActivityProducts, .foonActivityCartRail, .foonStorefrontCart) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.publicMenu .publicMenuCart,
+.foonActivityStorefront .foonStorefrontCart {
+  overflow-anchor: none;
+}
+@media (max-width: 950px) {
+  /* iOS Safari zooms the page when a focused form control computes below 16px.
+     This overrides the smaller inherited fonts inside booking/login forms. */
+  .publicMenu :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea),
+  .foonActivityStorefront :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+    font-size: 16px !important;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .publicMenu :is(.publicMenuServiceDialog, .publicMenuCategoryDialog, .publicMenuProductDialog, .publicMenuEmptyCartDialog, .publicMenuQrDialog),
+  .foonActivityStorefront .foonActivityProductDialog {
+    box-sizing: border-box;
+    max-inline-size: calc(100dvw - 24px);
+    max-block-size: calc(100dvh - 24px);
+    overscroll-behavior: contain;
+  }
+  /* The fixed bottom dock must not cover fields while the keyboard is open. */
+  .publicMenu:has(.publicMenuCart :is(input, textarea, select):focus) .publicMenuMobileDock,
+  .foonActivityStorefront:has(.foonStorefrontCart :is(input, textarea, select):focus) .foonActivityMobileDock,
+  .foonActivityStorefront:has(.foonStorefrontCart .foonCartOptions) .foonActivityMobileDock {
+    /* Keep the fixed dock hidden while choosing options, including when focus
+       moves from a radio input to Confirm; otherwise it can swallow pointer-up. */
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
