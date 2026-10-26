@@ -34,3 +34,18 @@ test("returns empty text for a missing body",async()=>{
 test("rejects an invalid size cap",async()=>{
  await assert.rejects(()=>readBoundedSyncRequestText(request(["{}"]),0),/SYNC_INVALID_BODY/);
 });
+
+// An attacker-controlled stream can leave its cancellation hook unresolved.
+// The original payload-size error must be returned without awaiting that hook.
+test("oversized stream does not hang on stalled cancellation",async()=>{
+ const body=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(16));},cancel(){return new Promise(()=>{});}});
+ const result=await Promise.race([
+  readBoundedSyncRequestText({headers:{get:()=>null},body},15).then(()=>"resolved",error=>error.message),
+  new Promise(resolve=>setTimeout(()=>resolve("STALLED"),250))
+ ]);
+ assert.equal(result,"SYNC_PAYLOAD_TOO_LARGE");
+});
+test("cancellation cleanup rejection does not mask original size error",async()=>{
+ const body=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(16));},cancel(){return Promise.reject(Error("CANCEL_FAILED"));}});
+ await assert.rejects(()=>readBoundedSyncRequestText({headers:{get:()=>null},body},15),/SYNC_PAYLOAD_TOO_LARGE/);
+});
