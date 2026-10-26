@@ -3,6 +3,7 @@ import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {canRoleTransitionOrder} from "./order-role-channel-policy";
+import {orderStatusTransitionAllowed} from "./order-status-transition.mjs";
 import {assignedWaiterTableIds} from "./waiter-assignments";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
@@ -584,14 +585,17 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  }
  let status=String(order.status),payment=String(order.payment_status);
  if(body.status!==undefined){
-  const next=String(body.status),transitions:Record<string,string[]>={new:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["completed","cancelled"],completed:[],cancelled:[]};
-  if(!transitions[status].includes(next))throw new ResourceError("INVALID_TRANSITION");
+  // Do not coerce arrays or accept unexpected stored lifecycle states.
+  if(typeof body.status!=="string")throw new ResourceError("INVALID_TRANSITION");
+  const next=body.status;
+  if(!orderStatusTransitionAllowed(status,next))throw new ResourceError("INVALID_TRANSITION");
   if(!canRoleTransitionOrder(role,String(order.channel),status,next))throw new ResourceError("FORBIDDEN");
   if(next==="cancelled"&&payment==="paid")throw new ResourceError("REFUND_REQUIRED");status=next;
  }
  if(body.paymentStatus!==undefined){
   if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
-  const next=String(body.paymentStatus);
+  if(typeof body.paymentStatus!=="string")throw new ResourceError("INVALID_PAYMENT_TRANSITION");
+  const next=body.paymentStatus;
   if(!(payment==="unpaid"&&next==="paid"&&status!=="cancelled"||payment==="paid"&&next==="refunded"))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
  }
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
