@@ -140,6 +140,8 @@ export async function PATCH(req:Request){
     // One-to-one mapping is authoritative. Never create another real table on replay.
     const [previousLink]=await db.execute<RowDataPacket[]>("SELECT dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND layout_id=? AND floor_table_id=? FOR UPDATE",[c.tenant,c.branch,b.id,b.tableId]);
     if(previousLink.length){await db.commit();return NextResponse.json({ok:true,diningTableId:String(previousLink[0].dining_table_id),alreadyLinked:true})}
+    // Serialize table creation across all floor plans in this branch.
+    await db.execute("SELECT id FROM branches WHERE tenant_id=? AND id=? FOR UPDATE",[c.tenant,c.branch]);
     // Reject duplicates in the same branch+section, including old tables.
     const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.sectionId'))=? AND CAST(JSON_UNQUOTE(JSON_EXTRACT(data,'$.number')) AS UNSIGNED)=? LIMIT 1 FOR UPDATE",[c.tenant,c.branch,String(sections[0].section_id),number]);
     if(existing.length){await db.rollback();return NextResponse.json({ok:false,code:"REGISTERED_TABLE_NUMBER_EXISTS",diningTableId:String(existing[0].id)},{status:409})}
