@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {activeDeliveryDriverIds,assignedActiveDeliveryDriver} from '../lib/restaurant/delivery-driver-scope.ts';
+import {activeDeliveryDriverIds,assignedActiveDeliveryDriver,activeDeliveryDriverEmployeeId} from '../lib/restaurant/delivery-driver-scope.ts';
 
 const tenant='tenant-a', branch='branch-a', user='driver-user', employee='employee-a';
 const mock=(rows)=>{
@@ -59,4 +59,25 @@ test('rejects missing actor or assigned driver before querying the database',asy
 test('rejects ambiguous duplicate matches rather than authorizing completion',async()=>{
  const {db}=mock([{id:employee},{id:employee}]);
  assert.equal(await assignedActiveDeliveryDriver(db,tenant,branch,user,employee),false);
+});
+
+test('driver order reads require one active matching employee in the scoped branch',async()=>{
+ const {db,calls}=mock([{id:employee}]);
+ assert.equal(await activeDeliveryDriverEmployeeId(db,tenant,branch,user),employee);
+ assert.deepEqual(calls[0].params,[branch,tenant,branch,user]);
+ assert.match(calls[0].sql,/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/);
+ assert.match(calls[0].sql,/JOIN users u ON u\.id=m\.user_id AND u\.status='active'/);
+ assert.match(calls[0].sql,/JSON_UNQUOTE\(JSON_EXTRACT\(e\.data,'\$\.userId'\)\)=\? LIMIT 2$/);
+});
+
+test('driver order reads reject no match or ambiguous duplicate matches',async()=>{
+ const none=mock([]),duplicate=mock([{id:employee},{id:employee}]);
+ assert.equal(await activeDeliveryDriverEmployeeId(none.db,tenant,branch,user),null);
+ assert.equal(await activeDeliveryDriverEmployeeId(duplicate.db,tenant,branch,user),null);
+});
+
+test('driver order reads reject missing user before any query',async()=>{
+ const {db,calls}=mock([{id:employee}]);
+ assert.equal(await activeDeliveryDriverEmployeeId(db,tenant,branch,''),null);
+ assert.equal(calls.length,0);
 });
