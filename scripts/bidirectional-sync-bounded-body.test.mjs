@@ -49,3 +49,17 @@ test("cancellation cleanup rejection does not mask original size error",async()=
  const body=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(16));},cancel(){return Promise.reject(Error("CANCEL_FAILED"));}});
  await assert.rejects(()=>readBoundedSyncRequestText({headers:{get:()=>null},body},15),/SYNC_PAYLOAD_TOO_LARGE/);
 });
+// Regression: a request may stall before its first chunk, or after a partial chunk.
+test("rejects a stalled stream before its first byte",async()=>{
+ const body=new ReadableStream({start(){},cancel(){return new Promise(()=>{});}});
+ await assert.rejects(()=>readBoundedSyncRequestText({headers:{get:()=>null},body},15,15),/SYNC_BODY_TIMEOUT/);
+});
+test("rejects a stalled stream after receiving partial data",async()=>{
+ const body=new ReadableStream({start(controller){controller.enqueue(enc.encode('{'));},cancel(){return new Promise(()=>{});}});
+ await assert.rejects(()=>readBoundedSyncRequestText({headers:{get:()=>null},body},15,15),/SYNC_BODY_TIMEOUT/);
+});
+test("rejects invalid body deadlines",async()=>{
+ for(const duration of [0,-1,1.5,Number.POSITIVE_INFINITY]){
+  await assert.rejects(()=>readBoundedSyncRequestText(request(['{}']),15,duration),/SYNC_INVALID_BODY/);
+ }
+});
