@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {database} from "@/lib/db/mysql";
 import {CheckoutError} from "@/lib/payments/customer-checkout";
@@ -18,9 +19,10 @@ export async function POST(request:Request){
  if(!tenantId)return reply({ok:false,code:"TENANT_CONTEXT_REQUIRED"},400);
  try{await requireTenantMembership(user,tenantId,["owner","manager"],true);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
  if(!(await tenantEntitlement(tenantId,"customer_invoices")).enabled)return reply({ok:false,code:"PLAN_FEATURE_REQUIRED"},403);
- const raw=await request.text();if(raw.length>1024)return reply({ok:false,code:"INVALID_INPUT"},400);
- let body:Record<string,unknown>;
- try{body=JSON.parse(raw);}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
+ let parsed:unknown;
+ try{parsed=await readLimitedJson(request,1024);}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return reply({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},tooLarge?413:400);}
+ if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))return reply({ok:false,code:"INVALID_INPUT"},400);
+ const body=parsed as Record<string,unknown>;
  if(!body||typeof body!=="object"||Array.isArray(body)||Object.keys(body).some(k=>!["invoiceId","customerEmail","consentConfirmed"].includes(k))||typeof body.invoiceId!=="string"||!/^[a-f0-9]{8}-[a-f0-9-]{27}$/i.test(body.invoiceId)||typeof body.customerEmail!=="string"||body.consentConfirmed!==true)return reply({ok:false,code:"INVALID_INPUT"},400);
  try{
   const [invoices]=await database().execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='customer_invoice' AND archived=FALSE LIMIT 1",[tenantId,body.invoiceId]);
