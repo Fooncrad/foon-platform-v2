@@ -25,7 +25,13 @@ function setup(options={}){
  const calls={connections:0,created:0,paid:0,commits:0,rollbacks:0,unlocks:0,body:null};
  const conn={
   query:async()=>[[]],
-  execute:async()=>[[]],
+  execute:async(sql,values)=>{
+   if(sql.includes('FROM employee_branch_assignments')){
+    const assigned=!options.transactionBranchRevoked&&values?.[0]===tenant&&values?.[1]===user&&values?.[2]===branch;
+    return [assigned?[{id:1}]:[]];
+   }
+   return [[]];
+  },
   beginTransaction:async()=>{},
   commit:async()=>{calls.commits++;},
   rollback:async()=>{calls.rollbacks++;},
@@ -131,6 +137,11 @@ test('cashier with pos.create and pos.edit can create paid order on assigned bra
  const h=setup({role:'cashier',grants:[{permission_key:'pos.create',allowed:1,branch_id:branch},{permission_key:'pos.edit',allowed:1,branch_id:branch}]});
  const response=await h.post(request(JSON.stringify({...JSON.parse(normal),paymentStatus:'paid'})),params);
  assert.equal(response.status,201);assert.equal(h.calls.created,1);assert.equal(h.calls.body.branchId,branch);
+});
+test('cashier loses access if assigned branch is revoked inside the transaction',async()=>{
+ const h=setup({role:'cashier',transactionBranchRevoked:true,grants:[{permission_key:'pos.create',allowed:1,branch_id:branch},{permission_key:'pos.edit',allowed:1,branch_id:branch}]});
+ const response=await h.post(request(JSON.stringify({...JSON.parse(normal),paymentStatus:'paid'})),params);
+ assert.equal(response.status,403);assert.equal(h.calls.created,0);assert.equal(h.calls.rollbacks,1);
 });
 test('cashier cannot create an order in a different branch',async()=>{
  const h=setup({role:'cashier'}),body=JSON.stringify({...JSON.parse(normal),branchId:'branch-other'});
