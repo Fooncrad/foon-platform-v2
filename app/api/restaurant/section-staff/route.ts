@@ -35,7 +35,7 @@ export async function PUT(req:Request){
  if(!data||typeof data!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const v=data as {sectionId?:unknown;assignments?:unknown};
  if(typeof v.sectionId!=="string"||!idPattern.test(v.sectionId)||!Array.isArray(v.assignments)||v.assignments.length>100)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
- const entries=v.assignments as {userId?:unknown;duty?:unknown}[];
+ const entries=v.assignments as {userId:string;duty:"waiter"|"host"}[];
  if(entries.some(x=>!x||typeof x.userId!=="string"||!idPattern.test(x.userId)||!["waiter","host"].includes(String(x.duty))))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const unique=new Set(entries.map(x=>x.userId+":"+x.duty));if(unique.size!==entries.length)return NextResponse.json({ok:false,code:"DUPLICATE_ASSIGNMENT"},{status:400});
  const db=await database().getConnection();try{
