@@ -36,7 +36,9 @@ test('both role and branch changes revoke grants',()=>{
 });
 test('operation route binds grant revocation to tenant and user before assignment update',()=>{
  const src=readFileSync(new URL('../lib/restaurant/operations.ts',import.meta.url),'utf8');
- const segment=src.split('if(module==="team"){')[1]?.split('if(module==="purchases"){')[0];
+ const start=src.lastIndexOf('if(module==="team"){');
+ const end=src.indexOf('if(module==="purchases"){',start);
+ const segment=start>=0&&end>start?src.slice(start,end):null;
  assert.ok(segment,'team mutation must exist');
  assert.match(segment,/employeeGrantsNeedRevocation\(/);
  assert.match(segment,/membershipRole:members\[0\]\.role/);
