@@ -65,3 +65,40 @@ body { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
   :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront)
    :is(.foonPublicHeader,.foonActivityHeader,.publicMenuHeader) { min-inline-size:0; max-inline-size:100%; }
 }
+
+
+/* Second pass: contain mobile shell width without suppressing useful internal rails. */
+@media (max-width:767px) {
+  :where(.auth-shell,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.foonStorefrontCart,.customerDashboard,.restaurantApp,.adminShell) {
+    inline-size:100%;
+    max-inline-size:100%;
+  }
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(.workspace,.restaurantStage,.restaurantContent,.adminStage,.foonActivityContent,.foonPublicMain) {
+    min-inline-size:0;
+    max-inline-size:100%;
+  }
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(img,video,canvas) { block-size:auto; }
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(table,[role="grid"]) { font-variant-numeric:tabular-nums; }
+  /* Long identifiers and translated copy must wrap, but controls remain tappable. */
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(h1,h2,h3,p,legend) { overflow-wrap:break-word; }
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { min-inline-size:0; }
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(.restaurantTableScroll,.restaurantTableWrap,.adminOpsTableWrap,.foonActivityCategories,.publicMenuCategories) {
+    max-inline-size:100%;
+    overscroll-behavior-inline:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+@media(max-width:480px) {
+  :where(.auth-shell,.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { font-size:max(16px,1em); }
+}
+@media(prefers-reduced-motion:reduce) {
+  :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
+   :is(.foonMarketCard,.foonActivityProduct,.publicMenuItem) { transition-duration:0.01ms; }
+}
