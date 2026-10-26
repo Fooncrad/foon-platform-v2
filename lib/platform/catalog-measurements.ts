@@ -6,7 +6,7 @@ export function parseCatalogMeasurements(value:unknown):CatalogMeasurements{
  if(!sellingUnits.includes(v.unit as CatalogMeasurements["unit"]))throw Error("INVALID_UNIT");
  const result={unit:v.unit} as CatalogMeasurements;
  for(const key of ["weightKg","lengthCm","widthCm","heightCm"] as const){const n=v[key];if(n!==null&&(typeof n!=="number"||!Number.isFinite(n)||n<0||n>999999))throw Error("INVALID_MEASUREMENTS");result[key]=n as number|null}
- if(v.quantityMode!==undefined){if(!["whole","measured"].includes(String(v.quantityMode))||v.quantityMode==="measured"&&!["kg","g","l","ml","m","cm","m2","m3"].includes(String(v.unit)))throw Error("INVALID_QUANTITY_MODE");result.quantityMode=v.quantityMode as "whole"|"measured"}
+ if(v.quantityMode!==undefined){if(typeof v.quantityMode!=="string"||!["whole","measured"].includes(v.quantityMode)||v.quantityMode==="measured"&&!["kg","g","l","ml","m","cm","m2","m3"].includes(String(v.unit)))throw Error("INVALID_QUANTITY_MODE");result.quantityMode=v.quantityMode as "whole"|"measured"}
  return result;
 }
 
