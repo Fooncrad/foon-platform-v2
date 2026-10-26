@@ -3,7 +3,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
-import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
+import {requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
 const idPattern=/^[a-f0-9-]{36}$/i;
@@ -18,7 +18,8 @@ async function context(req:Request,write=false){
    const [assigned]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND branch_id=? AND user_id=? AND enabled=TRUE LIMIT 1",[m.tenantId,branch,uid]);
    if(!assigned.length)return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})};
   }
-  if(write)await requireAllAdditionalBranchesUnlocked(m.tenantId,uid);
+  // PIN checks apply to reads and writes for the selected branch, not unrelated branches.
+  await requireAdditionalBranchUnlock(m.tenantId,branch,uid);
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND id=? AND enabled=TRUE LIMIT 1",[m.tenantId,branch]);
   if(!rows.length)return {error:NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404})};
   return {tenant:m.tenantId,branch,uid,manager:m.role==="owner"||m.role==="manager"};
