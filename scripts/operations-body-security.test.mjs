@@ -117,7 +117,7 @@ test('valid POS order retains tenant scope and commits',async()=>{
  assert.equal(h.calls.body.branchId,branch);
 });
 test('valid near-limit UTF-8 payload is accepted by bounded parser',async()=>{
- const h=setup(),body=JSON.stringify({...JSON.parse(normal),notes:'م'.repeat(280000)});
+ const h=setup(),body=JSON.stringify({...JSON.parse(normal),notes:'م'.repeat(500000)});
  assert.ok(new TextEncoder().encode(body).length<1048576);
  const response=await h.post(request(body),params);
  assert.equal(response.status,201);assert.equal(h.calls.created,1);
