@@ -1,8 +1,21 @@
 import {test,expect} from "@playwright/test";
+import {spawn} from "node:child_process";
 
 // Read-only browser regression suite; run after a local production build.
 // Example: FOON_MOBILE_BASE_URL=http://127.0.0.1:3000 npm run test:mobile-layout
-const origin=(process.env.FOON_MOBILE_BASE_URL||"http://127.0.0.1:3000").replace(/\/$/,"");
+const managedServer=!process.env.FOON_MOBILE_BASE_URL;
+const origin=(process.env.FOON_MOBILE_BASE_URL||"http://127.0.0.1:3103").replace(/\/$/,"");
+let server;
+test.beforeAll(async()=>{
+ if(!managedServer)return;
+ server=spawn(process.execPath,["node_modules/next/dist/bin/next","start","-H","127.0.0.1","-p","3103"],{env:{...process.env,APP_URL:origin},stdio:"ignore"});
+ for(let i=0;i<60;i++){
+  try{const response=await fetch(origin+"/login");if(response.status<500)return;}catch{}
+  await new Promise(resolve=>setTimeout(resolve,500));
+ }
+ throw Error("Mobile layout test server did not start on port 3103");
+});
+test.afterAll(()=>server?.kill());
 const routes=["/","/login","/register","/market"];
 if(process.env.FOON_MOBILE_STORE_SLUG)routes.push("/menu/"+encodeURIComponent(process.env.FOON_MOBILE_STORE_SLUG));
 const widths=[320,375,390,430,768];
