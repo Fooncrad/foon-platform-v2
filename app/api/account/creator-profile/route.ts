@@ -6,6 +6,7 @@ import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {customerCreatorUserId} from "@/lib/creator/authorization";
 import {parseCreatorDraft,parsePortfolioDraft,CREATOR_PORTFOLIO_LIMIT} from "@/lib/creator/profile-policy";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readCreatorMutationJson} from "@/lib/creator/request-body";
 import {database} from "@/lib/db/mysql";
 
 export const runtime="nodejs";
@@ -36,7 +37,9 @@ export async function GET(){
 export async function PUT(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
  const access=await scope();if(access.error)return access.error;
- const input=parseCreatorDraft(await request.json().catch(()=>null));
+ const parsed=await readCreatorMutationJson(request,8192);
+ if(parsed.error)return fail(parsed.error.code,parsed.error.status);
+ const input=parseCreatorDraft(parsed.body);
  if(!input)return fail("INVALID_INPUT",400);
  const db=await database().getConnection();
  try{
@@ -66,7 +69,9 @@ export async function PUT(request:Request){
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
  const access=await scope();if(access.error)return access.error;
- const input=parsePortfolioDraft(await request.json().catch(()=>null));
+ const parsed=await readCreatorMutationJson(request,2048);
+ if(parsed.error)return fail(parsed.error.code,parsed.error.status);
+ const input=parsePortfolioDraft(parsed.body);
  if(!input)return fail("INVALID_INPUT",400);
  const db=await database().getConnection();
  try{
@@ -94,7 +99,9 @@ export async function POST(request:Request){
 export async function DELETE(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
  const access=await scope();if(access.error)return access.error;
- const body=await request.json().catch(()=>null);
+ const parsed=await readCreatorMutationJson(request,512);
+ if(parsed.error)return fail(parsed.error.code,parsed.error.status);
+ const body=parsed.body as {id?:unknown}|null;
  const id=typeof body?.id==="string"?body.id:"";
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return fail("INVALID_INPUT",400);
  try{
