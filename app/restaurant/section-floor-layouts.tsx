@@ -45,7 +45,7 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
  const statusLabel:Record<string,number>={available:31,occupied:32,reserved:33,cleaning:34,out_of_service:35};
  function tableEdit(patch:Record<string,number|string>){setPlan(p=>({...p,tables:p.tables.map(t=>t.id===selected?{...t,...patch}:t)}))}
  function localDuplicate():string|null{
- const normalize=(v:string)=>/^\\d+$/.test(v.trim())?String(BigInt(v.trim())):v.trim().toLowerCase();
+ const normalize=(v:string)=>/^\d+$/.test(v.trim())?String(BigInt(v.trim())):v.trim().toLowerCase();
  const currentNumbers=new Set(plan.tables.map(t=>normalize(t.number)));
  for(const layout of layouts)if(layout.sectionId===sectionId&&layout.id!==current)
   for(const t of layout.plan.tables)if(currentNumbers.has(normalize(t.number)))return t.number;

@@ -54,7 +54,7 @@ export async function GET(req:Request){const c=await scope(req,false);if(c.error
 
 function canonicalTableNumber(value:string):string{
  const raw=value.trim();
- return /^\\d+$/.test(raw)?String(BigInt(raw)):raw.toLocaleLowerCase("en");
+ return /^\d+$/.test(raw)?String(BigInt(raw)):raw.toLocaleLowerCase("en");
 }
 async function duplicateSectionTableNumber(db:import("mysql2/promise").PoolConnection,tenant:string,branch:string,section:string,plan:{tables:{number:string}[]},excludeId?:string):Promise<string|null>{
  // Writers lock the branch row before this query, serializing edits to every
