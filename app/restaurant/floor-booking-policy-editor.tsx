@@ -16,21 +16,26 @@ export default function FloorBookingPolicyEditor({tenantId, branch, language, cu
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setLoaded(false);
-    setMessage("");
-    setPolicy(defaultFloorBookingPolicy);
-    fetch(url, {headers: {"x-foon-tenant": tenantId}, cache: "no-store"})
-      .then(async response => {
-        if (!response.ok) throw new Error("LOAD_FAILED");
-        const data: {settings?: FloorBookingPolicy} = await response.json();
-        if (!data.settings) throw new Error("INVALID_RESPONSE");
-        if (active) {setPolicy(data.settings); setLoaded(true);}
-      })
-      .catch(() => {
-        if (active) setMessage(tr("تعذر تحميل سياسة الحجز؛ لن تُحفظ إعدادات غير محمّلة.", "Could not load the booking policy; saving is disabled.", "Impossible de charger la politique de réservation ; l'enregistrement est désactivé."));
-      })
-      .finally(() => {if (active) setLoading(false);});
+    // Reset asynchronously so React does not synchronously cascade renders
+    // from the effect. Ignore stale responses after a branch change.
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      setLoading(true);
+      setLoaded(false);
+      setMessage("");
+      setPolicy(defaultFloorBookingPolicy);
+      return fetch(url, {headers: {"x-foon-tenant": tenantId}, cache: "no-store"})
+        .then(async response => {
+          if (!response.ok) throw new Error("LOAD_FAILED");
+          const data: {settings?: FloorBookingPolicy} = await response.json();
+          if (!data.settings) throw new Error("INVALID_RESPONSE");
+          if (active) {setPolicy(data.settings); setLoaded(true);}
+        })
+        .catch(() => {
+          if (active) setMessage(tr("تعذر تحميل سياسة الحجز؛ لن تُحفظ إعدادات غير محمّلة.", "Could not load the booking policy; saving is disabled.", "Impossible de charger la politique de réservation ; l'enregistrement est désactivé."));
+        })
+        .finally(() => {if (active) setLoading(false);});
+    });
     return () => {active = false;};
   // language is only used to translate a failure; do not refetch on language changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
