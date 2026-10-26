@@ -12,7 +12,7 @@ export function validateImportRow(kind:ImportKind,row:unknown):asserts row is Im
  // Preflight measured catalog rows before images are fetched or any batch is written.
  // Without a unit, importBatch otherwise silently drops quantity_mode and dimensions.
  if(kind==='items'){
-  const unit=r.unit?.trim()??'';
+  const unit=r.unit??'';
   if(['quantity_mode','weight_kg','length_cm','width_cm','height_cm'].some(k=>r[k]?.trim())&&!unit)throw Error('UNIT_REQUIRED');
   if(unit&&!['piece','pack','kg','g','l','ml','m','cm','m2','m3','hour','service'].includes(unit))throw Error('INVALID_UNIT');
   if(r.quantity_mode&&!['whole','measured'].includes(r.quantity_mode))throw Error('INVALID_QUANTITY_MODE');
