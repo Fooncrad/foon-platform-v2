@@ -32,3 +32,21 @@ test('variant availability rejects duplicate option IDs rather than matching an 
  assert.equal(combinationAvailable([{options:[red,red],stock:2}],[red,large]),false);
  assert.equal(combinationAvailable([{options:[red,large],stock:2}],[red,red]),false);
 });
+
+test('variant option sets and stock match across 4800 deterministic combinations',()=>{
+ const choices=['red','large','blue'];
+ const selections=[[]];
+ for(let size=1;size<=3;size++){
+  const expand=(prefix)=>{if(prefix.length===size){selections.push(prefix);return;}for(const id of choices)expand([...prefix,id]);};
+  expand([]);
+ }
+ let checked=0;
+ for(const options of selections)for(const ids of selections)for(const stock of [null,0,2]){
+  const unique=(values)=>new Set(values).size===values.length;
+  const expected=unique(options)&&unique(ids)&&options.length===ids.length&&options.every(id=>ids.includes(id))&&(stock===null||stock>0);
+  assert.equal(combinationAvailable([{options,stock}],ids),expected,JSON.stringify({options,ids,stock}));
+  checked++;
+ }
+ assert.equal(checked,4800);
+ assert.equal(combinationAvailable(undefined,['red','red']),true,'preserve no-variants behavior');
+});
