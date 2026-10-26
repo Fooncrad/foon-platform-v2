@@ -25,8 +25,16 @@ async function sectionExists(tenant:string,branch:string,section:string){
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,section,branch]);return rows.length>0;
 }
 export async function GET(req:Request){const c=await scope(req,false);if(c.error)return c.error;
+ // Return the existing section catalog independently of optional floor-plan migrations.
+ if(new URL(req.url).searchParams.get("view")==="sections"){
+  try{
+   const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,status,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
+   return NextResponse.json({ok:true,sections:rows.map(r=>({id:String(r.id),name:String(r.name),status:String(r.status)}))},{headers:{"Cache-Control":"private, no-store"}});
+  }catch{return NextResponse.json({ok:false,code:"SECTIONS_UNAVAILABLE"},{status:503})}
+ }
+
  try{
- const [sections]=await database().execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
+ const [sections]=await database().execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
  const [layouts]=await database().execute<RowDataPacket[]>("SELECT id,section_id,name,layout_json,is_active FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? ORDER BY created_at,id LIMIT 500",[c.tenant,c.branch]);
  const items=[];for(const l of layouts){const plan=decode(l.layout_json);if(!plan)return NextResponse.json({ok:false,code:"FLOOR_LAYOUT_INVALID"},{status:409});items.push({id:String(l.id),sectionId:String(l.section_id),name:String(l.name),active:Boolean(l.is_active),plan})}
  const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
