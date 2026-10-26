@@ -46,3 +46,16 @@ export async function assignedActiveDeliveryDriver(
  );
  return rows.length===1;
 }
+
+
+export async function activeDeliveryDriverEmployeeId(
+ db:Pick<PoolConnection,"execute">,tenantId:string,branchId:string,userId:string
+):Promise<string|null>{
+ if(!userId)return null;
+ const [rows]=await db.execute<RowDataPacket[]>(
+  "SELECT e.id"+activeDriverScope+
+  " AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))=? LIMIT 2",
+  [branchId,tenantId,branchId,userId]
+ );
+ return rows.length===1?String(rows[0].id):null;
+}
