@@ -4,7 +4,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
-import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
+import {BranchPinError,requireAdditionalBranchUnlock,requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
 import {validFloorPlan} from "@/lib/restaurant/floor-plan";
@@ -18,8 +18,11 @@ async function scope(req:Request,write:boolean){
  if(write)await requireAllAdditionalBranchesUnlocked(membership.tenantId,user);
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branch,membership.tenantId]);
  if(!rows.length)return {error:NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404})};
+ // Read access to a protected branch requires its session PIN unlock.
+ // Explicit platform-admin support sessions retain their existing audited access.
+ if(!write&&(!membership.adminAccess||membership.platformRole==="support"))await requireAdditionalBranchUnlock(membership.tenantId,branch,user);
  return {tenant:membership.tenantId,branch};
- }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
+ }catch(error){const code=error instanceof BranchPinError?error.code:"FORBIDDEN";return {error:NextResponse.json({ok:false,code},{status:403})}}
 }
 function decode(value:unknown){try{const x=typeof value==="string"?JSON.parse(value):value;return validFloorPlan(x)?x:null}catch{return null}}
 async function sectionExists(tenant:string,branch:string,section:string){
