@@ -148,3 +148,15 @@ test("caller-supplied timeout signal is preserved for sync requests",async()=>{
  await requestSyncJson({url,authorization,method:"POST",body:{events:[]},timeoutSignal:controller.signal,fetchImpl:async(_,opts)=>{signal=opts.signal;return response(200,"application/json")}});
  assert.equal(signal,controller.signal);
 });
+
+// A reverse proxy can return an HTML login page or HTML outage response.
+// Preserve the real HTTP status so Windows can distinguish revoked credentials
+// from a temporary outage without ever accepting HTML as a successful ACK.
+test("HTML authentication failures retain their 401/403 classification",async()=>{
+ for(const status of [401,403]){
+  await assert.rejects(()=>requestSyncJson({url,authorization,method:"POST",body:{events:[]},fetchImpl:async()=>response(status,"text/html")}),/SYNC_AUTH_REJECTED/);
+ }
+});
+test("HTML server outage retains its 503 classification",async()=>{
+ await assert.rejects(()=>requestSyncJson({url,authorization,method:"POST",body:{events:[]},fetchImpl:async()=>response(503,"text/html")}),/SYNC_HTTP_503/);
+});
