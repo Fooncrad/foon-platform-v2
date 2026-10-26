@@ -76,13 +76,13 @@ test.describe("disposable authenticated mobile journeys",()=>{
  for(const language of ["ar","en","fr"])for(const width of [320,375,390,430,768]){
   test(`actual protected and tenant pages ${width}px ${language}`,async({browser})=>{
    test.setTimeout(120000);
-   for(const [identity,path,root] of [["merchant","/restaurant",".restaurantApp"],["staff","/restaurant",".restaurantApp"],["retailer","/grocery",".restaurantApp"],["customer","/customer",".customerDashboard"],["admin","/admin",".adminShell"],["customer","/"+restaurant.slug,".publicMenu"],["customer","/"+grocery.slug,".foonActivityStorefront"]]){
+   for(const [identity,path,root] of [["merchant","/restaurant",".restaurantApp"],["merchant","/restaurant/reservations",".restaurantApp"],["staff","/restaurant",".restaurantApp"],["retailer","/grocery",".restaurantApp"],["customer","/customer",".customerDashboard"],["admin","/admin",".adminShell"],["customer","/"+restaurant.slug,".publicMenu"],["customer","/"+grocery.slug,".foonActivityStorefront"]]){
     await test.step(identity+" "+path,async()=>{
      const context=await browser.newContext({storageState:identities[identity],viewport:{width,height:640},hasTouch:true});
      try{
       await context.addCookies([{name:"foon_language",value:language,url:origin}]);
       await context.addInitScript(lang=>{localStorage.setItem("foon-language",lang);localStorage.setItem("foon-public-lang",lang);},language);
-      const page=await context.newPage();const response=await page.goto(origin+path);
+      const page=await context.newPage();const response=await page.goto(origin+path,{waitUntil:"domcontentloaded"});
       expect(response.status()).toBe(200);await expect(page).toHaveURL(origin+path);
       await expect(page.locator("html")).toHaveAttribute("lang",language);
       await expect(page.locator("html")).toHaveAttribute("dir",language==="ar"?"rtl":"ltr");
@@ -93,6 +93,14 @@ test.describe("disposable authenticated mobile journeys",()=>{
        await inViewport(page,page.locator(".restaurantSearchDialog"),width,640);
        await expect(page.locator(".restaurantSearchDialog input")).toBeFocused();
        await page.keyboard.press("Escape");await expect(page.locator(".restaurantSearchDialog")).toHaveCount(0);
+      }
+      if(path==="/restaurant/reservations"){
+       const rail=page.locator(".calendarViewport");await inViewport(page,rail,width);
+       await rail.focus();await expect(rail).toBeFocused();
+       expect(await rail.evaluate(el=>{
+        el.scrollTo({left:10000,behavior:"instant"});if(!el.scrollLeft)el.scrollTo({left:-10000,behavior:"instant"});
+        return Math.abs(el.scrollLeft);
+       })).toBeGreaterThan(0);
       }
       if(identity==="admin"){
        await page.locator(".adminMenuButton").click();

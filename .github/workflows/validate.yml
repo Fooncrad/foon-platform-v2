@@ -44,7 +44,9 @@ jobs:
         run: npm run build
 
   migration-database:
-    runs-on: ubuntu-latest
+    # Keep Playwright's OS dependencies stable; ubuntu-latest moved to 26.04
+    # and a slow font mirror exhausted the entire job before browser tests.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       mariadb:
@@ -85,6 +87,7 @@ jobs:
       - name: Test restaurant operational integrity
         run: npm run test:operations
       - name: Install Chromium for visual checks
+        timeout-minutes: 4
         run: npx playwright install --with-deps chromium
       - name: Verify public menu browsing without internet
         run: node --test scripts/public-menu-offline.test.mjs

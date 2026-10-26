@@ -89,3 +89,10 @@ the entire service database after the job, as with existing integration tests.
 Local checks for this follow-up cover syntax, lint and test discovery/skip
 behavior. Actual DB-backed results must be read from the follow-up commit's
 validation job; the earlier green commit is not evidence for the new suite.
+
+The first follow-up CI attempt (`e6aa2d73`) passed seven checks, but the browser
+job timed out installing OS font packages from Ubuntu 26.04's mirror before
+any browser suite ran. The database/browser job now pins Ubuntu 24.04 and bounds
+browser installation to four minutes while retaining all dependencies and
+assertions. The authenticated matrix also visits the real reservation calendar
+and verifies focus and actual internal scrolling (120 page visits total).
