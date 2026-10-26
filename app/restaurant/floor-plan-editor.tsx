@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useMemo,useRef,useState,type PointerEvent} from "react";
-import {clampFloorCoordinate,defaultFloorPlan,nextFloorTableNumber,type FloorPlan} from "@/lib/restaurant/floor-plan";
+import {clampFloorCoordinate,defaultFloorPlan,nextFloorTableNumber,nextFloorTablePosition,type FloorPlan} from "@/lib/restaurant/floor-plan";
 import "./floor-plan-editor.css";
 
 export default function RestaurantFloorPlan({tenantId,branch,onReservations}:{tenantId:string;branch:string;onReservations?:()=>void}){
@@ -36,7 +36,7 @@ export default function RestaurantFloorPlan({tenantId,branch,onReservations}:{te
  const shown=zoneFilter==="all"?plan.tables:plan.tables.filter(t=>t.zone===zoneFilter);
  const active=plan.tables.find(t=>t.id===selected);
  function change(fn:(p:FloorPlan)=>FloorPlan){if(!loaded)return;editRevision.current+=1;setPlan(p=>fn(p));setDirty(true);setMessage("")}
- function add(){const id="table-"+crypto.randomUUID();change(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,x:Math.min(2+p.tables.length%8*2,p.width-1),y:Math.min(2+Math.floor(p.tables.length/8)*2,p.height-1),zone:zones[0]||"الصالة"}]}));setSelected(id)}
+ function add(){const id="table-"+crypto.randomUUID();change(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,...nextFloorTablePosition(p),zone:zones[0]||"الصالة"}]}));setSelected(id)}
  function edit(patch:Record<string,string|number>){change(p=>({...p,tables:p.tables.map(t=>t.id===selected?{...t,...patch}:t)}))}
  function moveAt(e:PointerEvent<HTMLDivElement>){if(!drag||!board.current)return;const rect=board.current.getBoundingClientRect();const x=clampFloorCoordinate(Math.round((e.clientX-rect.left)/rect.width*plan.width*2)/2,plan.width);const y=clampFloorCoordinate(Math.round((e.clientY-rect.top)/rect.height*plan.height*2)/2,plan.height);change(p=>({...p,tables:p.tables.map(t=>t.id===drag?{...t,x,y}:t)}))}
  function beginDrag(e:PointerEvent<HTMLButtonElement>,id:string){if(!loaded||e.button!==0)return;setSelected(id);setDrag(id);e.currentTarget.parentElement?.setPointerCapture(e.pointerId)}
