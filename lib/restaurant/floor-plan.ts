@@ -2,7 +2,9 @@ export type FloorTable={id:string;number:string;seats:number;x:number;y:number;z
 export type FloorPlan={width:number;height:number;tables:FloorTable[]};
 export const defaultFloorPlan:FloorPlan={width:24,height:18,tables:[]};
 export function nextFloorTableNumber(tables:readonly FloorTable[]):string{
- const used=new Set(tables.map(table=>table.number.trim()));
+ // Treat numeric labels such as 01 and 1 as the same occupied table number.
+ // Non-numeric labels remain valid but do not reserve an auto-generated integer.
+ const used=new Set(tables.map(table=>table.number.trim()).filter(number=>/^\d+$/.test(number)).map(number=>number.replace(/^0+(?=\d)/,"")));
  let candidate=1;
  while(used.has(String(candidate)))candidate++;
  return String(candidate);
