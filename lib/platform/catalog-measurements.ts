@@ -23,5 +23,5 @@ export function catalogQuantityPolicy(attributes:unknown){
 
 export type CombinationAvailability={options:string[];stock:number|null};
 export function combinationAvailable(variants:CombinationAvailability[]|undefined,ids:string[]){
- return !variants?.length||variants.some(v=>v.options.length===ids.length&&v.options.every(id=>ids.includes(id))&&(v.stock===null||v.stock>0));
+ return !variants?.length||(new Set(ids).size===ids.length&&variants.some(v=>v.options.length===ids.length&&new Set(v.options).size===v.options.length&&v.options.every(id=>ids.includes(id))&&(v.stock===null||v.stock>0)));
 }
