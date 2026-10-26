@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {parseCatalogMeasurements,sellingUnits,validCatalogQuantity,catalogQuantityPolicy} from '../lib/platform/catalog-measurements.ts';
+import {parseCatalogMeasurements,sellingUnits,validCatalogQuantity,catalogQuantityPolicy,combinationAvailable} from '../lib/platform/catalog-measurements.ts';
 test('all selling units preserve fractional measurements',()=>{for(const unit of sellingUnits)assert.deepEqual(parseCatalogMeasurements({unit,weightKg:0.25,lengthCm:12.5,widthCm:null,heightCm:0}),{unit,weightKg:0.25,lengthCm:12.5,widthCm:null,heightCm:0})});
 test('reject invalid units and malformed dimensions',()=>{const base={unit:'kg',weightKg:1,lengthCm:null,widthCm:null,heightCm:null};for(const bad of [null,[],{}, {...base,unit:'unknown'}, {...base,weightKg:-1},{...base,widthCm:Infinity},{...base,heightCm:'10'},{...base,lengthCm:1000000}])assert.throws(()=>parseCatalogMeasurements(bad))});
 
@@ -22,4 +22,13 @@ test('quantityMode rejects coercible JSON arrays and non-string values before pe
  assert.equal(parseCatalogMeasurements({...base,quantityMode:'measured'}).quantityMode,'measured');
  assert.equal(parseCatalogMeasurements({...base,quantityMode:'whole'}).quantityMode,'whole');
  assert.equal(catalogQuantityPolicy({measurements:parseCatalogMeasurements({...base,quantityMode:'measured'})}).measured,true);
+});
+
+
+test('variant availability rejects duplicate option IDs rather than matching an unrelated selection',()=>{
+ const red='red', large='large';
+ assert.equal(combinationAvailable([{options:[red,large],stock:2}],[large,red]),true);
+ assert.equal(combinationAvailable([{options:[red,large],stock:0}],[large,red]),false);
+ assert.equal(combinationAvailable([{options:[red,red],stock:2}],[red,large]),false);
+ assert.equal(combinationAvailable([{options:[red,large],stock:2}],[red,red]),false);
 });
