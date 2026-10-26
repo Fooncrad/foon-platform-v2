@@ -1,6 +1,10 @@
 const terminalStatuses=new Set(["completed","cancelled","no_show"]);
+const knownStatuses=new Set(["pending","confirmed","seated",...terminalStatuses]);
 
 export function reservationTransitionAllowed(previous:string|null,next:string){
+ if(!knownStatuses.has(next))return false;
+ if(previous===null)return !terminalStatuses.has(next);
+ if(!knownStatuses.has(previous))return false;
  if(next==="no_show")return previous==="confirmed";
  if(previous==="no_show")return false;
  if(terminalStatuses.has(previous??""))return next===previous;
