@@ -3,6 +3,7 @@ import {database} from "@/lib/db/mysql";
 import {authenticateEnrolledSyncDevice} from "@/lib/platform/bidirectional-sync-device-auth.mjs";
 import {handleAuthenticatedSyncPush} from "@/lib/platform/bidirectional-sync-cloud-handler.mjs";
 import {applyScopedInventoryMovement,validateInventoryMovement} from "@/lib/platform/bidirectional-sync-inventory.mjs";
+import {readBoundedSyncRequestText} from "@/lib/platform/bidirectional-sync-bounded-body.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const noStore={"Cache-Control":"no-store"};
@@ -17,10 +18,13 @@ export async function POST(request:Request){
  if(!key)return reply("SYNC_NOT_CONFIGURED",503);
  const bearer=request.headers.get("authorization")||"";
  if(!bearer.startsWith("Bearer "))return reply("UNAUTHENTICATED",401);
- const size=Number(request.headers.get("content-length")||"0");
- if(!Number.isSafeInteger(size)||size>300000)return reply("PAYLOAD_TOO_LARGE",413);
- const raw=await request.text();
- if(Buffer.byteLength(raw,"utf8")>300000)return reply("PAYLOAD_TOO_LARGE",413);
+ // Bound streamed/chunked uploads before buffering JSON in memory.
+ let raw:string;
+ try{raw=await readBoundedSyncRequestText(request,300_000)}
+ catch(error){
+  if(error instanceof Error&&error.message==="SYNC_PAYLOAD_TOO_LARGE")return reply("PAYLOAD_TOO_LARGE",413);
+  return reply("INVALID_INPUT",400);
+ }
  let body:unknown;try{body=JSON.parse(raw)}catch{return reply("INVALID_INPUT",400)}
  if(!body||typeof body!=="object"||!("change" in body))return reply("INVALID_INPUT",400);
  const change=(body as {change:unknown}).change;
