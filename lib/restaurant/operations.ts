@@ -4,6 +4,7 @@ import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,ro
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {canRoleTransitionOrder} from "./order-role-channel-policy";
 import {assignedWaiterTableIds} from "./waiter-assignments";
+import {employeeGrantsNeedRevocation} from "./employee-grant-policy";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
 import {notifyOrder} from "@/lib/notifications/customer";
@@ -253,8 +254,13 @@ export async function saveResource(db:PoolConnection,tenantId:string,actor:strin
    const [members]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' FOR UPDATE",[tenantId,userId]);
    if(!members.length||["owner","manager"].includes(String(members[0].role)))throw new ResourceError("EMPLOYEE_OWNER_ROLE_PROTECTED");
    await db.execute("UPDATE memberships SET role=? WHERE tenant_id=? AND user_id=? AND role NOT IN ('owner','manager')",[membershipRole,tenantId,userId]);
-   if(previous?.branch_id!==input.branchId){
+   // Explicit permission grants are scoped to the employee's role and branch.
+   // A same-branch role change must revoke old grants, not just update membership.
+   const branchChanged=previous?.branch_id!==input.branchId;
+   if(employeeGrantsNeedRevocation(prior?.role,memberRole,previous?.branch_id??null,input.branchId)){
     await db.execute("DELETE FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[tenantId,userId]);
+   }
+   if(branchChanged){
     await db.execute("DELETE FROM employee_branch_assignments WHERE tenant_id=? AND user_id=?",[tenantId,userId]);
    }
    await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,?,TRUE) ON DUPLICATE KEY UPDATE role=VALUES(role),enabled=TRUE",[randomUUID(),tenantId,userId,input.branchId,membershipRole]);
