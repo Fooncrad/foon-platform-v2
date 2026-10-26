@@ -4,6 +4,7 @@ import type {RowDataPacket} from 'mysql2/promise';
 import {currentUserId} from '@/lib/auth/session';
 import {database} from '@/lib/db/mysql';
 import {assertSameOrigin} from '@/lib/security/origin';
+import {readLimitedJson} from '@/lib/security/limited-json';
 import {canReadStaffReceipt} from '@/lib/restaurant/receipt-authorization';
 import {finalReceiptEligible} from '@/lib/restaurant/final-receipt-policy';
 import {requireAdditionalBranchUnlock,BranchPinError} from '@/lib/restaurant/branch-pin';
@@ -11,7 +12,10 @@ export const runtime='nodejs';
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false},{status:403});}
  const user=await currentUserId(),tenant=request.headers.get('x-foon-tenant');if(!user||!tenant)return NextResponse.json({ok:false},{status:401});
- const body=await request.json().catch(()=>null);if(typeof body?.id!=='string'||!/^[a-f0-9-]{36}$/i.test(body.id))return NextResponse.json({ok:false},{status:400});
+ let body:{id?:unknown}|null;
+ try{body=await readLimitedJson(request,1024) as typeof body;}
+ catch(error){const oversized=error instanceof Error&&error.message==='BATCH_TOO_LARGE';return NextResponse.json({ok:false,code:oversized?'BODY_TOO_LARGE':'INVALID_INPUT'},{status:oversized?413:400,headers:{'Cache-Control':'no-store'}});}
+ if(typeof body?.id!=='string'||!/^[a-f0-9-]{36}$/i.test(body.id))return NextResponse.json({ok:false},{status:400});
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
