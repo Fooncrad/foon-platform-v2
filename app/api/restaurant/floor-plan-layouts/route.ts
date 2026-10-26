@@ -27,11 +27,12 @@ async function sectionExists(tenant:string,branch:string,section:string){
 export async function GET(req:Request){const c=await scope(req,false);if(c.error)return c.error;
  try{
  const [sections]=await database().execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
- const [layouts]=await database().execute<RowDataPacket[]>("SELECT id,section_id,name,layout_json FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? ORDER BY created_at,id LIMIT 500",[c.tenant,c.branch]);
- const items=[];for(const l of layouts){const plan=decode(l.layout_json);if(!plan)return NextResponse.json({ok:false,code:"FLOOR_LAYOUT_INVALID"},{status:409});items.push({id:String(l.id),sectionId:String(l.section_id),name:String(l.name),plan})}
+ const [layouts]=await database().execute<RowDataPacket[]>("SELECT id,section_id,name,layout_json,is_active FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? ORDER BY created_at,id LIMIT 500",[c.tenant,c.branch]);
+ const items=[];for(const l of layouts){const plan=decode(l.layout_json);if(!plan)return NextResponse.json({ok:false,code:"FLOOR_LAYOUT_INVALID"},{status:409});items.push({id:String(l.id),sectionId:String(l.section_id),name:String(l.name),active:Boolean(l.is_active),plan})}
+ const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
  const [legacy]=await database().execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plans WHERE tenant_id=? AND branch_id=? LIMIT 1",[c.tenant,c.branch]);
  let legacyPlan=null;if(legacy.length){legacyPlan=decode(legacy[0].layout_json);if(!legacyPlan)return NextResponse.json({ok:false,code:"LEGACY_LAYOUT_INVALID"},{status:409})}
- return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
+ return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
  }catch{return NextResponse.json({ok:false,code:"LAYOUTS_UNAVAILABLE"},{status:503})}}
 export async function POST(req:Request){try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
@@ -48,3 +49,30 @@ export async function PUT(req:Request){try{assertSameOrigin(req)}catch{return Ne
  const [result]=await database().execute<import("mysql2").ResultSetHeader>("UPDATE restaurant_floor_plan_layouts SET section_id=?,name=?,layout_json=? WHERE id=? AND tenant_id=? AND branch_id=?",[b.sectionId,b.name.trim(),JSON.stringify(b.plan),b.id,c.tenant,c.branch]);
  return result.affectedRows?NextResponse.json({ok:true}):NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})
  }catch{return NextResponse.json({ok:false,code:"LAYOUT_SAVE_FAILED"},{status:503})}}
+
+export async function PATCH(req:Request){
+ try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
+ const c=await scope(req,true);if(c.error)return c.error;
+ let input:unknown;try{input=await readLimitedJson(req,4096)}catch{return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400})}
+ if(!input||typeof input!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const b=input as Record<string,unknown>;
+ if(typeof b.id!=="string"||!uuid.test(b.id))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ try{
+  const db=await database().getConnection();
+  try{
+   await db.beginTransaction();
+   const [layouts]=await db.execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=? FOR UPDATE",[b.id,c.tenant,c.branch]);
+   if(!layouts.length){await db.rollback();return NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})}
+   if(b.action==="activate"&&typeof b.active==="boolean"){
+    // Multiple active plans can coexist under the same dining section.
+    await db.execute("UPDATE restaurant_floor_plan_layouts SET is_active=? WHERE id=? AND tenant_id=? AND branch_id=?",[b.active,b.id,c.tenant,c.branch]);
+   }else if(b.action==="tableStatus"&&typeof b.tableId==="string"&&/^[a-z0-9-]{1,60}$/i.test(b.tableId)&&typeof b.status==="string"&&["available","occupied","reserved","cleaning","out_of_service"].includes(b.status)){
+    const layout=decode(layouts[0].layout_json);
+    if(!layout||!layout.tables.some(t=>t.id===b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"TABLE_NOT_IN_LAYOUT"},{status:400})}
+    // These are MANUAL operational annotations only; reservation engine is authoritative.
+    await db.execute("INSERT INTO restaurant_floor_table_operations(tenant_id,branch_id,layout_id,floor_table_id,status) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status)",[c.tenant,c.branch,b.id,b.tableId,b.status]);
+   }else{await db.rollback();return NextResponse.json({ok:false,code:"INVALID_ACTION"},{status:400})}
+   await db.commit();return NextResponse.json({ok:true});
+  }catch(error){await db.rollback();throw error}finally{db.release()}
+ }catch{return NextResponse.json({ok:false,code:"OPERATION_SAVE_FAILED"},{status:503})}
+}
