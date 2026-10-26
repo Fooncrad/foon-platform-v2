@@ -7,7 +7,7 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
-import {defaultFloorPlan,validFloorPlan} from "@/lib/restaurant/floor-plan";
+import {validFloorPlan} from "@/lib/restaurant/floor-plan";
 const uuid=/^[a-f0-9-]{36}$/i;
 async function scope(req:Request,write:boolean){
  const user=await currentUserId();if(!user)return {error:NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401})};
@@ -34,14 +34,14 @@ export async function GET(req:Request){const c=await scope(req,false);if(c.error
  return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
  }catch{return NextResponse.json({ok:false,code:"LAYOUTS_UNAVAILABLE"},{status:503})}}
 export async function POST(req:Request){try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
- const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch{return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400})}
+ const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
  if(!input||typeof input!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const b=input as Record<string,unknown>;if(typeof b.sectionId!=="string"||!uuid.test(b.sectionId)||typeof b.name!=="string"||!b.name.trim()||b.name.length>120||!validFloorPlan(b.plan))return NextResponse.json({ok:false,code:"INVALID_LAYOUT"},{status:400});
  try{if(!await sectionExists(c.tenant!,c.branch!,b.sectionId))return NextResponse.json({ok:false,code:"SECTION_NOT_FOUND"},{status:404});
  const id=randomUUID();await database().execute("INSERT INTO restaurant_floor_plan_layouts(id,tenant_id,branch_id,section_id,name,layout_json) VALUES (?,?,?,?,?,?)",[id,c.tenant,c.branch,b.sectionId,b.name.trim(),JSON.stringify(b.plan)]);return NextResponse.json({ok:true,id},{status:201})
  }catch{return NextResponse.json({ok:false,code:"LAYOUT_SAVE_FAILED"},{status:503})}}
 export async function PUT(req:Request){try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
- const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch{return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400})}
+ const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
  if(!input||typeof input!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const b=input as Record<string,unknown>;if(typeof b.id!=="string"||!uuid.test(b.id)||typeof b.sectionId!=="string"||!uuid.test(b.sectionId)||typeof b.name!=="string"||!b.name.trim()||b.name.length>120||!validFloorPlan(b.plan))return NextResponse.json({ok:false,code:"INVALID_LAYOUT"},{status:400});
  try{if(!await sectionExists(c.tenant!,c.branch!,b.sectionId))return NextResponse.json({ok:false,code:"SECTION_NOT_FOUND"},{status:404});
