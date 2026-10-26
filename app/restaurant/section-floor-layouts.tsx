@@ -17,11 +17,12 @@ export default function SectionFloorLayouts(props:{tenantId:string;branch:string
 function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:string}){
  const language=useUiLanguage();const tr=(key:number)=>messages[language][key];
  const [sections,setSections]=useState<Section[]>([]),[layouts,setLayouts]=useState<Layout[]>([]),[operations,setOperations]=useState<TableOperation[]>([]),[registeredTables,setRegisteredTables]=useState<RegisteredTable[]>([]),[links,setLinks]=useState<FloorLink[]>([]);
+ const [legacyPlan,setLegacyPlan]=useState<FloorPlan|null>(null);
  const [current,setCurrent]=useState(""),[sectionId,setSectionId]=useState(""),[name,setName]=useState(""),[plan,setPlan]=useState<FloorPlan>(defaultFloorPlan);
  const [dragging,setDragging]=useState<string|null>(null);const boardRef=useRef<HTMLDivElement>(null);
  const [selected,setSelected]=useState(""),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
  const url="/api/restaurant/floor-plan-layouts?branch="+encodeURIComponent(branch);
- useEffect(()=>{let live=true;void Promise.resolve().then(async()=>{if(!live)return;setLoading(true);setSections([]);setLayouts([]);setCurrent("");setSectionId("");setName("");setPlan(defaultFloorPlan);setSelected("");setMessage("");
+ useEffect(()=>{let live=true;void Promise.resolve().then(async()=>{if(!live)return;setLoading(true);setSections([]);setLayouts([]);setLegacyPlan(null);setCurrent("");setSectionId("");setName("");setPlan(defaultFloorPlan);setSelected("");setMessage("");
   const headers={"x-foon-tenant":tenantId};
   try{
    // Load the existing dining sections first: missing newer migration tables must not hide them.
@@ -32,11 +33,12 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
   try{
    const response=await fetch(url,{headers,cache:"no-store"});const data=await response.json();
    if(!response.ok||!data.ok)throw Error(String(data.code||"LAYOUTS_UNAVAILABLE"));
-   if(live){setLayouts(data.layouts||[]);setOperations(data.operations||[]);setRegisteredTables(data.registeredTables||[]);setLinks(data.links||[])}
+   if(live){setLayouts(data.layouts||[]);setLegacyPlan(data.legacyPlan||null);setOperations(data.operations||[]);setRegisteredTables(data.registeredTables||[]);setLinks(data.links||[])}
   }catch(error){if(live)setMessage((language==="ar"?"الأقسام محفوظة، لكن بيانات المخططات غير متاحة. تأكد من الترحيلات 0306 و0307 و0308: ":language==="en"?"Sections are available, but floor plans could not load. Check migrations 0306–0308: ":"Sections disponibles, mais les plans sont indisponibles. Vérifiez les migrations 0306–0308 : ")+String(error instanceof Error?error.message:error));}
   finally{if(live)setLoading(false)}
  });return()=>{live=false}},[tenantId,url,language]);
  function openLayout(id:string){if(id===""){setCurrent("");setName("");setPlan(defaultFloorPlan);setSelected("");return}const l=layouts.find(x=>x.id===id);if(!l)return;setCurrent(id);setName(l.name);setSectionId(l.sectionId);setPlan(l.plan);setSelected("");setMessage("")}
+ function importLegacy(){if(!legacyPlan||!legacyPlan.tables.length||current||plan.tables.length)return;setPlan(structuredClone(legacyPlan));setName(language==="ar"?"المخطط السابق":language==="en"?"Legacy floor plan":"Ancien plan");setSelected("");setMessage(language==="ar"?"تم تحميل نسخة من المخطط السابق؛ اختر القسم ثم اضغط حفظ المخطط لإنشاء نسخة مستقلة. المخطط الأصلي محفوظ.":language==="en"?"Legacy floor plan copied. Select a section and save as a new plan; the original remains unchanged.":"Ancien plan copié. Sélectionnez une section et enregistrez une nouvelle copie ; l'original reste intact.")}
  function addTable(){if(!sectionId)return setMessage(tr(23));const id="table-"+crypto.randomUUID();setPlan(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,...nextFloorTablePosition(p),zone:sections.find(s=>s.id===sectionId)?.name||"الصالة"}]}));setSelected(id)}
  function moveTable(e:ReactPointerEvent<HTMLDivElement>){if(!dragging||!boardRef.current)return;const r=boardRef.current.getBoundingClientRect();if(r.width===0||r.height===0)return;const x=Math.max(0,Math.min(plan.width-0.01,Math.round((e.clientX-r.left)/r.width*plan.width*2)/2));const y=Math.max(0,Math.min(plan.height-0.01,Math.round((e.clientY-r.top)/r.height*plan.height*2)/2));setPlan(p=>({...p,tables:p.tables.map(t=>t.id===dragging?{...t,x,y}:t)}))}
  const active=plan.tables.find(t=>t.id===selected);
@@ -54,6 +56,7 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
  <label>{tr(10)}<input dir="ltr" lang="en" inputMode="decimal" style={{direction:"ltr",textAlign:"left",fontVariantNumeric:"tabular-nums"}} type="number" min={2} max={200} value={plan.width} onChange={e=>setPlan(p=>({...p,width:englishNumber(e.target.value)}))}/></label>
  <label>{tr(11)}<input dir="ltr" lang="en" inputMode="decimal" style={{direction:"ltr",textAlign:"left",fontVariantNumeric:"tabular-nums"}} type="number" min={2} max={200} value={plan.height} onChange={e=>setPlan(p=>({...p,height:englishNumber(e.target.value)}))}/></label>
  {current&&<button type="button" onClick={()=>openLayout(current)}>{tr(28)}</button>}{current&&<button type="button" disabled={saving} onClick={()=>operation("activate",{active:!layouts.find(l=>l.id===current)?.active})}>{layouts.find(l=>l.id===current)?.active?tr(30):tr(29)}</button>}
+ {legacyPlan&&legacyPlan.tables.length>0&&!current&&plan.tables.length===0&&<button type="button" onClick={importLegacy}>{language==="ar"?"استيراد نسخة من المخطط القديم":language==="en"?"Copy old floor plan":"Copier l'ancien plan"}</button>}
  <button type="button" onClick={addTable} disabled={!sections.some(s=>s.id===sectionId&&s.status==="active")||plan.tables.length>=500}>{tr(12)}</button>
  <button type="button" onClick={save} disabled={saving||!sections.some(s=>s.id===sectionId&&s.status==="active")}>{saving?tr(13):tr(14)}</button></div>
  {!sections.length&&<p role="alert">{tr(15)}</p>}
