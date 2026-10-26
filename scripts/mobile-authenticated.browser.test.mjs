@@ -25,6 +25,14 @@ test.describe("disposable authenticated mobile journeys",()=>{
   const post=async(context,path,data,tenant)=>{
    const response=await context.request.post(origin+path,{headers:{origin,...(tenant?{"x-foon-tenant":tenant}:{})},data});
    expect(response.status(),path+" fixture setup").toBeLessThan(300);
+   // next start sets Secure on session cookies even on the isolated HTTP loopback.
+   // Playwright correctly refuses to resend those cookies over HTTP. Re-scope only
+   // this disposable browser fixture's cookie; never change server auth policy.
+   if(["/api/auth/register","/api/auth/login","/api/customer/register"].includes(path)){
+    const session=(response.headers()["set-cookie"]??"").match(/(?:^|,\\s*)foon_session=([^;,]+)/)?.[1];
+    expect(session,path+" must issue a session cookie").toBeTruthy();
+    await context.addCookies([{name:"foon_session",value:session,url:origin,httpOnly:true,secure:false,sameSite:"Lax"}]);
+   }
    return response.json();
   };
   try{
