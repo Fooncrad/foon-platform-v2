@@ -1,1 +1,9 @@
 import test from "node:test";import assert from "node:assert/strict";import {readFileSync} from "node:fs";const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");test("multiple layouts are independently identified and scoped by tenant branch section",()=>{const s=read("migrations/0306_restaurant_floor_plan_layouts.sql");for(const part of ["PRIMARY KEY(id)","section_id CHAR(36)","tenant_id CHAR(36)","branch_id CHAR(36)","layout_json JSON"])assert.ok(s.includes(part))});test("layouts always refer to existing dining sections",()=>{const s=read("app/api/restaurant/floor-plan-layouts/route.ts");assert.match(s,/kind='dining_section'/);assert.match(s,/sectionExists/);assert.match(s,/branch_id=\? OR branch_id IS NULL/);assert.match(s,/assertSameOrigin/);assert.match(s,/requireTenantMembership/)});test("new layouts do not overwrite legacy floor plan",()=>{const s=read("app/api/restaurant/floor-plan-layouts/route.ts");assert.match(s,/SELECT layout_json FROM restaurant_floor_plans/);assert.doesNotMatch(s,/UPDATE restaurant_floor_plans|INSERT INTO restaurant_floor_plans/)});test("UI supports more than one plan per section and distinct tables",()=>{const s=read("app/restaurant/section-floor-layouts.tsx");assert.match(s,/layouts.map/);assert.match(s,/sections.map/);assert.match(s,/nextFloorTablePosition/);assert.match(s,/crypto.randomUUID/)});
+
+test("create and update reject oversized layout requests with HTTP 413",()=>{
+ const s=read("app/api/restaurant/floor-plan-layouts/route.ts");
+ assert.equal((s.match(/readLimitedJson\(req,131072\)/g)||[]).length,2);
+ assert.equal((s.match(/error\.message==="BATCH_TOO_LARGE"/g)||[]).length,2);
+ assert.equal((s.match(/tooLarge\?413:400/g)||[]).length,2);
+ assert.equal((s.match(/tooLarge\?"BODY_TOO_LARGE":"INVALID_INPUT"/g)||[]).length,2);
+});
