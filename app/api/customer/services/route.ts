@@ -60,7 +60,41 @@ export async function POST(request:Request){
    const [sections]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,body.sectionId,body.branchId]);
    if(!sections.length)throw new ResourceError("SECTION_NOT_FOUND");
   }
-  const data=waiter?{tableId:body.tableId,sectionId:body.sectionId||null,notes}:{tableId:null,sectionId:body.sectionId,phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),notes};
+  const cashFloor=!waiter&&body.bookingMode==="floor_cash";
+  if(!waiter&&body.bookingMode!==undefined&&!["classic","floor_cash"].includes(body.bookingMode))throw new ResourceError("INVALID_BOOKING_MODE");
+  if(!waiter&&!cashFloor&&body.tableId)throw new ResourceError("CLASSIC_TABLE_SELECTION_FORBIDDEN");
+  let selectedTableId:string|null=null;
+  let bookingFee=0;
+  if(cashFloor){
+   if(body.paymentMethod!=="cash"||typeof body.layoutId!=="string"||!/^[a-f0-9-]{36}$/i.test(body.layoutId)||typeof body.floorTableId!=="string"||!/^[a-z0-9-]{1,60}$/i.test(body.floorTableId))throw new ResourceError("INVALID_INPUT");
+   const [layouts]=await db.execute<RowDataPacket[]>("SELECT p.section_id,p.layout_json FROM restaurant_floor_plan_layouts p WHERE p.tenant_id=? AND p.branch_id=? AND p.id=? AND p.is_active=TRUE LIMIT 1",[tenant,body.branchId,body.layoutId]);
+   if(!layouts.length||String(layouts[0].section_id)!==String(body.sectionId))throw new ResourceError("FLOOR_LAYOUT_NOT_AVAILABLE");
+   let layout:unknown;try{layout=typeof layouts[0].layout_json==="string"?JSON.parse(layouts[0].layout_json):layouts[0].layout_json}catch{throw new ResourceError("INVALID_LAYOUT")}
+   const tables=layout&&typeof layout==="object"&&"tables" in layout&&Array.isArray(layout.tables)?layout.tables:[];
+   const floorTable=tables.find((item:{id?:string;seats?:number})=>item.id===body.floorTableId);
+   if(!floorTable||!Number.isInteger(floorTable.seats)||floorTable.seats<body.partySize)throw new ResourceError("TABLE_CAPACITY_UNAVAILABLE");
+   const [mapped]=await db.execute<RowDataPacket[]>("SELECT t.id,t.status FROM restaurant_floor_table_links l JOIN restaurant_resources t ON t.tenant_id=l.tenant_id AND t.id=l.dining_table_id AND t.kind='dining_table' AND t.archived=FALSE AND (t.branch_id=l.branch_id OR t.branch_id IS NULL) WHERE l.tenant_id=? AND l.branch_id=? AND l.layout_id=? AND l.floor_table_id=? LIMIT 1",[tenant,body.branchId,body.layoutId,body.floorTableId]);
+   if(!mapped.length||String(mapped[0].status)==="inactive")throw new ResourceError("TABLE_NOT_AVAILABLE");
+   const [operations]=await db.execute<RowDataPacket[]>("SELECT status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=? AND layout_id=? AND floor_table_id=? LIMIT 1",[tenant,body.branchId,body.layoutId,body.floorTableId]);
+   if(operations.some(x=>String(x.status)==="out_of_service"))throw new ResourceError("TABLE_NOT_AVAILABLE");
+   selectedTableId=String(mapped[0].id);
+   // Lock the real table row; concurrent cash-floor submissions serialize here.
+   const [locked]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status<>'inactive' FOR UPDATE",[tenant,selectedTableId]);
+   if(!locked.length)throw new ResourceError("TABLE_NOT_AVAILABLE");
+   const [prior]=await db.execute<RowDataPacket[]>("SELECT id,data,lookup_key FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed','seated') AND (branch_id=? OR branch_id IS NULL) AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId'))=? FOR UPDATE",[tenant,body.branchId,selectedTableId]);
+   const start=Date.parse(body.scheduledAt),duration=90;
+   for(const old of prior){
+    if(String(old.lookup_key||"")===user+":"+body.requestKey)continue; // handled by fingerprint-based replay below
+    let previous:Record<string,unknown>;try{previous=typeof old.data==="string"?JSON.parse(old.data):old.data}catch{throw new ResourceError("RESERVATION_DATA_INVALID")}
+    const from=Date.parse(String(previous.scheduledAt??"")),minutes=Number(previous.durationMinutes??90);
+    if(!Number.isFinite(from)||!Number.isFinite(minutes))throw new ResourceError("RESERVATION_DATA_INVALID");
+    if(start<from+Math.max(30,minutes)*60000&&from<start+duration*60000)throw new ResourceError("TABLE_TIME_UNAVAILABLE");
+   }
+   const [policies]=await db.execute<RowDataPacket[]>("SELECT booking_fee FROM restaurant_floor_booking_policies WHERE tenant_id=? AND branch_id=? LIMIT 1",[tenant,body.branchId]);
+   bookingFee=Number(policies[0]?.booking_fee??0);
+   if(!Number.isFinite(bookingFee)||bookingFee<0||bookingFee>100000)throw new ResourceError("INVALID_POLICY");
+  }
+  const data=waiter?{tableId:body.tableId,sectionId:body.sectionId||null,notes}:{tableId:selectedTableId,sectionId:body.sectionId,phone:body.phone.trim(),partySize:body.partySize,scheduledAt:new Date(body.scheduledAt).toISOString(),durationMinutes:cashFloor?90:null,bookingMode:cashFloor?"floor_cash":"classic",paymentMethod:cashFloor?"cash":null,paymentStatus:cashFloor?"unpaid":null,floorLayoutId:cashFloor?body.layoutId:null,floorTableId:cashFloor?body.floorTableId:null,serviceFee:cashFloor?bookingFee:null,notes};
   
   const fingerprint=createHash('sha256').update(JSON.stringify({branchId:body.branchId,data})).digest('hex'),lookup=user+':'+body.requestKey;
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,JSON_UNQUOTE(JSON_EXTRACT(data,'$.requestFingerprint')) AS fingerprint FROM restaurant_resources WHERE tenant_id=? AND kind=? AND lookup_key=? FOR UPDATE",[tenant,kind,lookup]);
