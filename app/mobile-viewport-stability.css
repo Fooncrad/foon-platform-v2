@@ -102,3 +102,44 @@ body { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
   :where(.foonPublic,.foonPublicMarket,.publicMenu,.foonActivityStorefront,.customerDashboard,.restaurantApp,.adminShell)
    :is(.foonMarketCard,.foonActivityProduct,.publicMenuItem) { transition-duration:0.01ms; }
 }
+
+/* Shrink the scroll owner, not its wide content. Otherwise a grid/flex item's
+ * automatic minimum can expand the shell even when the document clips it. */
+@media (max-width:767px) {
+  :is(.restaurantTableScroll,.restaurantTableWrap,.adminOpsTableWrap,.adminDataTableWrap,
+      .publicMenuCategories,.foonActivityCategories,.calendarViewport) {
+    min-inline-size:0;
+    max-inline-size:100%;
+    overflow-x:auto;
+    overscroll-behavior-inline:contain;
+  }
+  :is(.restaurantStage,.restaurantContent,.adminStage,.foonActivityContent,
+      .customerDashboard,.publicMenuServiceDialog,.calendarEditor) > * {
+    min-inline-size:0;
+  }
+  /* Native dialogs live in the top layer and may outlive their shell's sizing.
+   * Bound the border box and allow long forms to scroll on short viewports. */
+  :is(.publicMenuServiceDialog,.publicMenuCategoryDialog,.publicMenuEmptyCartDialog,
+      .publicMenuQrDialog,.foonActivityProductDialog,.foonUnifiedQrDialog,
+      .calendarEditor,.foonConfirmDialog,.restaurantSearchDialog) {
+    box-sizing:border-box;
+    min-inline-size:0;
+    max-inline-size:calc(100dvw - 24px);
+    max-block-size:calc(100dvh - 24px);
+    overflow-y:auto;
+    overflow-wrap:anywhere;
+    overscroll-behavior:contain;
+  }
+  .restaurantSearchOverlay { padding-block-start:12px; }
+}
+
+/* The fixed admin drawer must include its padding and borders in its viewport
+ * height. Otherwise content-box max-height pushes its bottom below the screen. */
+@media (max-width:850px) {
+  .adminShell .adminDrawer {
+    box-sizing:border-box!important;
+    max-height:calc(100dvh - 142px)!important;
+    max-block-size:calc(100dvh - 142px)!important;
+    overflow-y:auto;
+  }
+}
