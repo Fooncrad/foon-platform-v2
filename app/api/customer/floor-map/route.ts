@@ -28,7 +28,7 @@ export async function GET(request:Request){
     const op=ops.find(x=>String(x.layout_id)===String(l.id)&&String(x.floor_table_id)===table.id);
     const real=String(link.real_status);
     // Operational availability is NOT a time-slot guarantee.
-    const status=real==="inactive"?"out_of_service":["occupied","reserved"].includes(real)?real:String(op?.status||"unknown");
+    const status=real==="inactive"?"out_of_service":["occupied","reserved"].includes(real)?real:String(op?.status||"available");
     return [{id:table.id,number:table.number,seats:table.seats,x:table.x,y:table.y,status}];
    });
    if(!tables.length)return [];
