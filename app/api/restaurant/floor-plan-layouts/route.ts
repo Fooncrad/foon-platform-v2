@@ -60,6 +60,10 @@ async function duplicateSectionTableNumber(db:import("mysql2/promise").PoolConne
  // Writers lock the branch row before this query, serializing edits to every
  // layout of the same branch (including concurrent POST and PUT requests).
  const numbers=new Set(plan.tables.map(t=>canonicalTableNumber(t.number)));
+ if(numbers.size!==plan.tables.length){
+  const seen=new Set<string>();
+  for(const table of plan.tables){const normalized=canonicalTableNumber(table.number);if(seen.has(normalized))return table.number;seen.add(normalized)}
+ }
  const [existing]=await db.execute<RowDataPacket[]>("SELECT id,layout_json FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? AND section_id=?"+(excludeId?" AND id<>?":"")+" FOR UPDATE",excludeId?[tenant,branch,section,excludeId]:[tenant,branch,section]);
  for(const row of existing){
   const other=decode(row.layout_json);

@@ -58,10 +58,10 @@ function setup(previousSection=id,failDelete=false,otherLayouts=[]){
  };
  return {PUT:compile("app/api/restaurant/floor-plan-layouts/route.ts",deps).PUT,calls};
 }
-function request(sectionId,tableIds){
+function request(sectionId,tableIds,tableNumbers=tableIds.map((_,index)=>String(index+1))){
  return new Request("https://foon.example/api/restaurant/floor-plan-layouts?branch=branch-1",{
   method:"PUT",headers:{"x-foon-tenant":"tenant-1","content-type":"application/json"},
-  body:JSON.stringify({id,sectionId,name:"Main hall",plan:{width:10,height:10,tables:tableIds.map((tableId,index)=>({id:tableId,number:String(index+1)}))}})
+  body:JSON.stringify({id,sectionId,name:"Main hall",plan:{width:10,height:10,tables:tableIds.map((tableId,index)=>({id:tableId,number:tableNumbers[index]}))}})
  });
 }
 test("saving a layout prunes removed table links and statuses in one transaction",async()=>{
@@ -108,4 +108,14 @@ test("same-section numeric table numbers with leading zeroes return 409 without 
  assert.equal(calls.committed,0);
  assert.equal(calls.rolledBack,1);
  assert.equal(calls.released,1);
+});
+
+test("two canonically identical numbers inside one layout are rejected",async()=>{
+ const {PUT,calls}=setup();
+ const response=await PUT(request(id,["table-1","table-2"],["01","1"]));
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).code,"SECTION_TABLE_NUMBER_EXISTS");
+ assert.equal(calls.updates,0);
+ assert.equal(calls.committed,0);
+ assert.equal(calls.rolledBack,1);
 });

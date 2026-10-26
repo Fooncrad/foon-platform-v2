@@ -47,6 +47,7 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
  function localDuplicate():string|null{
  const normalize=(v:string)=>/^\d+$/.test(v.trim())?String(BigInt(v.trim())):v.trim().toLowerCase();
  const currentNumbers=new Set(plan.tables.map(t=>normalize(t.number)));
+ if(currentNumbers.size!==plan.tables.length){const seen=new Set<string>();for(const table of plan.tables){const number=normalize(table.number);if(seen.has(number))return table.number;seen.add(number)}}
  for(const layout of layouts)if(layout.sectionId===sectionId&&layout.id!==current)
   for(const t of layout.plan.tables)if(currentNumbers.has(normalize(t.number)))return t.number;
  return null;
