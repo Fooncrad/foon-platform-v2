@@ -64,6 +64,7 @@ test("storefront and menu remain width-stable during mobile booking and checkout
  assert.match(stableStorefrontCss,/max-inline-size: calc\(100dvw - 24px\)/);
  assert.match(stableStorefrontCss,/max-block-size: calc\(100dvh - 24px\)/);
  assert.match(stableStorefrontCss,/\.publicMenu:has\(\.publicMenuCart :is\(input, textarea, select\):focus\) \.publicMenuMobileDock/);
+ assert.match(stableStorefrontCss,/\.foonActivityStorefront:has\(\.foonStorefrontCart \.foonCartOptions\) \.foonActivityMobileDock/);
  assert.doesNotMatch(publicMenu,/categoryDialog\.current\?\.close\(\);document\.getElementById\('menu-items'\)\?\.scrollIntoView/);
  assert.match(stableCart,/rect\.top>=window\.innerHeight\|\|rect\.bottom<=0/);
  assert.match(stableCart,/scrollIntoView\(\{block:"nearest",behavior:"auto"\}\)/);

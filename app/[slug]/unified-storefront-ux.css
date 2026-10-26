@@ -757,7 +757,10 @@ html:has(.foonActivityStorefront) {
   }
   /* The fixed bottom dock must not cover fields while the keyboard is open. */
   .publicMenu:has(.publicMenuCart :is(input, textarea, select):focus) .publicMenuMobileDock,
-  .foonActivityStorefront:has(.foonStorefrontCart :is(input, textarea, select):focus) .foonActivityMobileDock {
+  .foonActivityStorefront:has(.foonStorefrontCart :is(input, textarea, select):focus) .foonActivityMobileDock,
+  .foonActivityStorefront:has(.foonStorefrontCart .foonCartOptions) .foonActivityMobileDock {
+    /* Keep the fixed dock hidden while choosing options, including when focus
+       moves from a radio input to Confirm; otherwise it can swallow pointer-up. */
     visibility: hidden;
     pointer-events: none;
   }
