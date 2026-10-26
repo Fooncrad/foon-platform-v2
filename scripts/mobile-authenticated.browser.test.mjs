@@ -118,8 +118,12 @@ test.describe("disposable authenticated mobile journeys",()=>{
       if(root===".publicMenu"){
        const name={ar:"حجز طاولة",en:"Book a table",fr:"Réserver une table"}[language];
        await page.locator(".publicMenuInfoBar .publicMenuServices").getByRole("button",{name,exact:true}).click();
-       await inViewport(page,page.locator(".publicMenuServiceDialog"),width,640);
-       await page.keyboard.press("Escape");await expect(page.locator(".publicMenuServiceDialog")).not.toBeVisible();
+       // The page may retain a closed dialog beside the currently open one.
+       // Scope assertions to the native open dialog, never to hidden siblings.
+       const bookingDialog=page.locator("dialog.publicMenuServiceDialog[open]");
+       await expect(bookingDialog).toHaveCount(1);
+       await inViewport(page,bookingDialog,width,640);
+       await page.keyboard.press("Escape");await expect(bookingDialog).toHaveCount(0);
       }
      }finally{await context.close();}
     });
