@@ -20,6 +20,7 @@ import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
 import {scopedStaffOverview} from "@/lib/restaurant/scoped-staff-overview";
 import {assignedWaiterTableIds} from "@/lib/restaurant/waiter-assignments";
+import {financialReportRoles,canAccessFinancialReports} from "@/lib/restaurant/report-access";
 
 export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
@@ -31,7 +32,7 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
  const special=["overview","orders","pos","kds","customers","security","health","reports"];
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
- const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:allRoles;
+ const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="reports"?financialReportRoles:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:allRoles;
  const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
  let authorizedBranch:string|null=null;
  // Existing role checks remain mandatory. Explicit employee grants narrow them further.
@@ -145,7 +146,10 @@ async function labelledTables(db:PoolConnection,tenantId:string,branch:string|nu
 export async function GET(request:Request,{params}:{params:Promise<{module:string}>}){
  let db:PoolConnection|undefined;
  try{
-  const {module}=await params,ctx=await authorize(request,module,false);db=await connection();
+  const {module}=await params,ctx=await authorize(request,module,false);
+  // Defense in depth: reports include revenue and must not be served to non-financial staff.
+  if(module==="reports"&&!canAccessFinancialReports(ctx.role))throw new ResourceError("FORBIDDEN");
+  db=await connection();
   const branch=ctx.authorizedBranch??new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
   if(Object.hasOwn(resourceModules,module)){
    const refs:Record<string,unknown[]>={};
