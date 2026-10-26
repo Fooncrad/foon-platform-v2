@@ -9,7 +9,12 @@ type Layout={id:string;sectionId:string;name:string;plan:FloorPlan;active:boolea
 type TableOperation={layoutId:string;tableId:string;status:string};
 type RegisteredTable={id:string;name:string;status:string;sectionId:string};
 type FloorLink={layoutId:string;tableId:string;diningTableId:string};
-export default function SectionFloorLayouts({tenantId,branch}:{tenantId:string;branch:string}){
+// Remount on tenant/branch changes: an in-flight save must never paint a prior
+// branch's layouts or success state into the newly selected workspace.
+export default function SectionFloorLayouts(props:{tenantId:string;branch:string}){
+ return <SectionFloorLayoutsScoped key={props.tenantId+":"+props.branch} {...props}/>;
+}
+function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:string}){
  const language=useUiLanguage();const tr=(key:number)=>messages[language][key];
  const [sections,setSections]=useState<Section[]>([]),[layouts,setLayouts]=useState<Layout[]>([]),[operations,setOperations]=useState<TableOperation[]>([]),[registeredTables,setRegisteredTables]=useState<RegisteredTable[]>([]),[links,setLinks]=useState<FloorLink[]>([]);
  const [current,setCurrent]=useState(""),[sectionId,setSectionId]=useState(""),[name,setName]=useState(""),[plan,setPlan]=useState<FloorPlan>(defaultFloorPlan);
