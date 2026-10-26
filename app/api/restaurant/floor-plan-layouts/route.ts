@@ -55,7 +55,7 @@ export async function PUT(req:Request){try{assertSameOrigin(req)}catch{return Ne
 export async function PATCH(req:Request){
  try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const c=await scope(req,true);if(c.error)return c.error;
- let input:unknown;try{input=await readLimitedJson(req,4096)}catch{return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400})}
+ let input:unknown;try{input=await readLimitedJson(req,4096)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
  if(!input||typeof input!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const b=input as Record<string,unknown>;
  if(typeof b.id!=="string"||!uuid.test(b.id))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
