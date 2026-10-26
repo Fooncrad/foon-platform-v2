@@ -149,6 +149,8 @@ export async function PATCH(req:Request){
     if(!layout||!layout.tables.some(t=>t.id===b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"TABLE_NOT_IN_LAYOUT"},{status:400})}
     // These are MANUAL operational annotations only; reservation engine is authoritative.
     await db.execute("INSERT INTO restaurant_floor_table_operations(tenant_id,branch_id,layout_id,floor_table_id,status) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status)",[c.tenant,c.branch,b.id,b.tableId,b.status]);
+    const [section]=await db.execute<RowDataPacket[]>("SELECT section_id FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=?",[b.id,c.tenant,c.branch]);
+    if(section.length)await db.execute("INSERT INTO restaurant_section_host_alerts(tenant_id,branch_id,section_id,layout_id,floor_table_id,status,actor_user_id) VALUES(?,?,?,?,?,?,?)",[c.tenant,c.branch,section[0].section_id,b.id,b.tableId,b.status,await currentUserId()]);
    }else{await db.rollback();return NextResponse.json({ok:false,code:"INVALID_ACTION"},{status:400})}
    await db.commit();return NextResponse.json({ok:true});
   }catch(error){await db.rollback();throw error}finally{db.release()}
