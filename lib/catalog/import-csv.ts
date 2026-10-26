@@ -9,11 +9,20 @@ export function validateImportRow(kind:ImportKind,row:unknown):asserts row is Im
  for(const k of ['name','name_en','name_fr','category','product','group'])if((r[k]?.length??0)>180)throw Error('INVALID_'+k);
  for(const k of ['price','stock','weight_kg','length_cm','width_cm','height_cm'])if(r[k]&&(!/^\d{1,9}(\.\d{1,3})?$/.test(r[k])||!Number.isFinite(Number(r[k]))||Number(r[k])>999999999))throw Error('INVALID_'+k);
  if(r.price&&Math.abs(Number(r.price)*100-Math.round(Number(r.price)*100))>1e-7)throw Error('INVALID_PRICE_PRECISION');
+ // Preflight measured catalog rows before images are fetched or any batch is written.
+ // Without a unit, importBatch otherwise silently drops quantity_mode and dimensions.
+ if(kind==='items'){
+  const unit=r.unit?.trim()??'';
+  if(['quantity_mode','weight_kg','length_cm','width_cm','height_cm'].some(k=>r[k]?.trim())&&!unit)throw Error('UNIT_REQUIRED');
+  if(unit&&!['piece','pack','kg','g','l','ml','m','cm','m2','m3','hour','service'].includes(unit))throw Error('INVALID_UNIT');
+  if(r.quantity_mode&&!['whole','measured'].includes(r.quantity_mode))throw Error('INVALID_QUANTITY_MODE');
+  if(r.quantity_mode==='measured'&&!['kg','g','l','ml','m','cm','m2','m3'].includes(unit))throw Error('INVALID_QUANTITY_MODE');
+ }
  if(r.selection&&!['single','multiple'].includes(r.selection))throw Error('INVALID_SELECTION');
  if(r.required&&!['yes','no'].includes(r.required))throw Error('INVALID_REQUIRED');
  if(r.max&&(!/^\d+$/.test(r.max)||Number(r.max)<1||Number(r.max)>50))throw Error('INVALID_MAX');
  if((r.sku?.length??0)>100)throw Error('INVALID_SKU');
- for(const k of ['image_1','image_2','image_3','image_4'])if(r[k]){if(/^\/api\/account\/library\/[a-f0-9-]{36}$/i.test(r[k]))continue;const u=new URL(r[k]);if(u.protocol!=='https:'||u.username||u.password||u.port&&u.port!=='443')throw Error('HTTPS_IMAGE_REQUIRED');}
+ for(const k of ['image_1','image_2','image_3','image_4'])if(r[k]){if(/^\/api\/account\/library\/[a-f0-9-]{36}$/i.test(r[k]))continue;let u:URL;try{u=new URL(r[k]);}catch{throw Error('HTTPS_IMAGE_REQUIRED');}if(u.protocol!=='https:'||u.username||u.password||u.port&&u.port!=='443')throw Error('HTTPS_IMAGE_REQUIRED');}
 }
 // Reject duplicate identities across the full CSV before the first five-row
 // transaction is submitted. This avoids partial imports with a later duplicate.
