@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS test harness uses require for isolated handler mocking. */
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 function load(file,mocks={}){
