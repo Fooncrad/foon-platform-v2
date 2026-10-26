@@ -12,7 +12,7 @@ class ResourceError extends Error{constructor(code){super(code);this.code=code;}
 const source=readFileSync(resolve(root,'lib/restaurant/dining.ts'),'utf8');
 const js=ts.transpileModule(source,{fileName:'dining.ts',compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const loadedModule={exports:{}};
-new Function('require','module','exports',js)(id=>id==='@/scripts/restaurant-resource-schema.mjs'?{ResourceError}:require(id),module,module.exports);
+new Function('require','module','exports',js)(id=>id==='@/scripts/restaurant-resource-schema.mjs'?{ResourceError}:require(id),loadedModule,loadedModule.exports);
 const {prepareDiningResource}=loadedModule.exports;
 
 function fixture({status='occupied',capacity=4,tenant='tenant-A',branch='branch-A'}={}){
