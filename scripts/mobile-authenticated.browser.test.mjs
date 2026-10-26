@@ -29,7 +29,7 @@ test.describe("disposable authenticated mobile journeys",()=>{
    // Playwright correctly refuses to resend those cookies over HTTP. Re-scope only
    // this disposable browser fixture's cookie; never change server auth policy.
    if(["/api/auth/register","/api/auth/login","/api/customer/register"].includes(path)){
-    const session=(response.headers()["set-cookie"]??"").match(/(?:^|,\\s*)foon_session=([^;,]+)/)?.[1];
+    const session=(response.headers()["set-cookie"]??"").match(/(?:^|,\s*)foon_session=([^;,]+)/)?.[1];
     expect(session,path+" must issue a session cookie").toBeTruthy();
     await context.addCookies([{name:"foon_session",value:session,url:origin,httpOnly:true,secure:false,sameSite:"Lax"}]);
    }
