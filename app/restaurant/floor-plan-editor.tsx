@@ -18,13 +18,18 @@ export default function RestaurantFloorPlan({tenantId,branch,onReservations}:{te
  const editRevision=useRef(0);
  const endpoint="/api/restaurant/floor-plan?branch="+encodeURIComponent(branch);
  useEffect(()=>{
-  editRevision.current+=1;
   let active=true;
-  setLoadedScope("");setPlan(defaultFloorPlan);setDirty(false);setSelected("");setMessage("");
-  fetch(endpoint,{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
-   .then(r=>r.ok?r.json():Promise.reject())
-   .then(j=>{if(!j?.ok||!j.plan)throw Error("INVALID_FLOOR_PLAN_RESPONSE");if(active){setPlan(j.plan);setLoadedScope(tenantId+":"+branch);setDirty(false);setSelected("");setZoneFilter("all");}})
-   .catch(()=>{if(active){setLoadedScope("");setMessage("تعذر تحميل مخطط الفرع؛ الحفظ معطّل لحماية الطاولات الموجودة");}});
+  // Defer resetting branch-local editor state until after the effect returns.
+  // Cleanup guards both the reset and the network response against stale branches.
+  void Promise.resolve().then(()=>{
+   if(!active)return;
+   editRevision.current+=1;
+   setLoadedScope("");setPlan(defaultFloorPlan);setDirty(false);setSelected("");setMessage("");
+   return fetch(endpoint,{headers:{"x-foon-tenant":tenantId},cache:"no-store"})
+    .then(r=>r.ok?r.json():Promise.reject())
+    .then(j=>{if(!j?.ok||!j.plan)throw Error("INVALID_FLOOR_PLAN_RESPONSE");if(active){setPlan(j.plan);setLoadedScope(tenantId+":"+branch);setDirty(false);setSelected("");setZoneFilter("all");}})
+    .catch(()=>{if(active){setLoadedScope("");setMessage("تعذر تحميل مخطط الفرع؛ الحفظ معطّل لحماية الطاولات الموجودة");}});
+  });
   return()=>{active=false};
  },[tenantId,endpoint]);
  const zones=useMemo(()=>Array.from(new Set(plan.tables.map(t=>t.zone).filter(Boolean))),[plan.tables]);
