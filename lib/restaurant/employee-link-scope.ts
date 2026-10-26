@@ -20,7 +20,7 @@ export async function resolveBoundEmployeeUser(
   FROM memberships m
   JOIN employee_branch_assignments a
    ON a.tenant_id=m.tenant_id AND a.user_id=m.user_id AND a.branch_id=?
-   AND a.enabled=TRUE AND a.role=m.role
+   AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
   JOIN users u ON u.id=m.user_id AND u.status='active'
   WHERE m.tenant_id=? AND m.user_id=? AND m.role=? AND m.status='active'
    AND NOT EXISTS (
