@@ -8,6 +8,7 @@ export function checkoutPolicy(data:Record<string,unknown>):CheckoutPolicy{
  return {enabled,rate:enabled?Number(rate):0,inclusive:data.menuStoredPricesIncludeVat==="yes",serviceFee:amount("checkoutServiceFee"),deliveryFee:amount("checkoutDeliveryFee"),roomServiceFee:amount("checkoutRoomServiceFee"),feesTaxable:data.checkoutFeesTaxable==="yes",feesInclusive:data.checkoutFeesIncludeVat!=="no"};
 }
 export function checkoutTotals(subtotal:number,discount:number,channel:string,policy:CheckoutPolicy):CheckoutTotals{
+ if(typeof channel!=="string"||!["delivery","takeaway","dine_in","room_service"].includes(channel))throw Error("INVALID_CHECKOUT_CHANNEL");
  const minor=(n:number)=>{const v=Math.round(n*100);if(!Number.isFinite(n)||n<0||!Number.isSafeInteger(v)||Math.abs(n*100-v)>1e-7)throw Error("INVALID_CHECKOUT_AMOUNT");return v;};
  const sub=minor(subtotal),off=minor(discount);if(off>sub)throw Error("INVALID_CHECKOUT_DISCOUNT");
  if(!Number.isFinite(policy.rate)||policy.rate<0||policy.rate>100)throw Error("INVALID_CHECKOUT_SETTINGS");
