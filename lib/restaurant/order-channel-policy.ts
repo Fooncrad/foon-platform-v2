@@ -12,8 +12,12 @@ export function orderChannelStatus(store:Settings,branch:Settings,channel:OrderC
  const key=keys[channel];
  if(store[key]==="no"||branch[key]==="no")return{allowed:false,reason:"ORDER_CHANNEL_DISABLED"};
  const start=minute(branch.openingTime),end=minute(branch.closingTime);
- // Legacy branches without configured hours remain usable until the manager sets hours.
- if(start===null||end===null)return{allowed:true};
+ // Only completely unconfigured legacy branches may bypass opening-hour checks.
+ // A partial or malformed schedule must never turn a closed branch into 24/7 ordering.
+ const hasOpening=branch.openingTime!==undefined&&branch.openingTime!==null&&branch.openingTime!=="";
+ const hasClosing=branch.closingTime!==undefined&&branch.closingTime!==null&&branch.closingTime!=="";
+ if(!hasOpening&&!hasClosing)return{allowed:true};
+ if(start===null||end===null)return{allowed:false,reason:"STORE_CLOSED"};
  const current=localMinute(now,String(branch.timeZone||"UTC"));
  if(current===null)return{allowed:false,reason:"INVALID_BRANCH_TIMEZONE"};
  if(start===end)return{allowed:false,reason:"STORE_CLOSED"};
