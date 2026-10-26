@@ -90,6 +90,10 @@ jobs:
         run: node --test scripts/public-menu-offline.test.mjs
       - name: Verify merchant dashboard desktop and mobile journeys
         run: npm run test:browser
+      - name: Verify authenticated mobile layouts in three languages and five sizes
+        run: npm run test:mobile-authenticated
+        env:
+          FOON_MOBILE_SEED_FIXTURES: "1"
       - name: Save merchant dashboard screenshots
         if: always()
         uses: actions/upload-artifact@v4

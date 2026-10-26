@@ -64,3 +64,28 @@ Real protected pages, tenant-specific catalogs, booking submission, employee/adm
 journeys and native iOS Safari remain required review checks; these results do
 not establish that every page or every merchant configuration has been tested.
 No merge or deployment performed. Manual review and merge only.
+
+## Authenticated CI follow-up
+
+All eight checks on commit `44de35d2` completed successfully. That success did
+not supply the missing four authenticated sessions to the optional matrix.
+
+`npm run test:mobile-authenticated` now supplies a separate self-contained
+15-case browser matrix. The validation workflow enables it with
+`FOON_MOBILE_SEED_FIXTURES=1` after existing database/browser checks. Before any
+fixture mutation, the suite requires DATABASE_URL host `127.0.0.1` and database
+`foon_migration_test`. Without explicit opt-in it skips. It never targets an
+external base URL or writes session credentials to disk.
+
+The suite creates temporary restaurant and grocery tenants via registration,
+adds sample catalog data, registers a customer, and creates separate synthetic
+waiter/admin test users in that disposable database. It exercises actual
+merchant, waiter, retailer, customer and admin pages plus populated public menu
+and grocery storefront, including merchant search focus/Escape, admin mobile
+drawer and customer booking-dialog visibility/Escape. These fixtures do not
+change production permissions or application authorization code. CI discards
+the entire service database after the job, as with existing integration tests.
+
+Local checks for this follow-up cover syntax, lint and test discovery/skip
+behavior. Actual DB-backed results must be read from the follow-up commit's
+validation job; the earlier green commit is not evidence for the new suite.
