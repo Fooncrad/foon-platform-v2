@@ -80,3 +80,40 @@ test("offline dine-in pre-check blocks unknown, unavailable, over-capacity and a
  assert.equal(offlineTableBlock(tables,queued,"branch","bad-capacity",2),"TABLE_UNKNOWN");
  assert.equal(offlineTableBlock(tables,queued,"branch","t1",1.5),"PARTY_SIZE");
 });
+
+test("background POS sync checks do not overwrite order feedback when nothing is queued",async()=>{
+ const component=await readFile(new URL("../app/restaurant/order-workspace.tsx",import.meta.url),"utf8");
+ const start=component.indexOf(" async function syncOffline(");
+ const end=component.indexOf("\n useEffect(",start);
+ assert.ok(start>=0&&end>start,"POS sync handler should be available");
+ const handler=component.slice(start,end);
+ const makeSync=(pending,{throwOnRead=false}={})=>{
+  const messages=[],states=[],syncingRef={current:false};
+  const sync=new Function("module","scope","syncingRef","setSyncState","updateQueueCounts","setSyncLastAt","setMessage",handler+"\nreturn syncOffline;")(
+   "pos","branch",syncingRef,state=>states.push(state),async()=>{if(throwOnRead)throw Error("offline store unavailable");return pending;},()=>{},message=>messages.push(message)
+  );
+  return {sync,messages,states,syncingRef};
+ };
+ const automatic=makeSync(0);
+ await automatic.sync();
+ assert.deepEqual(automatic.messages,[],"automatic online/visibility events must preserve order success messages");
+ assert.deepEqual(automatic.states,["syncing","idle"]);
+ const manual=makeSync(0);
+ await manual.sync(true);
+ assert.match(manual.messages[0],/المزامنة القديمة متوقفة/);
+ const pending=makeSync(2);
+ await pending.sync();
+ assert.deepEqual(pending.messages,[],"pending-order warning belongs in the sync panel until manually requested");
+ assert.equal(pending.states.at(-1),"failed");
+ const manualPending=makeSync(2);
+ await manualPending.sync(true);
+ assert.match(manualPending.messages[0],/المزامنة القديمة متوقفة/);
+ const readError=makeSync(0,{throwOnRead:true});
+ await readError.sync();
+ assert.deepEqual(readError.messages,[],"automatic storage errors must not replace checkout feedback");
+ assert.equal(readError.states.at(-1),"failed");
+ const manualError=makeSync(0,{throwOnRead:true});
+ await manualError.sync(true);
+ assert.match(manualError.messages[0],/تعذر فحص الطلبات المحلية/);
+ assert.equal((component.match(/onClick=\{\(\)=>void syncOffline\(true\)\}/g)||[]).length,2,"both manual sync buttons should request a notice");
+});

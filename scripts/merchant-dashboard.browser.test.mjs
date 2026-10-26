@@ -877,7 +877,38 @@ test('merchant configures weight options and selling measurements in mobile dial
   await page.getByRole('button',{name:'Edit details & measurements',exact:true}).click();let dialog=page.locator('dialog[open]');await dialog.getByLabel('Selling unit',{exact:true}).selectOption('kg');await dialog.getByLabel('Weight in kg',{exact:true}).fill('0.5');await dialog.getByLabel('Allow measured quantity to 0.001 for weight, volume and length units').check();await dialog.getByLabel('Width in cm',{exact:true}).fill('12');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toHaveCount(0);
   await page.getByRole('button',{name:'Variants & selling units',exact:true}).click();dialog=page.locator('dialog[open]');await dialog.getByLabel('Activity template').selectOption('3');await dialog.getByRole('button',{name:'Add group',exact:true}).click();await expect(dialog.getByLabel('Group',{exact:true})).toBeVisible();await dialog.getByLabel('Arabic value (e.g. 1 kg)').fill('نصف كيلو');await dialog.getByLabel('English',{exact:true}).last().fill('0.5 kg');await dialog.getByLabel('Français',{exact:true}).last().fill('0.5 kg');await dialog.getByLabel('Price adjustment').fill('2');await dialog.getByLabel('Pack stock (blank = unlimited)').fill('4');await dialog.getByRole('button',{name:'Add value',exact:true}).click();await expect(dialog).toContainText('نصف كيلو');
   const box=await dialog.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(320);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
-  await dialog.getByRole('radio',{name:'نصف كيلو',exact:true}).check();await dialog.getByLabel('SKU',{exact:true}).fill('HALF-KG');await dialog.getByLabel('Combination stock (blank = unlimited)',{exact:true}).fill('0.375');await dialog.getByRole('button',{name:'Add combination',exact:true}).click();await expect(dialog).toContainText('HALF-KG');await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await page.getByRole('button',{name:'Confirm addition',exact:true}).click();await expect(page.locator('.foonStorefrontCart')).toContainText('4.50');await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.375');await page.getByLabel('Quantity (kg)',{exact:true}).fill('0.125');await expect(page.locator('.foonStorefrontCart')).toContainText('1.50');
+  await dialog.getByRole('radio',{name:'نصف كيلو',exact:true}).check();await dialog.getByLabel('SKU',{exact:true}).fill('HALF-KG');await dialog.getByLabel('Combination stock (blank = unlimited)',{exact:true}).fill('0.375');await dialog.getByRole('button',{name:'Add combination',exact:true}).click();await expect(dialog).toContainText('HALF-KG');await dialog.getByRole('button',{name:'Close',exact:true}).click();
+  // Assert the server contract before exercising the client: fractional stock must be measurable.
+  const cartResponse=await context.request.get(origin+'/api/customer/cart?store='+encodeURIComponent(slug)+'&product='+product);
+  expect(cartResponse.status()).toBe(200);
+  const cartPayload=await cartResponse.json();
+  expect(cartPayload.item).toMatchObject({unit:'kg',measured:true});
+  expect(cartPayload.item.variants.some(variant=>variant.stock===0.375)).toBe(true);
+  await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await expect(page.getByRole('button',{name:'Confirm addition',exact:true})).toBeEnabled();
+   // Keep browser runtime failures visible in CI instead of reporting only a stale cart.
+   const cartPageErrors=[];page.on('pageerror',error=>cartPageErrors.push(error.message));
+   await page.evaluate(()=>{
+    window.__foonCartNativeClicks=0;window.__foonClickEvents=[];
+    document.querySelector('.foonCartOptions button')?.addEventListener('click',()=>window.__foonCartNativeClicks++);
+    document.addEventListener('click',event=>window.__foonClickEvents.push({phase:'capture',tag:event.target?.tagName,text:event.target?.textContent?.trim()?.slice(0,70)}),true);
+    document.addEventListener('click',event=>window.__foonClickEvents.push({phase:'bubble',tag:event.target?.tagName,text:event.target?.textContent?.trim()?.slice(0,70)}));
+   });
+   await page.getByRole('button',{name:'Confirm addition',exact:true}).click();
+   try{await expect(page.locator('.foonStorefrontCart')).toContainText('4.50');}
+   catch(error){
+    const diagnostics=await page.evaluate(()=>({
+     selectedOptions:[...document.querySelectorAll('.foonCartOptions input:checked')].map(input=>input.closest('label')?.textContent?.trim()),
+     confirmDisabled:document.querySelector('.foonCartOptions button')?.disabled,
+     cartText:document.querySelector('.foonStorefrontCart')?.textContent?.slice(0,450),
+     storedCart:sessionStorage.getItem('foon-public-cart:'+location.pathname.slice(1))?.slice(0,450)
+    }));
+    const before=await page.evaluate(()=>({nativeClicks:window.__foonCartNativeClicks,events:window.__foonClickEvents,buttons:[...document.querySelectorAll('.foonCartOptions button')].map(el=>({text:el.textContent,visible:el.getBoundingClientRect().width>0}))}));
+    // Diagnostic only: test whether DOM-dispatched click reaches the React handler.
+    await page.evaluate(()=>document.querySelector('.foonCartOptions button')?.click());
+    await page.waitForTimeout(150);
+    const after=await page.evaluate(()=>({nativeClicks:window.__foonCartNativeClicks,cartText:document.querySelector('.foonStorefrontCart')?.textContent?.slice(0,450)}));
+    throw new Error(String(error)+'\nCart diagnostics: '+JSON.stringify(diagnostics)+'\nNative clicks before DOM retry: '+before+'; after: '+JSON.stringify(after)+'\nBrowser exceptions: '+JSON.stringify(cartPageErrors));
+   }await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.375');await page.getByLabel('Quantity (kg)',{exact:true}).fill('0.125');await expect(page.locator('.foonStorefrontCart')).toContainText('1.50');
   const [[saved]]=await db.execute('SELECT attributes FROM catalog_products WHERE id=?',[product]);const attributes=typeof saved.attributes==='string'?JSON.parse(saved.attributes):saved.attributes;expect(attributes.measurements.weightKg).toBe(0.5);expect(attributes.measurements.quantityMode).toBe('measured');
   const customer=await context.request.post(origin+'/api/customer/register',{headers:{origin},data:{name:'Measured customer',email:randomUUID()+'@test.example',password:'a-strong-test-password',storeSlug:slug,legalAccepted:true}});expect(customer.status()).toBe(201);const measuredCustomer=(await customer.json()).user;await db.execute("UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",[measuredCustomer.id]);await page.reload();await expect(page.getByLabel('Quantity (kg)',{exact:true})).toHaveValue('0.125');const placed=page.waitForResponse(r=>r.url().endsWith('/api/customer/orders')&&r.request().method()==='POST');await page.getByRole('button',{name:'Place order',exact:true}).click();const order=await placed;expect(order.status(),await order.text()).toBe(201);expect((await order.json()).total).toBe(1.5);const [[variant]]=await db.execute('SELECT stock_quantity FROM catalog_variants WHERE product_id=?',[product]);expect(Number(variant.stock_quantity)).toBe(0.25);
  }finally{await db.end();await context.close()}

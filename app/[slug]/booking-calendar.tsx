@@ -18,6 +18,8 @@ export default function BookingCalendar({min,max,language="ar"}:{min:string;max:
  const value=selected+"T"+hour+":"+minute;
  const valid=value>=min&&value<=max;
  const title=language==="ar"?"اختر تاريخ الحجز (ميلادي)":language==="fr"?"Choisissez la date (grégorien)":"Choose booking date (Gregorian)";
+ const hourLabel=language==="ar"?"الساعة":language==="fr"?"Heure":"Hour";
+ const minuteLabel=language==="ar"?"الدقيقة":language==="fr"?"Minute":"Minute";
  function move(delta:number){const d=new Date(y,m-1+delta,1);setView(d.getFullYear()+"-"+pad(d.getMonth()+1));}
  const prev=new Date(y,m-2,1);const next=new Date(y,m,1);
  const canPrev=dateKey(prev.getFullYear(),prev.getMonth(),new Date(prev.getFullYear(),prev.getMonth()+1,0).getDate())>=min.slice(0,10);
@@ -36,8 +38,8 @@ export default function BookingCalendar({min,max,language="ar"}:{min:string;max:
    })}
   </div>
   <div style={{display:"flex",alignItems:"center",gap:8,marginTop:12}}>
-   <label style={{flex:1}}>Hour<select value={hour} onChange={e=>setHour(e.target.value)}>{Array.from({length:24},(_,i)=><option key={i} value={pad(i)}>{pad(i)}</option>)}</select></label>
-   <label style={{flex:1}}>Minute<select value={minute} onChange={e=>setMinute(e.target.value)}>{Array.from({length:60},(_,i)=><option key={i} value={pad(i)}>{pad(i)}</option>)}</select></label>
+   <label style={{flex:1}}>{hourLabel}<select aria-label={hourLabel} lang="en" value={hour} onChange={e=>setHour(e.target.value)}>{Array.from({length:24},(_,i)=><option key={i} value={pad(i)}>{pad(i)}</option>)}</select></label>
+   <label style={{flex:1}}>{minuteLabel}<select aria-label={minuteLabel} lang="en" value={minute} onChange={e=>setMinute(e.target.value)}>{Array.from({length:60},(_,i)=><option key={i} value={pad(i)}>{pad(i)}</option>)}</select></label>
   </div>
   <input type="hidden" name="scheduledAt" value={valid?value:""}/>
   <p aria-live="polite" style={{fontSize:12,marginTop:8}}>{valid?value.replace("T"," · "):language==="ar"?"اختر وقتًا ضمن الفترة المتاحة":language==="fr"?"Choisissez une heure disponible":"Choose a time within the available range"}</p>
