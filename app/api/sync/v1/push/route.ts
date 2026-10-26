@@ -23,6 +23,7 @@ export async function POST(request:Request){
  try{raw=await readBoundedSyncRequestText(request,300_000)}
  catch(error){
   if(error instanceof Error&&error.message==="SYNC_PAYLOAD_TOO_LARGE")return reply("PAYLOAD_TOO_LARGE",413);
+  if(error instanceof Error&&error.message==="SYNC_BODY_TIMEOUT")return reply("REQUEST_TIMEOUT",408);
   return reply("INVALID_INPUT",400);
  }
  let body:unknown;try{body=JSON.parse(raw)}catch{return reply("INVALID_INPUT",400)}
