@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
 const source=readFileSync(new URL("../lib/restaurant/dining.ts",import.meta.url),"utf8");
-const sql=source.match(/"SELECT r\\.id FROM restaurant_resources r JOIN memberships m ON [^"\\n]+ LOCK IN SHARE MODE"/)?.[0];
+const sql=source.match(/"SELECT r\.id FROM restaurant_resources r JOIN memberships m ON [^"\n]+ LOCK IN SHARE MODE"/)?.[0];
 assert.ok(sql,"section staff membership query must exist");
 
 test("section staff query scopes tenant, branch, resource and locks",()=>{
  for(const fragment of ["m.tenant_id=r.tenant_id","a.tenant_id=r.tenant_id","a.branch_id=?","r.tenant_id=?","r.id=?","r.branch_id=?","r.kind='employee'","r.archived=FALSE","r.status='active'","LOCK IN SHARE MODE"])
   assert.ok(sql.includes(fragment),fragment);
- assert.equal((sql.match(/\\?/g)||[]).length,5,"five bound parameters expected");
+ assert.equal((sql.match(/\?/g)||[]).length,5,"five bound parameters expected");
  assert.ok(source.includes("[input.branchId,tenant,d[key],input.branchId,expectedRole]"),"keep bound parameters");
 });
 test("section staff query requires active account and waiter membership",()=>{
