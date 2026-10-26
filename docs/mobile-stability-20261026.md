@@ -96,3 +96,9 @@ any browser suite ran. The database/browser job now pins Ubuntu 24.04 and bounds
 browser installation to four minutes while retaining all dependencies and
 assertions. The authenticated matrix also visits the real reservation calendar
 and verifies focus and actual internal scrolling (120 page visits total).
+
+Ubuntu 24.04's apt mirror also stalled on OS/font upgrades on `bd76c25a`.
+The job now installs the locked Playwright browser without invoking apt and
+requires an actual `chromium.launch()`/close smoke check before the suites.
+Playwright host validation remains enabled: missing libraries or browser launch
+failure fail the job. No test assertions or browser journeys are bypassed.
