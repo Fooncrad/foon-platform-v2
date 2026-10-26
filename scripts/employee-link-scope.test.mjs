@@ -60,8 +60,8 @@ test("unknown ID or missing branch fails before SQL, supervisor maps to waiter o
 
 test("mixed MariaDB collations cannot fall back to implicit role equality",async()=>{
  const db={async execute(sql,params){
-  assert.match(sql,/a\\.role COLLATE utf8mb4_unicode_ci=m\\.role COLLATE utf8mb4_unicode_ci/);
-  assert.doesNotMatch(sql,/a\\.role\\s*=\\s*m\\.role/);
+  assert.match(sql,/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/);
+  assert.doesNotMatch(sql,/a\.role\s*=\s*m\.role/);
   assert.deepEqual(params,[branch,tenant,user,"waiter"]);
   return [[{user_id:user}]];
  }};
