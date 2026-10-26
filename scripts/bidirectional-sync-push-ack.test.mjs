@@ -130,3 +130,14 @@ test("different signed duplicate receipts cannot bypass pending state or a malfo
   assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
  }
 });
+
+test("a forged but well-formed stored signature cannot be laundered by a new signed duplicate",async()=>{
+ const replay=signCommittedPushReceipt({receipt:{...receipt,status:"duplicate"},privateKey});
+ const forged="A".repeat(86);
+ assert.notEqual(forged,payload.receipt.signature);
+ const queued={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:1};
+ const db=dbFixture([{payload_digest:receipt.digest,next_version:1,signature:forged}],queued);
+ await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:replay,expected,deviceId:ids[0],publicKey}),/SYNC_ACK_CONFLICT/);
+ assert.equal(db.calls.at(-1),"rollback");
+ assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+});
