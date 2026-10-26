@@ -17,7 +17,7 @@ async function context(req:Request,write=false){
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND id=? AND enabled=TRUE LIMIT 1",[m.tenantId,branch]);
   if(!rows.length)return {error:NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404})};
   return {tenant:m.tenantId,branch,uid,manager:m.role==="owner"||m.role==="manager"};
- }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
+ }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
 }
 export async function GET(req:Request){
  const c=await context(req);if(c.error)return c.error;
