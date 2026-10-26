@@ -24,3 +24,12 @@ test("section staff reads and writes require only the selected branch PIN",()=>{
  assert.match(api,/await requireAdditionalBranchUnlock\(m\.tenantId,branch,uid\)/);
  assert.doesNotMatch(api,/requireAllAdditionalBranchesUnlocked/);
 });
+
+test("waiter section staff view is read-only and manager save is capability gated",()=>{
+ const api=read("app/api/restaurant/section-staff/route.ts");
+ const ui=read("app/restaurant/section-staff-panel.tsx");
+ assert.match(api,/canManage:c\.manager/);
+ assert.match(ui,/setCanManage\(Boolean\(data\.canManage\)\)/);
+ assert.match(ui,/\{canManage\?<button/);
+ assert.match(ui,/Assignments are read-only/);
+});
