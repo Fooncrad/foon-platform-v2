@@ -21,7 +21,7 @@ class BranchPinError extends Error{constructor(code){super(code);this.code=code;
 class CheckoutError extends Error{constructor(code,status){super(code);this.status=status;}}
 function handler(options={}){
  const calls={membership:0,invoice:0,checkout:0,unlock:0};
- const db={execute:async(sql,params)=>{calls.invoice++;assert.equal(params[0],'tenant-1');assert.equal(params[1],invoiceId);return [[{branch_id:'branch-1'}]];}};
+ const db={execute:async(sql,params)=>{calls.invoice++;assert.match(sql,/customer_invoice/);assert.equal(params[0],'tenant-1');assert.equal(params[1],invoiceId);return [[{branch_id:'branch-1'}]];}};
  const deps={
   'next/server':{NextResponse:{json:(data,init)=>Response.json(data,init)}},
   '@/lib/auth/session':{currentUserId:async()=>options.anonymous?null:'owner-1'},
