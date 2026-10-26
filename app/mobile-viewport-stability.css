@@ -132,3 +132,14 @@ body { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
   }
   .restaurantSearchOverlay { padding-block-start:12px; }
 }
+
+/* The fixed admin drawer must include its padding and borders in its viewport
+ * height. Otherwise content-box max-height pushes its bottom below the screen. */
+@media (max-width:850px) {
+  .adminShell .adminDrawer {
+    box-sizing:border-box!important;
+    max-height:calc(100dvh - 142px)!important;
+    max-block-size:calc(100dvh - 142px)!important;
+    overflow-y:auto;
+  }
+}
