@@ -7,6 +7,7 @@ import {customerCreatorUserId} from "@/lib/creator/authorization";
 import {parseCreatorDraft,parsePortfolioDraft,CREATOR_PORTFOLIO_LIMIT} from "@/lib/creator/profile-policy";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readCreatorMutationJson} from "@/lib/creator/request-body";
+import {creatorWriteAccess} from "@/lib/creator/write-access";
 import {database} from "@/lib/db/mysql";
 
 export const runtime="nodejs";
@@ -76,6 +77,12 @@ export async function POST(request:Request){
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
+  // Session validation can race with account suspension or role conversion.
+  const writeAccess=await creatorWriteAccess(db,access.userId);
+  if(writeAccess!=="active"){
+   await db.rollback();
+   return writeAccess==="inactive"?fail("UNAUTHENTICATED",401):fail("CUSTOMER_ACCOUNT_REQUIRED",403);
+  }
   const [profiles]=await db.execute<RowDataPacket[]>(
    "SELECT user_id FROM customer_creator_profiles WHERE user_id=? FOR UPDATE",[access.userId]);
   if(!profiles.length){await db.rollback();return fail("CREATOR_PROFILE_REQUIRED",409);}
@@ -104,10 +111,19 @@ export async function DELETE(request:Request){
  const body=parsed.body as {id?:unknown}|null;
  const id=typeof body?.id==="string"?body.id:"";
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return fail("INVALID_INPUT",400);
+ const db=await database().getConnection();
  try{
-  const [result]=await database().execute<ResultSetHeader>(
+  await db.beginTransaction();
+  const writeAccess=await creatorWriteAccess(db,access.userId);
+  if(writeAccess!=="active"){
+   await db.rollback();
+   return writeAccess==="inactive"?fail("UNAUTHENTICATED",401):fail("CUSTOMER_ACCOUNT_REQUIRED",403);
+  }
+  const [result]=await db.execute<ResultSetHeader>(
    "DELETE FROM customer_creator_portfolio WHERE id=? AND user_id=?",[id,access.userId]);
-  if(result.affectedRows===0)return fail("PORTFOLIO_ITEM_NOT_FOUND",404);
+  if(result.affectedRows===0){await db.rollback();return fail("PORTFOLIO_ITEM_NOT_FOUND",404);}
+  await db.commit();
   return NextResponse.json({ok:true},{headers});
- }catch{return fail("PORTFOLIO_DELETE_FAILED",503);}
+ }catch{await db.rollback();return fail("PORTFOLIO_DELETE_FAILED",503);}
+ finally{db.release();}
 }
