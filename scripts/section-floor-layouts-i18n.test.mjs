@@ -1,1 +1,19 @@
-import test from "node:test";import assert from "node:assert/strict";import {readFileSync} from "node:fs";const ui=readFileSync(new URL("../app/restaurant/section-floor-layouts.tsx",import.meta.url),"utf8");test("three languages use existing language provider",()=>{assert.match(ui,/useUiLanguage/);for(const key of ['"ar":','"en":','"fr":'])assert.ok(ui.includes(key),key);assert.match(ui,/dir=\{language==="ar"\?"rtl":"ltr"\}/)});test("translated labels, validations, and status messages",()=>{for(const n of [0,1,2,3,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27])assert.ok(ui.includes("tr("+n+")"),String(n));assert.match(ui,/SECTIONS_UNAVAILABLE/);assert.match(ui,/LAYOUTS_UNAVAILABLE/);assert.match(ui,/Could not load existing dining sections/);assert.match(ui,/Impossible de charger les sections/);assert.doesNotMatch(ui,/setMessage\(\{tr/)});test("numeric inputs remain English in all three locales",()=>{assert.match(ui,/lang="en"/);assert.match(ui,/latinDigits\(e.target.value\)/);assert.match(ui,/englishNumber\(e.target.value\)/)});
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const ui=readFileSync(new URL("../app/restaurant/section-floor-layouts.tsx",import.meta.url),"utf8");
+test("language follows FOON preference with RTL Arabic and LTR English/French",()=>{
+ assert.match(ui,/useUiLanguage/);
+ for(const language of ['"ar":','"en":','"fr":'])assert.ok(ui.includes(language),language);
+ assert.match(ui,/dir=\{language==="ar"\?"rtl":"ltr"\}/);
+});
+test("modern floor editor keeps localized user-facing controls, validation and error messages",()=>{
+ for(const label of ["الطاولات ومخططات الصالات","Tables & floor plans","Tables et plans de salle","Floor plan","Plan de salle","SECTIONS_UNAVAILABLE","LAYOUTS_UNAVAILABLE","Could not load existing dining sections","Impossible de charger les sections"])assert.ok(ui.includes(label),label);
+ for(const action of ["tr(12)","tr(14)","tr(19)","tr(20)","tr(24)","tr(25)","tr(26)","tr(27)"])assert.ok(ui.includes(action),action);
+ assert.doesNotMatch(ui,/setMessage\(\{tr/);
+});
+test("table numbers and dimensions stay in English digits across all three languages",()=>{
+ assert.match(ui,/dir="ltr" lang="en"/);
+ assert.match(ui,/latinDigits\(e.target.value\)/);
+ assert.match(ui,/englishNumber\(e.target.value\)/);
+});
