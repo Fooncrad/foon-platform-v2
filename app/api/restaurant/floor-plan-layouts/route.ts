@@ -25,6 +25,15 @@ async function sectionExists(tenant:string,branch:string,section:string){
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,section,branch]);return rows.length>0;
 }
 export async function GET(req:Request){const c=await scope(req,false);if(c.error)return c.error;
+ if(new URL(req.url).searchParams.get("view")==="operations"){
+  try{
+   const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+   const [links]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+   const [registered]=await database().execute<RowDataPacket[]>("SELECT id,status FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL)",[c.tenant,c.branch]);
+   return NextResponse.json({ok:true,operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),links:links.map(l=>({layoutId:String(l.layout_id),tableId:String(l.floor_table_id),diningTableId:String(l.dining_table_id)})),registeredStatuses:registered.map(t=>({id:String(t.id),status:String(t.status)}))},{headers:{"Cache-Control":"no-store, private"}});
+  }catch{return NextResponse.json({ok:false,code:"OPERATIONS_UNAVAILABLE"},{status:503})}
+ }
+
  try{
  const [sections]=await database().execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
  const [layouts]=await database().execute<RowDataPacket[]>("SELECT id,section_id,name,layout_json,is_active FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? ORDER BY created_at,id LIMIT 500",[c.tenant,c.branch]);
