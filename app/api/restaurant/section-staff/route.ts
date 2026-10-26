@@ -36,7 +36,7 @@ export async function GET(req:Request){
 export async function PUT(req:Request){
  try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const c=await context(req,true);if(c.error)return c.error;
- let data:unknown;try{data=await readLimitedJson(req,8192)}catch{return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400})}
+ let data:unknown;try{data=await readLimitedJson(req,8192)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
  if(!data||typeof data!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const v=data as {sectionId?:unknown;assignments?:unknown};
  if(typeof v.sectionId!=="string"||!idPattern.test(v.sectionId)||!Array.isArray(v.assignments)||v.assignments.length>100)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});

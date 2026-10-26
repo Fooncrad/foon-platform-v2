@@ -11,3 +11,10 @@ test("section staff listings and assignment writes reject inactive or other-bran
  assert.equal((api.match(/m\.role='owner' OR a\.user_id IS NOT NULL/g)??[]).length,2);
  assert.equal((api.match(/JOIN users u ON u\.id=m\.user_id AND u\.status='active'/g)??[]).length,2);
 });
+
+test("oversized section staff writes are rejected with HTTP 413",()=>{
+ const api=read("app/api/restaurant/section-staff/route.ts");
+ assert.match(api,/readLimitedJson\(req,8192\)/);
+ assert.match(api,/error\.message==="BATCH_TOO_LARGE"/);
+ assert.match(api,/status:tooLarge\?413:400/);
+});
