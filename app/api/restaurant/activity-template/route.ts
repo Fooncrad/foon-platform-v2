@@ -4,6 +4,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {defaultTemplateForActivity,isTemplateForActivity,templatesForActivity} from "@/lib/platform/activity-templates";
 export const runtime="nodejs";
@@ -32,7 +33,9 @@ export async function GET(request:Request){
 export async function PUT(request:Request){
  try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const ctx=await context(request,true);if(ctx.error)return ctx.error;
- const body=await request.json().catch(()=>null);
+ let body:{template?:unknown}|null;
+ try{body=await readLimitedJson(request,1024) as {template?:unknown}|null;}
+ catch(error){const large=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:large?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:large?413:400});}
  const template=body?.template;
  if(typeof template!=="string"||!isTemplateForActivity(ctx.activity!,template))return NextResponse.json({ok:false,code:"INVALID_ACTIVITY_TEMPLATE"},{status:400});
  try{

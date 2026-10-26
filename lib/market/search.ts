@@ -18,7 +18,7 @@ export function buildMarketWhere(filters:MarketFilters){
  const args:string[]=[filters.country];
  if(filters.kind){clauses.push("t.kind=?");args.push(filters.kind);}
  if(filters.activity){clauses.push("bp.activity_code=?");args.push(filters.activity);}
- if(filters.q){const search="%"+escapeMarketLike(filters.q)+"%";clauses.push("(t.name LIKE ? ESCAPE '!' OR t.slug LIKE ? ESCAPE '!')");args.push(search,search);}
+ if(filters.q){const search="%"+escapeMarketLike(filters.q)+"%";clauses.push("(t.name LIKE ? ESCAPE '!' OR t.slug LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM catalog_products cp WHERE cp.tenant_id=t.id AND cp.enabled=TRUE AND (cp.name_ar LIKE ? ESCAPE '!' OR cp.name_en LIKE ? ESCAPE '!' OR cp.name_fr LIKE ? ESCAPE '!')))");args.push(search,search,search,search,search);}
  return {where:clauses.join(" AND "),args};
 }
 export function marketListingOrderSql(){

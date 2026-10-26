@@ -59,7 +59,7 @@ test("old storefront slug collisions have a dedicated public route",()=>{
  assert.match(validator,/allowReserved/);
  assert.match(publicPage,/validStoreSlug\(slug,true\)/);
  assert.match(fallback,/from "..\/..\/\[slug\]\/page"/);
- assert.match(market,/publicStorefrontUrl\(String\(store.slug\)\)/);
+ assert.match(market,/marketPublicStorefrontUrl\(String\(store.slug\)\)/);
 });
 
 test("migration CLI retains valid JavaScript syntax and logs applied SQL files",async()=>{

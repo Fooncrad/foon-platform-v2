@@ -42,7 +42,7 @@ test("public landing and marketplace share language, theme, footer and safe coun
   await header.getByRole("button",{name:"تبديل المظهر"}).click();
   await expect(landing).toHaveAttribute("data-theme","dark");
   await assertReadableSurface(page.locator(".foonFeatureCard").first(),"Public landing feature");
-  await page.locator(".foonHeroActions").getByRole("link",{name:"استكشف السوق"}).click();
+  await page.locator(".foonHeroActions").getByRole("link",{name:"شاهد متاجر على FOON"}).click();
   const market=page.locator(".foonPublicMarket"),marketHeader=market.locator(".foonPublicHeader"),marketFooter=market.locator(".foonPublicFooter");
   await expect(market).toHaveAttribute("data-theme","dark");
   await expect(marketHeader).toHaveCount(1);
@@ -217,9 +217,13 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  },{timeout:15000}).toBe(1);
  await page.getByRole("button",{name:"الأصناف",exact:true}).click();
  await page.getByRole("button",{name:"إضافة صنف جديد",exact:true}).click();
+ // Loading categories can remount the item form. Wait until the newly
+ // persisted category is available before typing into controlled fields.
+ const itemCategory=page.getByLabel("التصنيف",{exact:true});
+ await expect(itemCategory.getByRole("option",{name:"مشروبات المعاينة",exact:true})).toBeAttached();
+ await itemCategory.selectOption({label:"مشروبات المعاينة"});
  await page.getByLabel("اسم الصنف",{exact:true}).fill("قهوة المعاينة");
  await page.getByLabel("السعر",{exact:true}).fill("10");
- await page.getByLabel("التصنيف",{exact:true}).selectOption({label:"مشروبات المعاينة"});
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
