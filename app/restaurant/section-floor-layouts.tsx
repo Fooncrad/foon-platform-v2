@@ -22,6 +22,27 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
  const [selected,setSelected]=useState(""),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
  const url="/api/restaurant/floor-plan-layouts?branch="+encodeURIComponent(branch);
  useEffect(()=>{let live=true;Promise.resolve().then(()=>{if(!live)return;setLoading(true);setSections([]);setLayouts([]);setCurrent("");setSectionId("");setName("");setPlan(defaultFloorPlan);setSelected("");setMessage("");return fetch(url,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(!data.ok)throw Error();if(live){setSections(data.sections);setLayouts(data.layouts);setOperations(data.operations||[]);setRegisteredTables(data.registeredTables||[]);setLinks(data.links||[]);setSectionId(data.sections[0]?.id||"")}}).catch(()=>{if(live)setMessage(tr(22))}).finally(()=>{if(live)setLoading(false)})});return()=>{live=false}},[tenantId,url]);
+ // Refresh real/operational status without reloading the plan being edited.
+ useEffect(()=>{
+  let stopped=false;
+  const refresh=async()=>{
+   if(document.visibilityState==="hidden")return;
+   try{
+    const response=await fetch(url+"&view=operations",{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
+    if(!response.ok)return;
+    const data=await response.json();
+    if(stopped||!data.ok)return;
+    setOperations(data.operations||[]);
+    setLinks(data.links||[]);
+    const statuses=new Map<string,string>((data.registeredStatuses||[]).map((item:{id:string;status:string})=>[item.id,item.status]));
+    setRegisteredTables(tables=>tables.map(t=>({...t,status:statuses.get(t.id)||t.status})));
+   }catch{/* Keep the last known state; do not overwrite unsaved work. */}
+  };
+  const timer=setInterval(()=>void refresh(),30000);
+  const visible=()=>{if(document.visibilityState==="visible")void refresh()};
+  document.addEventListener("visibilitychange",visible);
+  return()=>{stopped=true;clearInterval(timer);document.removeEventListener("visibilitychange",visible)};
+ },[tenantId,url]);
  function openLayout(id:string){if(id===""){setCurrent("");setName("");setPlan(defaultFloorPlan);setSelected("");return}const l=layouts.find(x=>x.id===id);if(!l)return;setCurrent(id);setName(l.name);setSectionId(l.sectionId);setPlan(l.plan);setSelected("");setMessage("")}
  function addTable(){if(!sectionId)return setMessage(tr(23));const id="table-"+crypto.randomUUID();setPlan(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,...nextFloorTablePosition(p),zone:sections.find(s=>s.id===sectionId)?.name||"الصالة"}]}));setSelected(id)}
  function moveTable(e:ReactPointerEvent<HTMLDivElement>){if(!dragging||!boardRef.current)return;const r=boardRef.current.getBoundingClientRect();if(r.width===0||r.height===0)return;const x=Math.max(0,Math.min(plan.width-0.01,Math.round((e.clientX-r.left)/r.width*plan.width*2)/2));const y=Math.max(0,Math.min(plan.height-0.01,Math.round((e.clientY-r.top)/r.height*plan.height*2)/2));setPlan(p=>({...p,tables:p.tables.map(t=>t.id===dragging?{...t,x,y}:t)}))}
