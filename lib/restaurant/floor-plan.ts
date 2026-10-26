@@ -7,6 +7,19 @@ export function nextFloorTableNumber(tables:readonly FloorTable[]):string{
  while(used.has(String(candidate)))candidate++;
  return String(candidate);
 }
+
+// Place new tables into separate grid cells instead of stacking them at the same coordinates.
+export function nextFloorTablePosition(plan:FloorPlan):{x:number;y:number}{
+ const cols=Math.max(1,Math.floor(plan.width/2.5));
+ const rows=Math.max(1,Math.floor(plan.height/2.5));
+ const occupied=new Set(plan.tables.map(t=>Math.floor(t.x/2.5)+":"+Math.floor(t.y/2.5)));
+ for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+  if(!occupied.has(col+":"+row))return {x:Math.min(plan.width-0.5,col*2.5+1.25),y:Math.min(plan.height-0.5,row*2.5+1.25)};
+ }
+ // A packed grid can still contain available space; offset additional tables deterministically.
+ const n=plan.tables.length;
+ return {x:Math.min(plan.width-0.1,0.5+(n%cols)*(plan.width/cols)),y:Math.min(plan.height-0.1,0.5+(Math.floor(n/cols)%rows)*(plan.height/rows))};
+}
 export function validFloorPlan(x:unknown):x is FloorPlan{
  if(!x||typeof x!=="object")return false;const p=x as Record<string,unknown>;
  if(typeof p.width!=="number"||!Number.isFinite(p.width)||p.width<2||p.width>200||typeof p.height!=="number"||!Number.isFinite(p.height)||p.height<2||p.height>200||!Array.isArray(p.tables)||p.tables.length>500)return false;
