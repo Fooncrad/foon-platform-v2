@@ -1,0 +1,33 @@
+"use client";
+import {useEffect,useState} from "react";
+import {defaultFloorPlan,nextFloorTableNumber,nextFloorTablePosition,type FloorPlan} from "@/lib/restaurant/floor-plan";
+type Section={id:string;name:string};
+type Layout={id:string;sectionId:string;name:string;plan:FloorPlan};
+export default function SectionFloorLayouts({tenantId,branch}:{tenantId:string;branch:string}){
+ const [sections,setSections]=useState<Section[]>([]),[layouts,setLayouts]=useState<Layout[]>([]);
+ const [current,setCurrent]=useState(""),[sectionId,setSectionId]=useState(""),[name,setName]=useState(""),[plan,setPlan]=useState<FloorPlan>(defaultFloorPlan);
+ const [selected,setSelected]=useState(""),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
+ const url="/api/restaurant/floor-plan-layouts?branch="+encodeURIComponent(branch);
+ useEffect(()=>{let live=true;Promise.resolve().then(()=>{if(!live)return;setLoading(true);setSections([]);setLayouts([]);setCurrent("");setSectionId("");setName("");setPlan(defaultFloorPlan);setSelected("");setMessage("");return fetch(url,{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(!data.ok)throw Error();if(live){setSections(data.sections);setLayouts(data.layouts);setSectionId(data.sections[0]?.id||"")}}).catch(()=>{if(live)setMessage("تعذر تحميل أقسام الصالة والمخططات، تأكد من ترحيل 0306")}).finally(()=>{if(live)setLoading(false)})});return()=>{live=false}},[tenantId,url]);
+ function openLayout(id:string){if(id===""){setCurrent("");setName("");setPlan(defaultFloorPlan);setSelected("");return}const l=layouts.find(x=>x.id===id);if(!l)return;setCurrent(id);setName(l.name);setSectionId(l.sectionId);setPlan(l.plan);setSelected("");setMessage("")}
+ function addTable(){const id="table-"+crypto.randomUUID();setPlan(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,...nextFloorTablePosition(p),zone:sections.find(s=>s.id===sectionId)?.name||"الصالة"}]}));setSelected(id)}
+ const active=plan.tables.find(t=>t.id===selected);
+ function tableEdit(patch:Record<string,number|string>){setPlan(p=>({...p,tables:p.tables.map(t=>t.id===selected?{...t,...patch}:t)}))}
+ async function save(){if(!sectionId||!name.trim())return setMessage("اختر قسمًا سابقًا واكتب اسم المخطط");setSaving(true);setMessage("");try{const r=await fetch(url,{method:current?"PUT":"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({...(current?{id:current}:{}),sectionId,name,plan})});const data=await r.json();if(!r.ok)throw Error(data.code||"SAVE_FAILED");const id=current||data.id;setLayouts(ls=>{const next=ls.filter(l=>l.id!==id);return [...next,{id,sectionId,name,plan}]});setCurrent(id);setMessage("تم حفظ المخطط ضمن القسم المحدد")}catch(e){setMessage("تعذر حفظ المخطط: "+String(e))}finally{setSaving(false)}}
+ return <section className="restaurantPanel" dir="rtl" style={{marginBlock:16,padding:18}}><h2>مخططات الأقسام المتعددة</h2><p>اختر قسم الصالة الموجود مسبقًا، ثم أنشئ مخططًا أو أكثر داخله؛ دون إنشاء قسم مكرر أو تغيير المخطط القديم.</p>
+ {loading?<p>جار تحميل الأقسام والمخططات…</p>:<><div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"end"}}>
+ <label>المخططات المحفوظة<select value={current} onChange={e=>openLayout(e.target.value)}><option value="">+ مخطط جديد</option>{layouts.map(l=><option key={l.id} value={l.id}>{l.name} — {sections.find(s=>s.id===l.sectionId)?.name||"قسم غير متاح"}</option>)}</select></label>
+ <label>القسم الموجود في المطعم<select value={sectionId} onChange={e=>setSectionId(e.target.value)}><option value="">اختر القسم</option>{sections.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+ <label>اسم المخطط<input maxLength={120} value={name} onChange={e=>setName(e.target.value)} placeholder="مثال: صالة العائلات - الدور الأول"/></label>
+ <label>الطول بالمتر<input type="number" min={2} max={200} value={plan.width} onChange={e=>setPlan(p=>({...p,width:Number(e.target.value)}))}/></label>
+ <label>العرض بالمتر<input type="number" min={2} max={200} value={plan.height} onChange={e=>setPlan(p=>({...p,height:Number(e.target.value)}))}/></label>
+ <button type="button" onClick={addTable} disabled={!sectionId||plan.tables.length>=500}>+ طاولة</button>
+ <button type="button" onClick={save} disabled={saving||!sections.length||!sectionId}>{saving?"جار الحفظ":"حفظ هذا المخطط"}</button></div>
+ {!sections.length&&<p role="alert">لا توجد أقسام صالة مفعّلة لهذا الفرع. أنشئها من «إضافة قسم صالة» أولًا.</p>}
+ <p>الطاولات في هذا المخطط: <strong>{plan.tables.length}</strong> · عدد المخططات المحفوظة: <strong>{layouts.length}</strong></p>
+ <div style={{width:"100%",height:"min(65vh,650px)",minHeight:320,position:"relative",overflow:"auto",border:"2px solid #c49a45",borderRadius:15,backgroundColor:"#f9f5ea",backgroundImage:"linear-gradient(#9a876b22 1px,transparent 1px),linear-gradient(90deg,#9a876b22 1px,transparent 1px)",backgroundSize:"4% 4%"}}>{plan.tables.map(t=><button type="button" key={t.id} onClick={()=>setSelected(t.id)} style={{position:"absolute",left:`${Math.min(96,t.x/Math.max(plan.width,2)*100)}%`,top:`${Math.min(92,t.y/Math.max(plan.height,2)*100)}%`,border:selected===t.id?"3px solid #ac7524":"1px solid #bda475",borderRadius:12,background:selected===t.id?"#f8df9c":"#fff",padding:9,minWidth:68}}><strong>#{t.number}</strong><small style={{display:"block"}}>{t.seats} مقاعد</small></button>)}</div>
+ {active&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"end",marginTop:15}}><label>رقم الطاولة<input value={active.number} onChange={e=>tableEdit({number:e.target.value})}/></label><label>المقاعد<input type="number" min={1} max={30} value={active.seats} onChange={e=>tableEdit({seats:Number(e.target.value)})}/></label><label>X<input type="number" min={0} max={plan.width} step={0.5} value={active.x} onChange={e=>tableEdit({x:Number(e.target.value)})}/></label><label>Y<input type="number" min={0} max={plan.height} step={0.5} value={active.y} onChange={e=>tableEdit({y:Number(e.target.value)})}/></label><button type="button" onClick={()=>{setPlan(p=>({...p,tables:p.tables.filter(t=>t.id!==selected)}));setSelected("")}}>إزالة الطاولة من المخطط</button></div>}
+ </>}
+ {message&&<p role="status">{message}</p>}
+ </section>
+}
