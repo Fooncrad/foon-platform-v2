@@ -1,4 +1,4 @@
-import {normalizeHotelRoomNumber,validHotelRoomNumber} from "./hotel-room.mjs";
+import {normalizeHotelRoomNumber,roomServiceCheckoutAllowed} from "./hotel-room.mjs";
 import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
@@ -411,7 +411,7 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
  const [items]=await db.execute<RowDataPacket[]>("SELECT order_id,item_name,quantity,unit_price,line_total,options_snapshot FROM restaurant_order_items WHERE tenant_id=? AND order_id IN ("+orders.map(()=>"?").join(",")+")",[tenantId,...orders.map(o=>o.id)]);
  return orders.map(o=>{const checkout=o.checkout_snapshot?parseData(o.checkout_snapshot):null;return{...o,pickup_point:checkout?.pickupPoint??null,hotel_room:checkout?.hotelRoom??null,checkout_snapshot:financial?checkout:null,dining_snapshot:o.dining_snapshot?parseData(o.dining_snapshot):null,subtotal:financial?Number(o.subtotal):null,discount:financial?Number(o.discount):null,total:financial?Number(o.total):null,customer_name:role==="kitchen"?null:o.customer_name,customer_phone:["owner","manager","cashier","driver"].includes(role)?o.customer_phone:null,kitchen_notes:o.kitchen_notes??null,order_notes:role==="kitchen"&&o.channel==="delivery"?null:o.order_notes??null,items:items.filter(i=>i.order_id===o.id).map(i=>({name:String(i.item_name)+(i.options_snapshot?" · "+(typeof i.options_snapshot==="string"?JSON.parse(i.options_snapshot):i.options_snapshot).map((v:{name:string})=>v.name).join("، "):""),quantity:Number(i.quantity),price:financial?Number(i.unit_price):null,line_total:financial?Number(i.line_total):null})),version:Number(o.version)};});
 }
-export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
+export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null,authorizedStaffPos=false){
  const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
  if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!["dine_in","takeaway","delivery","room_service"].includes(String(body.channel)))throw new ResourceError("INVALID_INPUT");
  if(!cart.every(item=>item&&typeof item.id==="string"&&validCatalogQuantity(item.quantity)))throw new ResourceError("INVALID_CART");
@@ -423,7 +423,10 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
  const reservationId=body.reservationId==null?null:String(body.reservationId);
  if(reservationId&&!/^[a-f0-9-]{36}$/i.test(reservationId))throw new ResourceError("INVALID_INPUT");
  const roomNumber=body.channel==="room_service"?normalizeHotelRoomNumber(body.roomNumber):"";
- if(body.channel==="room_service"&&(!customerId||!validHotelRoomNumber(roomNumber))||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
+ // The POS-only flag is supplied by the authorized server route, never the request body.
+ // Customer routes still require a verified customer identity. The room is
+ // subsequently checked against active rooms in this exact tenant and branch.
+ if(body.channel==="room_service"&&!roomServiceCheckoutAllowed(roomNumber,customerId,authorizedStaffPos)||body.channel!=="room_service"&&body.roomNumber!=null)throw new ResourceError("ROOM_NUMBER_REQUIRED");
  const fingerprint=requestKey?createHash("sha256").update(JSON.stringify({...(body.currency!==undefined?{currency:body.currency}:{}),branchId,channel:body.channel,tableId:body.tableId??null,partySize:body.partySize??null,...(reservationId?{reservationId}:{}),pickupPointId:body.pickupPointId??null,...(roomNumber?{roomNumber}:{}),customerId,customerName:body.customerName??null,customerPhone:body.customerPhone??null,couponCode:body.couponCode??null,kitchenNotes:body.kitchenNotes??null,orderNotes:body.orderNotes??null,...(body.paymentStatus==="paid"?{manualPayment:{status:"paid",method:body.paymentMethod??null}}:{}),items:[...cart].sort((a,b)=>a.id.localeCompare(b.id)).map(item=>({id:item.id,quantity:item.quantity,options:[...(item.options??[])].sort()}))})).digest("hex"):null;
  if(requestKey){
   const [users]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? AND status='active' FOR UPDATE",[actor]);if(!users.length)throw new ResourceError("FORBIDDEN");
