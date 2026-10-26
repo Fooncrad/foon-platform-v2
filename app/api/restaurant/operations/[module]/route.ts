@@ -10,6 +10,7 @@ import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/bra
 import type {TenantRole} from "@/lib/auth/roles";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {checkoutSettings} from "@/lib/restaurant/checkout-settings";
@@ -25,6 +26,8 @@ export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
 const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const allRoles:TenantRole[]=[...orderRoles];
+// POS, dining batches and resource edits share this endpoint; cap their total UTF-8 payload.
+const MAX_OPERATIONS_BODY_BYTES=1024*1024;
 async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit",requestedBranch?:string|null){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
@@ -76,7 +79,7 @@ function failure(error:unknown,request:Request,module:string){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
  const code=error instanceof ResourceError||error instanceof BranchPinError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const status=code==="BODY_TOO_LARGE"?413:code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  const cookieLocale=request.headers.get("cookie")?.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1];
  const locale=normalizeLocale(cookieLocale??request.headers.get("accept-language"));
  const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
@@ -204,7 +207,13 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
 async function mutate(request:Request,module:string,method:string){
  let db:PoolConnection|undefined;
  try{
-  const body=await request.json().catch(()=>null);
+  // Reject anonymous/cross-origin uploads before consuming any request body.
+  // authorize() still runs below with the payload's requested branch and grants.
+  try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
+  if(!(await currentUserId()))throw new ResourceError("UNAUTHENTICATED");
+  const body=(await readLimitedJson(request,MAX_OPERATIONS_BODY_BYTES).catch(error=>{
+   throw new ResourceError(error instanceof Error&&error.message==="BATCH_TOO_LARGE"?"BODY_TOO_LARGE":"INVALID_INPUT");
+  })) as Awaited<ReturnType<Request["json"]>>;
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   // Recording payment during POS create is also a financial edit. A cashier
   // who can create orders but lacks pos.edit must never mark them paid.
