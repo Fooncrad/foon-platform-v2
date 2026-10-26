@@ -70,6 +70,7 @@ test('measured CSV items reject missing, unknown, or incompatible units before i
  for(const row of [
   {...base,unit:'unknown'},
   {...base,unit:'KG'},
+  {...base,unit:' kg '},
  ])assert.throws(()=>validateImportRow('items',row),/INVALID_UNIT/);
  for(const row of [
   {...base,unit:'kg',quantity_mode:'unsupported'},
