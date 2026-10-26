@@ -21,7 +21,7 @@ const next={NextResponse:{json:(body,init)=>Response.json(body,init)}};
 function handlers(options={}){
  const calls={write:0,connection:0,begin:0,commit:0,rollback:0,release:0,unlock:0,membership:0};
  const db={
-  execute:async(sql,params)=>{calls.write++;assert.ok(params.includes('tenant-1'));return [[]];},
+  execute:async(sql,params)=>{calls.write++;assert.match(sql,/tenant_qr_branding/);assert.ok(params.includes('tenant-1'));return [[]];},
   getConnection:async()=>{calls.connection++;return {
    beginTransaction:async()=>{calls.begin++;},commit:async()=>{calls.commit++;},rollback:async()=>{calls.rollback++;},release:()=>{calls.release++;},
    execute:async(sql,params)=>{assert.ok(params.includes('tenant-1'));if(sql.includes('FROM tenant_business_profiles'))return [[{activity_code:options.activity??'fashion'}]];calls.write++;return [[]];}
