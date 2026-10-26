@@ -15,7 +15,7 @@ test("valid signed receipt provides verified acknowledgment",()=>{
 });
 test("duplicate receipt is valid but conflict does not acknowledge",()=>{
  assert.equal(verifyCommittedPushReceipt({payload:signOne({...receipt,status:"duplicate"}),expected,deviceId:ids[0],publicKey}).status,"verified");
- assert.equal(verifyCommittedPushReceipt({payload:signOne({...receipt,status:"conflict"}),expected,deviceId:ids[0],publicKey}).status,"conflict");
+ assert.equal(verifyCommittedPushReceipt({payload:signOne({...receipt,status:"conflict",nextVersion:0}),expected,deviceId:ids[0],publicKey}).status,"conflict");
 });
 test("tampering status or version invalidates signature",()=>{
  const signed=signOne();
@@ -47,4 +47,10 @@ test("signer rejects array and object coercion for receipt identity and digest",
    assert.throws(()=>signOne({...receipt,[field]:invalid}),/SYNC_INVALID_RECEIPT/,field);
   }
  }
+});
+
+test("signer rejects contradictory conflict and success versions",()=>{
+ assert.throws(()=>signOne({...receipt,status:"conflict",nextVersion:1}),/SYNC_INVALID_RECEIPT/);
+ assert.throws(()=>signOne({...receipt,status:"recorded",nextVersion:0}),/SYNC_INVALID_RECEIPT/);
+ assert.throws(()=>signOne({...receipt,status:"duplicate",nextVersion:0}),/SYNC_INVALID_RECEIPT/);
 });

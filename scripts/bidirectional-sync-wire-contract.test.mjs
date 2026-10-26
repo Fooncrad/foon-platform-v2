@@ -10,7 +10,8 @@ const receipt={ok:true,receipt:{...scope,status:"recorded",nextVersion:1}};
 test("push receipt cannot claim success from ok:true alone",()=>{
  assert.throws(()=>validatePushReceipt({ok:true},scope),/SYNC_INVALID_RECEIPT/);
  assert.equal(validatePushReceipt(receipt,scope).status,"unverified");
- assert.equal(validatePushReceipt({...receipt,receipt:{...receipt.receipt,status:"conflict"}},scope).status,"conflict");
+ assert.equal(validatePushReceipt({...receipt,receipt:{...receipt.receipt,status:"conflict",nextVersion:0}},scope).status,"conflict");
+ assert.throws(()=>validatePushReceipt({...receipt,receipt:{...receipt.receipt,status:"conflict",nextVersion:1}},scope),/SYNC_INVALID_RECEIPT/);
 });
 test("receipt must match event, digest, branch and tenant",()=>{
  for(const k of ["eventId","tenantId","branchId","digest"]){

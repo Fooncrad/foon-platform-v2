@@ -20,7 +20,7 @@ test("duplicate signed ACK is idempotent without an insert",async()=>{
  assert.equal(r.status,"acknowledged");assert.ok(!db.calls.some(x=>x.startsWith("INSERT INTO foon_sync_push_acknowledgments")));
 });
 test("conflict receipts never mark a push acknowledged",async()=>{
- const conflict=signCommittedPushReceipt({receipt:{...receipt,status:"conflict"},privateKey});const db=dbFixture();
+ const conflict=signCommittedPushReceipt({receipt:{...receipt,status:"conflict",nextVersion:0},privateKey});const db=dbFixture();
  const r=await persistVerifiedPushAcknowledgment({db,payload:conflict,expected,deviceId:ids[0],publicKey});
  assert.equal(r.status,"conflict");assert.equal(db.calls.at(-1),"commit");
  assert.ok(db.calls.some(x=>x.startsWith("UPDATE foon_sync_pending_events SET state=\'conflict\'")));
