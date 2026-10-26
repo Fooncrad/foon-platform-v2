@@ -47,10 +47,28 @@ export async function PUT(req:Request){try{assertSameOrigin(req)}catch{return Ne
  const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
  if(!input||typeof input!=="object")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const b=input as Record<string,unknown>;if(typeof b.id!=="string"||!uuid.test(b.id)||typeof b.sectionId!=="string"||!uuid.test(b.sectionId)||typeof b.name!=="string"||!b.name.trim()||b.name.length>120||!validFloorPlan(b.plan))return NextResponse.json({ok:false,code:"INVALID_LAYOUT"},{status:400});
- try{if(!await sectionExists(c.tenant!,c.branch!,b.sectionId))return NextResponse.json({ok:false,code:"SECTION_NOT_FOUND"},{status:404});
- const [result]=await database().execute<import("mysql2").ResultSetHeader>("UPDATE restaurant_floor_plan_layouts SET section_id=?,name=?,layout_json=? WHERE id=? AND tenant_id=? AND branch_id=?",[b.sectionId,b.name.trim(),JSON.stringify(b.plan),b.id,c.tenant,c.branch]);
- return result.affectedRows?NextResponse.json({ok:true}):NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})
- }catch{return NextResponse.json({ok:false,code:"LAYOUT_SAVE_FAILED"},{status:503})}}
+ try{
+  if(!await sectionExists(c.tenant!,c.branch!,b.sectionId))return NextResponse.json({ok:false,code:"SECTION_NOT_FOUND"},{status:404});
+  const db=await database().getConnection();
+  try{
+   await db.beginTransaction();
+   // Serialize layout edits with table-link/status writes; old links must never
+   // reserve a real table after its drawn table was removed or moved to a new section.
+   const [existing]=await db.execute<RowDataPacket[]>("SELECT section_id FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=? FOR UPDATE",[b.id,c.tenant,c.branch]);
+   if(!existing.length){await db.rollback();return NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})}
+   await db.execute("UPDATE restaurant_floor_plan_layouts SET section_id=?,name=?,layout_json=? WHERE id=? AND tenant_id=? AND branch_id=?",[b.sectionId,b.name.trim(),JSON.stringify(b.plan),b.id,c.tenant,c.branch]);
+   const ids=(b.plan as {tables:{id:string}[]}).tables.map(t=>t.id);
+   const params=[c.tenant,c.branch,b.id];
+   const sectionChanged=String(existing[0].section_id)!==b.sectionId;
+   const staleFilter=sectionChanged||!ids.length?"":" AND floor_table_id NOT IN ("+ids.map(()=>"?").join(",")+")";
+   const args=staleFilter?[...params,...ids]:params;
+   await db.execute("DELETE FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND layout_id=?"+staleFilter,args);
+   await db.execute("DELETE FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=? AND layout_id=?"+staleFilter,args);
+   await db.commit();
+   return NextResponse.json({ok:true});
+  }catch(error){await db.rollback();throw error}finally{db.release()}
+ }catch{return NextResponse.json({ok:false,code:"LAYOUT_SAVE_FAILED"},{status:503})}
+}
 
 export async function PATCH(req:Request){
  try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
