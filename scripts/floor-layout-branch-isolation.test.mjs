@@ -60,6 +60,6 @@ test("malformed floor table operation remains HTTP 400",async()=>{
 });
 test("section editor remounts when tenant or branch changes",()=>{
  const ui=readFileSync(resolve(root,"app/restaurant/section-floor-layouts.tsx"),"utf8");
- assert.match(ui,/SectionFloorLayoutsScoped key=\\{props\\.tenantId\\+"\\:"\\+props\\.branch\\}/);
- assert.match(ui,/function SectionFloorLayoutsScoped\\(/);
+ assert.ok(ui.includes('SectionFloorLayoutsScoped key={props.tenantId+":"+props.branch}'));
+ assert.ok(ui.includes('function SectionFloorLayoutsScoped('));
 });
