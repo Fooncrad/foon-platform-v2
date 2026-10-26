@@ -1,5 +1,11 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "طريقة الحجز": ["Booking method", "Mode de réservation"],
+ "وسيلة دفع الحجز": ["Reservation payment method", "Mode de paiement de la réservation"],
+ "حالة دفع الحجز": ["Reservation payment status", "Statut du paiement de la réservation"],
+ "معرف مخطط الصالة": ["Floor plan ID", "Identifiant du plan de salle"],
+ "معرف الطاولة المرسومة": ["Drawn table ID", "Identifiant de la table sur le plan"],
+
  "ترتيب المجموعة":["Group sort order","Ordre du groupe"],
  "مخزون الإضافة (فارغ = غير محدود)":["Add-on stock (blank = unlimited)","Stock du supplément (vide = illimité)"],
  "ترتيب الإضافة":["Add-on sort order","Ordre du supplément"],
