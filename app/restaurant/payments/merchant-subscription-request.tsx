@@ -27,17 +27,18 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
  async function retryEvidence(){
   const pendingRequest=requests.find(r=>r.status==="pending");if(!pendingRequest||!evidence)return;
   setBusy(true);setError("");setDone("");
-  try{await uploadEvidence(pendingRequest.id,evidence);setDone(t("تم رفع إثبات التحويل للمراجعة.","Evidence uploaded for review.","Preuve transférée pour vérification."));setEvidence(null);}
+  try{await uploadEvidence(pendingRequest.id,evidence);await reload();setDone(t("تم رفع إيصال الدفع بنجاح، والطلب قيد مراجعة الإدارة.","Payment receipt uploaded; awaiting administrator review.","Reçu de paiement envoyé, en attente de validation."));setEvidence(null);}
   catch(e){setError(String(e instanceof Error?e.message:e));}finally{setBusy(false);}
  }
  async function submit(event:FormEvent){event.preventDefault();if(busy)return;
+  if(!evidence){setError(t("ارفق إيصال الدفع قبل إرسال طلب الترقية.","Attach a payment receipt before requesting an upgrade.","Joignez le reçu avant de demander une mise à niveau."));return;}
   const price=prices.find(p=>p.plan_id+":"+p.billing_cycle===chosen);if(!price)return;
   setBusy(true);setError("");setDone("");
   try{const r=await fetch("/api/tenant/subscription-requests",{method:"POST",headers:{"content-type":"application/json"},
    body:JSON.stringify({tenantId,planId:price.plan_id,billingCycle:price.billing_cycle,transferReference:reference})});
    const d=await r.json();if(!r.ok)throw Error(d.code??"REQUEST_FAILED");
-   if(evidence){try{await uploadEvidence(String(d.id),evidence);setEvidence(null);}
-    catch(uploadError){setError(t("سُجّل الطلب لكن فشل رفع الإثبات. أعد رفعه على الطلب المعلق. ","Request saved; evidence upload failed. Retry on the pending request. ","Demande enregistrée, mais preuve non chargée. ")+String(uploadError instanceof Error?uploadError.message:uploadError));}}
+   try{await uploadEvidence(String(d.id),evidence);setEvidence(null);}
+   catch(uploadError){await reload();setError(t("تم إنشاء طلب الترقية، لكن لم يُرفع الإيصال. استخدم زر رفع الإيصال للطلب المعلّق. ","Upgrade request created but receipt upload failed. Upload the receipt to the pending request. ","Demande créée mais le reçu n’a pas été envoyé. Ajoutez-le à la demande en attente. ")+String(uploadError instanceof Error?uploadError.message:uploadError));return;}
    await reload();setReference("");setDone(t("تم إرسال طلب مراجعة التحويل. لن تتفعّل الباقة إلا بعد تأكيد الإدارة استلام المبلغ.","Transfer review requested. The plan activates only after verified payment.","Demande de contrôle envoyée. La formule s'active après vérification du paiement."));
   }catch(e){setError(String(e instanceof Error?e.message:e));}finally{setBusy(false);}
  }
@@ -58,13 +59,14 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
    <label>{t("مرجع التحويل البنكي بعد الدفع","Bank transfer reference after payment","Référence du virement après paiement")}
     <input required minLength={8} maxLength={120} value={reference} disabled={pending||busy} onChange={e=>setReference(e.target.value)}/>
    </label>
-   <label>{t("إثبات التحويل (PDF أو صورة، 2 MB كحد أقصى)","Transfer evidence (PDF/image, 2 MB max)","Preuve du virement (PDF/image, 2 Mo max)")}
-    <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/png,image/jpeg" onChange={e=>setEvidence(e.target.files?.[0]??null)} disabled={busy}/>
+   <label>{t("إيصال الدفع لترقية الباقة (PDF أو صورة، 2 MB كحد أقصى)","Transfer evidence (PDF/image, 2 MB max)","Preuve du virement (PDF/image, 2 Mo max)")}
+    <input type="file" aria-label={t("اختيار إيصال الدفع","Choose payment receipt","Choisir le reçu")} accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/png,image/jpeg" onChange={e=>{const file=e.target.files?.[0]??null;setEvidence(file);setError(file&&file.size>2097152?t("حجم الإيصال يتجاوز 2 ميجابايت.","Receipt exceeds 2 MB.","Le reçu dépasse 2 Mo."):"");}} disabled={busy}/>
+    {evidence&&<small role="status">{t("الإيصال المحدد: ","Selected receipt: ","Reçu choisi : ")}{evidence.name}</small>}
    </label>
-   <button type="submit" disabled={!chosen||pending||busy}>{busy?t("جارٍ الإرسال…","Submitting…","Envoi…"):t("إرسال طلب اعتماد الدفع","Submit paid transfer for review","Envoyer le virement")}</button>
+   <button type="submit" disabled={!chosen||!evidence||evidence.size>2097152||pending||busy}>{busy?t("جارٍ الإرسال…","Submitting…","Envoi…"):t("إرسال طلب اعتماد الدفع","Submit paid transfer for review","Envoyer le virement")}</button>
   </form>
-  {pending&&<div><p role="status">{t("لديك طلب معلق، انتظر قرار الإدارة قبل تقديم طلب جديد.","A payment request is pending review.","Une demande de paiement est en attente.")}</p>
-    <button type="button" disabled={busy||!evidence} onClick={()=>void retryEvidence()}>{t("رفع إثبات للطلب المعلق","Upload evidence to pending request","Ajouter une preuve")}</button>
+  {pending&&<div><p role="status">{t("يمكنك رفع إيصال الدفع أو استبداله ما دام طلب الترقية قيد المراجعة.","You can upload or replace the payment receipt while the upgrade request is pending.","Vous pouvez ajouter ou remplacer le reçu tant que la demande est en attente.")}</p>
+    <button type="button" disabled={busy||!evidence||evidence.size>2097152} onClick={()=>void retryEvidence()}>{t("رفع إيصال الدفع للطلب المعلّق","Upload receipt to pending request","Ajouter le reçu à la demande")}</button>
    </div>}
   {requests.length>0&&<div style={{display:"grid",gap:8,marginTop:16}}>{requests.slice(0,8).map(r=><p key={r.id} style={{margin:0,padding:8,border:"1px solid #8885",borderRadius:8}}>{r.amount} {r.currency} · {r.billing_cycle==="yearly"?t("سنوي","Yearly","Annuel"):t("شهري","Monthly","Mensuel")} · {r.status==="approved"?t("معتمد","Approved","Approuvé"):r.status==="rejected"?t("مرفوض","Rejected","Rejeté"):t("قيد المراجعة","Pending","En attente")}{r.review_note&&" · "+r.review_note}</p>)}</div>}
   <section aria-label={t("إيصالات الاشتراك","Subscription receipts","Reçus d'abonnement")} style={{marginTop:20}}>

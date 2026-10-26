@@ -9,7 +9,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 
 export const runtime="nodejs";
-type CategoryInput={id?:unknown;name?:unknown;nameEn?:unknown;nameFr?:unknown};
+type CategoryInput={id?:unknown;name?:unknown;nameEn?:unknown;nameFr?:unknown;imageUrl?:unknown};
 
 async function scope(request:Request){
  const userId=await currentUserId();
@@ -49,7 +49,7 @@ export async function GET(request:Request){
  const ctx=await scope(request);if(ctx.error)return ctx.error;
  try{
   const [categories]=await database().execute<RowDataPacket[]>(
-   "SELECT c.id,c.name,c.sort_order,c.enabled,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameEn')),'') AS nameEn,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameFr')),'') AS nameFr FROM restaurant_menu_categories c LEFT JOIN restaurant_resources r ON r.id=c.id AND r.tenant_id=c.tenant_id AND r.kind='menu_category' AND r.archived=FALSE WHERE c.tenant_id=? ORDER BY c.sort_order,c.name",
+   "SELECT c.id,c.name,c.sort_order,c.enabled,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameEn')),'') AS nameEn,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.nameFr')),'') AS nameFr,NULLIF(JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.imageUrl')),'null') AS imageUrl FROM restaurant_menu_categories c LEFT JOIN restaurant_resources r ON r.id=c.id AND r.tenant_id=c.tenant_id AND r.kind='menu_category' AND r.archived=FALSE WHERE c.tenant_id=? ORDER BY c.sort_order,c.name",
    [ctx.tenantId]
   );
   return NextResponse.json({ok:true,categories});
@@ -87,7 +87,16 @@ export async function PATCH(request:Request){
   );
   if(!rows.length||rows[0].archived)throw new Error("CATEGORY_NOT_FOUND");
   await connection.execute("UPDATE restaurant_menu_categories SET name=? WHERE id=? AND tenant_id=?",[values.name,id,ctx.tenantId]);
-  const data={...metadata(rows[0].metadata),nameEn:values.nameEn,nameFr:values.nameFr};
+  let imageUrl: string|null|undefined;
+  if(body?.imageUrl!==undefined){
+   if(body.imageUrl!==null&&(typeof body.imageUrl!=="string"||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.imageUrl))){await connection.rollback();return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});}
+   if(typeof body.imageUrl==="string"){
+    const [found]=await connection.execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE tenant_id=? AND id=? LIMIT 1",[ctx.tenantId,body.imageUrl.split("/").at(-1)??""]);
+    if(!found.length){await connection.rollback();return NextResponse.json({ok:false,code:"INVALID_IMAGE"},{status:400});}
+   }
+   imageUrl=body.imageUrl;
+  }
+  const data={...metadata(rows[0].metadata),nameEn:values.nameEn,nameFr:values.nameFr,...(imageUrl!==undefined?{imageUrl}:{} )};
   await connection.execute(
    "INSERT INTO restaurant_resources(id,tenant_id,kind,name,status,data) VALUES (?,?,'menu_category',?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),data=VALUES(data),version=version+1",
    [id,ctx.tenantId,values.name,rows[0].enabled?"active":"inactive",JSON.stringify(data)]

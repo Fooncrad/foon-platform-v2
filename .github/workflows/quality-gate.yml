@@ -37,6 +37,8 @@ jobs:
         run: node --test scripts/foon-lan-gateway.test.mjs scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
       - name: Validate activity plan entitlements
         run: node --experimental-strip-types --test scripts/activity-plan-entitlements.test.mjs
+      - name: Validate receipt and location request body limits
+        run: node --test scripts/merchant-receipt-location-body-security.test.mjs
       - name: Validate lint
         run: npm run lint
       - name: Validate TypeScript

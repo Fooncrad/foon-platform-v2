@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {currentUserId} from "@/lib/auth/session";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {database} from "@/lib/db/mysql";
 import type {RowDataPacket} from "mysql2/promise";
 import {allowedDeliveryCountries} from "@/lib/tenant/international-shipping";
@@ -22,9 +23,11 @@ export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return failure("FORBIDDEN",403);}
  const blocked=await employeePersonalAccessDenied();if(blocked)return blocked;
  const user=await currentUserId();if(!user)return failure("UNAUTHENTICATED",401);
- const body=await request.json().catch(()=>null);
+ let body: {latitude?:unknown;longitude?:unknown;storeSlug?:unknown;language?:unknown}|null;
+ try{body=await readLimitedJson(request,1024) as typeof body;}
+ catch(error){return failure(error instanceof Error&&error.message==="BATCH_TOO_LARGE"?"BODY_TOO_LARGE":"INVALID_INPUT",error instanceof Error&&error.message==="BATCH_TOO_LARGE"?413:400);}
  const lat=body?.latitude,lng=body?.longitude;
- if(typeof lat!=="number"||typeof lng!=="number"||!Number.isFinite(lat)||!Number.isFinite(lng)||lat< -90||lat>90||lng< -180||lng>180||typeof body.storeSlug!=="string"||body.storeSlug.length>120||!body.storeSlug.length)return failure("INVALID_INPUT",400);
+ if(typeof lat!=="number"||typeof lng!=="number"||!Number.isFinite(lat)||!Number.isFinite(lng)||lat< -90||lat>90||lng< -180||lng>180||typeof body?.storeSlug!=="string"||body.storeSlug.length>120||!body.storeSlug.length)return failure("INVALID_INPUT",400);
  if(limited(user))return failure("RATE_LIMITED",429);
  const key=process.env.GOOGLE_MAPS_GEOCODING_API_KEY;
  if(!key)return failure("GEOCODING_NOT_CONFIGURED",503);

@@ -42,7 +42,7 @@ test("public landing and marketplace share language, theme, footer and safe coun
   await header.getByRole("button",{name:"تبديل المظهر"}).click();
   await expect(landing).toHaveAttribute("data-theme","dark");
   await assertReadableSurface(page.locator(".foonFeatureCard").first(),"Public landing feature");
-  await page.locator(".foonHeroActions").getByRole("link",{name:"استكشف السوق"}).click();
+  await page.locator(".foonHeroActions").getByRole("link",{name:"شاهد متاجر على FOON"}).click();
   const market=page.locator(".foonPublicMarket"),marketHeader=market.locator(".foonPublicHeader"),marketFooter=market.locator(".foonPublicFooter");
   await expect(market).toHaveAttribute("data-theme","dark");
   await expect(marketHeader).toHaveCount(1);
@@ -207,12 +207,23 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"إضافة قسم جديد",exact:true}).click();
  await page.getByLabel("اسم القسم",{exact:true}).fill("مشروبات المعاينة");
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
- await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
+ // Check persisted category rather than an implementation-specific transient toast.
+ await expect.poll(async()=>{
+  const db=await mysql.createConnection(process.env.DATABASE_URL);
+  try{
+   const [rows]=await db.execute("SELECT COUNT(*) AS total FROM restaurant_menu_categories WHERE tenant_id=? AND name=? AND enabled=TRUE",[visualTenant.tenant,"مشروبات المعاينة"]);
+   return Number(rows[0]?.total??0);
+  }finally{await db.end();}
+ },{timeout:15000}).toBe(1);
  await page.getByRole("button",{name:"الأصناف",exact:true}).click();
  await page.getByRole("button",{name:"إضافة صنف جديد",exact:true}).click();
+ // Loading categories can remount the item form. Wait until the newly
+ // persisted category is available before typing into controlled fields.
+ const itemCategory=page.getByLabel("التصنيف",{exact:true});
+ await expect(itemCategory.getByRole("option",{name:"مشروبات المعاينة",exact:true})).toBeAttached();
+ await itemCategory.selectOption({label:"مشروبات المعاينة"});
  await page.getByLabel("اسم الصنف",{exact:true}).fill("قهوة المعاينة");
  await page.getByLabel("السعر",{exact:true}).fill("10");
- await page.getByLabel("التصنيف",{exact:true}).selectOption({label:"مشروبات المعاينة"});
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
@@ -221,7 +232,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await assertReadableSurface(page.locator(".restaurantPosProduct").filter({hasText:"قهوة المعاينة"}),"POS product");
  await page.getByRole("combobox",{name:"المظهر"}).selectOption("light");
  await page.locator(".restaurantPosMenu article").filter({hasText:"قهوة المعاينة"}).getByRole("button").click();
- const firstQuantity=page.locator('.restaurantCart input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
+ const firstQuantity=page.locator('.restaurantPosCartLineActions input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();

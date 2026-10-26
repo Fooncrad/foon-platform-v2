@@ -52,7 +52,7 @@ test("market queries isolate countries, permit activity+kind, and treat search t
  assert.match(result.where,/market_visible_from IS NULL/);
  assert.match(result.where,/market_visible_until IS NULL/);
  assert.equal(marketListingOrderSql(),"t.market_sort_order ASC,bp.activity_code ASC,t.name ASC,t.id ASC");
- assert.deepEqual(result.args,["ML","store","automotive","%100!%!_!! Café%","%100!%!_!! Café%"]);
+ assert.deepEqual(result.args,["ML","store","automotive",...Array(5).fill("%100!%!_!! Café%")]);
  assert.equal(escapeMarketLike("a%b_c!"),"a!%b!_c!!");
 });
 

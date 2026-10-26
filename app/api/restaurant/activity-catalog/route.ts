@@ -40,7 +40,7 @@ export async function GET(request:Request){
   const [[categories],[counts],[products]]=await Promise.all([
    database().execute<RowDataPacket[]>("SELECT id,name_ar,name_en,name_fr,description_ar,description_en,description_fr,image_url,enabled FROM catalog_categories WHERE tenant_id=? ORDER BY sort_order,created_at",[ctx.tenantId]),
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM catalog_products p WHERE "+where.join(" AND "),values),
-   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity,p.attributes,p.description_ar,p.description_en,p.description_fr FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
+   database().execute<RowDataPacket[]>("SELECT p.id,p.category_id,p.name_ar,p.name_en,p.name_fr,p.price,p.currency,p.enabled,p.product_type,p.stock_quantity,p.attributes,p.description_ar,p.description_en,p.description_fr,(SELECT i.image_url FROM catalog_images i WHERE i.tenant_id=p.tenant_id AND i.product_id=p.id ORDER BY i.sort_order,i.id LIMIT 1) AS image_url FROM catalog_products p WHERE "+where.join(" AND ")+" ORDER BY p.sort_order,p.created_at,p.id LIMIT ? OFFSET ?",[...values,pageSize,offset])
   ]);
   return NextResponse.json({ok:true,activity:ctx.activity,currency:ctx.currency,categories,products,page,pageSize,total:Number(counts[0]?.total??0)});
  }catch{return NextResponse.json({ok:false,code:"CATALOG_UNAVAILABLE"},{status:503})}

@@ -90,3 +90,23 @@ test("ESC/POS tickets honor paper width and retain long product descriptions",()
   assert.equal(joined,"1 x "+itemName);
  }
 });
+
+
+test("retail, hotel and service catalog categories route to their assigned stations without cross-printing",()=>{
+ const items=[
+  {menu_item_id:"dress",category_id:"apparel",item_name:"Dress"},
+  {menu_item_id:"fragrance",category_id:"perfumes",item_name:"Perfume"},
+  {menu_item_id:"room-meal",category_id:"room-service",item_name:"Room meal"},
+  {menu_item_id:"service",category_id:"car-wash",item_name:"Car wash"}
+ ];
+ const routes=[
+  {categoryId:"apparel",departmentId:"packing"},
+  {categoryId:"perfumes",departmentId:"gift-wrap"},
+  {categoryId:"room-service",departmentId:"hotel-kitchen"},
+  {categoryId:"car-wash",departmentId:"service-desk"}
+ ];
+ for(const [department,expected] of [["packing","Dress"],["gift-wrap","Perfume"],["hotel-kitchen","Room meal"],["service-desk","Car wash"]]){
+  assert.deepEqual(routePreparationItems(items,routes,department).map(item=>item.item_name),[expected]);
+ }
+ assert.deepEqual(routePreparationItems(items,routes,"unassigned"),[]);
+});

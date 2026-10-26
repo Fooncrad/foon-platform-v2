@@ -48,3 +48,15 @@
 .creatorShareStrip>button{background:transparent;color:#e2a93b;border:1px solid #e2a93b}
 .creatorProfileReadiness [role="status"]{font-size:13px;color:#d1edcd}
 @media(max-width:420px){.creatorShareStrip>*{width:100%;justify-content:center}}
+
+/* Private, daily-deduplicated creator insights. */
+.creatorInsightsPanel{display:grid;gap:11px;min-width:0;padding:clamp(14px,3vw,22px);border:1px solid #e2a93b55;border-radius:18px;background:#2c2923}
+.creatorInsightsPanel h2{margin:0;font-size:19px}
+.creatorInsightsPanel>p{margin:0;font-size:13px;line-height:1.8;color:#ded4c6}
+.creatorInsightsPanel .creatorInsightsPrivate{padding:10px 12px;border:1px solid #e2a93b44;border-radius:11px;background:#e2a93b0f}
+.creatorInsightsGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.creatorInsightsGrid article{display:grid;gap:8px;border:1px solid #ffffff25;border-radius:14px;padding:15px;background:#ffffff09;min-width:0}
+.creatorInsightsGrid strong{color:#e2a93b;font-size:clamp(21px,3vw,29px);font-variant-numeric:tabular-nums}
+.creatorInsightsGrid span{font-size:12px;line-height:1.6;color:#ece4d5}
+@media(max-width:640px){.creatorInsightsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:340px){.creatorInsightsGrid article{padding:9px}}

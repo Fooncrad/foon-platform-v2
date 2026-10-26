@@ -21,6 +21,9 @@ export default function CustomerActionHub({language,verified,profileComplete,rec
    <a href="#customer-reservations"><span aria-hidden="true">◷</span>{t("الحجوزات والمواعيد","Bookings","Réservations")}</a>
    <a href="#customer-invoices"><span aria-hidden="true">▤</span>{t("الفواتير","Invoices","Factures")}</a>
    <a href="#customer-addresses"><span aria-hidden="true">⌖</span>{t("عناويني","Addresses","Adresses")}</a>
+   <a href="#customer-passport"><span aria-hidden="true">✦</span>{t("نقاط الولاء","Loyalty points","Points fidélité")}</a>
+   <a href="#customer-journey"><span aria-hidden="true">◇</span>{t("سجل رحلتي","My timeline","Mon parcours")}</a>
+   <a href="#customer-security-center"><span aria-hidden="true">◈</span>{t("الأجهزة والأمان","Device security","Appareils et sécurité")}</a>
    <Link href="/customer/creator"><span aria-hidden="true">◎</span>{t("بروفايلي العام","Public creator profile","Profil public")}</Link>
    {returnStore&&<Link href={publicStorefrontUrl(returnStore.slug)}><span aria-hidden="true">↻</span>{t("العودة إلى ","Return to ","Retour à ")}{returnStore.name}</Link>}
   </div>

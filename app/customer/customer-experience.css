@@ -137,3 +137,96 @@
 @media(max-width:660px){.customerDashboard .customerActionMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.customerDashboard .customerQuickActions{grid-template-columns:repeat(2,minmax(0,1fr))}.customerDashboard .customerActionHub{margin:12px 12px 22px;padding:15px}.customerDashboard .customerOrderFilterButtons button{flex:1 1 calc(50% - 8px);justify-content:space-between}}
 @media(max-width:340px){.customerDashboard .customerQuickActions{grid-template-columns:1fr}.customerDashboard .customerNextAction>a{width:100%}}
 @media(prefers-reduced-motion:reduce){.customerDashboard .customerActionHub *{scroll-behavior:auto;transition:none!important}}
+
+/* Growth hub: responsive in Arabic RTL, English and French */
+.customerGrowthStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.customerGrowthStats>div{background:var(--customer-card-bg,rgba(127,127,127,.08));border:1px solid rgba(127,127,127,.2);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.customerGrowthStats strong{font-size:clamp(1.3rem,3vw,1.8rem);font-variant-numeric:tabular-nums}
+.customerGrowthStats span,.customerGrowthHint{font-size:.875rem;opacity:.85}
+.customerGrowthActions,.customerGrowthStores{display:flex;flex-wrap:wrap;gap:10px;margin-block:12px}
+.customerGrowthActions a,.customerGrowthStores a{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-width:0;padding:10px 14px;border:1px solid currentColor;border-radius:12px;text-decoration:none;overflow-wrap:anywhere}
+.customerGrowthActions a:focus-visible,.customerGrowthStores a:focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
+@media(max-width:420px){.customerGrowthStats{gap:6px}.customerGrowthStats>div{padding:9px}.customerGrowthStats span{font-size:.75rem}.customerGrowthActions a{width:100%;justify-content:center}}
+
+.customerGrowthStores button{max-width:100%;padding:10px 14px;border:1px solid currentColor;border-radius:12px;background:transparent;color:inherit;cursor:pointer;text-align:start;overflow-wrap:anywhere}
+.customerGrowthStores button[aria-pressed="true"]{border-color:#e2a93b}
+.customerGrowthStores button:focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
+.customerGrowthStores button:disabled{opacity:.6;cursor:wait}
+
+.customerGrowthOffer{display:flex;flex-direction:column;gap:6px;min-width:min(100%,200px);padding:14px;border:1px solid rgba(127,127,127,.3);border-radius:12px}
+.customerGrowthOffer small,.customerGrowthOffer span{font-size:.85rem}
+
+
+/* FOON Passport: real store-scoped reward balances, private activity and session protection. */
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter){margin:18px clamp(12px,3vw,28px);padding:clamp(16px,3vw,26px);border:1px solid var(--customer-line,#ffffff23);border-radius:22px;background:var(--customer-surface,#24221e);color:inherit;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter) :is(h2,h3,p){overflow-wrap:anywhere}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter)>header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:15px}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter)>header>div{flex:1 1 270px;min-width:0}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter) h2{font-size:clamp(20px,2.5vw,26px);margin:6px 0}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter) header p{font-size:13px;line-height:1.8;margin:6px 0 16px}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter) header small{font-size:12px;color:#e2a93b;font-weight:800}
+.customerDashboard .customerPassport>header>span{font-size:38px;color:#e2a93b}
+.customerDashboard .customerLoyaltyGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr));gap:12px}
+.customerDashboard .customerLoyaltyGrid article{display:grid;justify-items:start;align-content:start;gap:10px;min-width:0;border:1px solid #e2a93b50;border-radius:17px;padding:17px;background:linear-gradient(145deg,#352c20,#24221e);color:#f8f3e9}
+.customerDashboard .customerLoyaltyGrid h3{margin:0;font-size:16px}
+.customerDashboard .customerLoyaltyGrid strong{font-size:28px;line-height:1.2;color:#e2a93b;font-variant-numeric:tabular-nums}
+.customerDashboard .customerLoyaltyGrid strong small{font-size:12px}
+.customerDashboard .customerLoyaltyGrid p{font-size:12px;line-height:1.7;color:#ddd4c7;margin:0}
+.customerDashboard .customerLoyaltyGrid a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;color:#171613;background:#e2a93b;border-radius:11px;font-weight:800;text-decoration:none}
+.customerDashboard .customerJourney ol{padding:0;list-style:none;display:grid;gap:10px;margin:14px 0 0}
+.customerDashboard .customerJourney li{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-width:0;padding:13px;border:1px solid var(--customer-line,#ffffff23);border-radius:14px}
+.customerDashboard .customerJourneySymbol{display:grid;place-items:center;min-width:34px;height:34px;background:#e2a93b22;color:#e2a93b;border-radius:12px;font-size:19px}
+.customerDashboard .customerJourney li>div{flex:1 1 175px;min-width:0}
+.customerDashboard .customerJourney li small{font-size:11px;opacity:.8}
+.customerDashboard .customerJourney li h3{margin:2px 0;font-size:15px}
+.customerDashboard .customerJourney li p{font-size:12px;margin:0}
+.customerDashboard .customerJourney li time,.customerDashboard .customerJourneyState{font-size:11px;opacity:.85;margin-inline-end:9px}
+.customerDashboard .customerJourney li>a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 12px;border-radius:11px;border:1px solid var(--customer-line,#ffffff23);text-decoration:none}
+.customerDashboard .customerSecurityCenter button{min-height:44px;border-radius:11px;border:1px solid var(--customer-line,#ffffff35);padding:10px 14px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.customerDashboard .customerSecurityCenter button:disabled{opacity:.5;cursor:not-allowed}
+.customerDashboard .customerSecurityCenter .customerSecurityDanger{margin:8px 0 13px;color:#ffd1c5;border-color:#d78975}
+.customerDashboard .customerSessionList{display:grid;gap:10px}
+.customerDashboard .customerSessionList article{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px;border:1px solid var(--customer-line,#ffffff28);border-radius:14px}
+.customerDashboard .customerSessionList article[data-current="true"]{border-color:#e2a93b80}
+.customerDashboard .customerSessionList article>div{display:grid;gap:5px;min-width:0}
+.customerDashboard .customerSessionList article small{font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
+.customerDashboard .customerSecurityFootnote{font-size:12px;line-height:1.7;opacity:.8;margin:14px 0 0}
+.customerDashboard .customerSecurityCenter [role="alert"]{color:#ffc5ba}
+.customerDashboard[data-theme="light"] :is(.customerPassport,.customerJourney,.customerSecurityCenter){background:#fff;color:#26221c}
+.customerDashboard[data-theme="light"] :is(.customerPassport,.customerJourney,.customerSecurityCenter)>header small{color:#825d19}
+.customerDashboard[data-theme="light"] .customerJourneySymbol{color:#825d19}
+.customerDashboard[data-theme="light"] .customerSecurityCenter .customerSecurityDanger{color:#a03023;border-color:#a03023}
+.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter) :is(button,a):focus-visible{outline:3px solid #e2a93b;outline-offset:2px}
+.customerDashboard :is(.customerJourney li,.customerSessionList article){scroll-margin-top:95px}
+@media(max-width:420px){.customerDashboard :is(.customerPassport,.customerJourney,.customerSecurityCenter){margin:12px;padding:14px}.customerDashboard .customerJourney li>a{width:100%}.customerDashboard .customerSessionList article>button{width:100%}}
+
+/* Personal favorite stores: compact, touch-friendly and 320px-safe. */
+.customerDashboard .customerFavoriteStores{min-width:0;overflow:hidden}
+.customerDashboard .customerFavoriteStores>header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center}
+.customerDashboard .customerFavoriteStores>header>div{flex:1 1 200px;min-width:0}
+.customerDashboard .customerFavoriteStores>header small{font-size:12px;color:#e2a93b;font-weight:750}
+.customerDashboard .customerFavoriteStores>header h2{margin:6px 0;font-size:clamp(18px,2vw,23px)}
+.customerDashboard .customerFavoriteStores>header p{font-size:13px;line-height:1.7;margin:3px 0 10px}
+.customerDashboard .customerFavoriteStores>header>strong{font-size:23px;color:#e2a93b;font-variant-numeric:tabular-nums}
+.customerDashboard .customerFavoriteSearch{display:grid;gap:8px;margin-block:10px}
+.customerDashboard .customerFavoriteSearch span{font-size:12px}
+.customerDashboard .customerFavoriteSearch input{box-sizing:border-box;max-width:100%;width:100%;min-height:44px;padding:10px 13px;border:1px solid var(--customer-line,#ffffff30);border-radius:12px;background:var(--customer-bg,#171613);color:inherit;font:inherit}
+.customerDashboard .customerFavoriteGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr));gap:12px;margin-block:12px;min-width:0}
+.customerDashboard .customerFavoriteCard{display:grid;align-content:start;gap:10px;min-width:0;padding:14px;border:1px solid var(--customer-line,#ffffff30);border-radius:15px}
+.customerDashboard .customerFavoriteCard[data-favorite="true"]{border-color:#e2a93b}
+.customerDashboard .customerFavoriteCardHead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center}
+.customerDashboard .customerFavoriteCardHead strong{font-size:15px;overflow-wrap:anywhere}
+.customerDashboard .customerFavoriteMark{font-size:11px;font-weight:750;color:#e2a93b}
+.customerDashboard .customerFavoriteCard>small{font-size:12px;line-height:1.6;opacity:.8}
+.customerDashboard .customerFavoriteActions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.customerDashboard .customerFavoriteActions a,.customerDashboard .customerFavoriteActions button{display:inline-flex;justify-content:center;align-items:center;min-height:44px;border-radius:11px;padding:10px 13px;text-decoration:none;font:inherit;font-size:13px;font-weight:800}
+.customerDashboard .customerFavoriteActions a{background:#e2a93b;color:#171613}
+.customerDashboard .customerFavoriteActions button{background:transparent;color:inherit;border:1px solid var(--customer-line,#ffffff30);cursor:pointer}
+.customerDashboard .customerFavoriteActions button[aria-pressed="true"]{color:#e2a93b;border-color:#e2a93b}
+.customerDashboard .customerFavoriteActions button:disabled{opacity:.55;cursor:not-allowed}
+.customerDashboard .customerFavoritePrivacy{font-size:12px;line-height:1.8;opacity:.85}
+.customerDashboard .customerFavoriteStores [role="alert"]{padding:10px;border-radius:9px;border:1px solid #eab29d}
+.customerDashboard .customerFavoriteStores :is(button,a,input):focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+.customerDashboard[data-theme="light"] .customerFavoriteSearch input{background:#fff;color:#232323}
+.customerDashboard[data-theme="light"] .customerFavoriteMark,.customerDashboard[data-theme="light"] .customerFavoriteActions button[aria-pressed="true"]{color:#865b13}
+@media(max-width:400px){.customerDashboard .customerFavoriteActions>*{flex:1 1 100%}.customerDashboard .customerFavoriteCard{padding:11px}}

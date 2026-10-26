@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS restaurant_floor_plans (
+ tenant_id CHAR(36) NOT NULL,
+ branch_id CHAR(36) NOT NULL,
+ layout_json JSON NOT NULL,
+ updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY(tenant_id,branch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
