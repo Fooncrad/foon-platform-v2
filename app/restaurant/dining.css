@@ -4,3 +4,11 @@
 @media(max-width:600px){.calendarFilters{grid-template-columns:1fr}.calendarToolbar{align-items:stretch;flex-direction:column}.calendarNavigation{gap:5px}.calendarSummary{gap:12px;font-size:11px}.calendarSummary b{font-size:16px}.calendarGrid-month>section{min-height:90px;padding:3px}.calendarGrid-month .calendarEvent>b{display:none}.calendarGrid-month .calendarEvent strong{font-size:9px}.calendarGrid-month .calendarEvent{padding:4px 2px}.calendarGrid>section>header small{font-size:8px}.calendarGrid>section>header b{font-size:14px}.diningBatchFields{grid-template-columns:1fr}.calendarEditor{padding:16px}.diningBatch fieldset{padding:14px}}
 @media(max-width:600px){.reservationCalendar>header{flex-direction:column;align-items:stretch;gap:16px}.reservationCalendar>header>.restaurantPrimary{width:100%;white-space:nowrap}}
 .restaurantPrinterSetup{display:grid;gap:14px}.restaurantPrinterAdvanced{padding:16px 18px}.restaurantPrinterAdvanced>summary{cursor:pointer;font-weight:700;list-style-position:inside}.restaurantPrinterAdvanced[open]{display:grid;gap:18px}.restaurantPrinterAdvanced>div{border-top:1px solid var(--restaurant-border,#ddd);padding-top:12px}.restaurantPrinterAdvanced h3{margin:0 0 8px}
+.calendarViewport{min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
+/* Seven readable day columns; horizontal movement belongs to this region. */
+@media(max-width:900px){
+ .calendarViewport .calendarGrid-month{min-width:840px}
+ .calendarViewport .calendarGrid-month .calendarEvent>b{display:block;white-space:normal;overflow-wrap:anywhere}
+ .calendarViewport .calendarGrid-month .calendarEvent strong{font-size:11px}
+ .calendarViewport .calendarGrid-month>section>header small{font-size:11px}
+}
