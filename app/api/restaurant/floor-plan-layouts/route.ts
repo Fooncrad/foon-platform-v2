@@ -30,9 +30,11 @@ export async function GET(req:Request){const c=await scope(req,false);if(c.error
  const [layouts]=await database().execute<RowDataPacket[]>("SELECT id,section_id,name,layout_json,is_active FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? ORDER BY created_at,id LIMIT 500",[c.tenant,c.branch]);
  const items=[];for(const l of layouts){const plan=decode(l.layout_json);if(!plan)return NextResponse.json({ok:false,code:"FLOOR_LAYOUT_INVALID"},{status:409});items.push({id:String(l.id),sectionId:String(l.section_id),name:String(l.name),active:Boolean(l.is_active),plan})}
  const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+ const [registeredTables]=await database().execute<RowDataPacket[]>("SELECT id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 1000",[c.tenant,c.branch]);
+ const [links]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
  const [legacy]=await database().execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plans WHERE tenant_id=? AND branch_id=? LIMIT 1",[c.tenant,c.branch]);
  let legacyPlan=null;if(legacy.length){legacyPlan=decode(legacy[0].layout_json);if(!legacyPlan)return NextResponse.json({ok:false,code:"LEGACY_LAYOUT_INVALID"},{status:409})}
- return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
+ return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,registeredTables:registeredTables.map(t=>({id:String(t.id),name:String(t.name),status:String(t.status),sectionId:String((typeof t.data==="string"?JSON.parse(t.data):t.data)?.sectionId||"")})),links:links.map(l=>({layoutId:String(l.layout_id),tableId:String(l.floor_table_id),diningTableId:String(l.dining_table_id)})),operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
  }catch{return NextResponse.json({ok:false,code:"LAYOUTS_UNAVAILABLE"},{status:503})}}
 export async function POST(req:Request){try{assertSameOrigin(req)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}
  const c=await scope(req,true);if(c.error)return c.error;let input:unknown;try{input=await readLimitedJson(req,131072)}catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400})}
@@ -63,7 +65,19 @@ export async function PATCH(req:Request){
    await db.beginTransaction();
    const [layouts]=await db.execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=? FOR UPDATE",[b.id,c.tenant,c.branch]);
    if(!layouts.length){await db.rollback();return NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})}
-   if(b.action==="activate"&&typeof b.active==="boolean"){
+   if(b.action==="linkTable"&&typeof b.tableId==="string"&&/^[a-z0-9-]{1,60}$/i.test(b.tableId)&&(b.diningTableId===null||(typeof b.diningTableId==="string"&&uuid.test(b.diningTableId)))){
+    const layout=decode(layouts[0].layout_json);
+    const [[section]]=await db.execute<RowDataPacket[]>("SELECT section_id FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=?",[b.id,c.tenant,c.branch]);
+    if(!layout||!layout.tables.some(t=>t.id===b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"TABLE_NOT_IN_LAYOUT"},{status:400})}
+    if(b.diningTableId===null)await db.execute("DELETE FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND layout_id=? AND floor_table_id=?",[c.tenant,c.branch,b.id,b.tableId]);
+    else{
+     const [real]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status<>'inactive' AND (branch_id=? OR branch_id IS NULL) AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.sectionId'))=? LIMIT 1",[c.tenant,b.diningTableId,c.branch,String(section.section_id)]);
+     if(!real.length){await db.rollback();return NextResponse.json({ok:false,code:"DINING_TABLE_SECTION_MISMATCH"},{status:409})}
+     const [already]=await db.execute<RowDataPacket[]>("SELECT layout_id,floor_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND dining_table_id=? FOR UPDATE",[c.tenant,c.branch,b.diningTableId]);
+     if(already.some(a=>String(a.layout_id)!==b.id||String(a.floor_table_id)!==b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"DINING_TABLE_ALREADY_LINKED"},{status:409})}
+     await db.execute("INSERT INTO restaurant_floor_table_links(tenant_id,branch_id,layout_id,floor_table_id,dining_table_id) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE dining_table_id=VALUES(dining_table_id)",[c.tenant,c.branch,b.id,b.tableId,b.diningTableId]);
+    }
+   }else if(b.action==="activate"&&typeof b.active==="boolean"){
     // Multiple active plans can coexist under the same dining section.
     await db.execute("UPDATE restaurant_floor_plan_layouts SET is_active=? WHERE id=? AND tenant_id=? AND branch_id=?",[b.active,b.id,c.tenant,c.branch]);
    }else if(b.action==="tableStatus"&&typeof b.tableId==="string"&&/^[a-z0-9-]{1,60}$/i.test(b.tableId)&&typeof b.status==="string"&&["available","occupied","reserved","cleaning","out_of_service"].includes(b.status)){
