@@ -8,13 +8,16 @@ import { NextResponse } from "next/server";
 import { currentUserId } from "@/lib/auth/session";
 import { database } from "@/lib/db/mysql";
 import { assertSameOrigin } from "@/lib/security/origin";
+import { readLimitedJson } from "@/lib/security/limited-json";
 
 export const runtime="nodejs";
 export async function POST(request:Request){
  const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const userId=await currentUserId();if(!userId)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ let body:Record<string,unknown>|null;
+ try{body=await readLimitedJson(request,8192) as Record<string,unknown>|null;}
+ catch(error){const large=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:large?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:large?413:400});}
  if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  if(body.legalAccepted!==true)return NextResponse.json({ok:false,code:"LEGAL_CONSENT_REQUIRED"},{status:400});
  const name=typeof body.name==="string"?body.name.trim():"";
