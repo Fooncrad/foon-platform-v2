@@ -28,7 +28,8 @@ for(const width of widths){
       if(el.closest('[aria-hidden="true"],[hidden]'))continue;
       const box=el.getBoundingClientRect();
       if(!box.width||!box.height)continue;
-      if(box.width>screen+2 && style.overflowX!=="auto"&&style.overflowX!=="scroll"&&bad.length<12){
+      const scrollParent=[...function*(node){for(let parent=node.parentElement;parent;parent=parent.parentElement)yield parent;} (el)].some(parent=>{const s=getComputedStyle(parent);return (s.overflowX==="auto"||s.overflowX==="scroll")&&parent.scrollWidth>parent.clientWidth;});
+      if(box.width>screen+2 && !scrollParent && style.overflowX!=="auto"&&style.overflowX!=="scroll"&&bad.length<12){
        bad.push({tag:el.tagName,cls:String(el.className).slice(0,90),width:Math.round(box.width),screen});
       }
      }
