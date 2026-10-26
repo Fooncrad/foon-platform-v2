@@ -38,7 +38,7 @@
     "test:system-errors": "node --experimental-strip-types --test scripts/system-errors.test.mjs scripts/account-status-contract.test.mjs scripts/client-incident-body-limit.test.mjs scripts/client-incident-route-mock.test.mjs",
     "test:catalog-import": "node --experimental-strip-types --test scripts/catalog-import.test.mjs",
     "test:catalog-import:integration": "node --test scripts/catalog-import.integration.mjs",
-    "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs",
+    "test:checkout": "node --experimental-strip-types --test scripts/checkout-pricing.test.mjs scripts/checkout-channel-guard.test.mjs",
     "test:checkout:integration": "node --test scripts/checkout-orders.integration.mjs",
     "test:offline-pos": "node --test scripts/foon-offline-pos.test.mjs scripts/pos-encrypted-backup-atomic.test.mjs",
     "test:offline-workspace-security": "node --test scripts/workspace-offline-security.test.mjs",
