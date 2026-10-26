@@ -887,7 +887,12 @@ test('merchant configures weight options and selling measurements in mobile dial
   await page.goto(origin+'/'+slug);await page.getByRole('button',{name:'Add to cart',exact:true}).click();await expect(page.getByRole('radio',{name:/0.5 kg/})).toBeVisible();await page.getByRole('radio',{name:/0.5 kg/}).check();await expect(page.getByRole('button',{name:'Confirm addition',exact:true})).toBeEnabled();
    // Keep browser runtime failures visible in CI instead of reporting only a stale cart.
    const cartPageErrors=[];page.on('pageerror',error=>cartPageErrors.push(error.message));
-   await page.evaluate(()=>{window.__foonCartNativeClicks=0;document.querySelector('.foonCartOptions button')?.addEventListener('click',()=>window.__foonCartNativeClicks++);});
+   await page.evaluate(()=>{
+    window.__foonCartNativeClicks=0;window.__foonClickEvents=[];
+    document.querySelector('.foonCartOptions button')?.addEventListener('click',()=>window.__foonCartNativeClicks++);
+    document.addEventListener('click',event=>window.__foonClickEvents.push({phase:'capture',tag:event.target?.tagName,text:event.target?.textContent?.trim()?.slice(0,70)}),true);
+    document.addEventListener('click',event=>window.__foonClickEvents.push({phase:'bubble',tag:event.target?.tagName,text:event.target?.textContent?.trim()?.slice(0,70)}));
+   });
    await page.getByRole('button',{name:'Confirm addition',exact:true}).click();
    try{await expect(page.locator('.foonStorefrontCart')).toContainText('4.50');}
    catch(error){
@@ -897,7 +902,7 @@ test('merchant configures weight options and selling measurements in mobile dial
      cartText:document.querySelector('.foonStorefrontCart')?.textContent?.slice(0,450),
      storedCart:sessionStorage.getItem('foon-public-cart:'+location.pathname.slice(1))?.slice(0,450)
     }));
-    const before=await page.evaluate(()=>window.__foonCartNativeClicks);
+    const before=await page.evaluate(()=>({nativeClicks:window.__foonCartNativeClicks,events:window.__foonClickEvents,buttons:[...document.querySelectorAll('.foonCartOptions button')].map(el=>({text:el.textContent,visible:el.getBoundingClientRect().width>0}))}));
     // Diagnostic only: test whether DOM-dispatched click reaches the React handler.
     await page.evaluate(()=>document.querySelector('.foonCartOptions button')?.click());
     await page.waitForTimeout(150);
