@@ -52,6 +52,9 @@ export async function POST(request:Request){
    const [tables]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND archived=FALSE AND status<>'inactive' AND (branch_id=? OR branch_id IS NULL) LIMIT 1 LOCK IN SHARE MODE",[tenant,body.tableId,body.branchId]);
    if(!tables.length)throw new ResourceError("REFERENCE_NOT_FOUND");
   }else{
+   // The paid floor plan is not bookable until hold, settlement and locking exist.
+   if(body.bookingMode!==undefined&&body.bookingMode!=="classic")throw new ResourceError("PAYMENT_SETTLEMENT_INTEGRATION_REQUIRED");
+   if(body.tableId!==undefined&&body.tableId!==null&&body.tableId!=="")throw new ResourceError("CLASSIC_TABLE_SELECTION_FORBIDDEN");
    const date=typeof body.scheduledAt==='string'?Date.parse(body.scheduledAt):NaN;
    if(!Number.isFinite(date)||date<Date.now()+15*60*1000||date>Date.now()+90*86400000||!Number.isInteger(body.partySize)||body.partySize<1||body.partySize>100||typeof body.phone!=='string'||(!/^\+?[\d ()-]{7,40}$/.test(body.phone)||body.phone.replace(/\D/g,'').length<7))throw new ResourceError("INVALID_INPUT");
   }
