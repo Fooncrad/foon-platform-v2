@@ -3,6 +3,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {database} from "@/lib/db/mysql";
 import {BranchPinError,requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {defaultLocationSettings,parseLocationSettings} from "@/lib/tenant/free-location";
@@ -39,7 +40,9 @@ export async function GET(request:Request){
 export async function PUT(request:Request){
  try{assertSameOrigin(request);}catch{return failed("FORBIDDEN",403);}
  const ctx=await scope(request,true);if(!ctx)return failed("FORBIDDEN",403);
- const body=await request.json().catch(()=>null);
+ let body:unknown;
+ try{body=await readLimitedJson(request,4096);}
+ catch(error){const oversized=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return failed(oversized?"BODY_TOO_LARGE":"INVALID_INPUT",oversized?413:400);}
  const settings=parseLocationSettings(body);
  if(!settings)return failed("INVALID_LOCATION_SETTINGS",400);
  // Location, radius and analytics settings affect the entire business.
