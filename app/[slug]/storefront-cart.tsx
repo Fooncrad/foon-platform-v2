@@ -115,8 +115,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
  const busyRef=useRef(false);
  function setWorking(value:boolean){busyRef.current=value;setBusy(value);}
  const requestRef=useRef<{payload:string;key:string}|null>(null);
-
-
+ const panel=useRef<HTMLElement>(null);
  const localized=(item:{name:string;nameEn?:string;nameFr?:string})=>language==="en"?item.nameEn||item.name:language==="fr"?item.nameFr||item.name:item.name;
  const error=(code:string)=>code==="STORE_CUSTOMER_REQUIRED"?tr("اربط حسابك بهذا المتجر أولاً من زر المتابعة، ثم أعد الطلب.","Link your account to this store using Continue, then retry checkout.","Associez votre compte à cette boutique puis réessayez."):code==="UNAUTHENTICATED"?tr("سجّل الدخول أولاً لإكمال الطلب وحفظه في سجل حسابك.","Sign in first to save this order to your account history.","Connectez-vous pour enregistrer cette commande dans votre historique."):code==="DELIVERY_DETAILS_REQUIRED"?tr("للتوصيل أدخل رقم جوال صحيحًا والمدينة والعنوان وأكّدها.","For delivery, enter a valid phone, city and address, then confirm.","Indiquez un téléphone, une ville et une adresse valides puis confirmez."):code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"?tr("الفرع لا يستقبل هذه الطلبات حاليًا. اختر قناة متاحة أو حاول في وقت العمل.","This branch is not accepting this order type now. Choose another method or try during opening hours.","Cette succursale ne reçoit pas ce type de commande actuellement."):code==="DELIVERY_GPS_REQUIRED"?tr("هذا المتجر يحدد التوصيل بنصف القطر. شارك موقعك بالزر ثم راجع العنوان.","This store requires GPS coordinates for radius-based delivery. Tap use my location, then confirm your address.","Cette boutique exige votre position GPS pour une livraison dans un rayon."):code==="DELIVERY_OUT_OF_RANGE"?tr("موقعك خارج نطاق توصيل المتجر المحدد، اختر الاستلام أو تواصل مع المتجر.","Your location is outside this store’s delivery radius. Select pickup or contact the store.","Votre position est hors de la zone de livraison."):code==="DELIVERY_COUNTRY_MISMATCH"?tr("عنوان التوصيل يجب أن يكون في دولة هذا المتجر. غيّر دولة العنوان أو اختر متجرًا محليًا.","Delivery must be within this store’s country. Change the delivery country or choose a local store.","La livraison doit rester dans le pays de cette boutique. Modifiez le pays ou choisissez une boutique locale."):code==="INSUFFICIENT_STOCK"?tr("الكمية المطلوبة غير متاحة. عدّل السلة.","Requested quantity is unavailable. Update your cart.","Quantité indisponible. Modifiez le panier."):code==="INVALID_OPTIONS"?tr("راجع خيارات الأصناف وأضفها مجددًا.","Review item options and add them again.","Vérifiez les options et ajoutez à nouveau les articles."):code==="DELIVERY_DRIVER_UNAVAILABLE"?tr("لا يمكن تنفيذ طلب التوصيل حاليًا لعدم توفر سائق معيّن لهذا المتجر. اختر الاستلام من الفرع أو حاول لاحقًا.","Delivery is unavailable because this store has no assigned driver available. Choose store pickup or try again later.","La livraison est indisponible, car aucun livreur n’est disponible pour cette boutique. Choisissez le retrait en magasin ou réessayez plus tard."):tr("تعذر إكمال العملية. راجع البيانات وحاول مجددًا.","Unable to continue. Check the details and try again.","Impossible de continuer. Vérifiez les informations et réessayez.");
  useEffect(()=>{if(mounted)try{sessionStorage.setItem(storage,JSON.stringify(lines));}catch{}},[lines,mounted,storage]);
@@ -130,7 +129,13 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
    try{
     const r=await fetch("/api/customer/cart?store="+encodeURIComponent(slug)+"&product="+encodeURIComponent(detail.id),{cache:"no-store"}),body=await r.json();
     if(!r.ok||!body.ok)throw Error(body.code??"CART_UNAVAILABLE");
-    if(active){setPending({item:body.item,groups:body.groups});setSelected(validPreselectedOptions(detail.options,body.groups,body.item.variants??[]));}
+    if(active){
+      setPending({item:body.item,groups:body.groups});
+      setSelected(validPreselectedOptions(detail.options,body.groups,body.item.variants??[]));
+      // Reveal an entirely off-screen cart once, without moving an already visible menu.
+      const rect=panel.current?.getBoundingClientRect();
+      if(rect&&(rect.top>=window.innerHeight||rect.bottom<=0))panel.current?.scrollIntoView({block:"nearest",behavior:"auto"});
+     }
    }catch(e){if(active)setMessage(error(e instanceof Error?e.message:""));}finally{if(active)setWorking(false);}
   };
   window.addEventListener("foon:storefront-cart-add",handler);return()=>{active=false;window.removeEventListener("foon:storefront-cart-add",handler);};
@@ -178,7 +183,7 @@ export default function StorefrontCart({checkoutPolicy,slug,language,controls=de
   }catch(e){setMessage(error(e instanceof Error?e.message:""));}finally{setWorking(false);}
  }
  if(!mounted)return <aside className="foonStorefrontCart" aria-label={title}><h2>{title}</h2></aside>;
- return <aside className="foonStorefrontCart" aria-label={title} aria-busy={busy}>
+ return <aside ref={panel} className="foonStorefrontCart" aria-label={title} aria-busy={busy}>
   <h2>{title} <span dir="ltr">({count})</span></h2>
   
   {busy&&<p role="status">{tr("جارٍ التنفيذ…","Working…","En cours…")}</p>}
