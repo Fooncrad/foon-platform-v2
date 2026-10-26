@@ -59,3 +59,39 @@ test('CSV row errors are translated and correctly offset across 5-row batches',(
  assert.match(formatImportError('PLAN_FEATURE_REQUIRED','fr'),/abonnement/);
  assert.match(formatImportError('CSV_INVALID_HEADERS','ar'),/أعمدة الملف/);
 });
+
+test('measured CSV items reject missing, unknown, or incompatible units before import',()=>{
+ const base={category:'ملابس',name:'قماش',price:'25.00'};
+ for(const row of [
+  {...base,quantity_mode:'measured'},
+  {...base,weight_kg:'0.375'},
+  {...base,length_cm:'50'},
+ ])assert.throws(()=>validateImportRow('items',row),/UNIT_REQUIRED/);
+ for(const row of [
+  {...base,unit:'unknown'},
+  {...base,unit:'KG'},
+ ])assert.throws(()=>validateImportRow('items',row),/INVALID_UNIT/);
+ for(const row of [
+  {...base,unit:'kg',quantity_mode:'unsupported'},
+  {...base,unit:'piece',quantity_mode:'measured'},
+  {...base,unit:'hour',quantity_mode:'measured'},
+ ])assert.throws(()=>validateImportRow('items',row),/INVALID_QUANTITY_MODE/);
+ assert.doesNotThrow(()=>validateImportRow('items',{...base,unit:'kg',quantity_mode:'measured',weight_kg:'0.375'}));
+ assert.doesNotThrow(()=>validateImportRow('items',{...base,unit:'piece',quantity_mode:'whole',weight_kg:'0.375'}));
+ assert.doesNotThrow(()=>validateImportRow('items',base),'legacy whole-piece CSV remains supported');
+ assert.throws(()=>validateImportRows('items',[{...base,quantity_mode:'measured'}]),/ROW_2: UNIT_REQUIRED/);
+});
+test('malformed CSV image URLs have a stable actionable error in all languages',()=>{
+ const base={name:'قسم'};
+ for(const image_1 of ['not-a-url','https://%ZZ/a.png','ftp://example.com/a.png','https://user:pass@example.com/a.png']){
+  assert.throws(()=>validateImportRow('categories',{...base,image_1}),/HTTPS_IMAGE_REQUIRED/);
+ }
+ assert.doesNotThrow(()=>validateImportRow('categories',{...base,image_1:'https://example.com/a.png'}));
+ assert.doesNotThrow(()=>validateImportRow('categories',{...base,image_1:'/api/account/library/11111111-1111-4111-8111-111111111111'}));
+ for(const lang of ['ar','en','fr']){
+  const error=formatImportError('ROW_2: HTTPS_IMAGE_REQUIRED',lang);
+  assert.match(error,/ROW_2: HTTPS_IMAGE_REQUIRED/);
+  assert.ok(!error.includes('Invalid URL'));
+  assert.ok(error.length>35);
+ }
+});
