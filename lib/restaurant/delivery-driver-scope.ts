@@ -47,7 +47,6 @@ export async function assignedActiveDeliveryDriver(
  return rows.length===1;
 }
 
-
 export async function activeDeliveryDriverEmployeeId(
  db:Pick<PoolConnection,"execute">,tenantId:string,branchId:string,userId:string
 ):Promise<string|null>{
