@@ -72,21 +72,22 @@ function setup(options={}){
   '@/lib/notifications/dispatch':{dispatchNotifications:()=>{}},
   '@/lib/payments/webhook-settlement':{reconcileLateIssuedInvoice:async()=>({status:'not_applicable'})}
  };
- return {post:compile('app/api/restaurant/operations/[module]/route.ts',deps).POST,calls};
+ const route=compile('app/api/restaurant/operations/[module]/route.ts',deps);
+ return {post:route.POST,patch:route.PATCH,del:route.DELETE,calls};
 }
-function request(body,headers={}){
+function request(body,headers={},method='POST'){
  return new Request('https://example.invalid/api/restaurant/operations/pos',{
-  method:'POST',body,duplex:'half',
+  method,body,duplex:'half',
   headers:{'x-foon-tenant':tenant,'x-foon-branch':branch,...headers}
  });
 }
-function chunked(body){
+function chunked(body,method='POST',headers={}){
  const bytes=new TextEncoder().encode(body);let offset=0;
  const stream=new ReadableStream({pull(controller){
   if(offset>=bytes.length){controller.close();return;}
   const end=Math.min(offset+4096,bytes.length);controller.enqueue(bytes.slice(offset,end));offset=end;
  }});
- return {req:request(stream),get consumed(){return offset;},total:bytes.length};
+ return {req:request(stream,headers,method),get consumed(){return offset;},total:bytes.length};
 }
 const normal=JSON.stringify({branchId:branch,channel:'pickup',paymentStatus:'pending',items:[{id:'item-1',quantity:1}]});
 test('anonymous chunked upload is rejected before body consumption and DB connection',async()=>{
@@ -152,5 +153,22 @@ test('tenant mismatch and locked branch deny writes',async()=>{
  for(const [opts,headers] of [[{}, {'x-foon-tenant':'tenant-other'}],[{locked:true},{}]]){
   const h=setup(opts),response=await h.post(request(normal,headers),params);
   assert.equal(response.status,403);assert.equal(h.calls.created,0);
+ }
+});
+
+// The same shared mutation handler protects PATCH and DELETE, not only POST.
+test('PATCH and DELETE reject anonymous, cross-origin and oversized streamed bodies before DB work',async()=>{
+ for(const [method,handler] of [['PATCH','patch'],['DELETE','del']]){
+  for(const [scenario,status] of [['anonymous',401],['cross-origin',403],['oversized',413]]){
+   const h=setup({anonymous:scenario==='anonymous'});
+   const headers=scenario==='cross-origin'?{'x-cross-origin':'1'}:{};
+   const upload=chunked(normal+' '.repeat(1200000),method,headers);
+   const response=await h[handler](upload.req,params);
+   assert.equal(response.status,status,method+' '+scenario);
+   assert.equal(h.calls.connections,0,method+' '+scenario+' must not open DB connection');
+   assert.equal(h.calls.created,0);
+   assert.ok(upload.consumed<upload.total,method+' '+scenario+' must not buffer entire body');
+   if(scenario==='oversized')assert.equal((await response.json()).code,'BODY_TOO_LARGE');
+  }
  }
 });
