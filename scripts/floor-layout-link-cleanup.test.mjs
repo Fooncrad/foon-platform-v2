@@ -19,7 +19,7 @@ function compile(path,deps={}){
 const {readLimitedJson}=compile("lib/security/limited-json.ts");
 const id="12345678-1234-1234-1234-123456789abc";
 const otherSection="87654321-4321-4321-4321-cba987654321";
-function setup(previousSection=id,failDelete=false){
+function setup(previousSection=id,failDelete=false,otherLayouts=[]){
  const calls={begun:0,committed:0,rolledBack:0,released:0,deletes:[],updates:0};
  const connection={
   beginTransaction:async()=>{calls.begun++},
@@ -27,6 +27,8 @@ function setup(previousSection=id,failDelete=false){
   rollback:async()=>{calls.rolledBack++},
   release:()=>{calls.released++},
   execute:async(sql,params)=>{
+   if(sql.startsWith("SELECT id FROM branches WHERE"))return [[{id}]];
+   if(sql.startsWith("SELECT id,layout_json FROM restaurant_floor_plan_layouts"))return [otherLayouts];
    if(sql.includes("SELECT section_id FROM restaurant_floor_plan_layouts"))return [[{section_id:previousSection}]];
    if(sql.startsWith("UPDATE restaurant_floor_plan_layouts")){calls.updates++;return [{affectedRows:1}]}
    if(sql.startsWith("DELETE FROM restaurant_floor_table_")){
@@ -56,10 +58,10 @@ function setup(previousSection=id,failDelete=false){
  };
  return {PUT:compile("app/api/restaurant/floor-plan-layouts/route.ts",deps).PUT,calls};
 }
-function request(sectionId,tableIds){
+function request(sectionId,tableIds,tableNumbers=tableIds.map((_,index)=>String(index+1))){
  return new Request("https://foon.example/api/restaurant/floor-plan-layouts?branch=branch-1",{
   method:"PUT",headers:{"x-foon-tenant":"tenant-1","content-type":"application/json"},
-  body:JSON.stringify({id,sectionId,name:"Main hall",plan:{width:10,height:10,tables:tableIds.map(tableId=>({id:tableId}))}})
+  body:JSON.stringify({id,sectionId,name:"Main hall",plan:{width:10,height:10,tables:tableIds.map((tableId,index)=>({id:tableId,number:tableNumbers[index]}))}})
  });
 }
 test("saving a layout prunes removed table links and statuses in one transaction",async()=>{
@@ -94,4 +96,26 @@ test("failed stale-link cleanup rolls back the layout edit",async()=>{
  assert.equal(calls.committed,0);
  assert.equal(calls.rolledBack,1);
  assert.equal(calls.released,1);
+});
+
+test("same-section numeric table numbers with leading zeroes return 409 without writes",async()=>{
+ const otherLayouts=[{id:otherSection,layout_json:JSON.stringify({tables:[{id:"other-table",number:"001"}]})}];
+ const {PUT,calls}=setup(id,false,otherLayouts);
+ const response=await PUT(request(id,["table-1"]));
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).code,"SECTION_TABLE_NUMBER_EXISTS");
+ assert.equal(calls.updates,0);
+ assert.equal(calls.committed,0);
+ assert.equal(calls.rolledBack,1);
+ assert.equal(calls.released,1);
+});
+
+test("two canonically identical numbers inside one layout are rejected",async()=>{
+ const {PUT,calls}=setup();
+ const response=await PUT(request(id,["table-1","table-2"],["01","1"]));
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).code,"SECTION_TABLE_NUMBER_EXISTS");
+ assert.equal(calls.updates,0);
+ assert.equal(calls.committed,0);
+ assert.equal(calls.rolledBack,1);
 });
