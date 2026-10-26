@@ -109,3 +109,24 @@ test("safe integer and canonical decimal-string ACK versions remain idempotent",
   assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
  }
 });
+
+test("a new signed duplicate receipt after an acknowledged recorded receipt is idempotent",async()=>{
+ const replay=signCommittedPushReceipt({receipt:{...receipt,status:"duplicate"},privateKey});
+ assert.notEqual(replay.receipt.signature,payload.receipt.signature);
+ const stored=[{payload_digest:receipt.digest,next_version:1,signature:payload.receipt.signature}];
+ const acknowledged={tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state:"acknowledged",acknowledged_version:1};
+ const db=dbFixture(stored,acknowledged);
+ const result=await persistVerifiedPushAcknowledgment({db,payload:replay,expected,deviceId:ids[0],publicKey});
+ assert.equal(result.status,"acknowledged");
+ assert.equal(db.calls.at(-1),"commit");
+ assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+});
+test("different signed duplicate receipts cannot bypass pending state or a malformed ledger signature",async()=>{
+ const replay=signCommittedPushReceipt({receipt:{...receipt,status:"duplicate"},privateKey});
+ for(const [state,signature] of [["pending",payload.receipt.signature],["acknowledged","invalid"]]){
+  const db=dbFixture([{payload_digest:receipt.digest,next_version:1,signature}],{tenant_id:ids[2],branch_id:ids[3],payload_digest:receipt.digest,state,acknowledged_version:state==="acknowledged"?1:null});
+  await assert.rejects(()=>persistVerifiedPushAcknowledgment({db,payload:replay,expected,deviceId:ids[0],publicKey}),/SYNC_ACK_CONFLICT/);
+  assert.equal(db.calls.at(-1),"rollback");
+  assert.ok(!db.calls.some(sql=>sql.startsWith("INSERT ")||sql.startsWith("UPDATE ")));
+ }
+});
