@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const merchant=read("app/restaurant/merchant-dashboard.tsx");
+const merchantShellCss=read("app/restaurant/merchant-dashboard.css");
 const merchantCss=read("app/restaurant/reference-dashboard-layout.css");
 const adminLayout=read("app/admin/layout.tsx");
 const adminCss=read("app/admin/reference-admin-dashboard.css");
@@ -42,4 +43,21 @@ test("styles cover RTL\/LTR, mobile, light and dark without new backend dependen
  assert.match(adminCss,/@media\(max-width:600px\)/);
  assert.equal((merchantCss.match(/\{/g)||[]).length,(merchantCss.match(/\}/g)||[]).length);
  assert.equal((adminCss.match(/\{/g)||[]).length,(adminCss.match(/\}/g)||[]).length);
+});
+
+
+test("merchant topbar keeps translated workspace title horizontal when controls wrap",()=>{
+ assert.match(merchant,/uiLanguage==="fr"\?"Espace de travail"/);
+ const selector=".restaurantApp .restaurantBreadcrumb small{";
+ const ruleStart=merchantShellCss.lastIndexOf(selector);
+ assert.ok(ruleStart>=0,"breadcrumb CSS override is present");
+ const rule=merchantShellCss.slice(ruleStart,merchantShellCss.indexOf("}",ruleStart)+1);
+ for(const style of ["white-space:nowrap","overflow-wrap:normal","word-break:normal","writing-mode:horizontal-tb","text-overflow:ellipsis"]){
+  assert.ok(rule.includes(style),"missing breadcrumb rule: "+style);
+ }
+ assert.match(merchantShellCss,/\.restaurantApp:not\(\.restaurantPosFocus\) \.restaurantTopbar\{\s*flex-wrap:wrap/);
+ assert.match(merchantShellCss,/\.restaurantApp:not\(\.restaurantPosFocus\) \.restaurantTopActions\{[^}]*flex-wrap:wrap/s);
+ assert.match(merchantShellCss,/@media \(max-width:1023px\)/);
+ assert.match(merchantShellCss,/@media \(max-width:680px\)/);
+ assert.equal((merchantShellCss.match(/\{/g)||[]).length,(merchantShellCss.match(/\}/g)||[]).length);
 });
