@@ -13,7 +13,7 @@ test("section staff query scopes tenant, branch, resource and locks",()=>{
  assert.ok(source.includes("[input.branchId,tenant,d[key],input.branchId,expectedRole]"),"keep bound parameters");
 });
 test("section staff query requires active account and waiter membership",()=>{
- for(const fragment of ["JOIN users u ON u.id=m.user_id AND u.status='active'","m.status='active'","m.role='waiter'","a.enabled=TRUE","a.role=m.role"])
+ for(const fragment of ["JOIN users u ON u.id=m.user_id AND u.status='active'","m.status='active'","m.role='waiter'","a.enabled=TRUE","a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci"])
   assert.ok(sql.includes(fragment),fragment);
 });
 test("section staff cannot use customer or platform admin identities",()=>{
@@ -23,5 +23,10 @@ test("section staff cannot use customer or platform admin identities",()=>{
 test("supervisor resource still maps to waiter membership with matching branch assignment",()=>{
  assert.ok(source.includes("key==='waiterId'?'waiter':'supervisor'"));
  assert.ok(sql.includes("JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.role'))=?"));
- assert.ok(sql.includes("a.role=m.role"));
+ assert.ok(sql.includes("a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci"));
+});
+
+test("mixed MariaDB 11.8 role collations are normalized for the authorization comparison",()=>{
+ assert.ok(sql.includes("a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci"));
+ assert.ok(!sql.includes("a.role=m.role"),"implicit collation comparison is unsafe");
 });
