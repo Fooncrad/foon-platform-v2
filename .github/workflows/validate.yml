@@ -44,7 +44,9 @@ jobs:
         run: npm run build
 
   migration-database:
-    runs-on: ubuntu-latest
+    # Keep Playwright's OS dependencies stable; ubuntu-latest moved to 26.04
+    # and a slow font mirror exhausted the entire job before browser tests.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       mariadb:
@@ -85,11 +87,21 @@ jobs:
       - name: Test restaurant operational integrity
         run: npm run test:operations
       - name: Install Chromium for visual checks
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 4
+        # The hosted runner supplies runtime libraries. Verify an actual launch
+        # instead of upgrading OS/font packages through the slow apt mirror.
+        # Missing runtime libraries must still fail this step and the job.
+        run: |
+          npx playwright install chromium
+          node --input-type=module -e "import {chromium} from '@playwright/test'; const browser=await chromium.launch(); await browser.close();"
       - name: Verify public menu browsing without internet
         run: node --test scripts/public-menu-offline.test.mjs
       - name: Verify merchant dashboard desktop and mobile journeys
         run: npm run test:browser
+      - name: Verify authenticated mobile layouts in three languages and five sizes
+        run: npm run test:mobile-authenticated
+        env:
+          FOON_MOBILE_SEED_FIXTURES: "1"
       - name: Save merchant dashboard screenshots
         if: always()
         uses: actions/upload-artifact@v4
