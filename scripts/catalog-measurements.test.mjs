@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {parseCatalogMeasurements,sellingUnits,validCatalogQuantity,catalogQuantityPolicy} from '../lib/platform/catalog-measurements.ts';
+import {parseCatalogMeasurements,sellingUnits,validCatalogQuantity,catalogQuantityPolicy,combinationAvailable} from '../lib/platform/catalog-measurements.ts';
 test('all selling units preserve fractional measurements',()=>{for(const unit of sellingUnits)assert.deepEqual(parseCatalogMeasurements({unit,weightKg:0.25,lengthCm:12.5,widthCm:null,heightCm:0}),{unit,weightKg:0.25,lengthCm:12.5,widthCm:null,heightCm:0})});
 test('reject invalid units and malformed dimensions',()=>{const base={unit:'kg',weightKg:1,lengthCm:null,widthCm:null,heightCm:null};for(const bad of [null,[],{}, {...base,unit:'unknown'}, {...base,weightKg:-1},{...base,widthCm:Infinity},{...base,heightCm:'10'},{...base,lengthCm:1000000}])assert.throws(()=>parseCatalogMeasurements(bad))});
 
@@ -12,4 +12,41 @@ test('measured quantity precision is bounded and explicitly enabled',()=>{
  assert.equal(catalogQuantityPolicy(null).measured,false);
  assert.equal(catalogQuantityPolicy('{invalid').measured,false);
  assert.throws(()=>parseCatalogMeasurements({unit:'piece',quantityMode:'measured',weightKg:null,lengthCm:null,widthCm:null,heightCm:null}));
+});
+
+test('quantityMode rejects coercible JSON arrays and non-string values before persistence',()=>{
+ const base={unit:'kg',weightKg:1,lengthCm:null,widthCm:null,heightCm:null};
+ for(const quantityMode of [['measured'],['whole'],new String('measured'),{toString:()=> 'whole'},null,true,1]){
+  assert.throws(()=>parseCatalogMeasurements({...base,quantityMode}),undefined,String(quantityMode));
+ }
+ assert.equal(parseCatalogMeasurements({...base,quantityMode:'measured'}).quantityMode,'measured');
+ assert.equal(parseCatalogMeasurements({...base,quantityMode:'whole'}).quantityMode,'whole');
+ assert.equal(catalogQuantityPolicy({measurements:parseCatalogMeasurements({...base,quantityMode:'measured'})}).measured,true);
+});
+
+
+test('variant availability rejects duplicate option IDs rather than matching an unrelated selection',()=>{
+ const red='red', large='large';
+ assert.equal(combinationAvailable([{options:[red,large],stock:2}],[large,red]),true);
+ assert.equal(combinationAvailable([{options:[red,large],stock:0}],[large,red]),false);
+ assert.equal(combinationAvailable([{options:[red,red],stock:2}],[red,large]),false);
+ assert.equal(combinationAvailable([{options:[red,large],stock:2}],[red,red]),false);
+});
+
+test('variant option sets and stock match across 4800 deterministic combinations',()=>{
+ const choices=['red','large','blue'];
+ const selections=[[]];
+ for(let size=1;size<=3;size++){
+  const expand=(prefix)=>{if(prefix.length===size){selections.push(prefix);return;}for(const id of choices)expand([...prefix,id]);};
+  expand([]);
+ }
+ let checked=0;
+ for(const options of selections)for(const ids of selections)for(const stock of [null,0,2]){
+  const unique=(values)=>new Set(values).size===values.length;
+  const expected=unique(options)&&unique(ids)&&options.length===ids.length&&options.every(id=>ids.includes(id))&&(stock===null||stock>0);
+  assert.equal(combinationAvailable([{options,stock}],ids),expected,JSON.stringify({options,ids,stock}));
+  checked++;
+ }
+ assert.equal(checked,4800);
+ assert.equal(combinationAvailable(undefined,['red','red']),true,'preserve no-variants behavior');
 });
