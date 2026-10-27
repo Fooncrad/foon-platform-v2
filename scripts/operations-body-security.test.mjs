@@ -158,6 +158,32 @@ test('tenant mismatch and locked branch deny writes',async()=>{
  }
 });
 
+test('conflicting header/query branch selectors are rejected before database work',async()=>{
+ for(const role of ['owner','manager','cashier']){
+  const h=setup({role});
+  const req=new Request('https://example.invalid/api/restaurant/operations/pos?branch=branch-other',{
+   method:'POST',body:normal,duplex:'half',
+   headers:{'x-foon-tenant':tenant,'x-foon-branch':branch}
+  });
+  const response=await h.post(req,params);
+  assert.equal(response.status,403,role+' conflicting branch selectors');
+  assert.equal(h.calls.connections,0,role+' conflict must be rejected before opening a DB connection');
+  assert.equal(h.calls.created,0);
+  assert.equal(h.calls.commits,0);
+ }
+});
+test('whitespace-only query branch preserves the explicit header branch',async()=>{
+ const h=setup();
+ const req=new Request('https://example.invalid/api/restaurant/operations/pos?branch=%20%20',{
+  method:'POST',body:normal,duplex:'half',
+  headers:{'x-foon-tenant':tenant,'x-foon-branch':branch}
+ });
+ const response=await h.post(req,params);
+ assert.equal(response.status,201);
+ assert.ok(h.calls.unlocks>=1);
+ assert.equal(h.calls.created,1);
+ assert.equal(h.calls.body.branchId,branch);
+});
 // The same shared mutation handler protects PATCH and DELETE, not only POST.
 test('PATCH and DELETE reject anonymous, cross-origin and oversized streamed bodies before DB work',async()=>{
  for(const [method,handler] of [['PATCH','patch'],['DELETE','del']]){
