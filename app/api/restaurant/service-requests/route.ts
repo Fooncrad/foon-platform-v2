@@ -4,6 +4,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {serviceRequestTransitionAllowed} from "@/lib/platform/service-request-policy";
@@ -42,8 +43,12 @@ export async function GET(request:Request){
 export async function PATCH(request:Request){
  try{assertSameOrigin(request)}catch{return error("FORBIDDEN",403)}
  const ctx=await authorize(request,true);if(!ctx)return error("FORBIDDEN",403);
- const body=await request.json().catch(()=>null);
- if(!body||!uuid.test(body.id??"")||!Number.isSafeInteger(body.version)||body.version<1||typeof body.status!=="string")return error("INVALID_INPUT");
+ let body:Record<string,unknown>|null;
+ try{
+  const parsed=await readLimitedJson(request,2048);
+  body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as Record<string,unknown>:null;
+ }catch(e){return error(e instanceof Error&&e.message==="BATCH_TOO_LARGE"?"BODY_TOO_LARGE":"INVALID_INPUT",e instanceof Error&&e.message==="BATCH_TOO_LARGE"?413:400)}
+ if(!body||typeof body.id!=="string"||!uuid.test(body.id)||typeof body.version!=="number"||!Number.isSafeInteger(body.version)||body.version<1||typeof body.status!=="string")return error("INVALID_INPUT");
  const db=await database().getConnection();
  try{
   await db.beginTransaction();
