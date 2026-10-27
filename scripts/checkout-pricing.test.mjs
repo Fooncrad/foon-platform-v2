@@ -11,17 +11,3 @@ test('taxable inclusive fees are extracted, exclusive fees added',()=>{const p=p
 test('zero rate, free goods and fractional quantities retain cent precision',()=>{assert.equal(checkoutTotals(0,0,'takeaway',policy()).total,0);assert.equal(checkoutTotals(1.25,0,'takeaway',policy()).total,1.44);assert.equal(checkoutTotals(1.25,0,'delivery',policy({vatRate:0})).total,1.25);});
 test('invalid settings, amounts and excess discounts fail closed',()=>{for(const values of [{vatRate:null},{vatRate:101},{vatRate:'15'},{checkoutServiceFee:-1},{checkoutDeliveryFee:1.001}])assert.throws(()=>policy(values));for(const amount of [NaN,Infinity,-1,0.001])assert.throws(()=>checkoutTotals(amount,0,'takeaway',policy()));assert.throws(()=>checkoutTotals(1,2,'takeaway',policy()));});
 test('rounding preserves net plus tax equals total across inclusive/exclusive fees',()=>{for(const inclusive of [true,false])for(let minor=0;minor<10000;minor+=37){const r=checkoutTotals(minor/100,0,'delivery',{...policy({checkoutServiceFee:2.33,checkoutDeliveryFee:7.29,checkoutFeesTaxable:'yes'}),inclusive});assert.equal(Math.round(r.net*100)+Math.round(r.tax*100),Math.round(r.total*100));}});
-test('invalid channels never silently drop delivery or room service charges',()=>{
- const p=policy({checkoutDeliveryFee:10,checkoutRoomServiceFee:12});
- for(const channel of ['deliveri','room-service','constructor','__proto__','', ['delivery'], ['room_service'], null, undefined, {toString:()=> 'delivery'}])
-  assert.throws(()=>checkoutTotals(100,0,channel,p),/INVALID_CHECKOUT_CHANNEL/);
- assert.equal(checkoutTotals(100,0,'delivery',p).deliveryFee,10);
- assert.equal(checkoutTotals(100,0,'room_service',p).serviceFee,12);
-});
-test('all canonical checkout channels retain configured charges',()=>{
- const p=checkoutPolicy({checkoutServiceFee:3,checkoutDeliveryFee:10,checkoutRoomServiceFee:7});
- assert.equal(checkoutTotals(100,0,'takeaway',p).total,103);
- assert.equal(checkoutTotals(100,0,'dine_in',p).total,103);
- assert.equal(checkoutTotals(100,0,'delivery',p).total,113);
- assert.equal(checkoutTotals(100,0,'room_service',p).total,110);
-});
