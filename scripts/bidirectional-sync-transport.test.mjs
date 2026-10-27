@@ -142,11 +142,32 @@ test("offline sync transport provides a bounded default AbortSignal",async()=>{
  assert.equal(options.signal.aborted,false);
 });
 
-test("caller-supplied timeout signal is preserved for sync requests",async()=>{
+test("caller cancellation cannot disable the transport hard deadline",async()=>{
  const controller=new AbortController();
  let signal;
  await requestSyncJson({url,authorization,method:"POST",body:{events:[]},timeoutSignal:controller.signal,fetchImpl:async(_,opts)=>{signal=opts.signal;return response(200,"application/json")}});
- assert.equal(signal,controller.signal);
+ assert.ok(signal instanceof AbortSignal);
+ assert.notEqual(signal,controller.signal);
+ assert.equal(signal.aborted,false);
+ controller.abort();
+ assert.equal(signal.aborted,true);
+});
+test("a stalled fetch times out even when caller never aborts",async()=>{
+ const original=AbortSignal.timeout;
+ const controller=new AbortController();
+ AbortSignal.timeout=(ms)=>{assert.equal(ms,30_000);return original(5);};
+ try{
+  await assert.rejects(
+   ()=>requestSyncJson({url,authorization,method:"POST",body:{events:[]},timeoutSignal:controller.signal,fetchImpl:(_,opts)=>new Promise((resolve,reject)=>{if(opts.signal.aborted)reject(opts.signal.reason);else opts.signal.addEventListener("abort",()=>reject(opts.signal.reason),{once:true});})}),
+   error=>error?.name==="TimeoutError"
+  );
+  assert.equal(controller.signal.aborted,false);
+ }finally{AbortSignal.timeout=original;}
+});
+test("null caller signal retains the default timeout",async()=>{
+ let signal;
+ await requestSyncJson({url,authorization,method:"POST",body:{events:[]},timeoutSignal:null,fetchImpl:async(_,opts)=>{signal=opts.signal;return response(200,"application/json")}});
+ assert.ok(signal instanceof AbortSignal);
 });
 
 // A reverse proxy can return an HTML login page or HTML outage response.
