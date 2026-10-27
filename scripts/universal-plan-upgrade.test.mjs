@@ -17,7 +17,8 @@ test("each of the fifteen business activities has an owner plan-upgrade route",(
  assert.match(dashboard,/active==="subscription"/);
  assert.match(dashboard,/MerchantSubscriptionRequest tenantId=\{data\.tenantId\}/);
  assert.match(dashboard,/data\.role==="owner"&&!data\.supportReadOnly&&!data\.adminAccess/);
- assert.match(dashboard,/activitySectionUrl\(data\.activityCode,"subscription"\)/);
+ assert.match(dashboard,/\{key:"subscription",label:.*roles:\["owner","manager"\]/);
+ assert.match(dashboard,/window\.history\.pushState\(null,"",activitySectionUrl\(data\.activityCode,section\)\)/);
 });
 
 test("category and item entitlement blocks provide a recovery path in every editor",()=>{
