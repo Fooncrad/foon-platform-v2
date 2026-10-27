@@ -27,8 +27,6 @@ test("overnight hours and closed-all-day schedules",()=>{
  assert.equal(orderChannelStatus({},branch,"takeaway",at("2026-10-19T08:00:00Z")).allowed,false);
  assert.equal(orderChannelStatus({},{openingTime:"00:00",closingTime:"00:00"},"delivery").allowed,false);
 });
-
-
 test("partial and malformed business hours fail closed",()=>{
  for(const branch of [{openingTime:"09:00"},{closingTime:"17:00"},{openingTime:"25:00",closingTime:"17:00"},{openingTime:"09:00",closingTime:"17:99"}]){
   for(const channel of ["delivery","takeaway","dine_in","room_service"])
@@ -39,7 +37,6 @@ test("unconfigured legacy hours remain allowed",()=>{
  for(const branch of [{},{openingTime:null,closingTime:null},{openingTime:"",closingTime:""}])
   assert.equal(orderChannelStatus({},branch,"delivery").allowed,true);
 });
-
 test("unknown and inherited channel names fail closed before checking business hours",()=>{
  for(const channel of ["deliveri","pickup","constructor","toString","__proto__",""]){
   assert.deepEqual(orderChannelStatus({}, {}, channel),{allowed:false,reason:"ORDER_CHANNEL_DISABLED"},channel);
