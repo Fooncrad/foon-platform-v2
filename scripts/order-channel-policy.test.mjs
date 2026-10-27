@@ -27,3 +27,15 @@ test("overnight hours and closed-all-day schedules",()=>{
  assert.equal(orderChannelStatus({},branch,"takeaway",at("2026-10-19T08:00:00Z")).allowed,false);
  assert.equal(orderChannelStatus({},{openingTime:"00:00",closingTime:"00:00"},"delivery").allowed,false);
 });
+
+
+test("partial and malformed business hours fail closed",()=>{
+ for(const branch of [{openingTime:"09:00"},{closingTime:"17:00"},{openingTime:"25:00",closingTime:"17:00"},{openingTime:"09:00",closingTime:"17:99"}]){
+  for(const channel of ["delivery","takeaway","dine_in","room_service"])
+   assert.equal(orderChannelStatus({},branch,channel).reason,"STORE_CLOSED");
+ }
+});
+test("unconfigured legacy hours remain allowed",()=>{
+ for(const branch of [{},{openingTime:null,closingTime:null},{openingTime:"",closingTime:""}])
+  assert.equal(orderChannelStatus({},branch,"delivery").allowed,true);
+});
