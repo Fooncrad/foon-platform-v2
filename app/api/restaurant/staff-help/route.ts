@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {requireAdditionalBranchUnlock,onlyUnlockedBranchRows,BranchPinError} from "@/lib/restaurant/branch-pin";
 export const runtime="nodejs";
 const roles=["owner","manager","waiter","cashier","kitchen","driver","accountant"] as const;
@@ -36,7 +37,14 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false},{status:401});
- const body=await request.json().catch(()=>null) as {tenantId?:string;branchId?:string;description?:string;id?:string;action?:string}|null;
+ let body:{tenantId?:string;branchId?:string;description?:string;id?:string;action?:string}|null;
+ try{
+  const parsed=await readLimitedJson(request,2048);
+  body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as typeof body:null;
+ }catch(error){
+  const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";
+  return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400});
+ }
  if(!body||!uuid.test(body.tenantId??""))return NextResponse.json({ok:false},{status:400});
  try{
   const tenantId=String(body.tenantId);
