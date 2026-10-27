@@ -39,3 +39,18 @@ test("unconfigured legacy hours remain allowed",()=>{
  for(const branch of [{},{openingTime:null,closingTime:null},{openingTime:"",closingTime:""}])
   assert.equal(orderChannelStatus({},branch,"delivery").allowed,true);
 });
+
+test("unknown and inherited channel names fail closed before checking business hours",()=>{
+ for(const channel of ["deliveri","pickup","constructor","toString","__proto__",""]){
+  assert.deepEqual(orderChannelStatus({}, {}, channel),{allowed:false,reason:"ORDER_CHANNEL_DISABLED"},channel);
+ }
+});
+test("coerced JSON channels cannot bypass per-channel settings",()=>{
+ for(const channel of [["delivery"],["room_service"],null,undefined,0,{toString:()=>"delivery"}]){
+  assert.deepEqual(orderChannelStatus({}, {}, channel),{allowed:false,reason:"ORDER_CHANNEL_DISABLED"});
+ }
+});
+test("all supported channels remain allowed when opening hours are fully unset",()=>{
+ for(const channel of ["delivery","takeaway","dine_in","room_service"])
+  assert.equal(orderChannelStatus({}, {}, channel).allowed,true);
+});
