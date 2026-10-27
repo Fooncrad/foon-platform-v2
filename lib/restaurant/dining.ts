@@ -45,8 +45,7 @@ export async function prepareDiningResource(db:PoolConnection,tenant:string,modu
   if(!linked.length){d.tableId=null;d.sectionId=null;}
  }
  if(['waiterCalls','reservations'].includes(module)&&d.tableId){
-  // Closing an existing reservation must not require a table to remain available
-  // or retain its original capacity. Active bookings still enforce both.
+  // Terminal reservation changes need not have an available or unchanged-capacity table.
   const activeReservation=module==='reservations'&&!['completed','cancelled','no_show'].includes(input.status);
   const table=await diningTable(db,tenant,String(input.branchId??''),String(d.tableId),activeReservation?Number(d.partySize):undefined,activeReservation);
   if(d.sectionId&&d.sectionId!==table.sectionId)throw new ResourceError('SECTION_TABLE_MISMATCH');
