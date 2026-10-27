@@ -25,13 +25,23 @@ async function context(req:Request,write=false){
   return {tenant:m.tenantId,branch,uid,manager:m.role==="owner"||m.role==="manager"};
  }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
 }
+function visibleTableNumber(layoutJson:unknown,floorTableId:unknown):string{
+ try{
+  const layout=typeof layoutJson==="string"?JSON.parse(layoutJson):layoutJson;
+  if(layout&&typeof layout==="object"&&Array.isArray((layout as {tables?:unknown}).tables)){
+   const table=(layout as {tables:{id?:unknown;number?:unknown}[]}).tables.find(t=>String(t?.id)===String(floorTableId));
+   if(table&&typeof table.number==="string"&&table.number.trim())return table.number;
+  }
+ }catch{}
+ return String(floorTableId);
+}
 export async function GET(req:Request){
  const c=await context(req);if(c.error)return c.error;
  try{
   const [assignments]=await database().execute<RowDataPacket[]>("SELECT section_id,user_id,duty FROM restaurant_section_staff_assignments WHERE tenant_id=? AND branch_id=?"+(c.manager?"":" AND user_id=?"),c.manager?[c.tenant,c.branch]:[c.tenant,c.branch,c.uid]);
   const [staff]=c.manager?await database().execute<RowDataPacket[]>("SELECT DISTINCT m.user_id,m.role,COALESCE(NULLIF(u.display_name,''),u.email) AS name FROM memberships m JOIN users u ON u.id=m.user_id AND u.status='active' LEFT JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci WHERE m.tenant_id=? AND m.status='active' AND m.role IN ('owner','manager','waiter') AND (m.role='owner' OR a.user_id IS NOT NULL) ORDER BY name LIMIT 500",[c.branch,c.tenant]):[[] as RowDataPacket[]];
-  const [alerts]=await database().execute<RowDataPacket[]>("SELECT a.id,a.section_id,a.layout_id,a.floor_table_id,a.status,a.created_at FROM restaurant_section_host_alerts a WHERE a.tenant_id=? AND a.branch_id=?"+(c.manager?"":" AND EXISTS(SELECT 1 FROM restaurant_section_staff_assignments s WHERE s.tenant_id=a.tenant_id AND s.branch_id=a.branch_id AND s.section_id=a.section_id AND s.user_id=? AND s.duty='host')")+" ORDER BY a.id DESC LIMIT 50",c.manager?[c.tenant,c.branch]:[c.tenant,c.branch,c.uid]);
-  return NextResponse.json({ok:true,canManage:c.manager,assignments:assignments.map(x=>({sectionId:String(x.section_id),userId:String(x.user_id),duty:String(x.duty)})),staff:staff.map(x=>({id:String(x.user_id),role:String(x.role),name:String(x.name)})),alerts:alerts.map(x=>({id:String(x.id),sectionId:String(x.section_id),layoutId:String(x.layout_id),tableId:String(x.floor_table_id),status:String(x.status),createdAt:x.created_at}))},{headers:{"Cache-Control":"private, no-store"}});
+  const [alerts]=await database().execute<RowDataPacket[]>("SELECT a.id,a.section_id,a.layout_id,a.floor_table_id,a.status,a.created_at,p.layout_json FROM restaurant_section_host_alerts a LEFT JOIN restaurant_floor_plan_layouts p ON p.id=a.layout_id AND p.tenant_id=a.tenant_id AND p.branch_id=a.branch_id WHERE a.tenant_id=? AND a.branch_id=?"+(c.manager?"":" AND EXISTS(SELECT 1 FROM restaurant_section_staff_assignments s WHERE s.tenant_id=a.tenant_id AND s.branch_id=a.branch_id AND s.section_id=a.section_id AND s.user_id=? AND s.duty='host')")+" ORDER BY a.id DESC LIMIT 50",c.manager?[c.tenant,c.branch]:[c.tenant,c.branch,c.uid]);
+  return NextResponse.json({ok:true,canManage:c.manager,assignments:assignments.map(x=>({sectionId:String(x.section_id),userId:String(x.user_id),duty:String(x.duty)})),staff:staff.map(x=>({id:String(x.user_id),role:String(x.role),name:String(x.name)})),alerts:alerts.map(x=>({id:String(x.id),sectionId:String(x.section_id),layoutId:String(x.layout_id),tableId:String(x.floor_table_id),tableLabel:visibleTableNumber(x.layout_json,x.floor_table_id),status:String(x.status),createdAt:x.created_at}))},{headers:{"Cache-Control":"private, no-store"}});
  }catch{return NextResponse.json({ok:false,code:"SECTION_STAFF_UNAVAILABLE"},{status:503})}
 }
 export async function PUT(req:Request){
