@@ -6,8 +6,10 @@ import {NextResponse} from "next/server";
 import type {NextRequest} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
+import {activeCustomerAccount} from "@/lib/auth/active-customer-account.mjs";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {tenantPublicControls} from "@/lib/tenant/public-controls";
 import {saveResource} from "@/lib/restaurant/operations";
@@ -19,10 +21,11 @@ export async function GET(request:NextRequest){
  const storeSlug=request.nextUrl.searchParams.get("storeSlug");if(!storeSlug||storeSlug.length>120)return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
  try{
-  const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? WHERE t.slug=? AND t.status='active' LIMIT 1",[user,storeSlug]);
+  if(!await activeCustomerAccount(db,user))return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401,headers:{"Cache-Control":"no-store"}});
+  const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1",[user,storeSlug]);
   if(!stores.length)return NextResponse.json({ok:false,code:"STORE_CUSTOMER_REQUIRED"},{status:403});
   const tenant=String(stores[0].id);
-  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 100",[tenant,user]);
+  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? AND EXISTS (SELECT 1 FROM users WHERE id=? AND status='active') ORDER BY created_at DESC LIMIT 100",[tenant,user,user]);
   const reservations=rows.flatMap(row=>{const data=typeof row.data==="string"?JSON.parse(row.data):row.data;const scheduledAt=typeof data?.scheduledAt==="string"?data.scheduledAt:"";const time=Date.parse(scheduledAt);if(!Number.isFinite(time)||time<=Date.now())return [];return [{id:String(row.id),branchId:String(row.branch_id??""),name:String(row.name),status:String(row.status),scheduledAt,partySize:Number(data.partySize)}];});
   return NextResponse.json({ok:true,reservations});
  }catch{return NextResponse.json({ok:false,code:"SERVICE_UNAVAILABLE"},{status:503});}finally{db.release();}
@@ -31,7 +34,10 @@ export async function POST(request:Request){
  const employeeDenied=await employeePersonalAccessDenied();if(employeeDenied)return employeeDenied;
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null);
+ let parsed:unknown;
+ try{parsed=await readLimitedJson(request,16384);}
+ catch(error){const oversized=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:oversized?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:oversized?413:400,headers:{"Cache-Control":"no-store"}});}
+ const body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as {storeSlug:string;action:string;branchId:string;requestKey:string;notes?:string;tableId?:string;sectionId?:string;bookingMode?:string;paymentMethod?:string;layoutId?:string;floorTableId?:string;scheduledAt:string;partySize:number;phone:string}:null;
  if(!body||typeof body.storeSlug!=="string"||!['waiter','reservation'].includes(body.action)||typeof body.branchId!=="string"||typeof body.requestKey!=="string"||!/^[a-f0-9-]{36}$/i.test(body.requestKey))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  const db=await database().getConnection();
  try{

@@ -5,6 +5,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
+import {activeCustomerAccount} from "@/lib/auth/active-customer-account.mjs";
 import {tenantPublicControls} from "@/lib/tenant/public-controls";
 export const runtime="nodejs";
 export async function POST(request:Request){
@@ -18,6 +19,11 @@ export async function POST(request:Request){
  const connection=await database().getConnection();
  try{
   await connection.beginTransaction();
+  // Lock the account while creating tenant links: a suspended session cannot join a store.
+  if(!await activeCustomerAccount(connection,userId,true)){
+   await connection.rollback();
+   return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401,headers:{"Cache-Control":"no-store"}});
+  }
   const [stores]=await connection.execute<RowDataPacket[]>("SELECT id FROM tenants WHERE slug=? AND status='active' LIMIT 1",[slug]);
   if(!stores.length){await connection.rollback();return NextResponse.json({ok:false,code:"STORE_NOT_FOUND"},{status:404})}
   const tenantId=String(stores[0].id);
