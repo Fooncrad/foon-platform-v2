@@ -198,3 +198,11 @@
 .restaurantApp .restaurantMenuSectionTabs button:focus-visible{outline:3px solid #b68011;outline-offset:2px}
 @media(max-width:600px){.restaurantApp .restaurantMenuSectionTabs{display:flex;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;gap:7px;padding:8px}.restaurantApp .restaurantMenuSectionTabs button{flex:0 0 auto;min-width:145px;max-width:200px;scroll-snap-align:start;min-height:48px}.restaurantApp .restaurantMenuTabGlyph{flex-basis:19px;width:19px;height:19px}}
 @media(prefers-reduced-motion:reduce){.restaurantApp .restaurantMenuSectionTabs button{transition:none}}
+.restaurantAssignedStatus[data-status="occupied"],.restaurantAssignedStatus[data-status="busy"]{background:#fee2e2;color:#991b1b}
+.restaurantAssignedStatus[data-status="reserved"]{background:#fef3c7;color:#92400e}
+.restaurantAssignedStatus[data-status="cleaning"]{background:#dbeafe;color:#1e40af}
+.restaurantAssignedStatus[data-status="inactive"],.restaurantAssignedStatus[data-status="out_of_service"]{background:#e5e7eb;color:#374151}
+.restaurantAssignedAlerts:empty{display:none}
+.restaurantAssignedAlerts p{padding:8px 12px;border-inline-start:3px solid currentColor;border-radius:6px;background:var(--surface,#fff);overflow-wrap:anywhere}
+.restaurantIconButton[data-pending="true"]::after{content:"";display:block;position:absolute;inset-block-start:4px;inset-inline-end:4px;width:9px;height:9px;border-radius:50%;background:#dc2626}
+.restaurantIconButton[data-pending="true"]{position:relative}

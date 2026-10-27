@@ -42,7 +42,7 @@ function setup(options={}){
   execute:async(sql,values)=>{
    assert.equal(values[0],tenant);
    if(sql.includes('employee_permission_grants'))return [options.grants??[{permission_key:'pos.create',allowed:1,branch_id:branch}]];
-   if(sql.includes('employee_branch_assignments'))return [[{branch_id:branch}]];
+   if(sql.includes('employee_branch_assignments'))return [[{branch_id:branch,role:options.role??'owner'}]];
    throw Error('Unexpected DB query: '+sql);
   }
  };
