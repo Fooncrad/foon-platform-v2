@@ -26,18 +26,31 @@ export async function POST(request:Request){
   const employee=rows[0],data=typeof employee.data==="string"?JSON.parse(employee.data):employee.data;
   try{await requireAdditionalBranchUnlock(tenantId,employee.branch_id?String(employee.branch_id):null,actor);}catch(error){await db.rollback();return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
   const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!["supervisor","cashier","waiter","kitchen","driver","accountant"].includes(role)||data.userId){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!["supervisor","cashier","waiter","kitchen","driver","accountant"].includes(role)){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
   if(!employee.branch_id){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_REQUIRED"},{status:400});}
-  const [validBranch]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[employee.branch_id,tenantId]);
+  const branchId=String(employee.branch_id);
+  const [validBranch]=await db.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branchId,tenantId]);
   if(!validBranch.length){await db.rollback();return NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:400});}
-  const [existing]=await db.execute<RowDataPacket[]>("SELECT id FROM users WHERE email=? LIMIT 1 FOR UPDATE",[email]);
-  if(existing.length){await db.rollback();return NextResponse.json({ok:false,code:"ACCOUNT_ALREADY_EXISTS_USE_INVITATION"},{status:409});}
-  const userId=randomUUID(),membershipRole=role==="supervisor"?"waiter":role;
-  await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?, 'active')",[userId,email,passwordHash,String(employee.name)]);
-  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?, 'active')",[randomUUID(),tenantId,userId,membershipRole]);
-  if(employee.branch_id)await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,String(employee.branch_id),membershipRole]);
-  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,FALSE)",[randomUUID(),tenantId,userId,employee.branch_id??null,"policy.enabled"]);
-  for(const permission of permissions)await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,employee.branch_id??null,permission]);
+  const membershipRole=role==="supervisor"?"waiter":role;
+  const [existing]=await db.execute<RowDataPacket[]>("SELECT id,email,status FROM users WHERE email=? LIMIT 1 FOR UPDATE",[email]);
+  let userId="";
+  if(existing.length){
+   const candidateId=String(existing[0].id??"");
+   const eligible=String(existing[0].status)==="active"&&await resolveBoundEmployeeUser(db,tenantId,branchId,{userId:candidateId,role})===candidateId;
+   if(!eligible||String(existing[0].email??"").trim().toLowerCase()!==email||(data.userId&&String(data.userId)!==candidateId)){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
+   userId=candidateId;
+   await db.execute("UPDATE users SET password_hash=?,display_name=? WHERE id=? AND status='active'",[passwordHash,String(employee.name),userId]);
+   await db.execute("DELETE FROM auth_sessions WHERE user_id=?",[userId]);
+   await db.execute("DELETE FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND branch_id <=> ?",[tenantId,userId,branchId]);
+  }else{
+   if(data.userId){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
+   userId=randomUUID();
+   await db.execute("INSERT INTO users(id,email,password_hash,display_name,status) VALUES (?,?,?,?, 'active')",[userId,email,passwordHash,String(employee.name)]);
+   await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,?, 'active')",[randomUUID(),tenantId,userId,membershipRole]);
+   await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,branchId,membershipRole]);
+  }
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,FALSE)",[randomUUID(),tenantId,userId,branchId,"policy.enabled"]);
+  for(const permission of permissions)await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,?,TRUE)",[randomUUID(),tenantId,userId,branchId,permission]);
   data.userId=userId;data.invitationStatus="accepted";
   await db.execute("UPDATE restaurant_resources SET data=?,status='active',version=version+1 WHERE id=? AND tenant_id=?",[JSON.stringify(data),resourceId,tenantId]);
   await db.commit();
