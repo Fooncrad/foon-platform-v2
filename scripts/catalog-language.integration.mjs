@@ -13,7 +13,7 @@ test("catalog descriptions round-trip in three languages and remain tenant isola
   const r=await fetch(origin+path,{method,headers:{origin,"content-type":"application/json",...(owner?{cookie:owner.cookie,"x-foon-tenant":owner.tenant}:{})},...(body?{body:JSON.stringify(body)}:{})});
   return {status:r.status,body:await r.json(),cookie:r.headers.get("set-cookie")?.split(";")[0]};
  };
- const register=async()=>{const slug="lang-"+randomUUID().slice(0,12);const r=await call("POST",{name:slug,storeName:slug,slug,email:slug+"@test.example",password:"a-strong-test-password",kind:"restaurant",activity:"clothing",countryCode:"SA",currency:"SAR",region:"الرياض"},null,"/api/auth/register");assert.equal(r.status,201,JSON.stringify(r.body));return {tenant:r.body.tenant.id,cookie:r.cookie,slug};};
+ const register=async()=>{const slug="lang-"+randomUUID().slice(0,12);const r=await call("POST",{name:slug,storeName:slug,slug,email:slug+"@test.example",password:"a-strong-test-password",kind:"restaurant",activity:"clothing",countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true},null,"/api/auth/register");assert.equal(r.status,201,JSON.stringify(r.body));return {tenant:r.body.tenant.id,cookie:r.cookie,slug};};
  try{
   let ready=false;for(let i=0;i<100;i++){try{await fetch(origin+"/login");ready=true;break;}catch{await new Promise(r=>setTimeout(r,200));}}assert.ok(ready);
   const owner=await register(),other=await register();
