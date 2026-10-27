@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {customerCreatorUserId} from "@/lib/creator/authorization";
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readCreatorMutationJson} from "@/lib/creator/request-body";
 import {parseCreatorSocialLinks} from "@/lib/creator/social-links";
 
 export const runtime="nodejs";
@@ -27,7 +28,9 @@ export async function GET(){
 export async function PUT(request:Request){
  try{assertSameOrigin(request);}catch{return fail("FORBIDDEN",403);}
  const a=await actor();if(a.error)return a.error;
- const body=await request.json().catch(()=>null);
+ const parsed=await readCreatorMutationJson(request,32768);
+ if(parsed.error)return fail(parsed.error.code,parsed.error.status);
+ const body=parsed.body as {links?:unknown}|null;
  const links=parseCreatorSocialLinks(body?.links);
  if(!links)return fail("INVALID_SOCIAL_LINK",400);
  const db=await database().getConnection();
