@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {parseImportCsv,validateImportRow,validateImportRows} from '../lib/catalog/import-csv.ts';
 import {publicImageAddress} from '../lib/media/remote-image.ts';
 import {formatImportError} from '../lib/catalog/import-errors.ts';
+import {cleanupUnusedImportAssets} from '../lib/catalog/import-media-cleanup.ts';
 test('CSV preserves multilingual quoted content and rejects invalid rows before writing',()=>{
  const rows=parseImportCsv('\uFEFFname,name_en,description,image_1\r\n"قسم, واحد",Category,"سطر\nثان",https://example.com/image.jpg','categories');assert.equal(rows[0].name,'قسم, واحد');assert.equal(rows[0].description,'سطر\nثان');
  for(const csv of ['name,name\nx,y','name,unknown\nx,y','name\n"unclosed'])assert.throws(()=>parseImportCsv(csv,'categories'));
@@ -95,4 +96,30 @@ test('malformed CSV image URLs have a stable actionable error in all languages',
   assert.ok(!error.includes('Invalid URL'));
   assert.ok(error.length>35);
  }
+});
+
+test('unused staged image assets are deleted when CSV rows are skipped',async()=>{
+ const url='/api/restaurant/assets/11111111-1111-4111-8111-111111111111';
+ const calls=[];
+ const db={async execute(sql,params){calls.push({sql,params});return sql.startsWith('SELECT')?[[{reference_count:0}],[]]:[{affectedRows:1},[]]}};
+ const removed=await cleanupUnusedImportAssets(db,'tenant-a',new Map([['first',url],['same asset',url],['remote','https://example.com/image.jpg']]));
+ assert.equal(removed,1);
+ assert.equal(calls.filter(c=>c.sql.startsWith('SELECT')).length,1,'duplicate URLs are checked once');
+ const deletion=calls.find(c=>c.sql.startsWith('DELETE'));
+ assert.deepEqual(deletion.params,['tenant-a','11111111-1111-4111-8111-111111111111']);
+ assert.match(calls[0].sql,/catalog_variant_images/);
+ assert.match(calls[0].sql,/restaurant_resources/);
+});
+test('referenced staged image assets are retained',async()=>{
+ const url='/api/restaurant/assets/22222222-2222-4222-8222-222222222222';
+ const calls=[];
+ const db={async execute(sql,params){calls.push({sql,params});return sql.startsWith('SELECT')?[[{reference_count:2}],[]]:[{affectedRows:1},[]]}};
+ assert.equal(await cleanupUnusedImportAssets(db,'tenant-a',new Map([['image',url]])),0);
+ assert.equal(calls.some(c=>c.sql.startsWith('DELETE')),false);
+});
+test('cleanup ignores external URLs and malformed asset IDs',async()=>{
+ const calls=[];
+ const db={async execute(sql,params){calls.push({sql,params});return [[{reference_count:0}],[]]}};
+ assert.equal(await cleanupUnusedImportAssets(db,'tenant-a',new Map([['external','https://example.com/a.jpg'],['bad','/api/restaurant/assets/not-a-uuid']])),0);
+ assert.equal(calls.length,0);
 });
