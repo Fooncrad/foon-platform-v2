@@ -4,7 +4,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
-import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
+import {BranchPinError,requireAdditionalBranchUnlock,requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
 import {validFloorPlan} from "@/lib/restaurant/floor-plan";
@@ -18,24 +18,35 @@ async function scope(req:Request,write:boolean){
  if(write)await requireAllAdditionalBranchesUnlocked(membership.tenantId,user);
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branch,membership.tenantId]);
  if(!rows.length)return {error:NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404})};
+ // Keep the selected branch PIN gate from the dedicated security PR when this feature lands.
+ if(!write&&(!membership.adminAccess||membership.platformRole==="support"))await requireAdditionalBranchUnlock(membership.tenantId,branch,user);
  return {tenant:membership.tenantId,branch};
- }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
+ }catch(error){const code=error instanceof BranchPinError?error.code:"FORBIDDEN";return {error:NextResponse.json({ok:false,code},{status:403})}}
 }
 function decode(value:unknown){try{const x=typeof value==="string"?JSON.parse(value):value;return validFloorPlan(x)?x:null}catch{return null}}
 async function sectionExists(tenant:string,branch:string,section:string){
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,section,branch]);return rows.length>0;
 }
 export async function GET(req:Request){const c=await scope(req,false);if(c.error)return c.error;
+ // Read-only operational snapshot; never returns or overwrites the editor's unsaved plan.
+ if(new URL(req.url).searchParams.get("view")==="operations"){
+  try{
+   const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+   const [links]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+   const [registered]=await database().execute<RowDataPacket[]>("SELECT id,status FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 1000",[c.tenant,c.branch]);
+   return NextResponse.json({ok:true,operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),links:links.map(l=>({layoutId:String(l.layout_id),tableId:String(l.floor_table_id),diningTableId:String(l.dining_table_id)})),registeredStatuses:registered.map(t=>({id:String(t.id),status:String(t.status)}))},{headers:{"Cache-Control":"no-store, private"}});
+  }catch{return NextResponse.json({ok:false,code:"OPERATIONS_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}})}
+ }
  // Return the existing section catalog independently of optional floor-plan migrations.
  if(new URL(req.url).searchParams.get("view")==="sections"){
   try{
-   const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,status,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
+   const [rows]=await database().execute<RowDataPacket[]>("SELECT id,name,status,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
    return NextResponse.json({ok:true,sections:rows.map(r=>({id:String(r.id),name:String(r.name),status:String(r.status)}))},{headers:{"Cache-Control":"private, no-store"}});
   }catch{return NextResponse.json({ok:false,code:"SECTIONS_UNAVAILABLE"},{status:503})}
  }
 
  try{
- const [sections]=await database().execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
+ const [sections]=await database().execute<RowDataPacket[]>("SELECT id,name FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200",[c.tenant,c.branch]);
  const [layouts]=await database().execute<RowDataPacket[]>("SELECT id,section_id,name,layout_json,is_active FROM restaurant_floor_plan_layouts WHERE tenant_id=? AND branch_id=? ORDER BY created_at,id LIMIT 500",[c.tenant,c.branch]);
  const items=[];for(const l of layouts){const plan=decode(l.layout_json);if(!plan)return NextResponse.json({ok:false,code:"FLOOR_LAYOUT_INVALID"},{status:409});items.push({id:String(l.id),sectionId:String(l.section_id),name:String(l.name),active:Boolean(l.is_active),plan})}
  const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
@@ -169,6 +180,8 @@ export async function PATCH(req:Request){
     if(!layout||!layout.tables.some(t=>t.id===b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"TABLE_NOT_IN_LAYOUT"},{status:400})}
     // These are MANUAL operational annotations only; reservation engine is authoritative.
     await db.execute("INSERT INTO restaurant_floor_table_operations(tenant_id,branch_id,layout_id,floor_table_id,status) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status)",[c.tenant,c.branch,b.id,b.tableId,b.status]);
+    const [section]=await db.execute<RowDataPacket[]>("SELECT section_id FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=?",[b.id,c.tenant,c.branch]);
+    if(section.length)await db.execute("INSERT INTO restaurant_section_host_alerts(tenant_id,branch_id,section_id,layout_id,floor_table_id,status,actor_user_id) VALUES(?,?,?,?,?,?,?)",[c.tenant,c.branch,section[0].section_id,b.id,b.tableId,b.status,await currentUserId()]);
    }else{await db.rollback();return NextResponse.json({ok:false,code:"INVALID_ACTION"},{status:400})}
    await db.commit();return NextResponse.json({ok:true});
   }catch(error){await db.rollback();throw error}finally{db.release()}
