@@ -18,3 +18,10 @@ test('invalid channels never silently drop delivery or room service charges',()=
  assert.equal(checkoutTotals(100,0,'delivery',p).deliveryFee,10);
  assert.equal(checkoutTotals(100,0,'room_service',p).serviceFee,12);
 });
+test('all canonical checkout channels retain configured charges',()=>{
+ const p=checkoutPolicy({checkoutServiceFee:3,checkoutDeliveryFee:10,checkoutRoomServiceFee:7});
+ assert.equal(checkoutTotals(100,0,'takeaway',p).total,103);
+ assert.equal(checkoutTotals(100,0,'dine_in',p).total,103);
+ assert.equal(checkoutTotals(100,0,'delivery',p).total,113);
+ assert.equal(checkoutTotals(100,0,'room_service',p).total,110);
+});
