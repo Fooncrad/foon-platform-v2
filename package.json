@@ -86,6 +86,6 @@
     "typescript": "^5.9.0"
   },
   "overrides": {
-    "zod": "4.6.6"
+    "zod": "4.6.7"
   }
 }
