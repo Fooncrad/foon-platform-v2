@@ -20,10 +20,10 @@ export async function prepareDiningResource(db:PoolConnection,tenant:string,modu
  const d=input.data;
  if(module==='sections'){
   if(!input.branchId)throw new ResourceError('INVALID_BRANCH');
-  // Supervisors use the existing waiter membership for login, while their resource role remains supervisor.
-  for(const [key,expectedRole,membershipRole] of [['waiterId','waiter','waiter'],['supervisorId','supervisor','waiter']]){
+  for(const [key,role] of [['waiterId','waiter'],['supervisorId','manager']]){
    if(!d[key])continue;
-   const [staff]=await db.execute<RowDataPacket[]>("SELECT r.id FROM restaurant_resources r JOIN memberships m ON m.tenant_id=r.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.userId')) AND m.status='active' AND m.role=? JOIN users u ON u.id=m.user_id AND u.status='active' JOIN employee_branch_assignments a ON a.tenant_id=r.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci WHERE r.tenant_id=? AND r.id=? AND r.kind='employee' AND r.archived=FALSE AND r.status='active' AND r.branch_id=? AND JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.role'))=? AND NOT EXISTS (SELECT 1 FROM memberships customer WHERE customer.user_id=m.user_id AND customer.role='customer' AND customer.status='active') AND NOT EXISTS (SELECT 1 FROM tenant_customers tc WHERE tc.user_id=m.user_id) AND NOT EXISTS (SELECT 1 FROM platform_admins pa WHERE pa.user_id=m.user_id) LIMIT 1 LOCK IN SHARE MODE",[membershipRole,input.branchId,tenant,d[key],input.branchId,expectedRole]);
+   const expectedRole=key==='waiterId'?'waiter':'supervisor';
+   const [staff]=await db.execute<RowDataPacket[]>("SELECT r.id FROM restaurant_resources r JOIN memberships m ON m.tenant_id=r.tenant_id AND m.user_id=JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.userId')) AND m.status='active' AND m.role='waiter' JOIN employee_branch_assignments a ON a.tenant_id=r.tenant_id AND a.user_id=m.user_id AND a.branch_id=? AND a.enabled=TRUE WHERE r.tenant_id=? AND r.id=? AND r.kind='employee' AND r.archived=FALSE AND r.status='active' AND r.branch_id=? AND JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.role'))=? LIMIT 1 LOCK IN SHARE MODE",[input.branchId,tenant,d[key],input.branchId,expectedRole]);
    if(!staff.length)throw new ResourceError('INVALID_SECTION_STAFF');
   }
  }
