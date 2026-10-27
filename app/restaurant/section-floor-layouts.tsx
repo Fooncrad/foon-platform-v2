@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import "./section-floor-layouts.css";
+import SectionStaffPanel from "./section-staff-panel";
 const messages={"ar":["مخططات الأقسام المتعددة","اختر قسمًا موجودًا، ثم أنشئ مخططًا أو أكثر له.","جار تحميل المخططات…","المخططات المحفوظة","+ مخطط جديد","قسم غير متاح","القسم الموجود","اختر القسم","اسم المخطط","مثال: الصالة الرئيسية","الطول بالمتر","العرض بالمتر","+ إضافة طاولة","جار الحفظ","حفظ المخطط","لا توجد أقسام نشطة؛ أضف قسم صالة أولًا.","الطاولات:","المخططات:","مقاعد","رقم الطاولة","السعة","إزالة من المخطط","تعذر تحميل المخططات. تحقق من الترحيل والصلاحيات.","اختر القسم أولًا.","يجب أن تتراوح الأبعاد بين 2 و200 متر.","اختر القسم واسم المخطط.","تم حفظ المخطط.","تعذر الحفظ:","تعديل المخطط","تفعيل المخطط","إيقاف المخطط","متاح","مشغول","محجوز","تنظيف","خارج الخدمة","حالة الطاولة التشغيلية","الحالة اليدوية لا تؤكد أو تلغي الحجز الفعلي.","الحالة التشغيلية","حفظ الحالة","نشط","غير نشط"],"en":["Multiple dining floor plans","Choose an existing section and create one or more plans.","Loading plans…","Saved floor plans","+ New floor plan","Unavailable section","Existing section","Select section","Plan name","Example: Main hall","Length (m)","Width (m)","+ Add table","Saving","Save plan","No active sections. Add a dining section first.","Tables:","Plans:","seats","Table number","Capacity","Remove from plan","Could not load plans. Check migrations and permissions.","Select a section first.","Dimensions must be 2–200 metres.","Choose a section and a plan name.","Plan saved.","Save failed:","Edit layout","Activate layout","Deactivate layout","Available","Occupied","Reserved","Cleaning","Out of service","Operational table status","Manual status does not confirm or cancel an actual reservation.","Operational status","Save status","Active","Inactive"],"fr":["Plans de salle multiples","Choisissez une section existante et créez un ou plusieurs plans.","Chargement des plans…","Plans enregistrés","+ Nouveau plan","Section indisponible","Section existante","Choisir une section","Nom du plan","Exemple : Salle principale","Longueur (m)","Largeur (m)","+ Ajouter une table","Enregistrement","Enregistrer","Aucune section active. Ajoutez une section d'abord.","Tables :","Plans :","places","Numéro de table","Capacité","Retirer du plan","Impossible de charger les plans. Vérifiez la migration et les droits.","Choisissez d'abord une section.","Les dimensions doivent être entre 2 et 200 mètres.","Choisissez une section et un nom.","Plan enregistré.","Erreur d'enregistrement :","Modifier le plan","Activer le plan","Désactiver le plan","Disponible","Occupée","Réservée","Nettoyage","Hors service","État opérationnel de la table","L'état manuel ne confirme ni n'annule une réservation réelle.","État opérationnel","Enregistrer l'état","Actif","Inactif"]} as const;
 import {defaultFloorPlan,nextFloorTableNumber,nextFloorTablePosition,type FloorPlan} from "@/lib/restaurant/floor-plan";
 import {latinDigits,englishNumber} from "@/lib/restaurant/floor-layout-numbers";
@@ -39,6 +40,27 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
   }catch(error){if(live)setMessage((language==="ar"?"الأقسام محفوظة، لكن بيانات المخططات غير متاحة. تأكد من الترحيلات 0306 و0307 و0308: ":language==="en"?"Sections are available, but floor plans could not load. Check migrations 0306–0308: ":"Sections disponibles, mais les plans sont indisponibles. Vérifiez les migrations 0306–0308 : ")+String(error instanceof Error?error.message:error));}
   finally{if(live)setLoading(false)}
  });return()=>{live=false}},[tenantId,url,language]);
+// Refresh real/operational status without replacing unsaved editor layout or table positions.
+ useEffect(()=>{
+  let stopped=false;
+  const refresh=async()=>{
+   if(stopped||saving||document.visibilityState==="hidden")return;
+   try{
+    const response=await fetch(url+"&view=operations",{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
+    if(!response.ok)return;
+    const data=await response.json();
+    if(stopped||!data.ok)return;
+    setOperations(data.operations||[]);
+    setLinks(data.links||[]);
+    const statuses=new Map<string,string>((data.registeredStatuses||[]).map((item:{id:string;status:string})=>[item.id,item.status]));
+    setRegisteredTables(tables=>tables.map(t=>({...t,status:statuses.get(t.id)||t.status})));
+   }catch{/* Retain the last known state when the connection fails. */}
+  };
+  const timer=setInterval(()=>void refresh(),30000);
+  const visible=()=>{if(document.visibilityState==="visible")void refresh()};
+  document.addEventListener("visibilitychange",visible);
+  return()=>{stopped=true;clearInterval(timer);document.removeEventListener("visibilitychange",visible)};
+ },[tenantId,url,saving]);
  function openLayout(id:string){
   if(saving)return;
   // Tabs and the existing selector must not silently discard an unsaved floor layout.
@@ -124,6 +146,7 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
      <button type="button" className="foonFloorButton foonFloorDanger" onClick={()=>{setPlan(p=>({...p,tables:p.tables.filter(t=>t.id!==selected)}));setSelected("")}}>{tr(21)}</button>
     </div>:<p className="foonFloorHint">{language==="ar"?"اختر طاولة من المخطط لتعديل تفاصيلها.":language==="en"?"Select a table on the plan to edit its details.":"Sélectionnez une table pour modifier ses détails."}</p>}
    </section>
+   <SectionStaffPanel tenantId={tenantId} branch={branch} sections={sections}/>
   </aside>
  </div>}
  {message&&<p className="foonFloorMessage" role="status">{message}</p>}
