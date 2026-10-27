@@ -39,7 +39,7 @@ test('preserves allowed payment transitions without coercion',()=>{
   assert.equal(orderPaymentTransitionAllowed('paid','paid','ready'),false);
 });
 test('rejects malformed payment transition inputs instead of coercing JSON values',()=>{
-  for(const value of [null,undefined,0,1,[],['paid'],{},true,'__proto__','constructor','toString']){
+  for(const value of [null,undefined,0,1,[],['paid'],{},true,'delivered','refunded','rejected','','__proto__','constructor','toString']){
     assert.equal(orderPaymentTransitionAllowed('unpaid',value,'new'),false);
     assert.equal(orderPaymentTransitionAllowed(value,'paid','new'),false);
     assert.equal(orderPaymentTransitionAllowed('unpaid','paid',value),false);
