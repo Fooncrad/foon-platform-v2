@@ -15,7 +15,7 @@ async function context(req:Request,write=false){
   const m=await requireTenantMembership(uid,tenant,write?["owner","manager"]:["owner","manager","waiter"],write);
   // Only owners are tenant-wide; other roles require an enabled branch assignment.
   if(m.role!=="owner"){
-   const [assigned]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND branch_id=? AND user_id=? AND enabled=TRUE AND role COLLATE utf8mb4_unicode_ci=? COLLATE utf8mb4_unicode_ci LIMIT 1",[m.tenantId,branch,uid,m.role]);
+   const [assigned]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND branch_id=? AND user_id=? AND enabled=TRUE AND role COLLATE utf8mb4_unicode_ci=? LIMIT 1",[m.tenantId,branch,uid,m.role]);
    if(!assigned.length)return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})};
   }
   // PIN checks apply to reads and writes for the selected branch, not unrelated branches.
