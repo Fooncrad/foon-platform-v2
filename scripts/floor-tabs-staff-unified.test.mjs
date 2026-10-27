@@ -69,3 +69,12 @@ test("host alerts display the visible table number instead of the internal layou
  assert.match(ui,/alertStatus\(a\.status\)/);
  assert.match(ui,/متاحة.*Available.*Disponible/);
 });
+
+test("section staff endpoint preserves actionable branch PIN errors",()=>{
+ const api=read("app/api/restaurant/section-staff/route.ts");
+ const ui=read("app/restaurant/section-staff-panel.tsx");
+ assert.match(api,/BranchPinError,requireAdditionalBranchUnlock/);
+ assert.match(api,/error instanceof BranchPinError\?error.code:"FORBIDDEN"/);
+ assert.match(ui,/code==="BRANCH_PIN_REQUIRED"/);
+ assert.match(ui,/code==="BRANCH_PIN_SETUP_REQUIRED"/);
+});
