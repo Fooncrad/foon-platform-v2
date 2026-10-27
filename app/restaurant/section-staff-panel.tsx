@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 type Entry={sectionId:string;userId:string;duty:"waiter"|"host"};
 type Staff={id:string;name:string;role:string};
-type Alert={id:string;sectionId:string;floorTableId?:string;tableId:string;status:string;createdAt:string};
+type Alert={id:string;sectionId:string;floorTableId?:string;tableId:string;tableLabel?:string;status:string;createdAt:string};
 export default function SectionStaffPanel({tenantId,branch,sections}:{tenantId:string;branch:string;sections:{id:string;name:string}[]}){
  const language=useUiLanguage();
  const tr=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
@@ -18,7 +18,7 @@ export default function SectionStaffPanel({tenantId,branch,sections}:{tenantId:s
  <div style={{display:"grid",gap:8,maxHeight:220,overflowY:"auto"}}>{staff.map(user=><div key={user.id} style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",padding:"6px 0",borderBottom:"1px solid var(--floor-line)"}}><strong style={{flex:"1 1 90px"}}>{user.name}</strong>{(["waiter","host"] as const).map(duty=><label key={duty} style={{display:"flex",alignItems:"center",gap:4}}><input type="checkbox" style={{width:16,minHeight:16}} checked={assignments.some(a=>a.sectionId===current&&a.userId===user.id&&a.duty===duty)} onChange={()=>toggle(user.id,duty)}/>{duty==="waiter"?tr("نادل","Waiter","Serveur"):tr("هوست","Host","Accueil")}</label>)}</div>)}</div>
  {canManage?<button type="button" className="foonFloorButton foonFloorPrimary" disabled={busy} onClick={()=>void save()}>{busy?tr("جارٍ الحفظ","Saving","Enregistrement"):tr("حفظ تعيين القسم","Save assignments","Enregistrer")}</button>:<p role="note">{tr("تعيينات الفريق للعرض فقط؛ يغيّرها مالك النشاط أو المدير.","Assignments are read-only; only the owner or manager can change them.","Affectations en lecture seule ; seul le propriétaire ou le responsable peut les modifier.")}</p>}</>}
  <h4 style={{margin:"10px 0 0"}}>{tr("آخر تنبيهات الطاولات","Recent table alerts","Dernières alertes")}</h4>
- <div aria-live="polite" style={{maxHeight:170,overflowY:"auto"}}>{alerts.filter(a=>!current||a.sectionId===current).slice(0,10).map(a=><p key={a.id} style={{fontSize:12,margin:"7px 0"}}>#{a.tableId} · {a.status} · {new Date(a.createdAt).toLocaleString(language==="ar"?"ar-SA":language==="fr"?"fr-FR":"en-GB",{numberingSystem:"latn"})}</p>)}</div>
+ <div aria-live="polite" style={{maxHeight:170,overflowY:"auto"}}>{alerts.filter(a=>!current||a.sectionId===current).slice(0,10).map(a=><p key={a.id} style={{fontSize:12,margin:"7px 0"}}>#{a.tableLabel||a.tableId} · {a.status} · {new Date(a.createdAt).toLocaleString(language==="ar"?"ar-SA":language==="fr"?"fr-FR":"en-GB",{numberingSystem:"latn"})}</p>)}</div>
  {message&&<p role="status">{message}</p>}
  </section>
 }
