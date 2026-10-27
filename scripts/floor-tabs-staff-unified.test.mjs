@@ -53,3 +53,9 @@ test("floor-plan selectors exclude inactive dining sections",()=>{
  const query="kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200";
  assert.equal(api.split(query).length-1,2,"both section list endpoints must show active sections only");
 });
+
+test("section alert timestamps use the selected Arabic, English, or French locale",()=>{
+ const ui=read("app/restaurant/section-staff-panel.tsx");
+ assert.match(ui,/language==="ar"\?"ar-SA":language==="fr"\?"fr-FR":"en-GB"/);
+ assert.match(ui,/numberingSystem:"latn"/);
+});
