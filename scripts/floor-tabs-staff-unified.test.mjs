@@ -40,3 +40,10 @@ test("waiter section staff view is read-only and manager save is capability gate
  assert.match(ui,/\{canManage\?<button/);
  assert.match(ui,/Assignments are read-only/);
 });
+
+test("floor-plan reads retain the selected-branch PIN gate when section staffing lands",()=>{
+ const api=read("app/api/restaurant/floor-plan-layouts/route.ts");
+ assert.match(api,/BranchPinError,requireAdditionalBranchUnlock,requireAllAdditionalBranchesUnlocked/);
+ assert.match(api,/if\(!write&&\(!membership\.adminAccess\|\|membership\.platformRole==="support"\)\)await requireAdditionalBranchUnlock\(membership\.tenantId,branch,user\)/);
+ assert.match(api,/error instanceof BranchPinError\?error\.code:"FORBIDDEN"/);
+});
