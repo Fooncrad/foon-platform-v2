@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {readLimitedJson} from "@/lib/security/limited-json";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
