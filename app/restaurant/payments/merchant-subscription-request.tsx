@@ -78,7 +78,7 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
     {evidence&&<small role="status">{t("الإيصال المحدد: ","Selected receipt: ","Reçu choisi : ")}{evidence.name}</small>}
    </label>
    <button type="submit" disabled={!chosen||!evidence||evidence.size>2097152||pending||busy}>{busy?t("جارٍ الإرسال…","Submitting…","Envoi…"):t("إرسال طلب اعتماد الدفع","Submit paid transfer for review","Envoyer le virement")}</button>
-  </form>
+  </form>}
   {pending&&<div><p role="status">{t("يمكنك رفع إيصال الدفع أو استبداله ما دام طلب الترقية قيد المراجعة.","You can upload or replace the payment receipt while the upgrade request is pending.","Vous pouvez ajouter ou remplacer le reçu tant que la demande est en attente.")}</p>
     <button type="button" disabled={busy||!evidence||evidence.size>2097152} onClick={()=>void retryEvidence()}>{t("رفع إيصال الدفع للطلب المعلّق","Upload receipt to pending request","Ajouter le reçu à la demande")}</button>
    </div>}
