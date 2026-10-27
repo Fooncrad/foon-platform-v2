@@ -2,9 +2,16 @@ import test from "node:test";import assert from "node:assert/strict";import {rea
 test("non-owner section access requires an enabled assignment to the requested branch",()=>{
  const api=read("app/api/restaurant/section-staff/route.ts");
  assert.match(api,/if\(m\.role!=="owner"\)/);
- assert.match(api,/SELECT 1 FROM employee_branch_assignments WHERE tenant_id=\? AND branch_id=\? AND user_id=\? AND enabled=TRUE LIMIT 1/);
+ assert.match(api,/SELECT 1 FROM employee_branch_assignments WHERE tenant_id=\? AND branch_id=\? AND user_id=\? AND enabled=TRUE AND role COLLATE utf8mb4_unicode_ci=\? COLLATE utf8mb4_unicode_ci LIMIT 1/);
  assert.match(api,/if\(!assigned\.length\)return \{error:NextResponse\.json\(\{ok:false,code:"FORBIDDEN"\},\{status:403\}\)\}/);
 });
+test("section staff access, listing and assignment writes require branch role to match membership role",()=>{
+ const api=read("app/api/restaurant/section-staff/route.ts");
+ assert.match(api,/\[m\.tenantId,branch,uid,m\.role\]/);
+ assert.equal((api.match(/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/g)??[]).length,2);
+ assert.match(api,/m\.role!==\"owner\"/);
+});
+
 test("section staff listings and assignment writes reject inactive or other-branch staff",()=>{
  const api=read("app/api/restaurant/section-staff/route.ts");
  assert.equal((api.match(/a\.branch_id=\? AND a\.enabled=TRUE/g)??[]).length,2);
