@@ -11,6 +11,7 @@ import CatalogImages from "./catalog-images";
 import {catalogText} from "@/lib/platform/catalog-copy";
 import ProductWorkspaceTabs from "./product-workspace-tabs";
 import ActivityTemplateEditor from "./activity-template-editor";
+import PlanUpgradeNotice,{isUpgradeError} from "./plan-upgrade-notice";
 
 const ACTIVITY_ATTRIBUTE_GUIDES:Record<string,{ar:string;en:string;fr:string;fields:[string,string,string][]}>={
  clothing:{ar:"الملابس والأزياء",en:"Clothing & fashion",fr:"Vêtements et mode",fields:[["المقاس XS–3XL أو مقاس رقمي","Size XS–3XL or numeric","Taille XS–3XL ou numérique"],["اللون والخامة","Color and fabric","Couleur et tissu"],["مخزون كل تركيبة","Stock per combination","Stock par combinaison"]]},
