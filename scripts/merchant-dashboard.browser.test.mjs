@@ -924,7 +924,7 @@ test("existing accounts create activity-specific businesses without administrato
    const registered=await context.request.post(origin+"/api/auth/register",{headers:{origin},data:{name:"Owner",storeName:"Original business",email:slug+"@test.example",password:"synthetic-long-password",slug,activity:"grocery",countryCode:"SA",currency:"SAR",region:"الرياض",legalAccepted:true}});expect(registered.status()).toBe(201);
    const page=await context.newPage();await page.goto(origin+"/restaurant/register");
    await page.locator('select[name="activity"]').selectOption(activity);
-   await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");
+   await page.locator('input[name="name"]').fill("Additional business");await page.locator('input[name="slug"]').fill(slug+"-new");await page.locator('input[name="legalConsent"]').check();
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
    await page.locator('input[name="legalConsent"]').check();
    const response=page.waitForResponse(r=>r.url().endsWith("/api/restaurant/onboard")&&r.request().method()==="POST");
