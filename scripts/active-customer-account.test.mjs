@@ -43,6 +43,14 @@ test('customer GET routes retain active-user gate before data reads', async () =
     const source = await readFile(new URL(`../app/api/customer/${route}/route.ts`, import.meta.url), 'utf8');
     const get = source.split('export async function GET')[1]?.split('export async function POST')[0] ?? '';
     assert.match(get, /if\(!await activeCustomerAccount\(/, route);
+    if (route === 'service-requests') {
+      assert.match(source, /JOIN users u ON u\\.id=c\\.user_id AND u\\.status='active'/);
+      assert.match(get, /EXISTS \\(SELECT 1 FROM users WHERE id=\\? AND status='active'\\)/);
+    }
+    if (route === 'services') {
+      assert.match(get, /JOIN users u ON u\\.id=c\\.user_id AND u\\.status='active'/);
+      assert.match(get, /EXISTS \\(SELECT 1 FROM users WHERE id=\\? AND status='active'\\)/);
+    }
   }
 });
 test('customer store enrollment locks active user before creating tenant links', async () => {
