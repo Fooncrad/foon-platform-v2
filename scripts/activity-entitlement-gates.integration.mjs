@@ -31,8 +31,23 @@ export async function runActivityEntitlementGateChecks({db,call,restaurant,staff
    }
   }
   const assigned=await call("/api/restaurant/assigned-service?tenantId="+owner.tenant,"GET",undefined,owner.cookie);
-  assert.equal(assigned.status,dining?200:403,JSON.stringify(assigned.body));
-  if(!dining)assert.equal(assigned.body.code,"ACTIVITY_MODULE_UNAVAILABLE");
+  // This is a personal waiter endpoint, not an owner activity overview.
+  assert.equal(assigned.status,403,JSON.stringify(assigned.body));
+  assert.equal(assigned.body.code,"FORBIDDEN");
+  const membershipId=randomUUID(),assignmentId=randomUUID(),grantId=randomUUID();
+  await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'waiter','active')",[membershipId,owner.tenant,staff.user]);
+  await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,'waiter',TRUE)",[assignmentId,owner.tenant,staff.user,owner.branch]);
+  await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,'tables.view',TRUE)",[grantId,owner.tenant,staff.user,owner.branch]);
+  try{
+   const waiter=await call("/api/restaurant/assigned-service?tenantId="+owner.tenant+"&branch="+owner.branch,"GET",undefined,staff.cookie);
+   assert.equal(waiter.status,dining?200:403,activity+": assigned waiter: "+JSON.stringify(waiter.body));
+   if(dining){assert.deepEqual(waiter.body.tables,[]);assert.deepEqual(waiter.body.calls,[]);}
+   else assert.equal(waiter.body.code,"FORBIDDEN");
+  }finally{
+   await db.execute("DELETE FROM employee_permission_grants WHERE id=? AND tenant_id=?",[grantId,owner.tenant]);
+   await db.execute("DELETE FROM employee_branch_assignments WHERE id=? AND tenant_id=?",[assignmentId,owner.tenant]);
+   await db.execute("DELETE FROM memberships WHERE id=? AND tenant_id=?",[membershipId,owner.tenant]);
+  }
   assert.equal((await resource(owner,"pos",undefined,"GET")).status,200,activity+" shared POS stays allowed by its explicit grant");
  }
  const grocery=activities.find(a=>a.activity==="grocery").owner,cafe=activities.find(a=>a.activity==="cafe").owner;

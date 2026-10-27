@@ -31,7 +31,7 @@ function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'tab
  return {get:(b=branch)=>exports.GET(new Request(`https://example.test/api/restaurant/assigned-service?tenantId=${tenant}&branch=${b}`)),post:()=>exports.POST(new Request('https://example.test/api/restaurant/assigned-service',{method:'POST',body:JSON.stringify({tenantId:tenant,branch,callId:foreign,action:'accept'})})),calls};
 }
 test('assigned API denies missing grant, foreign branch, stale role, disabled assignment, locked PIN and non-waiter',async()=>{
- for(const options of [{grants:[]},{assignmentRole:'cashier'},{enabled:false},{pin:false},{role:'cashier'},{grants:[{permission_key:'tables.manage',allowed:1,branch_id:branch},{permission_key:'tables.view',allowed:0,branch_id:branch}]}])assert.equal((await harness(options).get()).status,403);
+ for(const options of [{grants:[]},{assignmentRole:'cashier'},{enabled:false},{pin:false},{role:'cashier'},{role:'owner'},{role:'manager'},{grants:[{permission_key:'tables.manage',allowed:1,branch_id:branch},{permission_key:'tables.view',allowed:0,branch_id:branch}]}])assert.equal((await harness(options).get()).status,403);
  assert.equal((await harness().get(foreign)).status,403);
  assert.equal((await harness({user:null}).get()).status,401);
 });
