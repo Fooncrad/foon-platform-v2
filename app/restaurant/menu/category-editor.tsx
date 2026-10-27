@@ -2,6 +2,7 @@
 import {useUiLanguage} from "@/lib/i18n/ui-language";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import MenuCategoryImageEditor from "./category-image-editor";
+import PlanUpgradeNotice,{isUpgradeError} from "../plan-upgrade-notice";
 
 type Category={id:string;name:string;nameEn:string;nameFr:string;enabled:boolean;imageUrl?:string|null};
 type Names={name:string;nameEn:string;nameFr:string};
@@ -11,6 +12,7 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
  const [categories,setCategories]=useState<Category[]>([]);
  const [names,setNames]=useState<Names>({name:"",nameEn:"",nameFr:""});
  const [busy,setBusy]=useState(""),[error,setError]=useState(""),[message,setMessage]=useState(""),[loading,setLoading]=useState(true);
+ const [upgradeCode,setUpgradeCode]=useState("");
  const load=useCallback(async()=>{
   const response=await fetch("/api/restaurant/menu/categories",{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
   const body=await response.json();
@@ -33,7 +35,7 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
   const values=id?Object.fromEntries(new FormData(event.currentTarget)) as Record<string,string>:names;
   const input:Names={name:String(values.name??"").trim(),nameEn:String(values.nameEn??"").trim(),nameFr:String(values.nameFr??"").trim()};
   if(!input.name)return;
-  setBusy(id??"new");setError("");setMessage("");
+  setBusy(id??"new");setError("");setMessage("");setUpgradeCode("");
   try{
    const response=await fetch("/api/restaurant/menu/categories",{method:id?"PATCH":"POST",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({...input,...(id?{id}:{})})});
    const body=await response.json();
@@ -41,7 +43,7 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
    if(!id)setNames({name:"",nameEn:"",nameFr:""});
    await refresh();
    setMessage(tr("تم حفظ أسماء القسم باللغات الثلاث.","Category names saved.","Noms des catégories enregistrés."));
-  }catch(e){setError(tr("تعذر حفظ القسم. تحقق من صلاحياتك أو قفل الفرع.","Could not save category. Check your access and branch lock.","Enregistrement impossible. Vérifiez vos droits et le verrouillage de succursale.")+" ("+String(e)+")")}
+  }catch(e){const code=e instanceof Error?e.message:"";if(isUpgradeError(code))setUpgradeCode(code);setError(tr("تعذر حفظ القسم. تحقق من صلاحياتك أو قفل الفرع.","Could not save category. Check your access and branch lock.","Enregistrement impossible. Vérifiez vos droits et le verrouillage de succursale.")+" ("+String(e)+")")}
   finally{setBusy("")}
  }
  const fields=[["name",tr("اسم القسم بالعربية","Arabic category name","Nom arabe"),"rtl"],["nameEn","English","ltr"],["nameFr","Français","ltr"]] as const;
@@ -52,6 +54,7 @@ export default function MenuCategoryEditor({tenantId}:{tenantId:string}){
    {fields.map(([field,label,dir])=><label key={field} style={{display:"grid",gap:6}}>{label}<input dir={dir} value={names[field]} onChange={event=>setNames(old=>({...old,[field]:event.target.value}))} maxLength={180} required={field==="name"} placeholder={field==="name"?tr("مثال: المشروبات الساخنة","Example: hot drinks","Exemple : boissons chaudes"):""}/></label>)}
    <button type="submit" disabled={!!busy}>{busy==="new"?tr("جارٍ الحفظ…","Saving…","Enregistrement…"):tr("إضافة القسم","Add category","Ajouter")}</button>
   </form>
+  {upgradeCode&&<PlanUpgradeNotice activity="restaurant" code={upgradeCode}/>}
   {error&&<p role="alert">{error}</p>}
   {message&&<p role="status">{message}</p>}
   {loading?<p>{tr("جارٍ تحميل الأقسام…","Loading categories…","Chargement des catégories…")}</p>:categories.length===0?<p>{tr("لم تضف أقسامًا بعد.","No categories yet.","Aucune catégorie.")}</p>:
