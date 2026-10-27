@@ -26,6 +26,15 @@ async function sectionExists(tenant:string,branch:string,section:string){
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) LIMIT 1",[tenant,section,branch]);return rows.length>0;
 }
 export async function GET(req:Request){const c=await scope(req,false);if(c.error)return c.error;
+ // Read-only operational snapshot: never return or overwrite the editor's unsaved floor plan.
+ if(new URL(req.url).searchParams.get("view")==="operations"){
+  try{
+   const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+   const [links]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
+   const [registered]=await database().execute<RowDataPacket[]>("SELECT id,status FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 1000",[c.tenant,c.branch]);
+   return NextResponse.json({ok:true,operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),links:links.map(l=>({layoutId:String(l.layout_id),tableId:String(l.floor_table_id),diningTableId:String(l.dining_table_id)})),registeredStatuses:registered.map(t=>({id:String(t.id),status:String(t.status)}))},{headers:{"Cache-Control":"no-store, private"}});
+  }catch{return NextResponse.json({ok:false,code:"OPERATIONS_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}})}
+ }
  // Return the existing section catalog independently of optional floor-plan migrations.
  if(new URL(req.url).searchParams.get("view")==="sections"){
   try{
