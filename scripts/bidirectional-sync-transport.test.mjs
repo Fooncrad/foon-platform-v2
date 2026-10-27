@@ -2,7 +2,30 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {requestSyncJson,validateSyncApiResponse} from "../lib/platform/bidirectional-sync-transport.mjs";
 const url="https://sync.example.com/api/sync/v1/push",authorization="Bearer "+"a".repeat(64);
+// Test-only trusted origin pin; production must provision this independently of the request URL.
+process.env.FOON_SYNC_TRUSTED_ORIGIN="https://sync.example.com";
 const response=(status,type,payload={ok:true},redirected=false)=>({status,ok:status>=200&&status<300,redirected,headers:{get:key=>key==="content-type"?type:null},json:async()=>payload});
+
+test("trusted origin pin is required and must match before bearer transport",async()=>{
+ let requests=0;
+ const fetchImpl=async()=>{requests++;return response(200,"application/json")};
+ const request=()=>requestSyncJson({url,authorization,method:"POST",body:{events:[]},fetchImpl});
+ try{
+  delete process.env.FOON_SYNC_TRUSTED_ORIGIN;
+  await assert.rejects(()=>request(),/SYNC_TRUSTED_ORIGIN_REQUIRED/);
+  for(const invalid of ["http://sync.example.com","https://sync.example.com/","https://sync.example.com/api/sync/v1","https://user:pass@sync.example.com","not-a-url"]){
+   process.env.FOON_SYNC_TRUSTED_ORIGIN=invalid;
+   await assert.rejects(()=>request(),/SYNC_TRUSTED_ORIGIN_INVALID/,invalid);
+  }
+  process.env.FOON_SYNC_TRUSTED_ORIGIN="https://other.example.com";
+  await assert.rejects(()=>request(),/SYNC_UNTRUSTED_ORIGIN/);
+  process.env.FOON_SYNC_TRUSTED_ORIGIN="https://sync.example.com";
+  await assert.rejects(()=>requestSyncJson({url:"https://attacker.example/api/sync/v1/push",authorization,method:"POST",body:{events:[]},fetchImpl}),/SYNC_UNTRUSTED_ORIGIN/);
+  assert.equal(requests,0,"missing or mismatched origin must never send the bearer token");
+ }finally{
+  process.env.FOON_SYNC_TRUSTED_ORIGIN="https://sync.example.com";
+ }
+});
 test("valid JSON response accepted without following redirects",async()=>{
  let options;
  const result=await requestSyncJson({url,authorization,method:"POST",body:{events:[]},fetchImpl:async(_,opts)=>{options=opts;return response(200,"application/json; charset=utf-8")}});
