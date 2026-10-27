@@ -3,9 +3,11 @@ import {useState} from 'react';
 import {useUiLanguage} from '@/lib/i18n/ui-language';
 import {importHeaders,parseImportCsv,type ImportKind,type ImportRow} from '@/lib/catalog/import-csv';
 import {formatImportError} from '@/lib/catalog/import-errors';
-export default function BulkImport({tenantId,kind,onChanged,canonical=false,categoryHint='',productHint='',groupHint='',optionsHint=''}:{tenantId:string;kind:ImportKind;onChanged?:()=>void;canonical?:boolean;categoryHint?:string;productHint?:string;groupHint?:string;optionsHint?:string}){
+import PlanUpgradeNotice,{isUpgradeError} from '../plan-upgrade-notice';
+export default function BulkImport({tenantId,kind,onChanged,canonical=false,categoryHint='',productHint='',groupHint='',optionsHint='',activity='restaurant'}:{tenantId:string;kind:ImportKind;onChanged?:()=>void;canonical?:boolean;categoryHint?:string;productHint?:string;groupHint?:string;optionsHint?:string;activity?:string}){
  const language=useUiLanguage(),t=(ar:string,en:string,fr:string)=>language==='ar'?ar:language==='en'?en:fr;
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[progress,setProgress]=useState({done:0,total:0});
+ const [upgradeCode,setUpgradeCode]=useState('');
  const [availableCategories,setAvailableCategories]=useState<string[]>([]),[selectedCategory,setSelectedCategory]=useState(''),[loadingCategories,setLoadingCategories]=useState(false);
  async function refreshCategories(){
   if(kind==='categories')return;
@@ -75,5 +77,5 @@ export default function BulkImport({tenantId,kind,onChanged,canonical=false,cate
   <button type="button" disabled={busy} onClick={()=>{const job=preview;setPreview(null);void run(job);}}>{t('تأكيد واستيراد','Confirm and import','Confirmer et importer')} ({preview.rows.length})</button>
   <button type="button" disabled={busy} onClick={()=>{setPreview(null);setMessage('');}}>{t('إلغاء دون حفظ','Cancel without saving','Annuler sans enregistrer')}</button>
  </div>
- </section>}<button type='button' disabled={busy} onClick={()=>{try{const job=JSON.parse(localStorage.getItem(storage)??'null');if(!job||!Array.isArray(job.rows)||!Number.isInteger(job.next)||typeof job.id!=='string')throw Error();void run(job);}catch{setMessage(t('لا يوجد استيراد متوقف لهذا القسم.','No paused import in this section.','Aucun import suspendu dans cette section.'));}}}>{t('استئناف آخر استيراد','Resume last import','Reprendre le dernier import')}</button>{progress.total>0&&<div role='status' aria-live='polite'><progress max={progress.total} value={progress.done} style={{width:'100%',marginTop:12}}/>{progress.done} / {progress.total} {busy&&t('جارٍ معالجة السجلات والصور…','Processing records and images…','Traitement des lignes et images…')}</div>}{message&&<p role='status' style={{overflowWrap:'anywhere'}} >{message}</p>}</div></details>;
+ </section>}<button type='button' disabled={busy} onClick={()=>{try{const job=JSON.parse(localStorage.getItem(storage)??'null');if(!job||!Array.isArray(job.rows)||!Number.isInteger(job.next)||typeof job.id!=='string')throw Error();void run(job);}catch{setMessage(t('لا يوجد استيراد متوقف لهذا القسم.','No paused import in this section.','Aucun import suspendu dans cette section.'));}}}>{t('استئناف آخر استيراد','Resume last import','Reprendre le dernier import')}</button>{progress.total>0&&<div role='status' aria-live='polite'><progress max={progress.total} value={progress.done} style={{width:'100%',marginTop:12}}/>{progress.done} / {progress.total} {busy&&t('جارٍ معالجة السجلات والصور…','Processing records and images…','Traitement des lignes et images…')}</div>}{upgradeCode&&<PlanUpgradeNotice activity={activity} code={upgradeCode} context='import'/>}{message&&<p role='status' style={{overflowWrap:'anywhere'}} >{message}</p>}</div></details>;
 }
