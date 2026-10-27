@@ -1,8 +1,9 @@
 import {normalizeHotelRoomNumber,validHotelRoomNumber} from "./hotel-room.mjs";
 import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
-import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
+import {orderChannelStatus,type OrderChannel,validOrderChannel} from "./order-channel-policy";
 import {canRoleTransitionOrder} from "./order-role-channel-policy";
+import {orderStatusTransitionAllowed,orderPaymentTransitionAllowed} from "./order-status-transition.mjs";
 import {assignedWaiterTableIds} from "./waiter-assignments";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
@@ -413,7 +414,7 @@ export async function ordersRows(db:PoolConnection,tenantId:string,role:string,b
 }
 export async function createOrder(db:PoolConnection,tenantId:string,actor:string,body:Record<string,unknown>,customerId:string|null=null){
  const branchId=typeof body.branchId==="string"?body.branchId:"",cart=body.items as {id:string;quantity:number;options?:string[]}[];
- if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!["dine_in","takeaway","delivery","room_service"].includes(String(body.channel)))throw new ResourceError("INVALID_INPUT");
+ if(!branchId||!Array.isArray(cart)||!cart.length||cart.length>80||!validOrderChannel(body.channel))throw new ResourceError("INVALID_INPUT");
  if(!cart.every(item=>item&&typeof item.id==="string"&&validCatalogQuantity(item.quantity)))throw new ResourceError("INVALID_CART");
  if(body.kitchenNotes!=null&&(typeof body.kitchenNotes!=="string"||body.kitchenNotes.length>1000)||body.orderNotes!=null&&(typeof body.orderNotes!=="string"||body.orderNotes.length>1000))throw new ResourceError("INVALID_INPUT");
  if(cart.some(item=>item.id.length>36)||body.customerName!=null&&typeof body.customerName!=="string"||body.customerPhone!=null&&typeof body.customerPhone!=="string"||body.couponCode!=null&&(typeof body.couponCode!=="string"||body.couponCode.length>40))throw new ResourceError("INVALID_INPUT");
@@ -584,15 +585,18 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
  }
  let status=String(order.status),payment=String(order.payment_status);
  if(body.status!==undefined){
-  const next=String(body.status),transitions:Record<string,string[]>={new:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["completed","cancelled"],completed:[],cancelled:[]};
-  if(!transitions[status].includes(next))throw new ResourceError("INVALID_TRANSITION");
+  // Reject coerced JSON values and unexpected persisted statuses before checking transitions.
+  if(typeof body.status!=="string")throw new ResourceError("INVALID_TRANSITION");
+  const next=body.status;
+  if(!orderStatusTransitionAllowed(status,next))throw new ResourceError("INVALID_TRANSITION");
   if(!canRoleTransitionOrder(role,String(order.channel),status,next))throw new ResourceError("FORBIDDEN");
   if(next==="cancelled"&&payment==="paid")throw new ResourceError("REFUND_REQUIRED");status=next;
  }
  if(body.paymentStatus!==undefined){
   if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
-  const next=String(body.paymentStatus);
-  if(!(payment==="unpaid"&&next==="paid"&&status!=="cancelled"||payment==="paid"&&next==="refunded"))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
+  if(typeof body.paymentStatus!=="string")throw new ResourceError("INVALID_PAYMENT_TRANSITION");
+  const next=body.paymentStatus;
+  if(!orderPaymentTransitionAllowed(payment,next,status))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
  }
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
  if(status==="cancelled"&&order.status!=="cancelled"){
