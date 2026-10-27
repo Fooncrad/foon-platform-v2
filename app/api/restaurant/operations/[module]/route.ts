@@ -7,6 +7,7 @@ import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
+import {resolveOperationsBranchSelection} from "@/lib/restaurant/operations-branch-selection";
 import type {TenantRole} from "@/lib/auth/roles";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
@@ -28,6 +29,8 @@ const allRoles:TenantRole[]=[...orderRoles];
 async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit",requestedBranch?:string|null){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
+ const branchSelection=resolveOperationsBranchSelection(request.headers.get("x-foon-branch"),new URL(request.url).searchParams.get("branch"));
+ if(branchSelection.conflict)throw new ResourceError("FORBIDDEN");
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
  const special=["overview","orders","pos","kds","customers","security","health","reports"];
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
@@ -42,10 +45,7 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
-  const headerBranch=request.headers.get("x-foon-branch");
-  const queryBranch=new URL(request.url).searchParams.get("branch");
-  if(headerBranch&&queryBranch&&headerBranch!==queryBranch)throw new ResourceError("FORBIDDEN");
-  let activeBranch=headerBranch??queryBranch;
+  let activeBranch=branchSelection.branch;
   // Tenant-wide reads must not be exposed through an omitted branch selector.
   if(!activeBranch&&!["security"].includes(module)){
    const [assigned]=await database().execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user]);
@@ -66,11 +66,11 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
   if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
  }
- const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch")??requestedBranch??null;
+ const selectedBranch=authorizedBranch??branchSelection.branch??requestedBranch??null;
  if(module!=="security"&&module!=="health")await requireAdditionalBranchUnlock(access.tenantId,selectedBranch,user);
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
- return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
+ return {user,tenantId:access.tenantId,role:access.role,authorizedBranch,selectedBranch};
 }
 function failure(error:unknown,request:Request,module:string){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
@@ -146,7 +146,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
  let db:PoolConnection|undefined;
  try{
   const {module}=await params,ctx=await authorize(request,module,false);db=await connection();
-  const branch=ctx.authorizedBranch??new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
+  const branch=ctx.selectedBranch;await branchExists(db,ctx.tenantId,branch,module==="pos");
   if(Object.hasOwn(resourceModules,module)){
    const refs:Record<string,unknown[]>={};
    for(const field of resourceModules[module].fields.filter(f=>f.ref)){
