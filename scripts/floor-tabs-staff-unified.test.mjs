@@ -59,3 +59,11 @@ test("section alert timestamps use the selected Arabic, English, or French local
  assert.match(ui,/language==="ar"\?"ar-SA":language==="fr"\?"fr-FR":"en-GB"/);
  assert.match(ui,/numberingSystem:"latn"/);
 });
+
+test("host alerts display the visible table number instead of the internal layout ID",()=>{
+ const api=read("app/api/restaurant/section-staff/route.ts");
+ const ui=read("app/restaurant/section-staff-panel.tsx");
+ assert.match(api,/LEFT JOIN restaurant_floor_plan_layouts p ON p\.id=a\.layout_id AND p\.tenant_id=a\.tenant_id AND p\.branch_id=a\.branch_id/);
+ assert.match(api,/tableLabel:visibleTableNumber\(x\.layout_json,x\.floor_table_id\)/);
+ assert.match(ui,/a\.tableLabel\|\|a\.tableId/);
+});
