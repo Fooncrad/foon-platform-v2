@@ -22,10 +22,10 @@ export async function GET(request:NextRequest){
  const db=await database().getConnection();
  try{
   if(!await activeCustomerAccount(db,user))return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401,headers:{"Cache-Control":"no-store"}});
-  const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? WHERE t.slug=? AND t.status='active' LIMIT 1",[user,storeSlug]);
+  const [stores]=await db.execute<RowDataPacket[]>("SELECT t.id FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' WHERE t.slug=? AND t.status='active' LIMIT 1",[user,storeSlug]);
   if(!stores.length)return NextResponse.json({ok:false,code:"STORE_CUSTOMER_REQUIRED"},{status:403});
   const tenant=String(stores[0].id);
-  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 100",[tenant,user]);
+  const [rows]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE AND status IN ('pending','confirmed') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? AND EXISTS (SELECT 1 FROM users WHERE id=? AND status='active') ORDER BY created_at DESC LIMIT 100",[tenant,user,user]);
   const reservations=rows.flatMap(row=>{const data=typeof row.data==="string"?JSON.parse(row.data):row.data;const scheduledAt=typeof data?.scheduledAt==="string"?data.scheduledAt:"";const time=Date.parse(scheduledAt);if(!Number.isFinite(time)||time<=Date.now())return [];return [{id:String(row.id),branchId:String(row.branch_id??""),name:String(row.name),status:String(row.status),scheduledAt,partySize:Number(data.partySize)}];});
   return NextResponse.json({ok:true,reservations});
  }catch{return NextResponse.json({ok:false,code:"SERVICE_UNAVAILABLE"},{status:503});}finally{db.release();}
