@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {orderStatusTransitionAllowed} from '../lib/restaurant/order-status-transition.mjs';
+import {orderStatusTransitionAllowed,orderPaymentTransitionAllowed} from '../lib/restaurant/order-status-transition.mjs';
 
 test('preserves the six allowed transitions',()=>{
   for(const [from,to] of [['new','preparing'],['new','cancelled'],['preparing','ready'],['preparing','cancelled'],['ready','completed'],['ready','cancelled']]){
@@ -28,4 +28,20 @@ test('does not mutate the transition table through inherited properties',()=>{
   assert.equal(orderStatusTransitionAllowed('new','__proto__'),false);
   assert.equal(orderStatusTransitionAllowed('__proto__','preparing'),false);
   assert.equal(orderStatusTransitionAllowed('toString','preparing'),false);
+});
+
+test('preserves allowed payment transitions without coercion',()=>{
+  assert.equal(orderPaymentTransitionAllowed('unpaid','paid','new'),true);
+  assert.equal(orderPaymentTransitionAllowed('unpaid','paid','completed'),true);
+  assert.equal(orderPaymentTransitionAllowed('paid','refunded','completed'),true);
+  assert.equal(orderPaymentTransitionAllowed('unpaid','paid','cancelled'),false);
+  assert.equal(orderPaymentTransitionAllowed('unpaid','refunded','new'),false);
+  assert.equal(orderPaymentTransitionAllowed('paid','paid','ready'),false);
+});
+test('rejects malformed payment transition inputs instead of coercing JSON values',()=>{
+  for(const value of [null,undefined,0,1,[],['paid'],{},true,'__proto__','constructor','toString']){
+    assert.equal(orderPaymentTransitionAllowed('unpaid',value,'new'),false);
+    assert.equal(orderPaymentTransitionAllowed(value,'paid','new'),false);
+    assert.equal(orderPaymentTransitionAllowed('unpaid','paid',value),false);
+  }
 });
