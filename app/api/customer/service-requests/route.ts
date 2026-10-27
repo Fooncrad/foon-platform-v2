@@ -18,7 +18,7 @@ const fail=(code:string,status=400)=>NextResponse.json({ok:false,code},{status,h
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 async function customerScope(db:Pick<ReturnType<typeof database>,"execute">,user:string,slug:string){
  const [rows]=await db.execute<RowDataPacket[]>(
-  "SELECT t.id,p.activity_code FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.slug=? AND t.status='active' LIMIT 1",
+  "SELECT t.id,p.activity_code FROM tenants t JOIN tenant_customers c ON c.tenant_id=t.id AND c.user_id=? JOIN users u ON u.id=c.user_id AND u.status='active' JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.slug=? AND t.status='active' LIMIT 1",
   [user,slug]);
  if(!rows.length)return null;
  const activity=String(rows[0].activity_code);
@@ -35,8 +35,8 @@ export async function GET(request:Request){
   const ctx=await customerScope(db,user,slug);
   if(!ctx)return fail("STORE_CUSTOMER_REQUIRED",403);
   const [rows]=await db.execute<RowDataPacket[]>(
-   "SELECT id,name,status,data,created_at,updated_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 50",
-   [ctx.tenantId,user]);
+   "SELECT id,name,status,data,created_at,updated_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? AND EXISTS (SELECT 1 FROM users WHERE id=? AND status='active') ORDER BY created_at DESC LIMIT 50",
+   [ctx.tenantId,user,user]);
   return NextResponse.json({ok:true,requests:rows.map(r=>{const data=typeof r.data==="string"?JSON.parse(r.data):r.data;return {id:r.id,name:r.name,status:r.status,requestType:data.requestType,scheduledAt:data.scheduledAt,createdAt:r.created_at,updatedAt:r.updated_at};})},{headers:{"Cache-Control":"no-store, private"}});
  }catch{return fail("SERVICE_REQUESTS_UNAVAILABLE",503)}
 }
