@@ -21,7 +21,7 @@ test('explicit denial wins and resolved grants cannot reopen denied actions via 
  assert.equal(staffCan(grants,'b','tables'),true);
 });
 test('missing or revoked permissions deny all staff modules',()=>{
- for(const module of ['tables','orders','pos','kitchen','reports','security'])assert.equal(staffCan([], 'a',module),false);
+ for(const permissionModule of ['tables','orders','pos','kitchen','reports','security'])assert.equal(staffCan([], 'a',permissionModule),false);
  assert.equal(staffCan([grant('waiterCalls.accept')],'a','waiterCalls'),false);
 });
 test('table alerts require a previous scoped snapshot and only report changed assigned tables',()=>{
