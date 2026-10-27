@@ -82,7 +82,21 @@ export async function runActivityEntitlementGateChecks({db,call,restaurant,staff
  assert.equal((await resource(cafe,"tables",{...tableBody,name:"Second gate table",data:{...tableBody.data,number:2}})).body.code,"PLAN_LIMIT_REACHED");
  await db.execute("UPDATE package_plan_features SET enabled=FALSE WHERE plan_id=? AND feature_key='tables'",[plan]);
  assert.equal((await resource(cafe,"tables",undefined,"GET")).body.code,"PLAN_FEATURE_REQUIRED");
- assert.equal((await call("/api/restaurant/assigned-service?tenantId="+cafe.tenant,"GET",undefined,cafe.cookie)).body.code,"PLAN_FEATURE_REQUIRED");
+ assert.equal((await call("/api/restaurant/assigned-service?tenantId="+cafe.tenant,"GET",undefined,cafe.cookie)).body.code,"FORBIDDEN","owner is rejected before personal waiter plan checks");
+ const waiterMembership=randomUUID(),waiterAssignment=randomUUID(),waiterGrant=randomUUID();
+ await db.execute("INSERT INTO memberships(id,tenant_id,user_id,role,status) VALUES (?,?,?,'waiter','active')",[waiterMembership,cafe.tenant,staff.user]);
+ await db.execute("INSERT INTO employee_branch_assignments(id,tenant_id,user_id,branch_id,role,enabled) VALUES (?,?,?,?,'waiter',TRUE)",[waiterAssignment,cafe.tenant,staff.user,cafe.branch]);
+ await db.execute("INSERT INTO employee_permission_grants(id,tenant_id,user_id,branch_id,permission_key,allowed) VALUES (?,?,?,?,'tables.view',TRUE)",[waiterGrant,cafe.tenant,staff.user,cafe.branch]);
+ try{
+  const denied=await call("/api/restaurant/assigned-service?tenantId="+cafe.tenant+"&branch="+cafe.branch,"GET",undefined,staff.cookie);
+  assert.equal(denied.status,403,"a valid waiter grant cannot bypass disabled tables entitlement");
+  assert.equal(denied.body.code,"FORBIDDEN");
+  assert.equal(denied.body.tables,undefined);
+ }finally{
+  await db.execute("DELETE FROM employee_permission_grants WHERE id=? AND tenant_id=?",[waiterGrant,cafe.tenant]);
+  await db.execute("DELETE FROM employee_branch_assignments WHERE id=? AND tenant_id=?",[waiterAssignment,cafe.tenant]);
+  await db.execute("DELETE FROM memberships WHERE id=? AND tenant_id=?",[waiterMembership,cafe.tenant]);
+ }
  await db.execute("DELETE FROM package_plan_features WHERE plan_id=? AND feature_key='tables'",[plan]);
  assert.equal((await resource(cafe,"tables",undefined,"GET")).body.code,"PLAN_FEATURE_REQUIRED");
  await db.execute("INSERT INTO package_plan_features(plan_id,feature_key,enabled,limit_value) VALUES (?,'tables',TRUE,NULL)",[plan]);

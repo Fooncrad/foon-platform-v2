@@ -7,7 +7,7 @@ import {staffCan} from '../lib/restaurant/staff-grants.ts';
 const source=readFileSync(new URL('../app/api/restaurant/assigned-service/route.ts',import.meta.url),'utf8');
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const tenant='11111111-1111-1111-1111-111111111111',branch='22222222-2222-2222-2222-222222222222',foreign='33333333-3333-3333-3333-333333333333';
-function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'tables.view',allowed:1,branch_id:branch}],ids=['mine'],pin=true,user='user',enabled=true}={}){
+function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'tables.view',allowed:1,branch_id:branch}],ids=['mine'],pin=true,user='user',enabled=true,planEnabled=true}={}){
  const calls=[];const db={execute:async(sql,args)=>{
   calls.push({sql,args});
   if(sql.includes('employee_branch_assignments'))return [enabled?[{branch_id:branch,role:assignmentRole}]:[]];
@@ -21,7 +21,7 @@ function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'tab
   '@/lib/auth/session':{currentUserId:async()=>user},
   '@/lib/auth/authorization':{requireTenantMembership:async(u,t,roles)=>{if(!roles.includes(role))throw Error();return {tenantId:t,role};}},
   '@/lib/db/mysql':{database:()=>db},
-  '@/lib/plans/entitlements':{tenantEntitlement:async()=>({enabled:true})},
+  '@/lib/plans/entitlements':{tenantEntitlement:async()=>({enabled:planEnabled})},
   '@/lib/security/origin':{assertSameOrigin:()=>{}},
   '@/lib/restaurant/branch-pin':{requireAdditionalBranchUnlock:async()=>{if(!pin)throw Error();}},
   '@/lib/restaurant/waiter-assignments':{assignedWaiterTableIds:async(d,t,b,u)=>{assert.equal(t,tenant);assert.equal(b,branch);assert.equal(u,'user');return ids;}},
@@ -31,7 +31,7 @@ function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'tab
  return {get:(b=branch)=>exports.GET(new Request(`https://example.test/api/restaurant/assigned-service?tenantId=${tenant}&branch=${b}`)),post:()=>exports.POST(new Request('https://example.test/api/restaurant/assigned-service',{method:'POST',body:JSON.stringify({tenantId:tenant,branch,callId:foreign,action:'accept'})})),calls};
 }
 test('assigned API denies missing grant, foreign branch, stale role, disabled assignment, locked PIN and non-waiter',async()=>{
- for(const options of [{grants:[]},{assignmentRole:'cashier'},{enabled:false},{pin:false},{role:'cashier'},{role:'owner'},{role:'manager'},{grants:[{permission_key:'tables.manage',allowed:1,branch_id:branch},{permission_key:'tables.view',allowed:0,branch_id:branch}]}])assert.equal((await harness(options).get()).status,403);
+ for(const options of [{grants:[]},{planEnabled:false},{assignmentRole:'cashier'},{enabled:false},{pin:false},{role:'cashier'},{role:'owner'},{role:'manager'},{grants:[{permission_key:'tables.manage',allowed:1,branch_id:branch},{permission_key:'tables.view',allowed:0,branch_id:branch}]}])assert.equal((await harness(options).get()).status,403);
  assert.equal((await harness().get(foreign)).status,403);
  assert.equal((await harness({user:null}).get()).status,401);
 });
