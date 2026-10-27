@@ -3,7 +3,7 @@ import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
-import {requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
+import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
 const idPattern=/^[a-f0-9-]{36}$/i;
@@ -23,7 +23,7 @@ async function context(req:Request,write=false){
   const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND id=? AND enabled=TRUE LIMIT 1",[m.tenantId,branch]);
   if(!rows.length)return {error:NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404})};
   return {tenant:m.tenantId,branch,uid,manager:m.role==="owner"||m.role==="manager"};
- }catch{return {error:NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}}
+ }catch(error){const code=error instanceof BranchPinError?error.code:"FORBIDDEN";return {error:NextResponse.json({ok:false,code},{status:403})}}
 }
 function visibleTableNumber(layoutJson:unknown,floorTableId:unknown):string{
  try{
