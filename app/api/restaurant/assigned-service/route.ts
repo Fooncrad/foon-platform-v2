@@ -5,71 +5,57 @@ import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
-import {onlyUnlockedBranchRows} from "@/lib/restaurant/branch-pin";
+import {requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
+import {assignedWaiterTableIds} from "@/lib/restaurant/waiter-assignments";
+import {staffCan,type StaffGrant} from "@/lib/restaurant/staff-grants";
 export const runtime="nodejs";
+const uuid=/^[a-f0-9-]{36}$/i;
+const parse=(value:unknown):Record<string,unknown>=>{try{return (typeof value==="string"?JSON.parse(value):value) as Record<string,unknown>??{};}catch{return {};}};
+async function scope(user:string,tenant:string,requested:string|null){
+ const membership=await requireTenantMembership(user,tenant,["waiter"],false);
+ const [assignments]=await database().execute<RowDataPacket[]>("SELECT a.branch_id,a.role FROM employee_branch_assignments a JOIN branches b ON b.id=a.branch_id AND b.tenant_id=a.tenant_id AND b.enabled=TRUE WHERE a.tenant_id=? AND a.user_id=? AND a.enabled=TRUE",[membership.tenantId,user]);
+ const branch=requested??(assignments.length===1?String(assignments[0].branch_id):null);
+ const matching=assignments.filter(a=>String(a.branch_id)===branch&&a.role===membership.role);
+ if(!branch||matching.length!==1)throw Error("FORBIDDEN");
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[membership.tenantId,user]);
+ const grants=rows as StaffGrant[];
+ if(!staffCan(grants,branch,"tables"))throw Error("FORBIDDEN");
+ await requireAdditionalBranchUnlock(membership.tenantId,branch,user);
+ if(!(await tenantEntitlement(membership.tenantId,"tables")).enabled)throw Error("FORBIDDEN");
+ return {tenant:membership.tenantId,branch,grants};
+}
 export async function GET(request:Request){
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const tenantId=new URL(request.url).searchParams.get("tenantId")??"";
- if(!/^[a-f0-9-]{36}$/i.test(tenantId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
- try{await requireTenantMembership(user,tenantId,["owner","manager","waiter","cashier","kitchen","driver","accountant"],false);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ const url=new URL(request.url),tenant=url.searchParams.get("tenantId")??"",branch=url.searchParams.get("branch");
+ if(!uuid.test(tenant)||(branch!==null&&!uuid.test(branch)))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ let c;try{c=await scope(user,tenant,branch);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  try{
-  const entitlement=await tenantEntitlement(tenantId,"tables");
-  if(!entitlement.enabled)return NextResponse.json({ok:false,code:entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED"},{status:403});
-  const db=database();
-  const [employees]=await db.execute<RowDataPacket[]>("SELECT id,branch_id FROM restaurant_resources WHERE tenant_id=? AND kind='employee' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.userId'))=?",[tenantId,user]);
-  if(!employees.length)return NextResponse.json({ok:true,tables:[],calls:[],assignmentStatus:"EMPLOYEE_PROFILE_NOT_LINKED"});
-  const employeeIds=[...new Set([...employees.map(e=>String(e.id)),String(user)])];
-  const parse=(value:unknown):Record<string,unknown>=>{try{return (typeof value==="string"?JSON.parse(value):value) as Record<string,unknown>??{};}catch{return {};}};
-  const [sections]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='dining_section' AND archived=FALSE",[tenantId]);
-  const mySections=new Set(sections.filter(section=>employeeIds.includes(String(parse(section.data).waiterId??""))).map(section=>String(section.id)));
-  const [assignments]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE",[tenantId,user]);
-  const myBranches=new Set(assignments.map(row=>String(row.branch_id)));
-  // Historical profile branch fields are not permissions; only active
-  // employee_branch_assignments can authorize access to a branch.
-  const unlockedBranches=await onlyUnlockedBranchRows(tenantId,user,[...myBranches].map(branch_id=>({branch_id})));
-  const accessibleBranches=new Set(unlockedBranches.map(row=>row.branch_id));
-  const [tables]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE",[tenantId]);
-  const mine=tables.filter(t=>{
-   const details=parse(t.data);
-   const section=sections.find(section=>String(section.id)===String(details.sectionId??""));
-   const tableBranch=String(t.branch_id??section?.branch_id??"");
-   if(!tableBranch||!accessibleBranches.has(tableBranch))return false;
-   const explicit=String(details.waiterId??"");
-   // Explicit table assignment overrides the hall default.
-   return explicit?employeeIds.includes(explicit):Boolean(section&&mySections.has(String(section.id))&&String(section.branch_id??"")===tableBranch);
-  });
-  const [calls]=await db.execute<RowDataPacket[]>("SELECT id,name,status,branch_id,data FROM restaurant_resources WHERE tenant_id=? AND kind='waiter_call' AND archived=FALSE AND status IN ('pending','in_progress','new','requested','open')",[tenantId]);
-  return NextResponse.json({ok:true,assignmentStatus:!myBranches.size?"NO_BRANCH_ASSIGNMENT":mine.length?"ASSIGNED":"NO_MATCHING_TABLE_ASSIGNMENT",tables:mine.map(t=>({id:t.id,name:t.name,status:t.status,branchId:t.branch_id})),calls:calls.filter(c=>{const d=parse(c.data);const branch=String(c.branch_id??"");if(!branch||!accessibleBranches.has(branch))return false;
-   const table=mine.find(t=>String(t.id)===String(d.tableId??"")&&String(t.branch_id)===branch);
-   if(table)return true;
-   // Legacy call payloads may use table number/name, but never match across branches.
-   return mine.some(t=>String(t.branch_id)===branch&&(String(parse(t.data).number??"")===String(d.tableNumber??d.table_number??"")&&Boolean(d.tableNumber??d.table_number)||String(t.name).trim()===String(d.tableName??"").trim()&&Boolean(d.tableName)));}).map(c=>{const d=parse(c.data);return {id:c.id,name:c.name,status:c.status,note:String(d.note??d.notes??d.message??d.reason??d.customerNote??d.customer_note??"").slice(0,1000)};})});
- }catch(error){console.error("[FOON assigned service]",error);return NextResponse.json({ok:false,code:"ASSIGNED_SERVICE_UNAVAILABLE"},{status:503});}
+ const db=database(),ids=await assignedWaiterTableIds(db,c.tenant,c.branch,user);
+ if(!ids.length)return NextResponse.json({ok:true,tables:[],calls:[],assignmentStatus:"NO_MATCHING_TABLE_ASSIGNMENT"},{headers:{"Cache-Control":"private, no-store"}});
+ const [tables]=await db.execute<RowDataPacket[]>("SELECT t.id,t.name,CASE WHEN t.status='inactive' THEN 'out_of_service' WHEN t.status IN ('occupied','reserved') THEN t.status ELSE COALESCE(o.status,t.status) END AS status,t.branch_id FROM restaurant_resources t LEFT JOIN restaurant_floor_table_links l ON l.tenant_id=t.tenant_id AND l.branch_id=t.branch_id AND l.dining_table_id=t.id LEFT JOIN restaurant_floor_plan_layouts f ON f.tenant_id=l.tenant_id AND f.branch_id=l.branch_id AND f.id=l.layout_id AND f.is_active=TRUE LEFT JOIN restaurant_floor_table_operations o ON o.tenant_id=f.tenant_id AND o.branch_id=f.branch_id AND o.layout_id=f.id AND o.floor_table_id=l.floor_table_id WHERE t.tenant_id=? AND t.branch_id=? AND t.kind='dining_table' AND t.archived=FALSE AND t.id IN ("+ids.map(()=>"?").join(",")+")",[c.tenant,c.branch,...ids]);
+ let calls:RowDataPacket[]=[];
+ if(staffCan(c.grants,c.branch,"waiterCalls")){
+  [calls]=await db.execute<RowDataPacket[]>("SELECT id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='waiter_call' AND archived=FALSE AND status IN ('pending','in_progress','new','requested','open') AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId')) IN ("+ids.map(()=>"?").join(",")+")",[c.tenant,c.branch,...ids]);
+ }
+ return NextResponse.json({ok:true,assignmentStatus:"ASSIGNED",tables:tables.map(t=>({id:t.id,name:t.name,status:t.status,branchId:t.branch_id})),calls:calls.map(call=>{const d=parse(call.data);return {id:call.id,name:call.name,status:call.status,note:String(d.note??d.notes??d.message??d.reason??d.customerNote??d.customer_note??"").slice(0,1000)};})},{headers:{"Cache-Control":"private, no-store"}});
+ }catch{return NextResponse.json({ok:false,code:"ASSIGNED_SERVICE_UNAVAILABLE"},{status:503});}
 }
-
 export async function POST(request:Request){
  try{assertSameOrigin(request);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- const user=await currentUserId();
- if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
- const body=await request.json().catch(()=>null) as {tenantId?:string;callId?:string;action?:string}|null;
- if(!body||!body.tenantId||!body.callId||!["accept","complete"].includes(body.action??""))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
+ const body=await request.json().catch(()=>null);
+ if(!body||!uuid.test(body.tenantId??"")||!uuid.test(body.callId??"")||!uuid.test(body.branch??"")||!["accept","complete"].includes(body.action))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ let c;try{c=await scope(user,body.tenantId,body.branch);if(!staffCan(c.grants,c.branch,"waiterCalls")||!staffCan(c.grants,c.branch,"waiterCalls",body.action==="accept"?"accept":"edit"))throw Error("FORBIDDEN");}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ const db=await database().getConnection();
  try{
-  const url=new URL(request.url);
-  url.searchParams.set("tenantId",body.tenantId);
-  const scoped=await GET(new Request(url));
-  if(!scoped.ok)return scoped;
-  const visible=await scoped.json() as {calls:{id:string;status:string}[]};
-  const call=visible.calls.find(item=>item.id===body.callId);
-  if(!call)return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});
-  const allowed=body.action==="accept"?["pending","new","requested","open"]:["in_progress"];
-  if(!allowed.includes(call.status))return NextResponse.json({ok:false,code:"INVALID_STATE"},{status:409});
-  const next=body.action==="accept"?"in_progress":"completed";
-  const [result]=await database().execute<import("mysql2/promise").ResultSetHeader>(
-   "UPDATE restaurant_resources SET status=?,updated_at=NOW() WHERE tenant_id=? AND id=? AND kind='waiter_call' AND archived=FALSE AND status=?",
-   [next,body.tenantId,body.callId,call.status]
-  );
-  if(result.affectedRows!==1)return NextResponse.json({ok:false,code:"INVALID_STATE"},{status:409});
-  return NextResponse.json({ok:true,status:next});
- }catch{return NextResponse.json({ok:false,code:"CALL_UPDATE_FAILED"},{status:503});}
+ await db.beginTransaction();
+ const ids=await assignedWaiterTableIds(db,c.tenant,c.branch,user);
+ const [calls]=await db.execute<RowDataPacket[]>("SELECT status,data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND id=? AND kind='waiter_call' AND archived=FALSE FOR UPDATE",[c.tenant,c.branch,body.callId]);
+ const call=calls[0];if(!call||!ids.includes(String(parse(call.data).tableId??""))){await db.rollback();return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
+ const allowed=body.action==="accept"?["pending","new","requested","open"]:["in_progress"];
+ if(!allowed.includes(String(call.status))){await db.rollback();return NextResponse.json({ok:false,code:"INVALID_STATE"},{status:409});}
+ const next=body.action==="accept"?"in_progress":"completed";
+ await db.execute("UPDATE restaurant_resources SET status=?,updated_at=NOW() WHERE tenant_id=? AND branch_id=? AND id=? AND kind='waiter_call' AND archived=FALSE AND status=?",[next,c.tenant,c.branch,body.callId,call.status]);
+ await db.commit();return NextResponse.json({ok:true,status:next});
+ }catch{await db.rollback();return NextResponse.json({ok:false,code:"CALL_UPDATE_FAILED"},{status:503});}finally{db.release();}
 }
-
