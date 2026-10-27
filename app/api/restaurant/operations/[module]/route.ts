@@ -210,9 +210,9 @@ async function mutate(request:Request,module:string,method:string){
   // Authenticate and enforce origin before reading any untrusted mutation stream.
   try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
   if(!(await currentUserId()))throw new ResourceError("UNAUTHENTICATED");
-  const body=await readLimitedJson(request,MAX_OPERATIONS_BODY_BYTES).catch(error=>{
+  const body=(await readLimitedJson(request,MAX_OPERATIONS_BODY_BYTES).catch(error=>{
    throw new ResourceError(error instanceof Error&&error.message==="BATCH_TOO_LARGE"?"BODY_TOO_LARGE":"INVALID_INPUT");
-  });
+  })) as Awaited<ReturnType<Request["json"]>>;
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   // Recording payment during POS create is also a financial edit. A cashier
   // who can create orders but lacks pos.edit must never mark them paid.
