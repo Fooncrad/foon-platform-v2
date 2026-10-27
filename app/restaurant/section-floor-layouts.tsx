@@ -39,6 +39,27 @@ function SectionFloorLayoutsScoped({tenantId,branch}:{tenantId:string;branch:str
   }catch(error){if(live)setMessage((language==="ar"?"الأقسام محفوظة، لكن بيانات المخططات غير متاحة. تأكد من الترحيلات 0306 و0307 و0308: ":language==="en"?"Sections are available, but floor plans could not load. Check migrations 0306–0308: ":"Sections disponibles, mais les plans sont indisponibles. Vérifiez les migrations 0306–0308 : ")+String(error instanceof Error?error.message:error));}
   finally{if(live)setLoading(false)}
  });return()=>{live=false}},[tenantId,url,language]);
+ // Refresh real/operational status without replacing unsaved editor layout or table positions.
+ useEffect(()=>{
+  let stopped=false;
+  const refresh=async()=>{
+   if(stopped||saving||document.visibilityState==="hidden")return;
+   try{
+    const response=await fetch(url+"&view=operations",{headers:{"x-foon-tenant":tenantId},cache:"no-store"});
+    if(!response.ok)return;
+    const data=await response.json();
+    if(stopped||!data.ok)return;
+    setOperations(data.operations||[]);
+    setLinks(data.links||[]);
+    const statuses=new Map<string,string>((data.registeredStatuses||[]).map((item:{id:string;status:string})=>[item.id,item.status]));
+    setRegisteredTables(tables=>tables.map(t=>({...t,status:statuses.get(t.id)||t.status})));
+   }catch{/* Retain the last known state when the connection fails. */}
+  };
+  const timer=setInterval(()=>void refresh(),30000);
+  const visible=()=>{if(document.visibilityState==="visible")void refresh()};
+  document.addEventListener("visibilitychange",visible);
+  return()=>{stopped=true;clearInterval(timer);document.removeEventListener("visibilitychange",visible)};
+ },[tenantId,url,saving]);
  function openLayout(id:string){if(id===""){setCurrent("");setName("");setPlan(defaultFloorPlan);setSelected("");return}const l=layouts.find(x=>x.id===id);if(!l)return;setCurrent(id);setName(l.name);setSectionId(l.sectionId);setPlan(l.plan);setSelected("");setMessage("")}
  function importLegacy(){if(!legacyPlan||!legacyPlan.tables.length||current||plan.tables.length)return;setPlan(structuredClone(legacyPlan));setName(language==="ar"?"المخطط السابق":language==="en"?"Legacy floor plan":"Ancien plan");setSelected("");setMessage(language==="ar"?"تم تحميل نسخة من المخطط السابق؛ اختر القسم ثم اضغط حفظ المخطط لإنشاء نسخة مستقلة. المخطط الأصلي محفوظ.":language==="en"?"Legacy floor plan copied. Select a section and save as a new plan; the original remains unchanged.":"Ancien plan copié. Sélectionnez une section et enregistrez une nouvelle copie ; l'original reste intact.")}
  function addTable(){if(!sectionId)return setMessage(tr(23));const id="table-"+crypto.randomUUID();setPlan(p=>({...p,tables:[...p.tables,{id,number:nextFloorTableNumber(p.tables),seats:4,...nextFloorTablePosition(p),zone:sections.find(s=>s.id===sectionId)?.name||"الصالة"}]}));setSelected(id)}
