@@ -57,3 +57,15 @@ test("checkout input validator accepts only exact primitive order channels",()=>
  for(const channel of [["delivery"],["room_service"],{toString:()=>"delivery"},null,undefined,0,true,"constructor","toString","__proto__","deliveri",""])
   assert.equal(validOrderChannel(channel),false,String(channel));
 });
+test("createOrder validates raw channel before delivery and hotel business checks",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const source=readFileSync(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ const start=source.indexOf("export async function createOrder(");
+ const end=source.indexOf("export async function recordManualPaymentAtCreate(",start);
+ assert.ok(start>=0&&end>start);
+ const create=source.slice(start,end);
+ assert.match(create,/!validOrderChannel\(body\.channel\)/);
+ assert.doesNotMatch(create,/includes\(String\(body\.channel\)\)/);
+ assert.match(create,/if\(body\.channel==="delivery"\)/);
+ assert.match(create,/if\(body\.channel==="room_service"\)/);
+});
