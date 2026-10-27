@@ -47,7 +47,7 @@ export async function POST(request:Request){
  let body:Record<string,unknown>|null;
  try{body=await readLimitedJson(request,1024) as Record<string,unknown>|null;}
  catch(error){const tooLarge=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return NextResponse.json({ok:false,code:tooLarge?"BODY_TOO_LARGE":"INVALID_INPUT"},{status:tooLarge?413:400});}
- if(!body||typeof body!=="object"||Array.isArray(body)||typeof body.tenantId!=="string"||typeof body.callId!=="string"||typeof body.branch!=="string"||!uuid.test(body.tenantId)||!uuid.test(body.callId)||!uuid.test(body.branch)||!["accept","complete"].includes(String(body.action??"")))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
+ if(!body||typeof body!=="object"||Array.isArray(body)||typeof body.tenantId!=="string"||typeof body.callId!=="string"||typeof body.branch!=="string"||!uuid.test(body.tenantId)||!uuid.test(body.callId)||!uuid.test(body.branch)||(body.action!=="accept"&&body.action!=="complete"))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  let c;try{c=await scope(user,String(body.tenantId),String(body.branch));if(!staffCan(c.grants,c.branch,"waiterCalls")||!staffCan(c.grants,c.branch,"waiterCalls",body.action==="accept"?"accept":"edit"))throw Error("FORBIDDEN");}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const db=await database().getConnection();
  try{
