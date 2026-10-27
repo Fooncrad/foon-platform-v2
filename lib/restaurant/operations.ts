@@ -3,7 +3,7 @@ import {checkoutSettings} from "./checkout-settings";
 import {customerReceiptPrintDue,preparationPrintEvents,printerDispatchAllowed,routePreparationItems} from "./print-policy.mjs";
 import {orderChannelStatus,type OrderChannel} from "./order-channel-policy";
 import {canRoleTransitionOrder} from "./order-role-channel-policy";
-import {orderStatusTransitionAllowed} from "./order-status-transition.mjs";
+import {orderStatusTransitionAllowed,orderPaymentTransitionAllowed} from "./order-status-transition.mjs";
 import {assignedWaiterTableIds} from "./waiter-assignments";
 import {reservationTransitionAllowed,reservationNoShowDue} from "./reservation-policy";
 import {checkoutTotals} from "./checkout-pricing";
@@ -596,7 +596,7 @@ export async function updateOrder(db:PoolConnection,tenantId:string,actor:string
   if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
   if(typeof body.paymentStatus!=="string")throw new ResourceError("INVALID_PAYMENT_TRANSITION");
   const next=body.paymentStatus;
-  if(!(payment==="unpaid"&&next==="paid"&&status!=="cancelled"||payment==="paid"&&next==="refunded"))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
+  if(!orderPaymentTransitionAllowed(payment,next,status))throw new ResourceError("INVALID_PAYMENT_TRANSITION");payment=next;
  }
  if(body.status===undefined&&body.paymentStatus===undefined)throw new ResourceError("INVALID_INPUT");
  if(status==="cancelled"&&order.status!=="cancelled"){
