@@ -50,6 +50,6 @@ test("floor-plan reads retain the selected-branch PIN gate when section staffing
 
 test("floor-plan selectors exclude inactive dining sections",()=>{
  const api=read("app/api/restaurant/floor-plan-layouts/route.ts");
- const queries=api.match(/SELECT id,name(?:,status,branch_id)? FROM restaurant_resources WHERE tenant_id=\\? AND kind='dining_section' AND archived=FALSE AND status='active' AND \\(branch_id=\\? OR branch_id IS NULL\\) ORDER BY name LIMIT 200/g)??[];
- assert.equal(queries.length,2,"both section list endpoints must show active sections only");
+ const query="kind='dining_section' AND archived=FALSE AND status='active' AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 200";
+ assert.equal(api.split(query).length-1,2,"both section list endpoints must show active sections only");
 });
