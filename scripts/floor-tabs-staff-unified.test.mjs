@@ -66,4 +66,6 @@ test("host alerts display the visible table number instead of the internal layou
  assert.match(api,/LEFT JOIN restaurant_floor_plan_layouts p ON p\.id=a\.layout_id AND p\.tenant_id=a\.tenant_id AND p\.branch_id=a\.branch_id/);
  assert.match(api,/tableLabel:visibleTableNumber\(x\.layout_json,x\.floor_table_id\)/);
  assert.match(ui,/a\.tableLabel\|\|a\.tableId/);
+ assert.match(ui,/alertStatus\(a\.status\)/);
+ assert.match(ui,/متاحة.*Available.*Disponible/);
 });
