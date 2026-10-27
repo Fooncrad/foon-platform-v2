@@ -9,6 +9,8 @@ function localMinute(now:Date,timeZone:string){
 function minute(value:unknown){if(typeof value!=="string"||!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))return null;const [h,m]=value.split(":").map(Number);return h*60+m;}
 export function orderChannelStatus(store:Settings,branch:Settings,channel:OrderChannel,now=new Date()):{allowed:boolean;reason?:string}{
  if(store.ordersEnabled==="no"||branch.ordersEnabled==="no")return{allowed:false,reason:"ORDERS_DISABLED"};
+ // JSON inputs must not coerce to a known channel or resolve inherited object keys.
+ if(typeof channel!=="string"||!Object.prototype.hasOwnProperty.call(keys,channel))return{allowed:false,reason:"ORDER_CHANNEL_DISABLED"};
  const key=keys[channel];
  if(store[key]==="no"||branch[key]==="no")return{allowed:false,reason:"ORDER_CHANNEL_DISABLED"};
  const start=minute(branch.openingTime),end=minute(branch.closingTime);
