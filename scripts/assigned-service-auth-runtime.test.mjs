@@ -29,7 +29,7 @@ function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'tab
   '@/lib/restaurant/waiter-assignments':{assignedWaiterTableIds:async(d,t,b,u)=>{assert.equal(t,tenant);assert.equal(b,branch);assert.equal(u,'user');return ids;}},
   '@/lib/restaurant/staff-grants':{staffCan}
  };
- vm.runInNewContext(code,{exports,require:id=>{if(!(id in imports))throw Error(id);return imports[id];},Request,Response,URL,console});
+ vm.runInNewContext(code,{exports,require:id=>{if(!(id in imports))throw Error(id);return imports[id];},Request,Response,URL,Error,console});
  return {get:(b=branch)=>exports.GET(new Request(`https://example.test/api/restaurant/assigned-service?tenantId=${tenant}&branch=${b}`)),post:(body={tenantId:tenant,branch,callId:foreign,action:'accept'},headers={})=>exports.POST(new Request('https://example.test/api/restaurant/assigned-service',{method:'POST',body:JSON.stringify(body),headers})),calls};
 }
 test('assigned API denies missing grant, foreign branch, stale role, disabled assignment, locked PIN and non-waiter',async()=>{
