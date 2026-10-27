@@ -58,3 +58,10 @@ test('assigned waiter POST enforces bounded JSON and rejects malformed lengths',
  assert.equal((await h.post({tenantId:tenant,branch,callId:foreign,action:'accept',padding:'x'.repeat(1200)})).status,413);
  assert.equal((await h.post({tenantId:tenant,branch,callId:foreign,action:'accept'},{'content-length':'invalid'})).status,400);
 });
+
+test('assigned waiter POST rejects coerced action arrays before authorization',async()=>{
+ const h=harness();
+ for(const action of [['accept'],['complete'],null,{},true,1]){
+  assert.equal((await h.post({tenantId:tenant,branch,callId:foreign,action})).status,400,JSON.stringify(action));
+ }
+});
