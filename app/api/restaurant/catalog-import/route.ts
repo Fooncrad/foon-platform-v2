@@ -11,6 +11,7 @@ import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin"
 import {tenantEntitlement} from '@/lib/plans/entitlements';
 import {importKinds,validateImportRows,type ImportKind,type ImportRow} from '@/lib/catalog/import-csv';
 import {importBatch} from '@/lib/catalog/import-batch';
+import {cleanupUnusedImportAssets} from '@/lib/catalog/import-media-cleanup';
 import {remoteImage} from '@/lib/media/remote-image';
 import {squareImage} from '@/lib/media/square-image';
 import {assertTenantMediaSpace,tenantMediaOwner} from '@/lib/media/account-quota';
@@ -42,7 +43,7 @@ export async function POST(request:Request){
  try{await db.beginTransaction();await db.execute('SELECT id FROM tenants WHERE id=? FOR UPDATE',[tenant]);
   const [replay]=await db.execute<RowDataPacket[]>('SELECT payload_hash,result FROM catalog_import_batches WHERE tenant_id=? AND request_key=?',[tenant,body.requestKey]);if(replay.length){await db.rollback();if(replay[0].payload_hash!==hash)return fail('IMPORT_KEY_CONFLICT',409);return NextResponse.json(typeof replay[0].result==='string'?JSON.parse(replay[0].result):replay[0].result);}
   const urls=new Map<string,string>();if(prepared.size){await tenantMediaOwner(db,tenant);for(const [source,bytes] of prepared){await assertTenantMediaSpace(db,tenant,bytes.length);const id=randomUUID();await db.execute('INSERT INTO restaurant_assets(id,tenant_id,mime_type,bytes,size_bytes) VALUES (?,?,\'image/jpeg\',?,?)',[id,tenant,bytes,bytes.length]);urls.set(source,'/api/restaurant/assets/'+id);}}
-  const imported=await importBatch(db,tenant,user,restaurant,String(profile.activity_code),String(profile.currency||'SAR'),kind,rows,urls),result={ok:true,created:imported.ids.length,skipped:imported.skipped,imageWarnings:imageWarnings.length,ids:imported.ids};
+  const imported=await importBatch(db,tenant,user,restaurant,String(profile.activity_code),String(profile.currency||'SAR'),kind,rows,urls);await cleanupUnusedImportAssets(db,tenant,urls);const result={ok:true,created:imported.ids.length,skipped:imported.skipped,imageWarnings:imageWarnings.length,ids:imported.ids};
   await db.execute('INSERT INTO catalog_import_batches(tenant_id,request_key,payload_hash,result) VALUES (?,?,?,?)',[tenant,body.requestKey,hash,JSON.stringify(result)]);await db.execute('INSERT INTO restaurant_audit_events(tenant_id,actor_user_id,action,metadata) VALUES (?,?,\'catalog.import\',?)',[tenant,user,JSON.stringify({kind,created:imported.ids.length,skipped:imported.skipped,imageWarnings:imageWarnings.length})]);await db.commit();return NextResponse.json(result,{status:201});
  }catch(e){await db.rollback();const error=e as Error&{code?:string};const code=error.code==='ER_DUP_ENTRY'?'DUPLICATE_SKU_OR_COMBINATION':error.message;return fail(/^[A-Z_]+$/.test(code)?code:'IMPORT_FAILED',code==='STORAGE_LIMIT_REACHED'?409:400);}finally{db.release();}
 }
