@@ -21,13 +21,12 @@ test("section staff cannot use customer or platform admin identities",()=>{
  for(const fragment of ["NOT EXISTS (SELECT 1 FROM memberships customer","customer.role='customer'","customer.status='active'","NOT EXISTS (SELECT 1 FROM tenant_customers tc","NOT EXISTS (SELECT 1 FROM platform_admins pa"])
   assert.ok(sql.includes(fragment),fragment);
 });
-test("waiters and supervisors require their corresponding membership and resource roles",()=>{
- assert.ok(source.includes("[['waiterId','waiter'],['supervisorId','manager']]"));
- assert.ok(source.includes("key==='waiterId'?'waiter':'supervisor'"));
+test("supervisor resource keeps the existing waiter membership and matching branch assignment",()=>{
+ assert.ok(source.includes("[['waiterId','waiter','waiter'],['supervisorId','supervisor','waiter']]"));
  assert.ok(sql.includes("JSON_UNQUOTE(JSON_EXTRACT(r.data,'$.role'))=?"));
  assert.ok(sql.includes("m.role=?"));
  assert.ok(sql.includes("a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci"));
- assert.ok(source.includes("[role,input.branchId,tenant,d[key],input.branchId,expectedRole]"));
+ assert.ok(source.includes("[membershipRole,input.branchId,tenant,d[key],input.branchId,expectedRole]"));
 });
 
 test("mixed MariaDB 11.8 role collations are normalized for the authorization comparison",()=>{
