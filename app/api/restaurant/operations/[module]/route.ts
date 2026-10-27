@@ -34,12 +34,13 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
  const special=["overview","orders","pos","kds","customers","security","health","reports"];
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
- const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:allRoles;
+ const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:module==="reports"?["owner","manager","accountant"] as TenantRole[]:allRoles;
  const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
  let authorizedBranch:string|null=null;
  // Existing role checks remain mandatory. Explicit employee grants narrow them further.
- // Legacy memberships without grants continue to use the existing role policy.
+ // Unconfigured staff fail closed.
  if(!["owner","manager"].includes(access.role)){
+  if(write&&["tables","sections"].includes(module))throw new ResourceError("FORBIDDEN");
   const permissionModule=module==="kds"?"kitchen":module;
   const action=requiredAction??(write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view");
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
@@ -55,8 +56,8 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   }
   let verifiedBranch:string|null=null;
   if(activeBranch){
-   const [assignments]=await database().execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[access.tenantId,user,activeBranch]);
-   if(!assignments.length)throw new ResourceError("FORBIDDEN");
+   const [assignments]=await database().execute<RowDataPacket[]>("SELECT role FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user,activeBranch]);
+   if(assignments.length!==1||assignments[0].role!==access.role)throw new ResourceError("FORBIDDEN");
    verifiedBranch=activeBranch;
   }
   authorizedBranch=verifiedBranch;
@@ -174,6 +175,13 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
     if((["owner","manager"].includes(ctx.role)||config.roles.includes(ctx.role))&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled)&&!(field.ref==="team"&&!["owner","manager"].includes(ctx.role)))refs[field.ref!]=field.ref==="tables"&&module==="reservations"?await availableTables(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,field.ref!,field.ref==="team"?null:branch);
    }
    let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
+   if(ctx.role==="waiter"&&["tables","waiterCalls","reservations"].includes(module)){
+    const ids=new Set(await assignedWaiterTableIds(db,ctx.tenantId,branch??"",ctx.user));
+    if(module==="tables")resources=resources.filter(row=>ids.has(String(row.id)));
+    if(module==="waiterCalls")resources=resources.filter(row=>ids.has(String(row.data.tableId??"")));
+    if(refs.tables)refs.tables=refs.tables.filter(row=>row!==null&&typeof row==="object"&&"id" in row&&ids.has(String(row.id)));
+    if(module==="tables")for(const key of Object.keys(refs))delete refs[key];
+   }
    if(module==="reservations"){const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");if(from||to){const a=Date.parse(from||""),b=Date.parse(to||"");if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>93*86400000)throw new ResourceError("INVALID_DATE_RANGE");const [found]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))>=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))<? ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt')) LIMIT 1001",[ctx.tenantId,...(branch?[branch]:[]),new Date(a).toISOString(),new Date(b).toISOString()]);truncated=found.length>1000;resources=found.slice(0,1000).map(r=>({id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),data:parseData(r.data),version:Number(r.version),created_at:String(r.created_at)}));}}
    if(module==="storefront"&&resources.length){const [appearance]=await db.execute<RowDataPacket[]>("SELECT template_key FROM restaurant_menu_appearance WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);resources[0].data.menuTheme=String(appearance[0]?.template_key??resources[0].data.menuTheme??"sufra");}
    if(module==="customerInvoices"){
@@ -231,8 +239,18 @@ async function mutate(request:Request,module:string,method:string){
    const [scope]=await db.execute<RowDataPacket[]>("SELECT id FROM "+table+" WHERE id=? AND tenant_id=? AND branch_id=? LIMIT 1 FOR UPDATE",[body.id,ctx.tenantId,ctx.authorizedBranch]);
    if(!scope.length)throw new ResourceError("FORBIDDEN");
   }
+  if(ctx.role==="waiter"&&module==="waiterCalls"){
+   const ids=await assignedWaiterTableIds(db,ctx.tenantId,ctx.authorizedBranch??"",ctx.user);
+   if(typeof body.id==="string"){
+    const [calls]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND id=? AND kind='waiter_call' AND archived=FALSE FOR UPDATE",[ctx.tenantId,ctx.authorizedBranch,body.id]);
+    if(!calls.length||!ids.includes(String(parseData(calls[0].data).tableId??"")))throw new ResourceError("FORBIDDEN");
+   }
+   const input=body.data as Record<string,unknown>|undefined;
+   if(input?.tableId!==undefined&&!ids.includes(String(input.tableId)))throw new ResourceError("FORBIDDEN");
+  }
   // Never trust a branch supplied in a mutation body without verifying employee assignment.
   if(!["owner","manager"].includes(ctx.role)&&typeof body.branchId==="string"&&body.branchId){
+   if(body.branchId!==ctx.authorizedBranch)throw new ResourceError("FORBIDDEN");
    const [assigned]=await db.execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[ctx.tenantId,ctx.user,body.branchId]);
    if(!assigned.length)throw new ResourceError("FORBIDDEN");
    const headerBranch=request.headers.get("x-foon-branch");
