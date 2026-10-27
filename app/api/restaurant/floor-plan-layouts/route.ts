@@ -18,8 +18,7 @@ async function scope(req:Request,write:boolean){
  if(write)await requireAllAdditionalBranchesUnlocked(membership.tenantId,user);
  const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branch,membership.tenantId]);
  if(!rows.length)return {error:NextResponse.json({ok:false,code:"BRANCH_NOT_FOUND"},{status:404})};
- // Read access to a protected branch requires its session PIN unlock.
- // Explicit platform admins keep audited read access; support sessions require PIN.
+ // Protected floor plans require branch PIN on reads, except audited platform admin access.
  if(!write&&(!membership.adminAccess||membership.platformRole==="support"))await requireAdditionalBranchUnlock(membership.tenantId,branch,user);
  return {tenant:membership.tenantId,branch};
  }catch(error){const code=error instanceof BranchPinError?error.code:"FORBIDDEN";return {error:NextResponse.json({ok:false,code},{status:403})}}
