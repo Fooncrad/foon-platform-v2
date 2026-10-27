@@ -41,8 +41,8 @@ test('active customer passes with parameterized account scope',async()=>{
  const db=mock([{id}],[]);
  assert.equal(await creatorWriteAccess(db,id),'active');
  assert.match(db.calls[0].sql,/status='active' FOR UPDATE/);
- assert.match(db.calls[1].sql,/FROM memberships WHERE user_id=\\?/);
- assert.match(db.calls[1].sql,/FROM platform_admins WHERE user_id=\\?/);
+ assert.match(db.calls[1].sql,/FROM memberships WHERE user_id=\?/);
+ assert.match(db.calls[1].sql,/FROM platform_admins WHERE user_id=\?/);
  assert.deepEqual(db.calls.map(x=>x.params),[[id],[id,id]]);
 });
 test('suspended or deleted customer blocked before role lookup',async()=>{
