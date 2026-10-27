@@ -17,6 +17,7 @@ function compile(path,deps){
  return mod.exports;
 }
 const {readLimitedJson}=compile('lib/security/limited-json.ts',{});
+const {resolveOperationsBranchSelection}=compile('lib/restaurant/operations-branch-selection.ts',{});
 class ResourceError extends Error{constructor(code){super(code);this.code=code;}}
 class BranchPinError extends Error{constructor(code){super(code);this.code=code;}}
 const params={params:Promise.resolve({module:'pos'})};
@@ -62,6 +63,7 @@ function setup(options={}){
   '@/lib/plans/entitlements':{tenantEntitlement:async()=>({enabled:true})},
   '@/lib/security/origin':{assertSameOrigin:req=>{if(req.headers.get('x-cross-origin'))throw Error('FORBIDDEN');}},
   '@/lib/security/limited-json':{readLimitedJson},
+  '@/lib/restaurant/operations-branch-selection':{resolveOperationsBranchSelection},
   '@/lib/db/mysql':{database:()=>db},
   '@/scripts/restaurant-resource-schema.mjs':{resourceModules:{},ResourceError},
   '@/lib/restaurant/operations':{
