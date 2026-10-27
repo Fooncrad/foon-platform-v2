@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {orderChannelStatus} from "../lib/restaurant/order-channel-policy.ts";
+import {orderChannelStatus,validOrderChannel} from "../lib/restaurant/order-channel-policy.ts";
 const at=value=>new Date(value);
 test("all activities share a global ordering kill switch",()=>{
  for(const channel of ["delivery","takeaway","dine_in","room_service"])
@@ -53,4 +53,10 @@ test("coerced JSON channels cannot bypass per-channel settings",()=>{
 test("all supported channels remain allowed when opening hours are fully unset",()=>{
  for(const channel of ["delivery","takeaway","dine_in","room_service"])
   assert.equal(orderChannelStatus({}, {}, channel).allowed,true);
+});
+test("checkout input validator accepts only exact primitive order channels",()=>{
+ for(const channel of ["delivery","takeaway","dine_in","room_service"])
+  assert.equal(validOrderChannel(channel),true,channel);
+ for(const channel of [["delivery"],["room_service"],{toString:()=>"delivery"},null,undefined,0,true,"constructor","toString","__proto__","deliveri",""])
+  assert.equal(validOrderChannel(channel),false,String(channel));
 });
