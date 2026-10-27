@@ -2,11 +2,13 @@ import {createHash,randomUUID} from "node:crypto";
 import {NextResponse} from "next/server";
 import type {RowDataPacket} from "mysql2/promise";
 import {currentUserId} from "@/lib/auth/session";
+import {activeCustomerAccount} from "@/lib/auth/active-customer-account.mjs";
 import {employeePersonalAccessDenied} from "@/lib/auth/account-surface";
 import {database} from "@/lib/db/mysql";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {tenantPublicControls,publicControlAllowed} from "@/lib/tenant/public-controls";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {validStoreSlug} from "@/scripts/store-slug.mjs";
 import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
@@ -28,7 +30,9 @@ export async function GET(request:Request){
  const slug=new URL(request.url).searchParams.get("storeSlug")?.trim().toLowerCase()??"";
  if(!validStoreSlug(slug))return fail("INVALID_INPUT");
  try{
-  const db=database(),ctx=await customerScope(db,user,slug);
+  const db=database();
+  if(!await activeCustomerAccount(db,user))return fail("UNAUTHENTICATED",401);
+  const ctx=await customerScope(db,user,slug);
   if(!ctx)return fail("STORE_CUSTOMER_REQUIRED",403);
   const [rows]=await db.execute<RowDataPacket[]>(
    "SELECT id,name,status,data,created_at,updated_at FROM restaurant_resources WHERE tenant_id=? AND kind='service_customer_request' AND archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.customerUserId'))=? ORDER BY created_at DESC LIMIT 50",
@@ -40,14 +44,17 @@ export async function POST(request:Request){
  const denied=await employeePersonalAccessDenied();if(denied)return denied;
  try{assertSameOrigin(request)}catch{return fail("FORBIDDEN",403)}
  const user=await currentUserId();if(!user)return fail("UNAUTHENTICATED",401);
- const body=await request.json().catch(()=>null);
+ let parsed:unknown;
+ try{parsed=await readLimitedJson(request,16384);}
+ catch(error){const oversized=error instanceof Error&&error.message==="BATCH_TOO_LARGE";return fail(oversized?"BODY_TOO_LARGE":"INVALID_INPUT",oversized?413:400);}
+ const body=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as {storeSlug:string;requestType:string;notes:string;phone:string;serviceId:string;requestKey:string;scheduledAt:string}:null;
  const slug=typeof body?.storeSlug==="string"?body.storeSlug.trim().toLowerCase():"";
- const type=body?.requestType;
- const note=body?.notes;
- const phone=body?.phone;
- if(!validStoreSlug(slug)||!uuid.test(body?.serviceId??"")||!uuid.test(body?.requestKey??"")||
-  !["inquiry","appointment","quote"].includes(type)||typeof note!=="string"||note.length>1000||
-  !validServiceRequestPhone(phone))
+ const type=body?.requestType??"";
+ const note=body?.notes??"";
+ const phone=body?.phone??"";
+ if(!body||!validStoreSlug(slug)||!uuid.test(body.serviceId??"")||!uuid.test(body?.requestKey??"")||
+  typeof body.requestType!=="string"||!["inquiry","appointment","quote"].includes(type)||typeof body.notes!=="string"||note.length>1000||
+  typeof body.phone!=="string"||!validServiceRequestPhone(phone))
   return fail("INVALID_INPUT");
  const scheduled=type==="appointment"?Date.parse(body.scheduledAt):null;
  if(type==="appointment"&&!validServiceAppointmentTime(body.scheduledAt))return fail("INVALID_APPOINTMENT_TIME");
