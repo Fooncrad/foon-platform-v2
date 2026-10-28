@@ -7,9 +7,11 @@ import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
+import {resolveOperationsBranchSelection} from "@/lib/restaurant/operations-branch-selection";
 import type {TenantRole} from "@/lib/auth/roles";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readLimitedJson} from "@/lib/security/limited-json";
 import {database} from "@/lib/db/mysql";
 import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
 import {checkoutSettings} from "@/lib/restaurant/checkout-settings";
@@ -25,9 +27,13 @@ export const runtime="nodejs";
 const managers:TenantRole[]=["owner","manager"];
 const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
 const allRoles:TenantRole[]=[...orderRoles];
+// Bound POS, orders and shared resource mutation streams before JSON buffering.
+const MAX_OPERATIONS_BODY_BYTES=1024*1024;
 async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit",requestedBranch?:string|null){
  if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
  const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
+ const branchSelection=resolveOperationsBranchSelection(request.headers.get("x-foon-branch"),new URL(request.url).searchParams.get("branch"));
+ if(branchSelection.conflict)throw new ResourceError("FORBIDDEN");
  const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
  const special=["overview","orders","pos","kds","customers","security","health","reports"];
  if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
@@ -43,10 +49,7 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
   // Fail closed: unconfigured employees cannot inherit broad role permissions.
   if(!grants.length)throw new ResourceError("FORBIDDEN");
-  const headerBranch=request.headers.get("x-foon-branch");
-  const queryBranch=new URL(request.url).searchParams.get("branch");
-  if(headerBranch&&queryBranch&&headerBranch!==queryBranch)throw new ResourceError("FORBIDDEN");
-  let activeBranch=headerBranch??queryBranch;
+  let activeBranch=branchSelection.branch;
   // Tenant-wide reads must not be exposed through an omitted branch selector.
   if(!activeBranch&&!["security"].includes(module)){
    const [assigned]=await database().execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user]);
@@ -67,17 +70,17 @@ async function authorize(request:Request,module:string,write:boolean,requiredAct
   if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
   if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
  }
- const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch")??requestedBranch??null;
+ const selectedBranch=authorizedBranch??branchSelection.branch??requestedBranch??null;
  if(module!=="security"&&module!=="health")await requireAdditionalBranchUnlock(access.tenantId,selectedBranch,user);
  const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
  if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
- return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
+ return {user,tenantId:access.tenantId,role:access.role,authorizedBranch,selectedBranch};
 }
 function failure(error:unknown,request:Request,module:string){
  const incidentId=randomUUID().slice(0,8).toUpperCase();
  const databaseCode=(error as {code?:string})?.code;
  const code=error instanceof ResourceError||error instanceof BranchPinError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
- const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const status=code==="BODY_TOO_LARGE"?413:code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
  const cookieLocale=request.headers.get("cookie")?.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1];
  const locale=normalizeLocale(cookieLocale??request.headers.get("accept-language"));
  const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
@@ -147,7 +150,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
  let db:PoolConnection|undefined;
  try{
   const {module}=await params,ctx=await authorize(request,module,false);db=await connection();
-  const branch=ctx.authorizedBranch??new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
+  const branch=ctx.selectedBranch;await branchExists(db,ctx.tenantId,branch,module==="pos");
   if(Object.hasOwn(resourceModules,module)){
    const refs:Record<string,unknown[]>={};
    for(const field of resourceModules[module].fields.filter(f=>f.ref)){
@@ -212,7 +215,12 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
 async function mutate(request:Request,module:string,method:string){
  let db:PoolConnection|undefined;
  try{
-  const body=await request.json().catch(()=>null);
+  // Reject unauthenticated and cross-origin mutations without consuming the body stream.
+  try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
+  if(!(await currentUserId()))throw new ResourceError("UNAUTHENTICATED");
+  const body=(await readLimitedJson(request,MAX_OPERATIONS_BODY_BYTES).catch(error=>{
+   throw new ResourceError(error instanceof Error&&error.message==="BATCH_TOO_LARGE"?"BODY_TOO_LARGE":"INVALID_INPUT");
+  })) as Awaited<ReturnType<Request["json"]>>;
   if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
   // Recording payment during POS create is also a financial edit. A cashier
   // who can create orders but lacks pos.edit must never mark them paid.
@@ -306,7 +314,7 @@ async function mutate(request:Request,module:string,method:string){
     if(item&&userId&&reservationBefore!==String(body.status)&&["confirmed","cancelled","seated","completed","no_show"].includes(String(body.status)))await notifyCustomer(db,{userId,tenantId:ctx.tenantId,event:"reservation_"+String(body.status),resourceId:body.id,reference:String(item.name??""),status:String(body.status)});
    }
   }else if(["orders","pos","kds"].includes(module)){
-   if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.channel==="room_service"&&!(await tenantEntitlement(ctx.tenantId,"room_service")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);if(module==="pos")await recordManualPaymentAtCreate(db,ctx.tenantId,ctx.user,ctx.role,String(result.id),body);}
+   if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.channel==="room_service"&&!(await tenantEntitlement(ctx.tenantId,"room_service")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body,null,module==="pos");if(module==="pos")await recordManualPaymentAtCreate(db,ctx.tenantId,ctx.user,ctx.role,String(result.id),body);}
    else if(method==="PATCH"){
     result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
    }
