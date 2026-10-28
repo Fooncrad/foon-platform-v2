@@ -66,7 +66,7 @@ export async function PATCH(request:Request){
    // when email, active tenant membership, role, and enabled branch assignment all match.
    const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
    const membershipRole=role==="supervisor"?"waiter":role;
-   if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)||typeof employee.branch_id!=="string"){
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)||typeof employee.branch_id!=="string"){
     await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});
    }
    const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
@@ -117,7 +117,7 @@ export async function GET(request:Request){
   if(!userId&&branchId){
    const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
    const membershipRole=role==="supervisor"?"waiter":role;
-   if(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)&&["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)){
+   if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)){
     const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
      JOIN memberships m ON m.user_id=u.id AND m.tenant_id=? AND m.status='active' AND m.role=?
      JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=u.id AND a.branch_id=? AND a.enabled=TRUE AND a.role=m.role
