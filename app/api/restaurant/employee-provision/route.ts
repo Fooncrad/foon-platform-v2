@@ -66,7 +66,7 @@ export async function PATCH(request:Request){
    // when email, active tenant membership, role, and enabled branch assignment all match.
    const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
    const membershipRole=role==="supervisor"?"waiter":role;
-   if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)||typeof employee.branch_id!=="string"){
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)||typeof employee.branch_id!=="string"){
     await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});
    }
    const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
@@ -106,8 +106,26 @@ export async function GET(request:Request){
  const [rows]=await database().execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1",[resourceId,tenantId]);
  if(!rows.length)return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});
  try{await requireAdditionalBranchUnlock(tenantId,rows[0].branch_id?String(rows[0].branch_id):null,actor);}catch(error){return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
- const data=typeof rows[0].data==="string"?JSON.parse(rows[0].data):rows[0].data,userId=await resolveBoundEmployeeUser(database(),tenantId,rows[0].branch_id??null,data);
- if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
- const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (branch_id IS NULL OR branch_id <=> ?) AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
- return NextResponse.json({ok:true,linked:true,permissions:grants.map(row=>String(row.permission_key)).filter(key=>validPermissions.has(key))});
+ try{
+  const db=database(),employee=rows[0],data=typeof employee.data==="string"?JSON.parse(employee.data):employee.data;
+  let userId=await resolveBoundEmployeeUser(db,tenantId,employee.branch_id??null,data);
+  if(!/^[a-f0-9-]{36}$/i.test(userId)){
+   const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
+   const membershipRole=role==="supervisor"?"waiter":role;
+   if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)&&typeof employee.branch_id==="string"){
+    const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
+     JOIN memberships m ON m.user_id=u.id AND m.tenant_id=? AND m.status='active' AND m.role=?
+     JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=u.id AND a.branch_id=? AND a.enabled=TRUE AND a.role=m.role
+     WHERE LOWER(u.email)=? AND u.status='active'
+      AND NOT EXISTS(SELECT 1 FROM memberships cm WHERE cm.user_id=u.id AND cm.role='customer' AND cm.status='active')
+      AND NOT EXISTS(SELECT 1 FROM tenant_customers tc WHERE tc.user_id=u.id)
+      AND NOT EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id=u.id)
+     LIMIT 2`,[tenantId,membershipRole,String(employee.branch_id),email]);
+    if(candidates.length===1)userId=String(candidates[0].id);
+   }
+  }
+  if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
+  const [grants]=await db.execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (branch_id IS NULL OR branch_id <=> ?) AND allowed=TRUE",[tenantId,userId,employee.branch_id??null]);
+  return NextResponse.json({ok:true,linked:true,permissions:grants.map(row=>String(row.permission_key)).filter(key=>validPermissions.has(key))});
+ }catch(error){console.error("[FOON staff permission read]",error);return NextResponse.json({ok:false,code:"EMPLOYEE_PERMISSION_READ_FAILED"},{status:503});}
 }

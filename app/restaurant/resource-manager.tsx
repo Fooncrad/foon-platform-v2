@@ -199,7 +199,7 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error("تم حفظ الملف، لكن فشل إنشاء حساب الموظف: "+String(result.code??"EMPLOYEE_PROVISION_FAILED"));
    setMessage("تم إنشاء حساب الموظف وتفعيله بكلمة المرور المحددة دون رابط دعوة.");
-  }else if(module==="team"&&editing&&staffLinked){
+  }else if(module==="team"&&editing){
    const response=await fetch("/api/restaurant/employee-provision",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({tenantId,resourceId:editing.id,permissions:employeePermissions,...(employeePassword?{password:employeePassword}:{})})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error("حُفظ ملف الموظف، لكن تعذر حفظ الصلاحيات أو كلمة المرور: "+String(result.code??"UNKNOWN"));
