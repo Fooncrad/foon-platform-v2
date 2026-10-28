@@ -195,7 +195,7 @@ export default function ResourceManager({tenantId,module,branch,branches,onChang
   setBusy(true);setMessage("");
   try{const saved=await operationApi(tenantId,module,editing?"PATCH":"POST",{...(editing?{id:editing.id,version:editing.version}:{}),name:module==="hotelRooms"?(String(form.get("name")??"").trim()||"غرفة "+String(data.roomNumber??"")):form.get("name"),status:module==="tables"?(editing?.status??"available"):form.get("status"),branchId:(()=>{const selected=String(form.get("branchId")??"").trim();if(module==="tables"&&data.sectionId){const section=refs.sections?.find(item=>item.id===data.sectionId);if(section?.branch_id)return section.branch_id;}return selected&&branches.some(b=>b.id===selected)?selected:null;})(),data});if(module!=="team"){await refresh();setShowForm(createOnly);setEditing(null);if(createOnly)formElement.reset();}
   if(module==="team"&&!editing){
-   const response=await fetch("/api/restaurant/employee-provision",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tenantId,resourceId:editing?.id??saved.id,password:employeePassword,permissions:employeePermissions})});
+   const response=await fetch("/api/restaurant/employee-provision",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tenantId,resourceId:saved.id,password:employeePassword,permissions:employeePermissions})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error("تم حفظ الملف، لكن فشل إنشاء حساب الموظف: "+String(result.code??"EMPLOYEE_PROVISION_FAILED"));
    setMessage("تم إنشاء حساب الموظف وتفعيله بكلمة المرور المحددة دون رابط دعوة.");
