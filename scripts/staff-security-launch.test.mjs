@@ -26,6 +26,10 @@ test("employee accounts are provisioned only by explicit password and branch",()
  assert.match(provision,/resolveBoundEmployeeUser/);
  assert.match(provision,/EMPLOYEE_ACCOUNT_NOT_ELIGIBLE/);
  assert.match(provision,/EMPLOYEE_ACCOUNT_AMBIGUOUS/);
+ assert.match(provision,/MAX_EMPLOYEE_BODY_BYTES=16\\*1024/);
+ assert.match(provision,/employeePayload\\(request\\)/);
+ assert.match(provision,/parseEmployeeProvisionPatch/);
+ assert.doesNotMatch(provision,/request\\.json\\(\\)/);
  assert.ok(provision.includes('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/'),"employee email validation must use the intended whitespace and dot escapes");
  const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  assert.ok(emailPattern.test("waiter@example.test"));
