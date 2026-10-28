@@ -60,8 +60,28 @@ export async function PATCH(request:Request){
   if(!rows.length){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});}
   const employee=rows[0],data=typeof employee.data==="string"?JSON.parse(employee.data):employee.data;
   try{await requireAdditionalBranchUnlock(tenantId,employee.branch_id?String(employee.branch_id):null,actor);}catch(error){await db.rollback();return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
-  const userId=await resolveBoundEmployeeUser(db,tenantId,employee.branch_id??null,data);
-  if(!/^[a-f0-9-]{36}$/i.test(userId)){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});}
+  let userId=await resolveBoundEmployeeUser(db,tenantId,employee.branch_id??null,data);
+  if(!/^[a-f0-9-]{36}$/i.test(userId)){
+   // Existing employee accounts can predate the resource link. Reuse one only
+   // when email, active tenant membership, role, and enabled branch assignment all match.
+   const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
+   const membershipRole=role==="supervisor"?"waiter":role;
+   if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)||typeof employee.branch_id!=="string"){
+    await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});
+   }
+   const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
+    JOIN memberships m ON m.user_id=u.id AND m.tenant_id=? AND m.status='active' AND m.role=?
+    JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=u.id AND a.branch_id=? AND a.enabled=TRUE AND a.role=m.role
+    WHERE LOWER(u.email)=? AND u.status='active'
+     AND NOT EXISTS(SELECT 1 FROM memberships cm WHERE cm.user_id=u.id AND cm.role='customer' AND cm.status='active')
+     AND NOT EXISTS(SELECT 1 FROM tenant_customers tc WHERE tc.user_id=u.id)
+     AND NOT EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id=u.id)
+    LIMIT 2 FOR UPDATE`,[tenantId,membershipRole,String(employee.branch_id),email]);
+   if(candidates.length!==1){await db.rollback();return NextResponse.json({ok:false,code:candidates.length>1?"EMPLOYEE_ACCOUNT_AMBIGUOUS":"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
+   userId=String(candidates[0].id);
+   data.userId=userId;
+   await db.execute("UPDATE restaurant_resources SET data=?,version=version+1 WHERE id=? AND tenant_id=?",[JSON.stringify(data),resourceId,tenantId]);
+  }
   const [memberships]=await db.execute<RowDataPacket[]>("SELECT role FROM memberships WHERE tenant_id=? AND user_id=? AND status='active' LIMIT 1",[tenantId,userId]);
   if(!memberships.length||["owner","manager"].includes(String(memberships[0].role))){await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_PERMISSION_CHANGE_FORBIDDEN"},{status:403});}
   const branchId=employee.branch_id??null;
