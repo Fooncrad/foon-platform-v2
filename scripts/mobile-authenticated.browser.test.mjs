@@ -111,7 +111,12 @@ test.describe("disposable authenticated mobile journeys",()=>{
        })).toBeGreaterThan(0);
       }
       if(identity==="admin"){
-       await page.locator(".adminMenuButton").click();
+       const adminMenuButton=page.locator(".adminMenuButton");
+       await expect(adminMenuButton).toBeVisible();
+       await expect(adminMenuButton).toHaveAttribute("aria-expanded","false");
+       await adminMenuButton.click();
+       // The app is a production build; wait for the client event handler to open the drawer.
+       await expect(adminMenuButton).toHaveAttribute("aria-expanded","true");
        await inViewport(page,page.locator(".adminDrawer"),width,640);
        await page.keyboard.press("Escape");await expect(page.locator(".adminDrawer")).toHaveCount(0);
       }
