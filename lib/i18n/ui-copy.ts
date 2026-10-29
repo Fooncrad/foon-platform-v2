@@ -1,5 +1,12 @@
 export type UiLanguage="ar"|"en"|"fr";
 export const uiCopy:Record<string,readonly [string,string]>={
+ "تعذر تحديث بيانات المنيو.": ["Could not update menu data.", "Impossible de mettre à jour le menu."],
+ "4. إضافات الأصناف": ["4. Item add-ons", "4. Suppléments d’articles"],
+ "قوالب حسب الدور": ["Role-based templates", "Modèles basés sur le rôle"],
+ "القالب يستبدل الاختيارات الحالية ويمكنك تعديل كل صلاحية بعد تطبيقه. لا يمنح صلاحيات إدارة الموظفين أو الأمان أو حذف السجلات تلقائيًا.": [
+  "The template replaces current selections and each permission can be adjusted afterward. It does not grant staff management, security or log deletion automatically.",
+  "Le modèle remplace les sélections actuelles et chaque autorisation peut être ajustée ensuite. Il n’accorde pas automatiquement la gestion du personnel, la sécurité ou la suppression des journaux."
+ ],
  "طريقة الحجز": ["Booking method", "Mode de réservation"],
  "وسيلة دفع الحجز": ["Reservation payment method", "Mode de paiement de la réservation"],
  "حالة دفع الحجز": ["Reservation payment status", "Statut du paiement de la réservation"],
