@@ -17,7 +17,7 @@ export default async function RestaurantPage({searchParams,params}:{searchParams
  let workspace;try{workspace=await resolveWorkspaceForActivity(userId,(await params)?.activity??"restaurant",tenant);}catch{redirect("/account");}
  const tenantId=workspace.tenant_id,canManage=workspace.adminAccess?!workspace.supportReadOnly:["owner","manager"].includes(workspace.role);
  const db=database();
- const [activityRows]=await db.execute<RowDataPacket[]>("SELECT t.kind,bp.activity_code,bp.currency FROM tenants t LEFT JOIN tenant_business_profiles bp ON bp.tenant_id=t.id WHERE t.id=? LIMIT 1",[tenantId]);
+ const [activityRows]=await db.execute<RowDataPacket[]>("SELECT t.kind,bp.activity_code,bp.currency FROM tenants t LEFT JOIN tenant_business_profiles bp ON bp.tenant_id COLLATE utf8mb4_unicode_ci=t.id COLLATE utf8mb4_unicode_ci WHERE t.id=? LIMIT 1",[tenantId]);
  // Legacy restaurant tenants may not yet have a business profile. Restore their
  // restaurant navigation without overriding an explicitly configured activity.
  const storedActivityCode=String(activityRows[0]?.activity_code??"").trim();
