@@ -39,4 +39,6 @@ test("legacy employee permission recovery is scoped and the edit form always inv
  assert.ok(employee.includes("EMPLOYEE_PERMISSION_READ_FAILED"));
  assert.ok(manager.includes('else if(module==="team"&&editing){'));
  assert.ok(!manager.includes('else if(module==="team"&&editing&&staffLinked){'));
+ assert.ok(manager.includes("staffPermissionLoadError"));
+ assert.ok(manager.includes("staffLoading||staffPermissionLoadError"));
 });
