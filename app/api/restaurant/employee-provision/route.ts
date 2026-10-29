@@ -70,12 +70,12 @@ export async function PATCH(request:Request){
     await db.rollback();return NextResponse.json({ok:false,code:"EMPLOYEE_ACCOUNT_NOT_LINKED"},{status:409});
    }
    const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
-    JOIN memberships m ON m.user_id=u.id AND m.tenant_id=? AND m.status='active' AND m.role=?
-    JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=u.id AND a.branch_id=? AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
+    JOIN memberships m ON m.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci AND m.tenant_id=? AND m.status='active' AND m.role=?
+    JOIN employee_branch_assignments a ON a.tenant_id COLLATE utf8mb4_unicode_ci=m.tenant_id COLLATE utf8mb4_unicode_ci AND a.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci AND a.branch_id=? AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
     WHERE LOWER(u.email)=? AND u.status='active'
-     AND NOT EXISTS(SELECT 1 FROM memberships cm WHERE cm.user_id=u.id AND cm.role='customer' AND cm.status='active')
-     AND NOT EXISTS(SELECT 1 FROM tenant_customers tc WHERE tc.user_id=u.id)
-     AND NOT EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id=u.id)
+     AND NOT EXISTS(SELECT 1 FROM memberships cm WHERE cm.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci AND cm.role='customer' AND cm.status='active')
+     AND NOT EXISTS(SELECT 1 FROM tenant_customers tc WHERE tc.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci)
+     AND NOT EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci)
     LIMIT 2 FOR UPDATE`,[tenantId,membershipRole,String(employee.branch_id),email]);
    if(candidates.length!==1){await db.rollback();return NextResponse.json({ok:false,code:candidates.length>1?"EMPLOYEE_ACCOUNT_AMBIGUOUS":"EMPLOYEE_ACCOUNT_NOT_ELIGIBLE"},{status:409});}
    userId=String(candidates[0].id);
