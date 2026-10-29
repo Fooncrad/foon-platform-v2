@@ -47,7 +47,7 @@ test("public menus and activity stores have persistent light/dark themes and res
 
 
 test("public menu mobile actions are not duplicated and offline status follows the selected language",()=>{
- assert.match(offlineMenuSave,/language==="ar"\?"المنيو محفوظ للتصفح دون اتصال":language==="fr"\?"Menu enregistré pour une consultation hors connexion":"Menu saved for offline browsing"/);
+ assert.match(offlineMenuSave,/language==="ar"\?"المنيو محفوظ للتصفح دون اتصال — جميع تفاصيل الأصناف متاحة":language==="fr"\?"Menu enregistré pour consultation hors connexion":"Menu saved for offline browsing"/);
  assert.doesNotMatch(offlineMenuSave,/المنيو محفوظ للتصفح دون اتصال\s*·\s*Offline menu saved/);
  assert.match(publicMenu,/OfflineMenuSave[^\n]*language=\{language\}/);
  assert.doesNotMatch(publicMenu,/publicMenuMobileDock[^\n]*MenuServiceActions/);
