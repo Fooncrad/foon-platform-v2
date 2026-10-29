@@ -115,14 +115,14 @@ export async function GET(request:Request){
    const email=String(data.email??"").trim().toLowerCase(),role=String(data.role??"");
    const membershipRole=role==="supervisor"?"waiter":role;
    if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&["waiter","cashier","kitchen","driver","accountant"].includes(membershipRole)&&typeof employee.branch_id==="string"){
-    const [candidates]=await db.execute<RowDataPacket[]>(\`SELECT u.id FROM users u
+    const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
      JOIN memberships m ON m.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci AND m.tenant_id=? AND m.status='active' AND m.role=?
      JOIN employee_branch_assignments a ON a.tenant_id COLLATE utf8mb4_unicode_ci=m.tenant_id COLLATE utf8mb4_unicode_ci AND a.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci AND a.branch_id=? AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
      WHERE LOWER(u.email)=? AND u.status='active'
       AND NOT EXISTS(SELECT 1 FROM memberships cm WHERE cm.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci AND cm.role='customer' AND cm.status='active')
       AND NOT EXISTS(SELECT 1 FROM tenant_customers tc WHERE tc.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci)
       AND NOT EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci)
-     LIMIT 2\`,[tenantId,membershipRole,String(employee.branch_id),email]);
+     LIMIT 2`,[tenantId,membershipRole,String(employee.branch_id),email]);
     if(candidates.length===1)userId=String(candidates[0].id);
    }
   }
