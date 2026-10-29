@@ -71,7 +71,7 @@ export async function PATCH(request:Request){
    }
    const [candidates]=await db.execute<RowDataPacket[]>(`SELECT u.id FROM users u
     JOIN memberships m ON m.user_id=u.id AND m.tenant_id=? AND m.status='active' AND m.role=?
-    JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=u.id AND a.branch_id=? AND a.enabled=TRUE AND a.role=m.role
+    JOIN employee_branch_assignments a ON a.tenant_id=m.tenant_id AND a.user_id=u.id AND a.branch_id=? AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
     WHERE LOWER(u.email)=? AND u.status='active'
      AND NOT EXISTS(SELECT 1 FROM memberships cm WHERE cm.user_id=u.id AND cm.role='customer' AND cm.status='active')
      AND NOT EXISTS(SELECT 1 FROM tenant_customers tc WHERE tc.user_id=u.id)
