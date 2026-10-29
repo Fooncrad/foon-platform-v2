@@ -6,6 +6,7 @@ const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const employee=read("app/api/restaurant/employee-provision/route.ts");
 const dining=read("lib/restaurant/dining.ts");
 const restaurant=read("app/restaurant/page.tsx");
+const manager=read("app/restaurant/resource-manager.tsx");
 
 test("employee account fallback compares role columns with explicit matching collations",()=>{
  assert.match(employee,/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/);
@@ -29,4 +30,13 @@ test("restaurant workspace joins normalize potentially mixed-collation text keys
   "u.id COLLATE utf8mb4_unicode_ci=m.user_id COLLATE utf8mb4_unicode_ci",
   "b.id COLLATE utf8mb4_unicode_ci=a.branch_id COLLATE utf8mb4_unicode_ci"
  ]) assert.ok(restaurant.includes(fragment),fragment);
+});
+
+test("legacy employee permission recovery is scoped and the edit form always invokes PATCH",()=>{
+ assert.ok(employee.includes("if(candidates.length===1)userId=String(candidates[0].id);"));
+ assert.ok(employee.includes("m.user_id COLLATE utf8mb4_unicode_ci=u.id COLLATE utf8mb4_unicode_ci"));
+ assert.ok(employee.includes("a.branch_id=?"));
+ assert.ok(employee.includes("EMPLOYEE_PERMISSION_READ_FAILED"));
+ assert.ok(manager.includes('else if(module==="team"&&editing){'));
+ assert.ok(!manager.includes('else if(module==="team"&&editing&&staffLinked){'));
 });
