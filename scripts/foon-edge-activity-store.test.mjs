@@ -52,3 +52,33 @@ test("journal rejects invalid activity, malformed scope and unsafe limits",async
   assert.throws(()=>store.read(scope,{activity:"unknown"}),/INVALID_ACTIVITY/);
  }finally{store.close();await rm(dir,{recursive:true,force:true});}
 });
+
+test("journal accepts and isolates every supported FOON activity",async()=>{
+ const activities=["restaurant","cafe","grocery","fashion","perfume_beauty","accessories_watches","gifts_packaging","ecommerce","car_wash","laundry","vehicle_services","salon_beauty","contracting","general_services"];
+ const dir=await mkdtemp(join(tmpdir(),"foon-activity-matrix-"));
+ const store=openActivityStore(join(dir,"offline.sqlite"),{verifyReceipt:verified});
+ try{
+  for(const [index,activity] of activities.entries()){
+   const result=store.append(scope,event({activity,entityType:"record",entityId:"record-"+index,idempotencyKey:"device-1:activity:"+index,payload:{activity,index}}));
+   assert.equal(result.version,1,activity);
+  }
+  const rows=store.read(scope);
+  assert.equal(rows.length,activities.length);
+  assert.deepEqual(new Set(rows.map(row=>row.activity)),new Set(activities));
+  assert.equal(store.pending(scope,500).length,activities.length);
+  assert.equal(store.read({...scope,tenantId:"tenant-other"}).length,0);
+  assert.equal(store.read({...scope,branchId:"branch-other"}).length,0);
+ }finally{store.close();await rm(dir,{recursive:true,force:true});}
+});
+
+test("journal refuses a receipt for a different event or payload digest",async()=>{
+ const dir=await mkdtemp(join(tmpdir(),"foon-activity-receipt-"));
+ const store=openActivityStore(join(dir,"offline.sqlite"),{verifyReceipt:verified});
+ try{
+  const created=store.append(scope,event());
+  const pending=store.pending(scope)[0];
+  assert.throws(()=>store.acknowledge(created.seq,{receiptId:"receipt-0001",eventId:"another-event",digest:pending.digest}),/INVALID_CLOUD_RECEIPT/);
+  assert.throws(()=>store.acknowledge(created.seq,{receiptId:"receipt-0001",eventId:pending.eventId,digest:"0".repeat(64)}),/INVALID_CLOUD_RECEIPT/);
+  assert.equal(store.pending(scope).length,1);
+ }finally{store.close();await rm(dir,{recursive:true,force:true});}
+});
