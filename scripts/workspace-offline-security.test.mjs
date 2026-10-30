@@ -80,3 +80,11 @@ test('offline public cached menu remains usable, but reserved business aliases a
  const response=await sw.fire('fetch',request('/alpha?language=fr'));
  assert.equal(await response.text(),'<h1>PUBLIC ALPHA</h1>');
 });
+
+
+test('restaurant POS hands offline checkout to the encrypted, tenant-and-branch scoped local POS without claiming the current cart was saved',async()=>{
+ const workspace=await readFile(new URL('../app/restaurant/order-workspace.tsx',import.meta.url),'utf8');
+ assert.match(workspace,/if\(!navigator\.onLine\)\{const offlineUrl=scope\?"\/foon-offline-pos\.html\?tenant="\+encodeURIComponent\(tenantId\)\+"&branch="\+encodeURIComponent\(scope\)/);
+ assert.match(workspace,/window\.open\(offlineUrl,"_blank","noopener,noreferrer"\)/);
+ assert.match(workspace,/لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل/);
+});
