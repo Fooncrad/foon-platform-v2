@@ -96,7 +96,7 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
   const id=requestRef.current.key,body={...payload,requestKey:id};
   setBusy(true);
   try{
-   if(!navigator.onLine){const offlineUrl=scope?"/foon-offline-pos.html?tenant="+encodeURIComponent(tenantId)+"&branch="+encodeURIComponent(scope):"";if(offlineUrl){const opened=window.open(offlineUrl,"_blank","noopener,noreferrer");setMessage(opened?"انقطع الإنترنت. افتح نقطة البيع المحلية المشفرة في النافذة الجديدة، وأعد اختيار الأصناف وحفظ الطلب هناك. لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل.":"انقطع الإنترنت. اسمح بالنوافذ المنبثقة ثم افتح نقطة البيع المحلية المشفرة من الشريط العلوي. لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل.");}else setMessage("لا يوجد فرع محدد لنقطة البيع المحلية. لم يُحفظ الطلب.");return;}
+   if(!navigator.onLine){const offlineUrl=scope?"/foon-offline-pos.html?tenant="+encodeURIComponent(tenantId)+"&branch="+encodeURIComponent(scope):"";if(offlineUrl){window.open(offlineUrl,"_blank");setMessage("انقطع الإنترنت. انتقل إلى نقطة البيع المحلية المشفرة، وأعد اختيار الأصناف وحفظ الطلب هناك. إذا لم تفتح النافذة تلقائيًا، استخدم رابط نقطة البيع المحلية من الشريط العلوي. لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل.");}else setMessage("لا يوجد فرع محدد لنقطة البيع المحلية. لم يُحفظ الطلب.");return;}
    await operationApi(tenantId,"pos","POST",body);requestRef.current=null;setCart({});setQuantityDrafts({});setMessage(ui.created);void refresh().then(()=>onChanged()).catch(()=>setMessage("تم تأكيد الطلب من الخادم، لكن تعذر تحديث القائمة. أعد تحميل الطلبات عند عودة الاتصال."));
   }catch(error){
    if(isNetworkFailure(error)){
