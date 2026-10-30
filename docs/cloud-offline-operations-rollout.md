@@ -26,3 +26,29 @@ Scope: the hosted FOON V2 application in `Fooncrad/foon-platform-v2`, based dire
 - Do not cache authenticated HTML, dashboards, RSC payloads, API responses, customer records, or staff records in the service worker.
 - A server acknowledgement is terminal for that queue item. Never resurrect it from a retry or backup.
 - Fail closed when identity, tenant, branch, permissions, encryption, or local authorization cannot be verified.
+
+## Second-pass implementation audit (2026-10-30)
+
+### What the current cloud code already supports
+
+- The authenticated POS read endpoint is activity-aware: `salesProfile` selects the legacy restaurant menu for restaurant tenants and the shared catalog for supported non-restaurant activities. `activityPosMenu` returns enabled, branch-scoped catalog products (up to 1,000) and their current price, stock, measurement policy, and variant metadata.
+- The encrypted local POS profile is bound to the authenticated user, tenant, and branch. It uses PBKDF2 (310,000 iterations) to derive an AES-GCM key, expires after eight hours, and locks after fifteen minutes of inactivity.
+- The local queue accepts only simple active items with a valid non-negative price. It deliberately excludes measured items, variants, and option groups. Its supported channels are only `takeaway` and `dine_in`; dine-in additionally requires a cached available table and capacity check.
+- Replay re-authenticates the same user and branch, uses an exclusive Web Lock, posts through the existing authenticated POS API, and relies on the server request key/fingerprint for idempotency. Network failures retain the encrypted queue item; deterministic server rejections are retained as `needs_review`.
+- The server remains authoritative for current tenant membership, branch and employee permissions, activity profile, catalog availability, price/currency, variants/options, stock, channel policy, tax/checkout totals, and request-key conflicts.
+- The service worker caches only the data-free offline shell and explicitly saved public menu pages/images. Authenticated dashboards, private HTML/RSC, and API responses remain network-only.
+
+### Verified gaps — do not describe these as completed
+
+- The hosted POS workspace itself still refuses to create an order while offline. It directs the operator to the separate encrypted local POS page.
+- The local POS page is a constrained fallback, not full parity with the online POS. It cannot accept measured products, variants/options, customer details, notes, coupons, manual payments, reservations, delivery assignment, or pickup-point selection.
+- Although the shared catalog endpoint can read products for non-restaurant activities, the offline queue still submits through the generic order/POS workflow. This does not implement offline service-order lifecycles for car wash, laundry, salons, vehicle services, or contracting, and it does not prove every activity's channels and plan entitlements are compatible.
+- The offline profile currently does not persist an explicit activity code/capability contract. A future shared queue must bind the activity and payload version, and the server must reject a replay if the tenant's activity or supported order contract has changed.
+- The existing plaintext `lib/restaurant/offline-pos.ts` queue is not an acceptable substitute for the encrypted local queue for new customer/staff data.
+
+### Next implementation slice
+
+1. Add a server-issued activity/capability contract to the encrypted local profile and bind every queued order to it.
+2. Build an explicit activity matrix for POS-capable catalog activities versus service-order activities. Keep unsupported workflows blocked rather than converting them into generic takeaway orders.
+3. Add focused tests for every supported activity, activity changes between queue and replay, measured/variant rejection, channel entitlement changes, account/branch switching, and duplicate replay after a response-loss window.
+4. Only then extend the offline UI or queue schema. Keep service-worker privacy boundaries unchanged.
