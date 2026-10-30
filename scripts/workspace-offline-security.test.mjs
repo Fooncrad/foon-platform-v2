@@ -88,3 +88,12 @@ test('restaurant POS hands offline checkout to the encrypted, tenant-and-branch 
  assert.match(workspace,/window\.open\(offlineUrl,"_blank"\)/);
  assert.match(workspace,/لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل/);
 });
+
+
+test('encrypted offline POS retries its pending queue when browser connectivity returns',async()=>{
+ const pos=await readFile(new URL('../public/foon-offline-pos.js',import.meta.url),'utf8');
+ assert.match(pos,/window\.addEventListener\("online",\(\)=>\{if\(active\)void sync\(\)\.catch\(/);
+ assert.match(pos,/تعذرت المزامنة التلقائية/);
+ assert.match(pos,/requestKey:id/);
+ assert.match(pos,/navigator\.locks\.request\("foon-pos-secure-sync-/);
+});
