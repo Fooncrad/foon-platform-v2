@@ -532,6 +532,9 @@ async function init(){
  action("unlock-btn",()=>openProfile($("profiles").value,$("unlock-pass").value));
  action("save-order",saveOrder);
  action("sync-btn",sync);
+ // Retry encrypted pending orders automatically after connectivity returns.
+ // The server remains authoritative; stable requestKey values protect against duplicate creation.
+ window.addEventListener("online",()=>{if(active)void sync().catch(error=>{if(active)notice("تعذرت المزامنة التلقائية: "+String(error.message||error)+" · بقيت الطلبات محفوظة محليًا.",true);});});
  action("refresh-btn",refresh);
  action("export-btn",exportEncrypted);
  action("legacy-recover",recoverLegacy);
