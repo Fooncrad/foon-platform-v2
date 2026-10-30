@@ -15,7 +15,7 @@ const digest=value=>createHash("sha256").update(json(value)).digest("hex");
  * UI/API adapters must supply authenticated tenant, branch and device scope;
  * this module never accepts scope from an untrusted payload.
  */
-export function openActivityStore(file){
+export function openActivityStore(file,{verifyReceipt}={}){
  const path=resolve(file);mkdirSync(dirname(path),{recursive:true});
  const db=new DatabaseSync(path);
  db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
@@ -93,7 +93,9 @@ export function openActivityStore(file){
   db.prepare("UPDATE activity_outbox SET state='conflict',attempts=attempts+1,last_error=? WHERE event_seq=? AND state<>'synced'").run(String(reason||"VERSION_CONFLICT").slice(0,160),seq);
  }
  function acknowledge(seq,receipt){
-  if(!Number.isSafeInteger(seq)||seq<1||!receipt||typeof receipt.receiptId!=="string"||receipt.receiptId.length<8)throw Error("INVALID_CLOUD_RECEIPT");
+  if(!Number.isSafeInteger(seq)||seq<1||!receipt||typeof receipt.receiptId!=="string"||receipt.receiptId.length<8||typeof verifyReceipt!=="function")throw Error("INVALID_CLOUD_RECEIPT");
+  const event=db.prepare("SELECT * FROM activity_events WHERE seq=?").get(seq);
+  if(!event||verifyReceipt(event,receipt)!==true)throw Error("INVALID_CLOUD_RECEIPT");
   const result=db.prepare("UPDATE activity_outbox SET state='synced',receipt_id=?,synced_at=?,last_error=NULL WHERE event_seq=? AND state<>'synced'").run(receipt.receiptId,iso(),seq);
   if(!result.changes&&!db.prepare("SELECT 1 FROM activity_outbox WHERE event_seq=? AND state='synced' AND receipt_id=?").get(seq,receipt.receiptId))throw Error("UNKNOWN_ACTIVITY_EVENT");
   return {synced:true,duplicate:result.changes===0};
