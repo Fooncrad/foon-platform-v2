@@ -256,7 +256,7 @@ async function sync(){
     if(["SESSION_EXPIRED","USER_CHANGED","ACCESS_DENIED"].includes(error.message)){lock("انتهت صلاحيات الحساب. تحقق من تسجيل الدخول قبل مزامنة الطلبات.");throw error;}
     if(error instanceof TypeError||!navigator.onLine)throw new Error("NETWORK_UNAVAILABLE_ORDERS_RETAINED");
     const changed={...item,status:"needs_review",lastError:String(error.message)};
-    const cipher=await seal(active.key,record.id,"order:"+item.id,changed);
+    const cipher=await seal(key,record.id,"order:"+item.id,changed);
     await put("orders",{...row,...cipher});
    }
   }
