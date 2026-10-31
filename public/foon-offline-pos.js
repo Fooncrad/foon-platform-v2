@@ -64,9 +64,9 @@ async function authorized(tenantId,branchId,expectedUser){
  return {user,data};
 }
 const localeLabels={
- ar:{unlock:"تم فتح النسخة المحلية.",locked:"البيانات مقفلة.",prepared:"تم إعداد النسخة مشفرة لهذا المستخدم والمتجر والفرع.",saved:"حُفظ الطلب مشفرًا ولم يصل للمطعم بعد.",empty:"أضف أصنافًا أولاً.",expired:"انتهت صلاحية النسخة. أعد إعدادها أثناء الاتصال.",bad:"عبارة المرور غير صحيحة، أو النسخة تالفة.",sync:"اكتملت محاولة المزامنة. راجع النتائج.",review:"الطلب يحتاج مراجعة قبل إعادة إرساله.",lockedOut:"انتهت مدة العمل المحلية؛ أعد فتح النسخة.",activityOnlineOnly:"هذا النشاط يعتمد على دورة خدمات أو عمليات غير مدعومة في نقطة البيع المحلية؛ أنشئ الطلب عند توفر الإنترنت."},
- en:{unlock:"Local profile unlocked.",locked:"Private data locked.",prepared:"Encrypted local profile prepared.",saved:"Order encrypted locally; not yet delivered.",empty:"Add items first.",expired:"Local authorization expired. Prepare again online.",bad:"Incorrect passphrase or corrupted profile.",sync:"Sync attempt completed. Review results.",review:"Order requires manual review.",lockedOut:"Local session timed out. Unlock again.",activityOnlineOnly:"This activity uses a service or workflow lifecycle that is not supported by the local POS. Create it when online."},
- fr:{unlock:"Profil local déverrouillé.",locked:"Données privées verrouillées.",prepared:"Profil local chiffré préparé.",saved:"Commande chiffrée localement, non envoyée.",empty:"Ajoutez des articles.",expired:"Autorisation locale expirée. Préparez de nouveau en ligne.",bad:"Phrase secrète incorrecte ou profil corrompu.",sync:"Synchronisation terminée. Vérifiez les résultats.",review:"Commande à vérifier.",lockedOut:"Session locale expirée. Déverrouillez à nouveau.",activityOnlineOnly:"Cette activité utilise un cycle de service non pris en charge par le point de vente local. Créez-la en ligne."}
+ ar:{unlock:"تم فتح النسخة المحلية.",locked:"البيانات مقفلة.",prepared:"تم إعداد النسخة مشفرة لهذا المستخدم والمتجر والفرع.",saved:"حُفظ الطلب مشفرًا ولم يصل للمطعم بعد.",empty:"أضف أصنافًا أولاً.",expired:"انتهت صلاحية النسخة. أعد إعدادها أثناء الاتصال.",bad:"عبارة المرور غير صحيحة، أو النسخة تالفة.",sync:"اكتملت محاولة المزامنة. راجع النتائج.",review:"الطلب يحتاج مراجعة قبل إعادة إرساله.",lockedOut:"انتهت مدة العمل المحلية؛ أعد فتح النسخة.",activityOnlineOnly:"هذا النشاط يعتمد على دورة خدمات أو عمليات غير مدعومة في نقطة البيع المحلية؛ أنشئ الطلب عند توفر الإنترنت.",profileUpdateRequired:"اتصل بالإنترنت مرة واحدة لتحديث صلاحية النسخة المحلية ونشاط المتجر قبل فتحها."},
+ en:{unlock:"Local profile unlocked.",locked:"Private data locked.",prepared:"Encrypted local profile prepared.",saved:"Order encrypted locally; not yet delivered.",empty:"Add items first.",expired:"Local authorization expired. Prepare again online.",bad:"Incorrect passphrase or corrupted profile.",sync:"Sync attempt completed. Review results.",review:"Order requires manual review.",lockedOut:"Local session timed out. Unlock again.",activityOnlineOnly:"This activity uses a service or workflow lifecycle that is not supported by the local POS. Create it when online.",profileUpdateRequired:"Reconnect once to refresh this encrypted profile and the store activity before opening it."},
+ fr:{unlock:"Profil local déverrouillé.",locked:"Données privées verrouillées.",prepared:"Profil local chiffré préparé.",saved:"Commande chiffrée localement, non envoyée.",empty:"Ajoutez des articles.",expired:"Autorisation locale expirée. Préparez de nouveau en ligne.",bad:"Phrase secrète incorrecte ou profil corrompu.",sync:"Synchronisation terminée. Vérifiez les résultats.",review:"Commande à vérifier.",lockedOut:"Session locale expirée. Déverrouillez à nouveau.",activityOnlineOnly:"Cette activité utilise un cycle de service non pris en charge par le point de vente local. Créez-la en ligne.",profileUpdateRequired:"Reconnectez-vous une fois pour actualiser ce profil chiffré et l’activité du magasin avant de l’ouvrir."}
 };
 const language=location.search.includes("lang=fr")?"fr":location.search.includes("lang=en")?"en":"ar",msg=k=>localeLabels[language][k];
 if(language!=="ar"){document.documentElement.lang=language;document.documentElement.dir="ltr";}
@@ -104,8 +104,8 @@ async function prepare(){
  if(pass.length<12||pass.length>128)throw new Error("PASSPHRASE_12_REQUIRED");
  const {user,data}=await authorized(tenant,branch);
  const contract=data.offlineContract;
- if(!contract||contract.version!==1||contract.activityCode!==data.activityCode)throw new Error("OFFLINE_PROFILE_UPDATE_REQUIRED");
- if(!contract.enabled)throw new Error(contract.orderKind==="service_order"?"SERVICE_WORKFLOW_ONLINE_REQUIRED":"OFFLINE_ACTIVITY_UNSUPPORTED");
+ if(!contract||contract.version!==1||contract.activityCode!==data.activityCode)throw new Error(msg("profileUpdateRequired"));
+ if(!contract.enabled)throw new Error(msg("activityOnlineOnly"));
  const id=idOf(user,tenant,branch),prior=await get("profiles",id);
  const salt=prior?.salt||Array.from(bytes(16)),key=await keyFor(pass,salt);
  if(prior){try{await unseal(key,id,"profile",prior);}catch{throw new Error("EXISTING_PROFILE_PASSPHRASE_REQUIRED");}}
@@ -126,7 +126,7 @@ async function openProfile(id,pass){
  if(record.reauthRequired||Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt)||!data.offlineContract||data.offlineContract.version!==1||data.offlineContract.activityCode!==data.activityCode){
   // Logout, account switch or expiry blocks offline access. Pending encrypted
   // orders are retained and can be recovered after new server authentication.
-  if(!navigator.onLine)throw new Error(msg("expired"));
+  if(!navigator.onLine)throw new Error(!data.offlineContract||data.offlineContract.version!==1||data.offlineContract.activityCode!==data.activityCode?msg("profileUpdateRequired"):msg("expired"));
   const access=await authorized(data.tenantId,data.branchId,data.userId);
   const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
   data={...data,activityCode:access.data.activityCode,offlineContract:access.data.offlineContract,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},currency:String(access.data.currency||data.currency),checkoutPolicy:access.data.checkoutPolicy||null,savedAt:now,expiresAt};
