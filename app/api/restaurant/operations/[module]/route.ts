@@ -17,6 +17,7 @@ import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoic
 import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
 import {reconcileLateIssuedInvoice} from "@/lib/payments/webhook-settlement";
 import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
+import {buildOfflinePosContract} from "@/lib/restaurant/offline-pos-contract";
 import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
 import {scopedStaffOverview} from "@/lib/restaurant/scoped-staff-overview";
 import {assignedWaiterTableIds} from "@/lib/restaurant/waiter-assignments";
@@ -190,7 +191,7 @@ export async function GET(request:Request,{params}:{params:Promise<{module:strin
    }
    return NextResponse.json({ok:true,resources,references:refs,truncated});
   }
-  if(["orders","pos","kds"].includes(module)){const profile=await salesProfile(db,ctx.tenantId);const menu=module==="pos"?(profile.catalog?await activityPosMenu(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,"menu",branch)):[];return NextResponse.json({ok:true,currency:profile.currency,legacyRecoveryAllowed:module==="pos"&&["owner","manager"].includes(ctx.role),checkoutPolicy:module==="pos"?(await checkoutSettings(db,ctx.tenantId)).policy:undefined,catalogSource:profile.catalog?"activity":"restaurant",orders:await ordersRows(db,ctx.tenantId,ctx.role,branch,ctx.user),menu,options:module==="pos"?(profile.catalog?await activityPosOptions(db,ctx.tenantId,menu.map(i=>i.id)):await menuOptions(db,ctx.tenantId,menu.map(i=>i.id))):{},tables:module==="pos"&&profile.dining&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
+  if(["orders","pos","kds"].includes(module)){const profile=await salesProfile(db,ctx.tenantId);const menu=module==="pos"?(profile.catalog?await activityPosMenu(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,"menu",branch)):[];return NextResponse.json({ok:true,currency:profile.currency,...(module==="pos"?{activityCode:profile.activityCode,offlineContract:buildOfflinePosContract(profile.activityCode)}:{}),legacyRecoveryAllowed:module==="pos"&&["owner","manager"].includes(ctx.role),checkoutPolicy:module==="pos"?(await checkoutSettings(db,ctx.tenantId)).policy:undefined,catalogSource:profile.catalog?"activity":"restaurant",orders:await ordersRows(db,ctx.tenantId,ctx.role,branch,ctx.user),menu,options:module==="pos"?(profile.catalog?await activityPosOptions(db,ctx.tenantId,menu.map(i=>i.id)):await menuOptions(db,ctx.tenantId,menu.map(i=>i.id))):{},tables:module==="pos"&&profile.dining&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
   if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch,ctx.user)});
   if(module==="reports"){
    const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");
