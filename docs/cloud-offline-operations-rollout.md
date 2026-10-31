@@ -52,3 +52,21 @@ Scope: the hosted FOON V2 application in `Fooncrad/foon-platform-v2`, based dire
 2. Build an explicit activity matrix for POS-capable catalog activities versus service-order activities. Keep unsupported workflows blocked rather than converting them into generic takeaway orders.
 3. Add focused tests for every supported activity, activity changes between queue and replay, measured/variant rejection, channel entitlement changes, account/branch switching, and duplicate replay after a response-loss window.
 4. Only then extend the offline UI or queue schema. Keep service-worker privacy boundaries unchanged.
+
+
+## Implemented cloud slice (2026-10-31)
+
+- The connected restaurant POS now opens the encrypted local POS page when it detects the browser is offline and has a selected branch. The handoff is explicit: the current cart is **not** transferred or claimed as saved; the operator must rebuild the simple order in the local page.
+- The POS API now returns the tenant activity code and a versioned offline capability contract. The encrypted profile stores that contract, and each queued order carries its activity code and contract version.
+- Offline catalog checkout is enabled only for simple product-sale activities: restaurant, cafe, sweets, grocery, clothing, perfume, accessories, watches, gifts, and ecommerce. Restaurant/cafe may use takeaway or dine-in; other enabled activities are takeaway-only.
+- Service lifecycle activities (carwash, laundry, automotive, salon, and publicworks), unknown activity codes, service products, measured items, variants/options, customer data, notes, coupons, payments, delivery, reservations, and pickup-point workflows remain online-only.
+- The server checks contract-tagged offline replays against the current activity after the existing request-key duplicate lookup. This ordering preserves a successful request whose response was lost, while rejecting a not-yet-accepted replay after the activity contract changes.
+- When connectivity returns while the encrypted POS page remains open and unlocked, it retries the encrypted queue. Network failures retain pending rows; stale contracts and deterministic validation failures move rows to manual review. The existing exclusive Web Lock remains in use.
+- No Service Worker caching boundary was widened. Authenticated dashboard/API/SSR/RSC data remains network-only.
+
+### Verification state for this slice
+
+- Added contract-matrix and replay-envelope tests to `scripts/foon-offline-pos.test.mjs`; that file is already included by `test:resources` and `test:offline-pos`.
+- Added source-level integration assertions for the cloud handoff, activity binding, idempotency ordering, and online retry.
+- These tests have **not** been executed in this run. The GitHub commit status endpoint returned no checks and no workflow runs were available for the new head; local Node/Next.js/MariaDB execution is not available here.
+- The change set is restricted to cloud app/API/library/public/test/docs paths. No Windows path is present in the compare result.
