@@ -9,17 +9,17 @@ import type {MenuGroup} from "./menu";
 export type StockDebit={kind:"product"|"option"|"variant";id:string;quantity:number};
 export async function salesProfile(db:PoolConnection,tenantId:string){
  const [rows]=await db.execute<RowDataPacket[]>("SELECT activity_code,currency FROM tenant_business_profiles WHERE tenant_id=? LIMIT 1",[tenantId]);
- const activity=String(rows[0]?.activity_code??"");
+ const activity=String(rows[0]?.activity_code??"").trim()||"restaurant";
  // Preserve the existing restaurant catalog for legacy tenants without a supported profile.
  const catalog=isActivityType(activity)&&activity!=="restaurant";
  const currency=catalog?String(rows[0]?.currency??"SAR"):"SAR";
  if(!/^[A-Z]{3}$/.test(currency))throw new ResourceError("UNSUPPORTED_CURRENCY");
- return {catalog,currency,dining:!catalog||activity==="cafe"};
+ return {activityCode:activity,catalog,currency,dining:!catalog||activity==="cafe"};
 }
 export async function activityPosMenu(db:PoolConnection,tenantId:string,branch:string|null){
  const [rows]=await db.execute<RowDataPacket[]>("SELECT p.id,p.branch_id,p.name_ar,p.price,p.currency,p.product_type,p.stock_quantity,p.attributes,p.created_at,c.name_ar AS category_name FROM catalog_products p JOIN catalog_categories c ON c.id=p.category_id AND c.tenant_id=p.tenant_id WHERE p.tenant_id=? AND p.enabled=TRUE AND c.enabled=TRUE"+(branch?" AND (p.branch_id IS NULL OR p.branch_id=?) AND (c.branch_id IS NULL OR c.branch_id=?)":"")+" ORDER BY c.sort_order,p.sort_order,p.id LIMIT 1000",branch?[tenantId,branch,branch]:[tenantId]);
  const [variants]=await db.execute<RowDataPacket[]>("SELECT product_id,option_ids,stock_quantity,enabled FROM catalog_variants WHERE tenant_id=?",[tenantId]);
- return rows.map(p=>({id:String(p.id),branch_id:p.branch_id,name:String(p.name_ar),status:p.product_type!=="service"&&p.stock_quantity!==null&&Number(p.stock_quantity)<=0?"unavailable":"active",version:1,created_at:p.created_at,data:{price:Number(p.price),currency:String(p.currency),categoryName:String(p.category_name),stockQuantity:p.stock_quantity===null?null:Number(p.stock_quantity),...catalogQuantityPolicy(p.attributes),variants:variants.filter(v=>v.product_id===p.id).map(v=>({options:typeof v.option_ids==="string"?JSON.parse(v.option_ids):v.option_ids,stock:v.enabled?(v.stock_quantity===null?null:Number(v.stock_quantity)):0}))}}));
+ return rows.map(p=>({id:String(p.id),branch_id:p.branch_id,name:String(p.name_ar),status:p.product_type!=="service"&&p.stock_quantity!==null&&Number(p.stock_quantity)<=0?"unavailable":"active",version:1,created_at:p.created_at,data:{price:Number(p.price),currency:String(p.currency),productType:String(p.product_type),categoryName:String(p.category_name),stockQuantity:p.stock_quantity===null?null:Number(p.stock_quantity),...catalogQuantityPolicy(p.attributes),variants:variants.filter(v=>v.product_id===p.id).map(v=>({options:typeof v.option_ids==="string"?JSON.parse(v.option_ids):v.option_ids,stock:v.enabled?(v.stock_quantity===null?null:Number(v.stock_quantity)):0}))}}));
 }
 export async function activityPosOptions(db:PoolConnection,tenantId:string,ids:string[],lock=false){
  const result:Record<string,MenuGroup[]>={};if(!ids.length)return result;
