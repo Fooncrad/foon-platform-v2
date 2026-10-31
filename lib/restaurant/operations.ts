@@ -441,7 +441,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   if(existing.length){if(existing[0].request_fingerprint!==fingerprint)throw new ResourceError("CONFLICT");return{id:String(existing[0].id),total:Number(existing[0].total),currency:String(existing[0].currency)};}
  }
  const profile=await salesProfile(db,tenantId);
- if(body.offlineContractVersion!==undefined&&!offlinePosEnvelopeAllowed(buildOfflinePosContract(profile.activityCode),body))throw new ResourceError("OFFLINE_CONTRACT_CHANGED");
+ if((body.offlineContractVersion!==undefined||body.offlineActivityCode!==undefined)&&!offlinePosEnvelopeAllowed(buildOfflinePosContract(profile.activityCode),body))throw new ResourceError("OFFLINE_CONTRACT_CHANGED");
  await branchExists(db,tenantId,branchId);
  let reservationData:Record<string,unknown>|null=null;
  if(reservationId){
