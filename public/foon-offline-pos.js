@@ -225,7 +225,7 @@ async function saveOrder(){
  cart.clear();renderCart();await renderQueue();notice(msg("saved"));
 }
 async function sync(){
- const {record,data}=valid();
+ const {record,data,key}=valid();
  if(!navigator.onLine)throw new Error("INTERNET_REQUIRED");
  if(!navigator.locks?.request)throw new Error("WEB_LOCKS_REQUIRED");
  const run=async()=>{
