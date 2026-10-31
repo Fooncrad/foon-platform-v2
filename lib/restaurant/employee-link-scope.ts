@@ -19,19 +19,19 @@ export async function resolveBoundEmployeeUser(
   SELECT m.user_id
   FROM memberships m
   JOIN employee_branch_assignments a
-   ON a.tenant_id=m.tenant_id AND a.user_id=m.user_id AND a.branch_id=?
+   ON a.tenant_id COLLATE utf8mb4_unicode_ci=m.tenant_id COLLATE utf8mb4_unicode_ci AND a.user_id COLLATE utf8mb4_unicode_ci=m.user_id COLLATE utf8mb4_unicode_ci AND a.branch_id COLLATE utf8mb4_unicode_ci=?
    AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
-  JOIN users u ON u.id=m.user_id AND u.status='active'
+  JOIN users u ON u.id COLLATE utf8mb4_unicode_ci=m.user_id COLLATE utf8mb4_unicode_ci AND u.status='active'
   WHERE m.tenant_id=? AND m.user_id=? AND m.role=? AND m.status='active'
    AND NOT EXISTS (
     SELECT 1 FROM memberships customer
-    WHERE customer.user_id=m.user_id AND customer.role='customer' AND customer.status='active'
+    WHERE customer.user_id COLLATE utf8mb4_unicode_ci=m.user_id COLLATE utf8mb4_unicode_ci AND customer.role='customer' AND customer.status='active'
    )
    AND NOT EXISTS (
-    SELECT 1 FROM tenant_customers tc WHERE tc.user_id=m.user_id
+    SELECT 1 FROM tenant_customers tc WHERE tc.user_id COLLATE utf8mb4_unicode_ci=m.user_id COLLATE utf8mb4_unicode_ci
    )
    AND NOT EXISTS (
-    SELECT 1 FROM platform_admins pa WHERE pa.user_id=m.user_id
+    SELECT 1 FROM platform_admins pa WHERE pa.user_id COLLATE utf8mb4_unicode_ci=m.user_id COLLATE utf8mb4_unicode_ci
    )
   LIMIT 2
  `,[branchId,tenantId,userId,role]);
