@@ -156,6 +156,8 @@ test("offline replay envelope rejects activity drift, customer data, payments an
  assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery")),true);
  assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("clothing")),false);
  assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{offlineContractVersion:2})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{offlineContractVersion:undefined})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{offlineActivityCode:undefined})),false);
  assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{channel:"delivery"})),false);
  assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{customerPhone:"0550000000"})),false);
  assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{couponCode:"SAVE10"})),false);
