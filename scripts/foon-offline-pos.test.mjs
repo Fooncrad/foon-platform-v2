@@ -188,6 +188,8 @@ test("cloud POS and secure local POS enforce the activity contract and preserve 
  const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
  assert.match(local,/offlineContractVersion:data\.offlineContract\.version,offlineActivityCode:data\.offlineContract\.activityCode/);
  assert.match(local,/OFFLINE_ACTIVITY_CONTRACT_CHANGED_ORDERS_RETAINED/);
+ const syncStart=local.indexOf("async function sync()");
+ assert.match(local.slice(syncStart,syncStart+100),/const \\{record,data,key\\}=valid\\(\\)/,"sync must retain the profile encryption key in its closure");
  assert.match(local,/item\.data\.productType!==\"service\"/);
 });
 
