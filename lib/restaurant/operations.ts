@@ -16,6 +16,7 @@ import {diningTable,prepareDiningResource} from "./dining";
 import {canonicalMenuModules,canonicalMenuRows,saveCanonicalMenu,menuOptions} from "./menu";
 import {catalogQuantityPolicy,validCatalogQuantity} from "@/lib/platform/catalog-measurements";
 import {debitCatalogVariant,salesProfile,activityPosOptions,activitySaleItem,debitActivityStock,ensureActivitySaleReference,restoreActivityStock,type StockDebit} from "./activity-pos";
+import {buildOfflinePosContract,offlinePosEnvelopeAllowed} from "./offline-pos-contract";
 
 export type StoredResource={currency?:string;id:string;branch_id:string|null;name:string;status:string;data:Record<string,string|number|null>;version:number|string;created_at:string};
 export const parseData=(value:unknown):Record<string,string|number|null>=>typeof value==="string"?JSON.parse(value):value as Record<string,string|number|null>;
@@ -439,6 +440,8 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   const [existing]=await db.execute<RowDataPacket[]>("SELECT id,total,currency,request_fingerprint FROM restaurant_orders WHERE tenant_id=? AND created_by=? AND request_key=? FOR UPDATE",[tenantId,actor,requestKey]);
   if(existing.length){if(existing[0].request_fingerprint!==fingerprint)throw new ResourceError("CONFLICT");return{id:String(existing[0].id),total:Number(existing[0].total),currency:String(existing[0].currency)};}
  }
+ const profile=await salesProfile(db,tenantId);
+ if(body.offlineContractVersion!==undefined&&!offlinePosEnvelopeAllowed(buildOfflinePosContract(profile.activityCode),body))throw new ResourceError("OFFLINE_CONTRACT_CHANGED");
  await branchExists(db,tenantId,branchId);
  let reservationData:Record<string,unknown>|null=null;
  if(reservationId){
@@ -474,7 +477,6 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
   if(pickupPoints.length&&customerId&&!body.pickupPointId)throw new ResourceError("PICKUP_POINT_REQUIRED");
   if(body.pickupPointId){const point=pickupPoints.find(row=>String(row.id)===body.pickupPointId);if(!point)throw new ResourceError("PICKUP_POINT_UNAVAILABLE");const data=parseData(point.data);pickupPointSnapshot={id:String(point.id),name:String(point.name),address:String(data.address??""),instructions:data.instructions?String(data.instructions):null,mapUrl:data.mapUrl?String(data.mapUrl):null};}
  }else if(body.pickupPointId!=null)throw new ResourceError("INVALID_INPUT");
- const profile=await salesProfile(db,tenantId);
  if(body.currency!==undefined&&body.currency!==profile.currency)throw new ResourceError("CURRENCY_CHANGED");
  if(!profile.dining&&body.channel==="dine_in")throw new ResourceError("CHANNEL_UNAVAILABLE");
  let assignedDriverId:string|null=null;
