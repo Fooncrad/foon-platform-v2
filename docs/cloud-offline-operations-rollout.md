@@ -46,12 +46,12 @@ Scope: the hosted FOON V2 application in `Fooncrad/foon-platform-v2`, based dire
 - The offline profile currently does not persist an explicit activity code/capability contract. A future shared queue must bind the activity and payload version, and the server must reject a replay if the tenant's activity or supported order contract has changed.
 - The existing plaintext `lib/restaurant/offline-pos.ts` queue is not an acceptable substitute for the encrypted local queue for new customer/staff data.
 
-### Next implementation slice
+### Remaining implementation work
 
-1. Add a server-issued activity/capability contract to the encrypted local profile and bind every queued order to it.
-2. Build an explicit activity matrix for POS-capable catalog activities versus service-order activities. Keep unsupported workflows blocked rather than converting them into generic takeaway orders.
-3. Add focused tests for every supported activity, activity changes between queue and replay, measured/variant rejection, channel entitlement changes, account/branch switching, and duplicate replay after a response-loss window.
-4. Only then extend the offline UI or queue schema. Keep service-worker privacy boundaries unchanged.
+1. Build dedicated offline-safe service-order contracts for carwash, laundry, automotive, salon, and publicworks instead of routing those lifecycles through generic takeaway orders.
+2. Extend the supported catalog-sale matrix only after measured items, variants/options, plan/channel entitlements, and branch-specific pickup rules have complete server and recovery coverage.
+3. Add browser end-to-end tests for disconnect during submit, response loss after server acceptance, activity changes between queue and replay, concurrent tabs, account/branch switching, backup restore, and auto-sync after reconnect.
+4. Run Node 24, TypeScript, focused Playwright, and production build checks before opening a review PR. Keep the Service Worker privacy boundary unchanged.
 
 
 ## Implemented cloud slice (2026-10-31)
