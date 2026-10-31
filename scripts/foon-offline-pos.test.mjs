@@ -134,6 +134,7 @@ test("offline activity contract enables only simple catalog-sale activities and 
  assert.equal(Object.keys(ACTIVITY_PRESETS).length,15);
  const sales=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce"];
  const services=["carwash","laundry","automotive","salon","publicworks"];
+ assert.deepEqual([...sales,...services].sort(),Object.keys(ACTIVITY_PRESETS).sort(),"every registered activity must be explicitly classified");
  for(const activity of sales){
   const contract=buildOfflinePosContract(activity);
   assert.equal(contract.enabled,true,activity);
@@ -179,6 +180,7 @@ test("cloud POS and secure local POS enforce the activity contract and preserve 
  const duplicate=operations.indexOf("if(existing.length){if(existing[0].request_fingerprint",createStart);
  const contractGuard=operations.indexOf("offlinePosEnvelopeAllowed(buildOfflinePosContract(profile.activityCode),body)",createStart);
  assert.ok(createStart>=0&&duplicate>createStart&&contractGuard>duplicate,"activity validation must follow the idempotent accepted-order lookup");
+ assert.match(operations,/body\.offlineContractVersion!==undefined\|\|body\.offlineActivityCode!==undefined/);
  const route=await readFile(new URL("../app/api/restaurant/operations/[module]/route.ts",import.meta.url),"utf8");
  assert.match(route,/offlineContract:buildOfflinePosContract\(profile\.activityCode\)/);
  const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
