@@ -68,5 +68,6 @@ Scope: the hosted FOON V2 application in `Fooncrad/foon-platform-v2`, based dire
 
 - Added contract-matrix and replay-envelope tests to `scripts/foon-offline-pos.test.mjs`; that file is already included by `test:resources` and `test:offline-pos`.
 - Added source-level integration assertions for the cloud handoff, activity binding, idempotency ordering, and online retry.
-- These tests have **not** been executed in this run. The GitHub commit status endpoint returned no checks and no workflow runs were available for the new head; local Node/Next.js/MariaDB execution is not available here.
+- The contract helper passed an isolated Node smoke check covering all 15 activity classifications and five replay-envelope cases; the public offline POS JavaScript also passed a syntax parse. These are not substitutes for the repository test suite.
+- The repository test files have **not** been executed in this run. The available container has Node 22.16 but no repository checkout/dependencies; the GitHub commit status endpoint returned no checks and no workflow runs were available for the new head.
 - The change set is restricted to cloud app/API/library/public/test/docs paths. No Windows path is present in the compare result.
