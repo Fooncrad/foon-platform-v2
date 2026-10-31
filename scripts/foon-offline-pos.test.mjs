@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {stripTypeScriptTypes} from "node:module";
 import "fake-indexeddb/auto";
+import {ACTIVITY_PRESETS} from "../lib/platform/activity-presets.ts";
+import {buildOfflinePosContract,offlinePosEnvelopeAllowed} from "../lib/restaurant/offline-pos-contract.ts";
 const source=stripTypeScriptTypes(await readFile(new URL("../lib/restaurant/offline-pos.ts",import.meta.url),"utf8"),{mode:"strip"})+"\n//# sourceURL=offline-pos-runtime.mjs";
 const {queuePosOrder,pendingPosOrders,scopedPosOrders,exportPendingPosOrders,importPendingPosOrders,retryReviewedPosOrder,offlineTableBlock}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
 const id1="11111111-1111-4111-8111-111111111111",id2="22222222-2222-4222-8222-222222222222";
@@ -116,4 +118,78 @@ test("background POS sync checks do not overwrite order feedback when nothing is
  await manualError.sync(true);
  assert.match(manualError.messages[0],/تعذر فحص الطلبات المحلية/);
  assert.equal((component.match(/onClick=\{\(\)=>void syncOffline\(true\)\}/g)||[]).length,2,"both manual sync buttons should request a notice");
+});
+
+
+const offlineEnvelope=(activityCode,overrides={})=>({
+ offlineContractVersion:1,offlineActivityCode:activityCode,
+ branchId:id1,requestKey:id2,currency:"SAR",channel:"takeaway",tableId:null,partySize:null,
+ customerName:"",customerPhone:"",couponCode:null,kitchenNotes:null,orderNotes:null,
+ items:[{id:id1,quantity:1,options:[]}],...overrides
+});
+
+test("offline activity contract enables only simple catalog-sale activities and keeps service lifecycles online",()=>{
+ assert.equal(Object.keys(ACTIVITY_PRESETS).length,15);
+ const sales=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce"];
+ const services=["carwash","laundry","automotive","salon","publicworks"];
+ for(const activity of sales){
+  const contract=buildOfflinePosContract(activity);
+  assert.equal(contract.enabled,true,activity);
+  assert.equal(contract.orderKind,"catalog_sale",activity);
+  assert.deepEqual(contract.channels,["restaurant","cafe"].includes(activity)?["takeaway","dine_in"]:["takeaway"],activity);
+  assert.equal(contract.itemPolicy,"simple_unmeasured_no_variants_options",activity);
+ }
+ for(const activity of services){
+  const contract=buildOfflinePosContract(activity);
+  assert.equal(contract.enabled,false,activity);
+  assert.equal(contract.orderKind,"service_order",activity);
+  assert.deepEqual(contract.channels,[],activity);
+ }
+ assert.equal(buildOfflinePosContract("unrecognized-activity").enabled,false);
+});
+
+test("offline replay envelope rejects activity drift, customer data, payments and unsupported order shapes",()=>{
+ const contract=buildOfflinePosContract("grocery");
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery")),true);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("clothing")),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{offlineContractVersion:2})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{channel:"delivery"})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{customerPhone:"0550000000"})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{couponCode:"SAVE10"})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{paymentStatus:"paid",paymentMethod:"cash"})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{items:[{id:id1,quantity:1,options:[id2]}]})),false);
+ assert.equal(offlinePosEnvelopeAllowed(contract,offlineEnvelope("grocery",{items:[{id:id1,quantity:1,options:[]}],branchId:""})),false);
+ assert.equal(offlinePosEnvelopeAllowed(buildOfflinePosContract("salon"),offlineEnvelope("salon")),false);
+});
+
+test("restaurant dine-in requires a table and party size while other catalog activities remain takeaway-only",()=>{
+ const restaurant=buildOfflinePosContract("restaurant");
+ assert.equal(offlinePosEnvelopeAllowed(restaurant,offlineEnvelope("restaurant",{channel:"dine_in",tableId:id2,partySize:3})),true);
+ assert.equal(offlinePosEnvelopeAllowed(restaurant,offlineEnvelope("restaurant",{channel:"dine_in",tableId:null,partySize:3})),false);
+ assert.equal(offlinePosEnvelopeAllowed(restaurant,offlineEnvelope("restaurant",{channel:"dine_in",tableId:id2,partySize:0})),false);
+ const clothing=buildOfflinePosContract("clothing");
+ assert.equal(offlinePosEnvelopeAllowed(clothing,offlineEnvelope("clothing",{channel:"dine_in",tableId:id2,partySize:2})),false);
+});
+
+test("cloud POS and secure local POS enforce the activity contract and preserve idempotent replay",async()=>{
+ const operations=await readFile(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ const createStart=operations.indexOf("export async function createOrder");
+ const duplicate=operations.indexOf("if(existing.length){if(existing[0].request_fingerprint",createStart);
+ const contractGuard=operations.indexOf("offlinePosEnvelopeAllowed(buildOfflinePosContract(profile.activityCode),body)",createStart);
+ assert.ok(createStart>=0&&duplicate>createStart&&contractGuard>duplicate,"activity validation must follow the idempotent accepted-order lookup");
+ const route=await readFile(new URL("../app/api/restaurant/operations/[module]/route.ts",import.meta.url),"utf8");
+ assert.match(route,/offlineContract:buildOfflinePosContract\(profile\.activityCode\)/);
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ assert.match(local,/offlineContractVersion:data\.offlineContract\.version,offlineActivityCode:data\.offlineContract\.activityCode/);
+ assert.match(local,/OFFLINE_ACTIVITY_CONTRACT_CHANGED_ORDERS_RETAINED/);
+ assert.match(local,/item\.data\.productType!==\"service\"/);
+});
+
+test("cloud POS hands offline checkout to the encrypted local page without claiming the current cart was saved",async()=>{
+ const workspace=await readFile(new URL("../app/restaurant/order-workspace.tsx",import.meta.url),"utf8");
+ assert.match(workspace,/\/foon-offline-pos\.html\?tenant=/);
+ assert.match(workspace,/window\.open\(offlineUrl,\"_blank\"\)/);
+ assert.match(workspace,/لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل/);
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ assert.match(local,/window\.addEventListener\(\"online\",\(\)=>\{if\(!active\)return;void sync\(\)/);
 });
