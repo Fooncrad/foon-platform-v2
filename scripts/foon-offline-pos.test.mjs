@@ -201,3 +201,26 @@ test("cloud POS hands offline checkout to the encrypted local page without claim
  const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
  assert.match(local,/window\.addEventListener\(\"online\",\(\)=>\{if\(!active\)return;void sync\(\)/);
 });
+
+
+test("secure local replay retains encrypted orders for transient server failures",async()=>{
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ const start=local.indexOf("async function json(");
+ const end=local.indexOf("\nasync function authorized(",start);
+ assert.ok(start>=0&&end>start,"secure POS JSON helper should be available");
+ const helper=local.slice(start,end);
+ const makeJson=(status,body)=>new Function("fetch",helper+"\nreturn json;")(
+  async()=>new Response(JSON.stringify(body),{status})
+ );
+ await assert.rejects(makeJson(503,{ok:false,code:"OPERATIONS_UNAVAILABLE"})("/sync"),error=>error.status===503&&error.retryable===true);
+ await assert.rejects(makeJson(429,{ok:false,code:"RATE_LIMITED"})("/sync"),error=>error.status===429&&error.retryable===true);
+ await assert.rejects(makeJson(409,{ok:false,code:"CONFLICT"})("/sync"),error=>error.status===409&&error.retryable===false);
+ await assert.rejects(makeJson(200,{ok:false})("/sync"),error=>error.status===200&&error.retryable===true);
+ const syncStart=local.indexOf("async function sync()");
+ const retryBranch=local.indexOf("if(error.retryable===true",syncStart);
+ const reviewBranch=local.indexOf('status:"needs_review"',retryBranch);
+ assert.ok(syncStart>=0&&retryBranch>syncStart&&reviewBranch>retryBranch,"transient failures must be handled before permanent failures are moved to review");
+ assert.match(local,/retryable:"تعذر الخادم أو الاتصال مؤقتًا/);
+ assert.match(local,/retryable:"The server or connection is temporarily unavailable/);
+ assert.match(local,/retryable:"Le serveur ou la connexion est temporairement indisponible/);
+});
