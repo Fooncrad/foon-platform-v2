@@ -1,6 +1,6 @@
 -- Activation per saved plan, manual operations distinct from real reservation payment state.
 ALTER TABLE restaurant_floor_plan_layouts
- ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT FALSE;
+ ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE TABLE IF NOT EXISTS restaurant_floor_table_operations (
  tenant_id CHAR(36) NOT NULL,
  branch_id CHAR(36) NOT NULL,
