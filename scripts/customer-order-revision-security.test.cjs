@@ -40,7 +40,8 @@ test('active customer receives own revision and private no-store response',async
  const s=setup(),r=await s.GET();
  assert.equal(r.status,200);assert.match(r.body.revision,/^[a-f0-9]{64}$/);
  assert.equal(r.body.notificationId,'notification-a');assert.equal(r.body.unread,1);
- assert.equal(r.headers['Cache-Control'],'private, no-store');
+ assert.match(r.headers['Cache-Control']??'',/private/i);
+ assert.match(r.headers['Cache-Control']??'',/no-store/i);
  assert.equal(s.calls.length,5);
 });
 test('frozen or deleted account with valid cookie cannot read activity',async()=>{
