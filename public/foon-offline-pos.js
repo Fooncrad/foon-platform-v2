@@ -52,7 +52,14 @@ async function unseal(key,id,kind,record){
 async function json(url,opts={}){
  const res=await fetch(url,{...opts,cache:"no-store",credentials:"same-origin",headers:{...(opts.headers||{}),"Cache-Control":"no-store"}});
  const body=await res.json().catch(()=>({}));
- if(!res.ok||!body.ok)throw new Error(res.status===401?"SESSION_EXPIRED":res.status===403?"ACCESS_DENIED":body.code||"SERVER_ERROR");
+ if(!res.ok||!body.ok){
+  const error=new Error(res.status===401?"SESSION_EXPIRED":res.status===403?"ACCESS_DENIED":body.code||"SERVER_ERROR");
+  error.status=res.status;
+  // A 2xx response with an unreadable/invalid envelope is ambiguous: the server
+  // may have committed the idempotent order, so retain it for a safe retry.
+  error.retryable=res.ok||[408,425,429].includes(res.status)||res.status>=500;
+  throw error;
+ }
  return body;
 }
 async function authorized(tenantId,branchId,expectedUser){
@@ -64,9 +71,9 @@ async function authorized(tenantId,branchId,expectedUser){
  return {user,data};
 }
 const localeLabels={
- ar:{unlock:"تم فتح النسخة المحلية.",locked:"البيانات مقفلة.",prepared:"تم إعداد النسخة مشفرة لهذا المستخدم والمتجر والفرع.",saved:"حُفظ الطلب مشفرًا ولم يصل للمطعم بعد.",empty:"أضف أصنافًا أولاً.",expired:"انتهت صلاحية النسخة. أعد إعدادها أثناء الاتصال.",bad:"عبارة المرور غير صحيحة، أو النسخة تالفة.",sync:"اكتملت محاولة المزامنة. راجع النتائج.",review:"الطلب يحتاج مراجعة قبل إعادة إرساله.",lockedOut:"انتهت مدة العمل المحلية؛ أعد فتح النسخة.",activityOnlineOnly:"هذا النشاط يعتمد على دورة خدمات أو عمليات غير مدعومة في نقطة البيع المحلية؛ أنشئ الطلب عند توفر الإنترنت.",profileUpdateRequired:"اتصل بالإنترنت مرة واحدة لتحديث صلاحية النسخة المحلية ونشاط المتجر قبل فتحها."},
- en:{unlock:"Local profile unlocked.",locked:"Private data locked.",prepared:"Encrypted local profile prepared.",saved:"Order encrypted locally; not yet delivered.",empty:"Add items first.",expired:"Local authorization expired. Prepare again online.",bad:"Incorrect passphrase or corrupted profile.",sync:"Sync attempt completed. Review results.",review:"Order requires manual review.",lockedOut:"Local session timed out. Unlock again.",activityOnlineOnly:"This activity uses a service or workflow lifecycle that is not supported by the local POS. Create it when online.",profileUpdateRequired:"Reconnect once to refresh this encrypted profile and the store activity before opening it."},
- fr:{unlock:"Profil local déverrouillé.",locked:"Données privées verrouillées.",prepared:"Profil local chiffré préparé.",saved:"Commande chiffrée localement, non envoyée.",empty:"Ajoutez des articles.",expired:"Autorisation locale expirée. Préparez de nouveau en ligne.",bad:"Phrase secrète incorrecte ou profil corrompu.",sync:"Synchronisation terminée. Vérifiez les résultats.",review:"Commande à vérifier.",lockedOut:"Session locale expirée. Déverrouillez à nouveau.",activityOnlineOnly:"Cette activité utilise un cycle de service non pris en charge par le point de vente local. Créez-la en ligne.",profileUpdateRequired:"Reconnectez-vous une fois pour actualiser ce profil chiffré et l’activité du magasin avant de l’ouvrir."}
+ ar:{unlock:"تم فتح النسخة المحلية.",locked:"البيانات مقفلة.",prepared:"تم إعداد النسخة مشفرة لهذا المستخدم والمتجر والفرع.",saved:"حُفظ الطلب مشفرًا ولم يصل للمطعم بعد.",empty:"أضف أصنافًا أولاً.",expired:"انتهت صلاحية النسخة. أعد إعدادها أثناء الاتصال.",bad:"عبارة المرور غير صحيحة، أو النسخة تالفة.",sync:"اكتملت محاولة المزامنة. راجع النتائج.",retryable:"تعذر الخادم أو الاتصال مؤقتًا؛ بقيت الطلبات محفوظة مشفرة وستبقى للمحاولة التالية.",review:"الطلب يحتاج مراجعة قبل إعادة إرساله.",lockedOut:"انتهت مدة العمل المحلية؛ أعد فتح النسخة.",activityOnlineOnly:"هذا النشاط يعتمد على دورة خدمات أو عمليات غير مدعومة في نقطة البيع المحلية؛ أنشئ الطلب عند توفر الإنترنت.",profileUpdateRequired:"اتصل بالإنترنت مرة واحدة لتحديث صلاحية النسخة المحلية ونشاط المتجر قبل فتحها."},
+ en:{unlock:"Local profile unlocked.",locked:"Private data locked.",prepared:"Encrypted local profile prepared.",saved:"Order encrypted locally; not yet delivered.",empty:"Add items first.",expired:"Local authorization expired. Prepare again online.",bad:"Incorrect passphrase or corrupted profile.",sync:"Sync attempt completed. Review results.",retryable:"The server or connection is temporarily unavailable. Orders remain encrypted locally for a later retry.",review:"Order requires manual review.",lockedOut:"Local session timed out. Unlock again.",activityOnlineOnly:"This activity uses a service or workflow lifecycle that is not supported by the local POS. Create it when online.",profileUpdateRequired:"Reconnect once to refresh this encrypted profile and the store activity before opening it."},
+ fr:{unlock:"Profil local déverrouillé.",locked:"Données privées verrouillées.",prepared:"Profil local chiffré préparé.",saved:"Commande chiffrée localement, non envoyée.",empty:"Ajoutez des articles.",expired:"Autorisation locale expirée. Préparez de nouveau en ligne.",bad:"Phrase secrète incorrecte ou profil corrompu.",sync:"Synchronisation terminée. Vérifiez les résultats.",retryable:"Le serveur ou la connexion est temporairement indisponible. Les commandes restent chiffrées localement pour une nouvelle tentative.",review:"Commande à vérifier.",lockedOut:"Session locale expirée. Déverrouillez à nouveau.",activityOnlineOnly:"Cette activité utilise un cycle de service non pris en charge par le point de vente local. Créez-la en ligne.",profileUpdateRequired:"Reconnectez-vous une fois pour actualiser ce profil chiffré et l’activité du magasin avant de l’ouvrir."}
 };
 const language=location.search.includes("lang=fr")?"fr":location.search.includes("lang=en")?"en":"ar",msg=k=>localeLabels[language][k];
 if(language!=="ar"){document.documentElement.lang=language;document.documentElement.dir="ltr";}
@@ -254,7 +261,7 @@ async function sync(){
     await del("orders",row.id);
    }catch(error){
     if(["SESSION_EXPIRED","USER_CHANGED","ACCESS_DENIED"].includes(error.message)){lock("انتهت صلاحيات الحساب. تحقق من تسجيل الدخول قبل مزامنة الطلبات.");throw error;}
-    if(error instanceof TypeError||!navigator.onLine)throw new Error("NETWORK_UNAVAILABLE_ORDERS_RETAINED");
+    if(error.retryable===true||error instanceof TypeError||!navigator.onLine)throw new Error(msg("retryable"));
     const changed={...item,status:"needs_review",lastError:String(error.message)};
     const cipher=await seal(key,record.id,"order:"+item.id,changed);
     await put("orders",{...row,...cipher});
