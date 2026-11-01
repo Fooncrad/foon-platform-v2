@@ -13,7 +13,7 @@ test("floor layout DDL can be safely retried after a partial MySQL/MariaDB DDL f
     sql("0309_restaurant_section_staff_alerts.sql")
   ]);
   assert.match(layouts, /CREATE TABLE IF NOT EXISTS restaurant_floor_plan_layouts/);
-  assert.match(operations, /information_schema\\.columns/);
+  assert.match(operations, /information_schema\.columns/);
   assert.match(operations, /PREPARE foon_floor_add_is_active_stmt/);
   assert.match(operations, /EXECUTE foon_floor_add_is_active_stmt/);
   assert.match(operations, /DEALLOCATE PREPARE foon_floor_add_is_active_stmt/);
