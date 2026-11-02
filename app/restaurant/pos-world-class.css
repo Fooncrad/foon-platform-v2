@@ -65,3 +65,10 @@
 .restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout,.restaurantPosModern[data-pos-theme=dark] .restaurantPosOrderSummary{background:#111a2b;border-color:#34445d;color:#e5edf8}
 .restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout :is(button,.restaurantPrimary){border-color:#40516b}
 @media(max-width:480px){.restaurantPosThemePicker{gap:5px}.restaurantPosThemePicker>span{width:100%}.restaurantPosThemePicker button{flex:1 1 auto}}
+
+/* Keep the cashier's live cart summary visible in the top POS toolbar. */
+.restaurantPosAddedProductsTopbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:10px 13px;border:1px solid color-mix(in srgb,var(--rc-accent,#2563eb) 34%,var(--rc-border,#dce3eb));border-radius:12px;background:color-mix(in srgb,var(--rc-accent,#2563eb) 7%,var(--rc-surface,#fff));}
+.restaurantPosAddedProductsTopbar strong{font-size:14px;font-weight:850;white-space:nowrap}
+.restaurantPosAddedProductsTopbar span{font-size:13px;font-weight:800;color:var(--rc-muted,#64748b);font-variant-numeric:tabular-nums;text-align:end;white-space:nowrap}
+.restaurantPosOrdersToolbar[data-pos-theme=dark] .restaurantPosAddedProductsTopbar{background:rgba(59,130,246,.13);border-color:rgba(96,165,250,.38)}
+@media(max-width:480px){.restaurantPosAddedProductsTopbar{padding:9px 10px}.restaurantPosAddedProductsTopbar strong{font-size:13px}.restaurantPosAddedProductsTopbar span{font-size:12px}}
