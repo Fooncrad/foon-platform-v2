@@ -1,0 +1,100 @@
+/*
+ * Platform administration adopts the same reference layout as merchant
+ * dashboards. Access checks and administrator navigation are unchanged.
+ */
+.adminShell{--foon-accent:#d92483}
+.adminShell[data-theme="light"]{--foon-border:#e7e8ef;--foon-muted:#667084;--foon-surface:#f5f6fa}
+.adminShell[data-theme="light"] .adminSide{
+ background:#fff;color:#1c2636;border-inline-end:1px solid #e7e8ef;box-shadow:0 3px 18px #1720330b;
+ padding:16px 12px;
+}
+.adminShell[data-theme="light"] .adminLogo{
+ color:#d92483;font-size:1.25rem;letter-spacing:.06em;
+ border-color:#e7e8ef;padding:12px 12px 18px;
+}
+.adminShell[data-theme="light"] .adminLogo small,
+.adminShell[data-theme="light"] .adminNavGroup>small{color:#64748b}
+.adminShell[data-theme="light"] .adminNavGroup{border-top-color:#e7e8ef}
+.adminShell[data-theme="light"] .adminSide nav a{
+ color:#263448;border-radius:9px;min-height:40px;display:flex;align-items:center;
+}
+.adminShell[data-theme="light"] .adminSide nav a:hover{
+ background:#fce7f2;color:#ad1264;
+}
+.adminShell[data-theme="light"] .adminSide nav a.active{
+ background:#fce7f2;color:#b31567;border-color:#f5c4df;
+ box-shadow:inset 3px 0 0 #d92483;
+}
+.adminShell[data-theme="light"] .adminTop{
+ background:#fff;border-bottom:1px solid #e7e8ef;min-height:64px;
+}
+.adminShell[data-theme="light"] .adminTop b{color:#1c2636}
+.adminShell[data-theme="light"] .adminTop small{color:#667084}
+.adminShell[data-theme="light"] .adminStage{background:#f5f6fa}
+.adminShell .adminStage>.adminDashboard{max-width:none;padding:20px 24px 28px}
+.adminShell .adminDashboard{gap:15px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.adminShell .adminDashboardHead{grid-column:1/-1}
+.adminShell .adminMetrics{grid-column:1/-1;gap:12px}
+.adminShell .adminOverviewSecondary{grid-column:1/-1;gap:12px}
+.adminShell .adminRecentActivity{grid-column:1;min-width:0}
+.adminShell .adminModules{grid-column:2;min-width:0}
+.adminShell .adminModulesGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.adminShell[data-theme="light"] .adminDashboard .adminMetric,
+.adminShell[data-theme="light"] .adminDashboard .adminOverviewSecondary article,
+.adminShell[data-theme="light"] .adminDashboard .adminPanel,
+.adminShell[data-theme="light"] .adminDashboard .adminModules{
+ background:#fff;border:1px solid #e7e8ef;border-radius:13px;box-shadow:0 2px 8px #1d24340a;
+}
+.adminShell .adminDashboard .adminMetric{padding:16px;gap:7px}
+.adminShell .adminDashboard .adminMetric strong{font-size:clamp(23px,2.6vw,33px);font-variant-numeric:tabular-nums}
+.adminShell[data-theme="light"] .adminDashboard .adminMetric strong{color:#1c2636}
+.adminShell[data-theme="light"] .adminDashboard .adminMetric span{color:#596579}
+.adminShell[data-theme="light"] .adminDashboard .adminMetric small{color:#667084}
+.adminShell[data-theme="light"] .adminDashboard .adminOverviewSecondary strong{color:#d92483}
+.adminShell .adminDashboard .adminPrimaryLink{background:#d92483;color:#fff!important}
+.adminShell .adminDashboard .adminEyebrow{color:#c01d74}
+.adminShell .adminDashboard .adminPanelHead{gap:12px;flex-wrap:wrap}
+.adminShell .adminDashboard .adminModuleCard{min-width:0;min-height:78px;border-radius:10px}
+.adminShell[data-theme="light"] .adminDashboard .adminModuleCard{
+ background:#fbfcfe;border-color:#e7e8ef;
+}
+.adminShell[data-theme="light"] .adminDashboard .adminModuleCard:hover{background:#fff2f9;border-color:#e49dbf}
+.adminShell[data-theme="light"] .adminDashboard .adminModuleIcon{background:#fce7f2;color:#c01d74}
+.adminShell[data-theme="light"] .adminDashboard .adminModuleArrow{color:#c01d74}
+.adminShell .adminDashboard .adminModules{padding:18px}
+.adminShell .adminDashboard .adminRecentList>*{overflow-wrap:anywhere}
+.adminShell[data-theme="light"] input:focus-visible,
+.adminShell[data-theme="light"] select:focus-visible,
+.adminShell[data-theme="light"] button:focus-visible,
+.adminShell[data-theme="light"] a:focus-visible{outline-color:#d92483}
+.adminShell[data-theme="dark"] .adminDashboard .adminPrimaryLink{background:#d92483;color:#fff!important}
+@media(max-width:1350px){
+ .adminShell .adminDashboard{grid-template-columns:minmax(0,1fr)}
+ .adminShell .adminRecentActivity,.adminShell .adminModules{grid-column:1}
+ .adminShell .adminModulesGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:980px){
+ .adminShell .adminModulesGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .adminShell .adminMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .adminShell .adminOverviewSecondary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:850px){
+ .adminShell .adminStage>.adminDashboard{padding:15px 14px 24px}
+ .adminShell[data-theme="light"] .adminDrawer{
+ background:#fff;border:1px solid #e7e8ef;color:#263448;
+ }
+ .adminShell[data-theme="light"] .adminDrawer a{background:#f5f6fa;color:#263448}
+ .adminShell[data-theme="light"] .adminDrawer a.active{background:#fce7f2;color:#b31567}
+ .adminShell[data-theme="light"] .adminDrawerGroup small{color:#667084}
+ .adminShell[data-theme="light"] .adminMenuButton{color:#1c2636;border-color:#e7e8ef}
+}
+@media(max-width:600px){
+ .adminShell .adminDashboard{gap:12px}
+ .adminShell .adminDashboard .adminMetrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .adminShell .adminDashboard .adminOverviewSecondary{grid-template-columns:1fr}
+ .adminShell .adminDashboard .adminModulesGrid{grid-template-columns:1fr}
+ .adminShell .adminDashboard .adminMetric{padding:12px}
+ .adminShell .adminDashboard .adminMetric strong{font-size:23px}
+ .adminShell .adminDashboardHead{flex-wrap:wrap}
+ .adminShell .adminDashboard .adminModules{padding:14px}
+}

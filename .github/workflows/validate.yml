@@ -1,0 +1,112 @@
+name: Validate FOON V2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Test SQL migration parsing
+        run: npm run test:migrations
+      - name: Test email templates and configuration
+        run: npm run test:mail
+      - name: Test administrator access policy
+        run: npm run test:admin-policy
+      - name: Test store registration policy
+        run: node --test scripts/registration.test.mjs
+      - name: Test operational resource validation
+        run: npm run test:resources
+      - name: Test LAN persistence, authentication and backups
+        run: node --test scripts/foon-lan-gateway.test.mjs scripts/foon-lan-sqlite.test.mjs scripts/foon-edge-backup.test.mjs
+      - name: Validate activity plan entitlements
+        run: node --experimental-strip-types --test scripts/activity-plan-entitlements.test.mjs
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+  migration-database:
+    # Keep Playwright's OS dependencies stable; ubuntu-latest moved to 26.04
+    # and a slow font mirror exhausted the entire job before browser tests.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mariadb:
+        # Use the official image directly; the ECR mirror hit its shared data limit.
+        image: mariadb:11.8
+        env:
+          # Catch pooled-session clock leaks hidden by UTC-only CI hosts.
+          TZ: Asia/Riyadh
+          MARIADB_ROOT_PASSWORD: foon-ci-only-password
+          MARIADB_DATABASE: foon_migration_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:foon-ci-only-password@127.0.0.1:3306/foon_migration_test
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Test migrations against disposable MariaDB
+        run: node --test scripts/migrations.integration.test.mjs
+      - name: Build production server for registration integration tests
+        run: npm run build
+      - name: Test real registration routes against disposable MariaDB
+        run: node --test scripts/registration-http.integration.test.mjs
+
+      - name: Verify activity-specific plans and employee account isolation
+        run: node --test --test-concurrency=1 scripts/activity-plan-settings.integration.test.mjs scripts/account-surface.integration.test.mjs
+      - name: Test restaurant operational integrity
+        run: npm run test:operations
+      - name: Install Chromium for visual checks
+        timeout-minutes: 4
+        # The hosted runner supplies runtime libraries. Verify an actual launch
+        # instead of upgrading OS/font packages through the slow apt mirror.
+        # Missing runtime libraries must still fail this step and the job.
+        run: |
+          npx playwright install chromium
+          node --input-type=module -e "import {chromium} from '@playwright/test'; const browser=await chromium.launch(); await browser.close();"
+      - name: Verify public menu browsing without internet
+        run: node --test scripts/public-menu-offline.test.mjs
+      - name: Verify merchant dashboard desktop and mobile journeys
+        run: npm run test:browser
+      - name: Verify authenticated mobile layouts in three languages and five sizes
+        run: npm run test:mobile-authenticated
+        env:
+          FOON_MOBILE_SEED_FIXTURES: "1"
+      - name: Save merchant dashboard screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchant-dashboard-screenshots
+          path: |
+            work/merchant-*.png
+            work/menu-*.png

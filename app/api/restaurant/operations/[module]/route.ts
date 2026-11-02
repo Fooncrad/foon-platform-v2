@@ -1,0 +1,347 @@
+import {notifyCustomer} from "@/lib/notifications/customer";
+import {dispatchNotifications} from "@/lib/notifications/dispatch";
+import {NextResponse} from "next/server";
+import {normalizeLocale,publicError,logIncident,type PublicErrorCode} from "@/lib/platform/incidents";
+import {localizedPlanNotice} from "@/lib/platform/plan-notices";
+import {uiText} from "@/lib/i18n/ui-copy";
+import {randomUUID} from "node:crypto";
+import type {PoolConnection,RowDataPacket} from "mysql2/promise";
+import {currentUserId,currentSessionId} from "@/lib/auth/session";
+import {requireTenantMembership} from "@/lib/auth/authorization";
+import {BranchPinError,requireAdditionalBranchUnlock} from "@/lib/restaurant/branch-pin";
+import type {TenantRole} from "@/lib/auth/roles";
+import {tenantEntitlement} from "@/lib/plans/entitlements";
+import {assertSameOrigin} from "@/lib/security/origin";
+import {database} from "@/lib/db/mysql";
+import {resourceModules,ResourceError} from "@/scripts/restaurant-resource-schema.mjs";
+import {checkoutSettings} from "@/lib/restaurant/checkout-settings";
+import {parseData,resourceRows,saveResource,convertAcceptedQuotation,draftInvoiceForCompletedService,confirmManualInvoiceReceipt,branchExists,ordersRows,createOrder,updateOrder,recordManualPaymentAtCreate} from "@/lib/restaurant/operations";
+import {createDiningBatch} from "@/lib/restaurant/dining-bulk";
+import {reconcileLateIssuedInvoice} from "@/lib/payments/webhook-settlement";
+import {salesProfile,activityPosMenu,activityPosOptions} from "@/lib/restaurant/activity-pos";
+import {menuOptions,canonicalMenuModules} from "@/lib/restaurant/menu";
+import {scopedStaffOverview} from "@/lib/restaurant/scoped-staff-overview";
+import {assignedWaiterTableIds} from "@/lib/restaurant/waiter-assignments";
+
+export const runtime="nodejs";
+const managers:TenantRole[]=["owner","manager"];
+const orderRoles:TenantRole[]=["owner","manager","cashier","waiter","kitchen","driver","accountant"];
+const allRoles:TenantRole[]=[...orderRoles];
+async function authorize(request:Request,module:string,write:boolean,requiredAction?:"create"|"edit",requestedBranch?:string|null){
+ if(write)try{assertSameOrigin(request);}catch{throw new ResourceError("FORBIDDEN");}
+ const user=await currentUserId();if(!user)throw new ResourceError("UNAUTHENTICATED");
+ const config=Object.hasOwn(resourceModules,module)?resourceModules[module]:null;
+ const special=["overview","orders","pos","kds","customers","security","health","reports"];
+ if(!config&&!special.includes(module))throw new ResourceError("MODULE_NOT_FOUND");
+ const allowed=config?config.roles as TenantRole[]:module==="customers"||module==="health"?managers:module==="pos"?["owner","manager","cashier"] as TenantRole[]:module==="kds"?["owner","manager","kitchen"] as TenantRole[]:module==="reports"?["owner","manager","accountant"] as TenantRole[]:allRoles;
+ const access=await requireTenantMembership(user,request.headers.get("x-foon-tenant")??"",allowed,write).catch(()=>{throw new ResourceError("FORBIDDEN");});
+ let authorizedBranch:string|null=null;
+ // Existing role checks remain mandatory. Explicit employee grants narrow them further.
+ // Unconfigured staff fail closed.
+ if(!["owner","manager"].includes(access.role)){
+  if(write&&["tables","sections"].includes(module))throw new ResourceError("FORBIDDEN");
+  const permissionModule=module==="kds"?"kitchen":module;
+  const action=requiredAction??(write?(request.method==="DELETE"?"delete":request.method==="POST"?"create":"edit"):"view");
+  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key,allowed,branch_id FROM employee_permission_grants WHERE tenant_id=? AND user_id=?",[access.tenantId,user]);
+  // Fail closed: unconfigured employees cannot inherit broad role permissions.
+  if(!grants.length)throw new ResourceError("FORBIDDEN");
+  const headerBranch=request.headers.get("x-foon-branch");
+  const queryBranch=new URL(request.url).searchParams.get("branch");
+  if(headerBranch&&queryBranch&&headerBranch!==queryBranch)throw new ResourceError("FORBIDDEN");
+  let activeBranch=headerBranch??queryBranch;
+  // Tenant-wide reads must not be exposed through an omitted branch selector.
+  if(!activeBranch&&!["security"].includes(module)){
+   const [assigned]=await database().execute<RowDataPacket[]>("SELECT branch_id FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user]);
+   if(assigned.length!==1)throw new ResourceError("BRANCH_REQUIRED");
+   // A single assigned branch is safe to infer for permission checks.
+   activeBranch=String(assigned[0].branch_id);
+  }
+  let verifiedBranch:string|null=null;
+  if(activeBranch){
+   const [assignments]=await database().execute<RowDataPacket[]>("SELECT role FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 2",[access.tenantId,user,activeBranch]);
+   if(assignments.length!==1||assignments[0].role!==access.role)throw new ResourceError("FORBIDDEN");
+   verifiedBranch=activeBranch;
+  }
+  authorizedBranch=verifiedBranch;
+  const scoped=grants.filter(g=>g.branch_id===null||(verifiedBranch!==null&&String(g.branch_id)===verifiedBranch));
+  const exact=scoped.filter(g=>g.permission_key===permissionModule+"."+action);
+  // A deliberately unchecked action must not be reopened by the broad "manage" grant.
+  if(exact.some(g=>Number(g.allowed)===0))throw new ResourceError("FORBIDDEN");
+  if(!(exact.some(g=>Number(g.allowed)===1)||(!exact.length&&scoped.some(g=>g.permission_key===permissionModule+".manage"&&Number(g.allowed)===1))))throw new ResourceError("FORBIDDEN");
+ }
+ const selectedBranch=authorizedBranch??request.headers.get("x-foon-branch")??new URL(request.url).searchParams.get("branch")??requestedBranch??null;
+ if(module!=="security"&&module!=="health")await requireAdditionalBranchUnlock(access.tenantId,selectedBranch,user);
+ const feature=config?.feature??({orders:"orders",pos:"pos",kds:"kds",customers:"customers",reports:"analytics"} as Record<string,string>)[module];
+ if(feature){const entitlement=await tenantEntitlement(access.tenantId,feature);if(!entitlement.enabled)throw new ResourceError(entitlement.reason==="UNSUPPORTED_ACTIVITY"?"ACTIVITY_MODULE_UNAVAILABLE":"PLAN_FEATURE_REQUIRED");}
+ return {user,tenantId:access.tenantId,role:access.role,authorizedBranch};
+}
+function failure(error:unknown,request:Request,module:string){
+ const incidentId=randomUUID().slice(0,8).toUpperCase();
+ const databaseCode=(error as {code?:string})?.code;
+ const code=error instanceof ResourceError||error instanceof BranchPinError?error.code:databaseCode==="ER_DUP_ENTRY"?"DUPLICATE_RESOURCE":["ER_LOCK_DEADLOCK","ER_LOCK_WAIT_TIMEOUT","ER_CHECKREAD"].includes(databaseCode??"")?"CONFLICT":"OPERATIONS_UNAVAILABLE";
+ const status=code==="BRANCH_PIN_REQUIRED"?403:code==="BRANCH_PIN_SETUP_REQUIRED"?409:code==="BRANCH_SELECTION_REQUIRED"?400:code==="UNAUTHENTICATED"?401:code==="FORBIDDEN"||code==="PLAN_FEATURE_REQUIRED"||code==="ACTIVITY_MODULE_UNAVAILABLE"?403:code.endsWith("_NOT_FOUND")?404:code==="INVOICE_ALREADY_SETTLED"||code==="SETTLEMENT_REFERENCE_REUSED"||code==="INVOICE_SETTLEMENT_AMOUNT_MISMATCH"||code==="CONFLICT"||code==="DUPLICATE_RESOURCE"||code==="TABLE_HAS_UNFINISHED_ORDER"||code==="DELIVERY_DRIVER_UNAVAILABLE"||code==="STORE_CLOSED"||code==="ORDERS_DISABLED"||code==="ORDER_CHANNEL_DISABLED"||code==="INSUFFICIENT_STOCK"||code==="STOCK_RESTORE_CONFLICT"||code==="CATALOG_REFERENCE_CONFLICT"||code==="CURRENCY_CHANGED"?409:code==="OPERATIONS_UNAVAILABLE"?503:400;
+ const cookieLocale=request.headers.get("cookie")?.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1];
+ const locale=normalizeLocale(cookieLocale??request.headers.get("accept-language"));
+ const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
+ const featureLabel=resourceModules[module]?.label?uiText(resourceModules[module].label,locale):module;
+ const message=localizedPlanNotice(code,locale,featureLabel)??publicError(category,status,incidentId,locale).error.message;
+ if(status>=500)logIncident({incidentId,code,location:"restaurant.operations."+module,error});
+ else console.warn(JSON.stringify({level:"warn",incidentId,code,location:"restaurant.operations."+module,status,at:new Date().toISOString()}));
+ return NextResponse.json({ok:false,code,message,incidentId,status},{status,headers:{"Cache-Control":"no-store","Content-Language":locale,"X-Foon-Incident-Id":incidentId}});
+}
+async function connection(){const db=await database().getConnection();try{await db.query("SET time_zone='+00:00'");return db;}catch(error){db.release();throw error;}}
+async function overview(db:PoolConnection,tenantId:string,role:string,branch:string|null,actorUserId:string){
+ // Never return all-branch metrics to staff restricted by assigned tables/driver.
+ if(role==="waiter"||role==="driver"){
+  const assignedOrders=await ordersRows(db,tenantId,role,branch,actorUserId);
+  if(role==="driver"||!branch||!(await tenantEntitlement(tenantId,"tables")).enabled)return scopedStaffOverview(assignedOrders);
+  const tableIds=await assignedWaiterTableIds(db,tenantId,branch,actorUserId);
+  if(!tableIds.length)return scopedStaffOverview(assignedOrders);
+  // Waiter call alerts must remain visible, but only for assigned tables.
+  const [[calls]]=await db.execute<RowDataPacket[]>(
+   "SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND kind='waiter_call' AND archived=FALSE AND status='pending' AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.tableId')) IN ("+tableIds.map(()=>"?").join(",")+")",
+   [tenantId,branch,...tableIds]
+  );
+  return scopedStaffOverview(assignedOrders,Number(calls?.n??0));
+ }
+ const filter=branch?" AND branch_id=?":"",params=branch?[tenantId,branch]:[tenantId];
+ const [[summary]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS orders,COALESCE(SUM(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total ELSE 0 END),0) AS sales,COALESCE(AVG(CASE WHEN payment_status='paid' AND status<>'cancelled' THEN total END),0) AS average,SUM(status='new') AS newOrders,SUM(status='preparing') AS preparing,SUM(status='ready') AS ready FROM restaurant_orders WHERE tenant_id=?"+filter+" AND created_at>=TIMESTAMP(DATE(UTC_TIMESTAMP()+INTERVAL 3 HOUR))-INTERVAL 3 HOUR",params);
+ const [[outstanding]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
+ const [[tables]]=await db.execute<RowDataPacket[]>("SELECT COUNT(DISTINCT table_id) AS occupied FROM restaurant_orders WHERE tenant_id=?"+filter+" AND status IN ('new','preparing','ready')",params);
+ const [series]=await db.execute<RowDataPacket[]>("SELECT DATE(created_at+INTERVAL 3 HOUR) AS day,SUM(total) AS total FROM restaurant_orders WHERE tenant_id=?"+filter+" AND payment_status='paid' AND status<>'cancelled' AND created_at>=UTC_TIMESTAMP()-INTERVAL 7 DAY GROUP BY day ORDER BY day",params);
+ const financial=["owner","manager","cashier","accountant"].includes(role);
+ const serviceCounts={waiterCalls:0,reservations:0};
+ if(["owner","manager","waiter"].includes(role)){
+  const [pending]=await db.execute<RowDataPacket[]>("SELECT kind,COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND status='pending' AND kind IN ('waiter_call','reservation') GROUP BY kind",params);
+  for(const row of pending){const key=row.kind==='waiter_call'?'waiterCalls':'reservations';if((await tenantEntitlement(tenantId,key==='waiterCalls'?'tables':'reservations')).enabled)serviceCounts[key]=Number(row.n);}
+ }
+ const attention:Record<string,number>={};
+ const [pendingResources]=await db.execute<RowDataPacket[]>(
+  "SELECT kind,status,data FROM restaurant_resources WHERE tenant_id=?"+filter+" AND archived=FALSE AND kind IN ('waiter_call','reservation','waitlist','inventory_item','purchase','customer_invoice','internal_invoice','employee','remote_task','split_bill','service_customer_request')",params);
+ for(const row of pendingResources){
+  const kind=String(row.kind),status=String(row.status);
+  let section="";
+  if(kind==="waiter_call"&&["pending","in_progress"].includes(status))section="tables";
+  else if(["reservation","waitlist"].includes(kind)&&["pending","waiting","requested"].includes(status))section="reservations";
+  else if(kind==="service_customer_request"&&["pending","in_review"].includes(status))section="menu";
+  else if(kind==="purchase"&&status==="planned")section="inventory";
+  else if(["customer_invoice","internal_invoice"].includes(kind)&&status==="draft")section="printers";
+  else if(kind==="split_bill"&&status==="requested")section="pos";
+  else if(kind==="employee"&&["pending","invited"].includes(status))section="team";
+  else if(kind==="inventory_item"&&status==="active"){
+   try{const d=typeof row.data==="string"?JSON.parse(row.data):row.data;const qty=Number(d?.quantity),min=Number(d?.minimum);if(d?.minimum!==null&&d?.minimum!==undefined&&Number.isFinite(qty)&&Number.isFinite(min)&&qty<=min)section="inventory";}catch{}
+  }
+  if(section){const allowed=section==="tables"||section==="reservations"?["owner","manager","waiter"]:section==="inventory"?["owner","manager","accountant"]:section==="printers"?["owner","manager","cashier","accountant"]:section==="pos"?["owner","manager","cashier"]:["owner","manager"];if(allowed.includes(role))attention[section]=(attention[section]??0)+1;}
+ }
+ return {attention,summary:{...serviceCounts,outstandingOrders:Number(outstanding.n),sales:financial?Number(summary.sales):null,orders:Number(summary.orders),average:financial?Number(summary.average):null,newOrders:Number(summary.newOrders??0),preparing:Number(summary.preparing??0),ready:Number(summary.ready??0),tables:Number(tables.occupied)},series:financial?series.map(s=>({day:s.day instanceof Date?s.day.toISOString().slice(0,10):String(s.day).slice(0,10),total:Number(s.total)})):[],orders:await ordersRows(db,tenantId,role,branch,actorUserId)};
+}
+async function availableTables(db:PoolConnection,tenantId:string,branch:string|null){
+ const tables=await resourceRows(db,tenantId,"tables",branch);
+ if(!tables.length)return tables;
+ const [busy]=await db.execute<RowDataPacket[]>(
+  "SELECT DISTINCT table_id FROM restaurant_orders WHERE tenant_id=? AND table_id IS NOT NULL AND (status IS NULL OR status NOT IN ('completed','cancelled','delivered','refunded','rejected'))"+(branch?" AND branch_id=?":""),
+  branch?[tenantId,branch]:[tenantId]
+ );
+ const occupied=new Set(busy.map(row=>String(row.table_id)));
+ return tables.filter(table=>table.status!=="inactive"&&!occupied.has(table.id));
+}
+async function labelledTables(db:PoolConnection,tenantId:string,branch:string|null){const [tables,sections]=await Promise.all([availableTables(db,tenantId,branch),resourceRows(db,tenantId,"sections",branch)]);return tables.map(t=>({...t,name:(sections.find(s=>s.id===t.data.sectionId)?.name||"الصالة الرئيسية")+" · "+t.name}));}
+export async function GET(request:Request,{params}:{params:Promise<{module:string}>}){
+ let db:PoolConnection|undefined;
+ try{
+  const {module}=await params,ctx=await authorize(request,module,false);db=await connection();
+  const branch=ctx.authorizedBranch??new URL(request.url).searchParams.get("branch")??request.headers.get("x-foon-branch");await branchExists(db,ctx.tenantId,branch,module==="pos");
+  if(Object.hasOwn(resourceModules,module)){
+   const refs:Record<string,unknown[]>={};
+   for(const field of resourceModules[module].fields.filter(f=>f.ref)){
+    // Orders are stored in restaurant_orders, not in the generic resource catalog.
+    if(field.ref==="orders"){
+     if(["owner","manager","accountant","cashier"].includes(ctx.role)){
+      const [orders]=await db.execute<RowDataPacket[]>(
+       "SELECT id,order_number,status,branch_id FROM restaurant_orders WHERE tenant_id=?"+(branch?" AND branch_id=?":"")+" ORDER BY created_at DESC LIMIT 200",
+       branch?[ctx.tenantId,branch]:[ctx.tenantId]
+      );
+      refs.orders=orders.map(order=>({id:String(order.id),name:"#"+String(order.order_number),status:String(order.status),branch_id:order.branch_id}));
+     }
+     continue;
+    }
+    const config=resourceModules[field.ref!];
+    if(!config)continue;
+    if(module==="departmentAssignments"&&field.ref==="categories"){
+     const profile=await salesProfile(db,ctx.tenantId);
+     if(profile.catalog){
+      const [categories]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name_ar FROM catalog_categories WHERE tenant_id=? AND enabled=TRUE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" ORDER BY sort_order,id LIMIT 500",branch?[ctx.tenantId,branch]:[ctx.tenantId]);
+      refs.categories=categories.map(category=>({id:String(category.id),name:String(category.name_ar),status:"active",branch_id:category.branch_id?String(category.branch_id):null,data:{}}));
+     }else refs.categories=await resourceRows(db,ctx.tenantId,"categories",branch);
+     continue;
+    }
+    if((["owner","manager"].includes(ctx.role)||config.roles.includes(ctx.role))&&(!config.feature||(await tenantEntitlement(ctx.tenantId,config.feature)).enabled)&&!(field.ref==="team"&&!["owner","manager"].includes(ctx.role)))refs[field.ref!]=field.ref==="tables"&&module==="reservations"?await availableTables(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,field.ref!,field.ref==="team"?null:branch);
+   }
+   let resources=await resourceRows(db,ctx.tenantId,module,branch);let truncated=false;
+   if(ctx.role==="waiter"&&["tables","waiterCalls","reservations"].includes(module)){
+    const ids=new Set(await assignedWaiterTableIds(db,ctx.tenantId,branch??"",ctx.user));
+    if(module==="tables")resources=resources.filter(row=>ids.has(String(row.id)));
+    if(module==="waiterCalls")resources=resources.filter(row=>ids.has(String(row.data.tableId??"")));
+    if(refs.tables)refs.tables=refs.tables.filter(row=>row!==null&&typeof row==="object"&&"id" in row&&ids.has(String(row.id)));
+    if(module==="tables")for(const key of Object.keys(refs))delete refs[key];
+   }
+   if(module==="reservations"){const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");if(from||to){const a=Date.parse(from||""),b=Date.parse(to||"");if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>93*86400000)throw new ResourceError("INVALID_DATE_RANGE");const [found]=await db.execute<RowDataPacket[]>("SELECT id,branch_id,name,status,data,version,created_at FROM restaurant_resources WHERE tenant_id=? AND kind='reservation' AND archived=FALSE"+(branch?" AND (branch_id=? OR branch_id IS NULL)":"")+" AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))>=? AND JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt'))<? ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.scheduledAt')) LIMIT 1001",[ctx.tenantId,...(branch?[branch]:[]),new Date(a).toISOString(),new Date(b).toISOString()]);truncated=found.length>1000;resources=found.slice(0,1000).map(r=>({id:String(r.id),branch_id:r.branch_id?String(r.branch_id):null,name:String(r.name),status:String(r.status),data:parseData(r.data),version:Number(r.version),created_at:String(r.created_at)}));}}
+   if(module==="storefront"&&resources.length){const [appearance]=await db.execute<RowDataPacket[]>("SELECT template_key FROM restaurant_menu_appearance WHERE tenant_id=? LIMIT 1",[ctx.tenantId]);resources[0].data.menuTheme=String(appearance[0]?.template_key??resources[0].data.menuTheme??"sufra");}
+   if(module==="customerInvoices"){
+    const ids=resources.map(r=>r.data.orderId).filter((id):id is string=>typeof id==="string"&&Boolean(id));
+    if(ids.length){const [orders]=await db.execute<RowDataPacket[]>("SELECT id,currency FROM restaurant_orders WHERE tenant_id=? AND id IN ("+ids.map(()=>"?").join(",")+")",[ctx.tenantId,...ids]);resources=resources.map(r=>({...r,currency:String(orders.find(o=>o.id===r.data.orderId)?.currency??"SAR")}));}
+   }
+   return NextResponse.json({ok:true,resources,references:refs,truncated});
+  }
+  if(["orders","pos","kds"].includes(module)){const profile=await salesProfile(db,ctx.tenantId);const menu=module==="pos"?(profile.catalog?await activityPosMenu(db,ctx.tenantId,branch):await resourceRows(db,ctx.tenantId,"menu",branch)):[];return NextResponse.json({ok:true,currency:profile.currency,legacyRecoveryAllowed:module==="pos"&&["owner","manager"].includes(ctx.role),checkoutPolicy:module==="pos"?(await checkoutSettings(db,ctx.tenantId)).policy:undefined,catalogSource:profile.catalog?"activity":"restaurant",orders:await ordersRows(db,ctx.tenantId,ctx.role,branch,ctx.user),menu,options:module==="pos"?(profile.catalog?await activityPosOptions(db,ctx.tenantId,menu.map(i=>i.id)):await menuOptions(db,ctx.tenantId,menu.map(i=>i.id))):{},tables:module==="pos"&&profile.dining&&(await tenantEntitlement(ctx.tenantId,"tables")).enabled?await labelledTables(db,ctx.tenantId,branch):[]});}
+  if(module==="overview")return NextResponse.json({ok:true,...await overview(db,ctx.tenantId,ctx.role,branch,ctx.user)});
+  if(module==="reports"){
+   const url=new URL(request.url),from=url.searchParams.get("from"),to=url.searchParams.get("to");
+   if(!from||!to||!/^\d{4}-\d\d-\d\d$/.test(from)||!/^\d{4}-\d\d-\d\d$/.test(to))throw new ResourceError("INVALID_DATE_RANGE");
+   const start=new Date(from+"T00:00:00+03:00"),end=new Date(to+"T00:00:00+03:00");end.setUTCDate(end.getUTCDate()+1);
+   if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start||end.getTime()-start.getTime()>366*86400000)throw new ResourceError("INVALID_DATE_RANGE");
+   const filter=branch?" AND o.branch_id=?":"",values=branch?[ctx.tenantId,start,end,branch]:[ctx.tenantId,start,end];
+   const [daily]=await db.execute<RowDataPacket[]>("SELECT DATE(o.created_at+INTERVAL 3 HOUR) AS day,COUNT(*) AS orders,SUM(CASE WHEN o.payment_status='paid' AND o.status<>'cancelled' THEN o.total ELSE 0 END) AS sales FROM restaurant_orders o WHERE o.tenant_id=? AND o.created_at>=? AND o.created_at<?"+filter+" GROUP BY day ORDER BY day",values);
+   const [branches]=await db.execute<RowDataPacket[]>("SELECT b.name,COUNT(*) AS orders,SUM(CASE WHEN o.payment_status='paid' AND o.status<>'cancelled' THEN o.total ELSE 0 END) AS sales FROM restaurant_orders o JOIN branches b ON b.id=o.branch_id WHERE o.tenant_id=? AND o.created_at>=? AND o.created_at<?"+filter+" GROUP BY b.id,b.name ORDER BY sales DESC",values);
+   const [products]=await db.execute<RowDataPacket[]>("SELECT i.item_name,SUM(i.quantity) AS quantity,SUM(i.line_total) AS amount FROM restaurant_order_items i JOIN restaurant_orders o ON o.id=i.order_id AND o.tenant_id=i.tenant_id WHERE o.tenant_id=? AND o.created_at>=? AND o.created_at<? AND o.payment_status='paid' AND o.status<>'cancelled'"+filter+" GROUP BY i.menu_item_id,i.item_name ORDER BY quantity DESC LIMIT 20",values);
+   return NextResponse.json({ok:true,daily:daily.map(row=>({...row,day:row.day instanceof Date?row.day.toISOString().slice(0,10):String(row.day),sales:Number(row.sales)})),branches:branches.map(row=>({...row,sales:Number(row.sales)})),products:products.map(row=>({...row,quantity:Number(row.quantity),amount:Number(row.amount)}))});
+  }
+  if(module==="customers"){const [rows]=await db.execute<RowDataPacket[]>("SELECT u.id,u.display_name,c.created_at FROM tenant_customers c JOIN users u ON u.id=c.user_id WHERE c.tenant_id=? ORDER BY c.created_at DESC LIMIT 200",[ctx.tenantId]);return NextResponse.json({ok:true,customers:rows});}
+  if(module==="security"){const current=await currentSessionId(),[rows]=await db.execute<RowDataPacket[]>("SELECT id,created_at,last_seen_at,expires_at FROM auth_sessions WHERE user_id=? AND expires_at>NOW() ORDER BY last_seen_at DESC LIMIT 100",[ctx.user]);return NextResponse.json({ok:true,sessions:rows.map(s=>({...s,current:s.id===current}))});}
+  if(module==="health"){const [[history]]=await db.query<RowDataPacket[]>("SELECT COUNT(*) AS count FROM schema_migrations");return NextResponse.json({ok:true,database:"connected",migrations:Number(history.count),mailConfigured:Boolean(process.env.SMTP_HOST&&process.env.SMTP_USER&&process.env.SMTP_PASSWORD),geocodingConfigured:Boolean(process.env.GOOGLE_MAPS_GEOCODING_API_KEY),checkedAt:new Date().toISOString()});}
+  throw new ResourceError("MODULE_NOT_FOUND");
+ }catch(error){return failure(error,request,(await params).module);}finally{db?.release();}
+}
+async function mutate(request:Request,module:string,method:string){
+ let db:PoolConnection|undefined;
+ try{
+  const body=await request.json().catch(()=>null);
+  if(!body||typeof body!=="object"||Array.isArray(body))throw new ResourceError("INVALID_INPUT");
+  // Recording payment during POS create is also a financial edit. A cashier
+  // who can create orders but lacks pos.edit must never mark them paid.
+  const requestedBranch=typeof body.branchId==="string"?body.branchId:null;
+  const ctx=await authorize(request,module,true,undefined,requestedBranch);
+  if(module==="pos"&&method==="POST"&&body.paymentStatus==="paid")await authorize(request,module,true,"edit",requestedBranch);
+  
+  db=await connection();await db.beginTransaction();
+  if(!["owner","manager"].includes(ctx.role)&&method==="POST"){
+   if(!ctx.authorizedBranch)throw new ResourceError("BRANCH_REQUIRED");
+   if(body.branchId!==undefined&&body.branchId!==ctx.authorizedBranch)throw new ResourceError("FORBIDDEN");
+   body.branchId=ctx.authorizedBranch;
+  }
+  // The PIN must apply to the actual target record, not merely a chosen header.
+  if(typeof body.branchId==="string"&&body.branchId)await requireAdditionalBranchUnlock(ctx.tenantId,body.branchId,ctx.user);
+  if(typeof body.id==="string"&&Object.hasOwn(resourceModules,module)){
+   const [target]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenantId]);
+   if(target.length&&target[0].branch_id)await requireAdditionalBranchUnlock(ctx.tenantId,String(target[0].branch_id),ctx.user);
+  }
+  // Existing records must belong to the employee's verified branch before any mutation.
+  if(!["owner","manager"].includes(ctx.role)&&typeof body.id==="string"){
+   if(!ctx.authorizedBranch)throw new ResourceError("BRANCH_REQUIRED");
+   const table=["orders","pos","kds"].includes(module)?"restaurant_orders":"restaurant_resources";
+   const [scope]=await db.execute<RowDataPacket[]>("SELECT id FROM "+table+" WHERE id=? AND tenant_id=? AND branch_id=? LIMIT 1 FOR UPDATE",[body.id,ctx.tenantId,ctx.authorizedBranch]);
+   if(!scope.length)throw new ResourceError("FORBIDDEN");
+  }
+  if(ctx.role==="waiter"&&module==="waiterCalls"){
+   const ids=await assignedWaiterTableIds(db,ctx.tenantId,ctx.authorizedBranch??"",ctx.user);
+   if(typeof body.id==="string"){
+    const [calls]=await db.execute<RowDataPacket[]>("SELECT data FROM restaurant_resources WHERE tenant_id=? AND branch_id=? AND id=? AND kind='waiter_call' AND archived=FALSE FOR UPDATE",[ctx.tenantId,ctx.authorizedBranch,body.id]);
+    if(!calls.length||!ids.includes(String(parseData(calls[0].data).tableId??"")))throw new ResourceError("FORBIDDEN");
+   }
+   const input=body.data as Record<string,unknown>|undefined;
+   if(input?.tableId!==undefined&&!ids.includes(String(input.tableId)))throw new ResourceError("FORBIDDEN");
+  }
+  // Never trust a branch supplied in a mutation body without verifying employee assignment.
+  if(!["owner","manager"].includes(ctx.role)&&typeof body.branchId==="string"&&body.branchId){
+   if(body.branchId!==ctx.authorizedBranch)throw new ResourceError("FORBIDDEN");
+   const [assigned]=await db.execute<RowDataPacket[]>("SELECT 1 FROM employee_branch_assignments WHERE tenant_id=? AND user_id=? AND branch_id=? AND enabled=TRUE LIMIT 1",[ctx.tenantId,ctx.user,body.branchId]);
+   if(!assigned.length)throw new ResourceError("FORBIDDEN");
+   const headerBranch=request.headers.get("x-foon-branch");
+   if(headerBranch&&headerBranch!==body.branchId)throw new ResourceError("FORBIDDEN");
+  }
+  if(["tables","sections"].includes(module))await db.execute("SELECT id FROM tenants WHERE id=? FOR UPDATE",[ctx.tenantId]);
+  let reservationBefore:string|null=null;
+  if(module==="reservations"&&method==="PATCH"&&typeof body.id==="string"){
+   const [before]=await db.execute<RowDataPacket[]>("SELECT status FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='reservation' FOR UPDATE",[ctx.tenantId,body.id]);reservationBefore=before[0]?String(before[0].status):null;
+  }
+  let result;
+  if(module==="menu"&&method==="DELETE"&&Array.isArray(body.items)){
+   // A bounded all-or-nothing archive. Never accept a client-provided tenant or branch,
+   // and keep the canonical item and historical orders in place.
+   if(!["owner","manager"].includes(ctx.role)||body.id!==undefined||body.items.length<1||body.items.length>100)throw new ResourceError("INVALID_INPUT");
+   const entries=body.items as unknown[];
+   if(entries.some(entry=>!entry||typeof entry!=="object"||Array.isArray(entry)||typeof (entry as {id?:unknown}).id!=="string"||typeof (entry as {version?:unknown}).version!=="string"))throw new ResourceError("INVALID_INPUT");
+   const items=entries as {id:string;version:string}[];
+   if(items.some(item=>item.id.length>64||item.id.length<3||item.version.length!==64)||new Set(items.map(item=>item.id)).size!==items.length)throw new ResourceError("INVALID_INPUT");
+   for(const item of items){
+    // The record's real branch, not the caller's header, decides PIN enforcement.
+    const [target]=await db.execute<RowDataPacket[]>("SELECT branch_id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='menu_item' LIMIT 1",[ctx.tenantId,item.id]);
+    if(target[0]?.branch_id)await requireAdditionalBranchUnlock(ctx.tenantId,String(target[0].branch_id),ctx.user);
+    // saveResource verifies tenant ownership and optimistic row version, and audits each archive.
+    await saveResource(db,ctx.tenantId,ctx.user,ctx.role,"menu",{id:item.id,version:item.version},true);
+   }
+   result={deleted:items.length};
+  }else if(module==="sections"&&method==="POST"&&body.sections){result=await createDiningBatch(db,ctx.tenantId,ctx.user,ctx.role,body);}else if(Object.hasOwn(resourceModules,module)){
+   if(method==="POST"&&body.id!==undefined||method!=="POST"&&typeof body.id!=="string")throw new ResourceError("INVALID_INPUT");
+   if(module==="storefront"&&method!=="DELETE"){
+    for(const [key,feature] of [["logoUrl","branding.logo"],["menuTheme","branding.menu_theme"],["fontPreset","branding.custom_font"],["platformBranding","branding.white_label"]]){
+     if(body.data?.[key]&&!(key==="menuTheme"&&body.data[key]==="classic"||key==="fontPreset"&&body.data[key]==="arial"||key==="platformBranding"&&body.data[key]==="visible")&&!(await tenantEntitlement(ctx.tenantId,feature)).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
+    }
+    if(body.data?.menuTheme==="dark"&&!(await tenantEntitlement(ctx.tenantId,"branding.dark_mode")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
+   }
+   if(method==="POST"&&body.confirmManualReceiptId===undefined&&resourceModules[module].feature){const grant=await tenantEntitlement(ctx.tenantId,resourceModules[module].feature!);if(grant.limit!==null){await db.execute("SELECT tenant_id FROM tenant_subscriptions WHERE tenant_id=? FOR UPDATE",[ctx.tenantId]);const [[used]]=await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS n FROM restaurant_resources WHERE tenant_id=? AND kind=? AND archived=FALSE",[ctx.tenantId,resourceModules[module].kind]);if((canonicalMenuModules.includes(module)?(await resourceRows(db,ctx.tenantId,module)).length:Number(used.n))>=grant.limit)throw new ResourceError("PLAN_LIMIT_REACHED");}}
+   if(module==="purchases"&&!(await tenantEntitlement(ctx.tenantId,"inventory")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");
+   if(module==="serviceOrders"&&method==="POST"&&body.convertQuotationId!==undefined){
+    if(typeof body.convertQuotationId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
+    result=await convertAcceptedQuotation(db,ctx.tenantId,ctx.user,ctx.role,body.convertQuotationId,body.branchId?String(body.branchId):null);
+   }else if(module==="customerInvoices"&&method==="POST"&&body.invoiceFromServiceOrderId!==undefined){
+    if(typeof body.invoiceFromServiceOrderId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
+    result=await draftInvoiceForCompletedService(db,ctx.tenantId,ctx.user,ctx.role,body.invoiceFromServiceOrderId,body.branchId?String(body.branchId):null);
+   }else if(module==="customerInvoices"&&method==="POST"&&body.confirmManualReceiptId!==undefined){
+    if(typeof body.confirmManualReceiptId!=="string"||body.id!==undefined||body.name!==undefined||body.status!==undefined||body.data!==undefined||body.branchId!=null&&typeof body.branchId!=="string")throw new ResourceError("INVALID_INPUT");
+    result=await confirmManualInvoiceReceipt(db,ctx.tenantId,ctx.user,body.confirmManualReceiptId,body.branchId?String(body.branchId):null,body.method,body.reference,body.amount,body.attested);
+   }else result=await saveResource(db,ctx.tenantId,ctx.user,ctx.role,module,body,method==="DELETE");
+   if(module==="reservations"&&method==="PATCH"&&body.status&&typeof body.id==="string"){
+    const [previous]=await db.execute<RowDataPacket[]>("SELECT status,data,name FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='reservation' LIMIT 1",[body.id,ctx.tenantId]);
+    const item=previous[0];
+    const data=item?parseData(item.data):{};
+    const userId=String(data.customerUserId??"");
+    if(item&&userId&&reservationBefore!==String(body.status)&&["confirmed","cancelled","seated","completed","no_show"].includes(String(body.status)))await notifyCustomer(db,{userId,tenantId:ctx.tenantId,event:"reservation_"+String(body.status),resourceId:body.id,reference:String(item.name??""),status:String(body.status)});
+   }
+  }else if(["orders","pos","kds"].includes(module)){
+   if(method==="POST"){if(module==="kds")throw new ResourceError("FORBIDDEN");if(body.couponCode&&!(await tenantEntitlement(ctx.tenantId,"coupons")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.tableId&&!(await tenantEntitlement(ctx.tenantId,"tables")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");if(body.channel==="room_service"&&!(await tenantEntitlement(ctx.tenantId,"room_service")).enabled)throw new ResourceError("PLAN_FEATURE_REQUIRED");result=await createOrder(db,ctx.tenantId,ctx.user,body);if(module==="pos")await recordManualPaymentAtCreate(db,ctx.tenantId,ctx.user,ctx.role,String(result.id),body);}
+   else if(method==="PATCH"){
+    result=await updateOrder(db,ctx.tenantId,ctx.user,ctx.role,body);
+   }
+   else throw new ResourceError("METHOD_NOT_ALLOWED");
+  }else if(module==="security"&&method==="DELETE"){
+   if(typeof body.id!=="string"||body.id===await currentSessionId())throw new ResourceError("CURRENT_SESSION_PROTECTED");
+   const [found]=await db.execute<RowDataPacket[]>("SELECT id FROM auth_sessions WHERE id=? AND user_id=? FOR UPDATE",[body.id,ctx.user]);if(!found.length)throw new ResourceError("RESOURCE_NOT_FOUND");
+   await db.execute("DELETE FROM auth_sessions WHERE id=? AND user_id=?",[body.id,ctx.user]);result={id:body.id};
+  }else throw new ResourceError("METHOD_NOT_ALLOWED");
+  await db.commit();dispatchNotifications();
+  // Do not hold invoice -> order locks across the first transaction: webhooks
+  // acquire order -> invoice, and the inverse ordering could deadlock. A late
+  // invoice is durable before the catch-up attempt starts.
+  let gatewayReconciliation:"reconciled"|"not_applicable"|"retry_required"|undefined;
+  const issuedInvoiceId=result&&typeof result==="object"&&"id" in result&&typeof result.id==="string"?result.id:null;
+  if(module==="customerInvoices"&&body.status==="issued"&&issuedInvoiceId){
+   try{
+    await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+    await db.beginTransaction();
+    gatewayReconciliation=(await reconcileLateIssuedInvoice(db,ctx.tenantId,issuedInvoiceId)).status;
+    await db.commit();dispatchNotifications();
+   }catch(error){
+    await db.rollback();
+    gatewayReconciliation="retry_required";
+    console.error("[FOON invoice catchup]",{incidentId:randomUUID().slice(0,8),error});
+   }
+  }
+  return NextResponse.json({ok:true,...result,...(gatewayReconciliation?{gatewayReconciliation}:{})},{status:method==="POST"?201:200});
+ }catch(error){if(db)await db.rollback();return failure(error,request,module);}finally{db?.release();}
+}
+export async function POST(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"POST");}
+export async function PATCH(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"PATCH");}
+export async function DELETE(request:Request,{params}:{params:Promise<{module:string}>}){return mutate(request,(await params).module,"DELETE");}
+
+

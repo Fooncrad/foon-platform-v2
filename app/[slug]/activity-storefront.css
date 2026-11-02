@@ -1,0 +1,335 @@
+.foonActivityStorefront{--activity-accent:#3458a4;overflow-x:clip}
+.foonActivityStorefront a{color:var(--activity-accent)}
+.foonActivityHero{padding:clamp(40px,7vw,90px) clamp(16px,5vw,72px);background:#edf2fa;border-bottom:1px solid #e2e8f0}
+.foonActivityHero h1{max-width:920px}
+.foonActivityContent{max-width:1200px;margin-inline:auto;padding:36px 20px}
+.foonActivityEmpty{min-height:230px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+.foonActivityEmpty span{font-size:42px;color:var(--activity-accent)}
+.foonActivityStorefront[data-template="market-grid"] .foonActivityHero,
+.foonActivityStorefront[data-template="commerce-grid"] .foonActivityHero{background:linear-gradient(120deg,#e1f2e7,#f6fbf7);border-bottom:5px solid var(--activity-accent)}
+.foonActivityStorefront[data-template="market-offers"] .foonActivityHero{background:linear-gradient(125deg,#145b3d,#27835c);color:#fff}
+.foonActivityStorefront[data-template="market-offers"] .foonActivityEmpty{border:2px dashed var(--activity-accent)}
+.foonActivityStorefront[data-template^="fashion-"] .foonActivityHero{background:#f7eaf0;text-align:center}
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityHero{padding-block:110px}
+.foonActivityStorefront[data-template^="fragrance-"] .foonActivityHero{background:#eee7f4;text-align:center}
+.foonActivityStorefront[data-template^="gift-"] .foonActivityHero{background:#fff0e6}
+.foonActivityStorefront[data-template^="coffee-"] .foonActivityHero{background:#f4e9dd}
+.foonActivityStorefront[data-template^="bakery-"] .foonActivityHero,
+.foonActivityStorefront[data-template="occasion-boxes"] .foonActivityHero{background:#fff0e9}
+.foonActivityStorefront[data-template^="wash-"] .foonActivityHero,
+.foonActivityStorefront[data-template^="laundry-"] .foonActivityHero,
+.foonActivityStorefront[data-template^="auto-"] .foonActivityHero{background:linear-gradient(120deg,#e1f4f3,#f5fbfc)}
+.foonActivityStorefront[data-template^="salon-"] .foonActivityHero{background:#fbeaf4}
+.foonActivityStorefront[data-template^="projects-"] .foonActivityHero,
+.foonActivityStorefront[data-template="service-quotation"] .foonActivityHero{background:#e7ecf1}
+.foonActivityStorefront[data-template$="-booking"] .foonActivityEmpty,
+.foonActivityStorefront[data-template$="-packages"] .foonActivityEmpty{border-inline-start:5px solid var(--activity-accent)}
+@media(max-width:480px){.foonActivityHero{padding:44px 18px}.foonActivityContent{padding:24px 14px}.foonActivityEmpty{min-height:180px}}
+
+.foonActivityProducts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:18px}
+.foonActivityProduct{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;min-width:0}
+.foonActivityProductMedia{aspect-ratio:1;display:grid;place-items:center;background:#eef2f7;color:var(--activity-accent);font-size:40px}
+.foonActivityProductMedia img{width:100%;height:100%;object-fit:cover}
+.foonActivityProductInfo{padding:14px;display:grid;gap:8px}
+.foonActivityProductInfo small{color:#64748b}
+.foonActivityProductInfo h3{font-size:17px;line-height:1.4;margin:0;overflow-wrap:anywhere}
+.foonActivityProductInfo strong{font-size:16px;color:var(--activity-accent);text-align:start}
+.foonActivityStorefront-gallery .foonActivityProducts{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.foonActivityStorefront-services .foonActivityProduct{display:flex;flex-direction:row}
+.foonActivityStorefront-services .foonActivityProductMedia{width:110px;flex:none;aspect-ratio:auto}
+@media(max-width:480px){.foonActivityProducts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.foonActivityProductInfo{padding:10px}.foonActivityProductInfo h3{font-size:14px}.foonActivityStorefront-services .foonActivityProducts{grid-template-columns:1fr}}
+
+.foonActivitySearch{display:flex;gap:10px;max-width:680px;margin:0 0 20px}
+.foonActivitySearch input{flex:1;min-width:0;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;font:inherit}
+.foonActivitySearch button{background:var(--activity-accent);color:white;border:0;border-radius:12px;padding:10px 20px;cursor:pointer}
+.foonActivityCategories{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.foonActivityCategories a{display:inline-flex;padding:9px 14px;border-radius:999px;border:1px solid #d4dce6;background:white;text-decoration:none;max-width:100%;overflow-wrap:anywhere}
+.foonActivityCategories a[aria-current="page"]{background:var(--activity-accent);color:#fff;border-color:var(--activity-accent)}
+.foonActivityCount{font-size:14px;color:#64748b;margin:0 0 18px}
+.foonActivityPagination{display:flex;justify-content:center;align-items:center;gap:18px;padding:28px 0}
+.foonActivityPagination a{border:1px solid #d4dce6;padding:10px 18px;border-radius:10px;text-decoration:none;background:white}
+@media(max-width:480px){.foonActivitySearch button{padding:10px 13px}.foonActivityCategories{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.foonActivityCategories a{flex:none;white-space:nowrap}}
+
+
+/* FOON activity-specific storefront design system — keeps restaurant public menu untouched. */
+.foonActivityStorefront{--activity-surface:#fff;--activity-ink:#1c2532;--activity-muted:#687386;--activity-border:#e6e9ef;--activity-radius:20px;background:#f7f8fb!important;color:var(--activity-ink)!important}
+.foonActivityStorefront>header{position:sticky;top:0;z-index:20;box-shadow:0 4px 20px #1620330b;min-height:70px}
+.foonActivityStorefront>header>a{font-size:clamp(18px,2.4vw,26px);font-weight:850!important;letter-spacing:-.02em}
+.foonActivityStorefront>header nav{align-items:center;flex-wrap:wrap;gap:10px!important}
+.foonActivityStorefront>header nav a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 15px;border:1px solid var(--activity-border);border-radius:999px;text-decoration:none;font-size:14px;font-weight:650}
+.foonActivityStorefront>header nav a:last-child{background:var(--activity-accent);border-color:var(--activity-accent);color:white}
+.foonActivityHero{position:relative;isolation:isolate;overflow:hidden;min-height:245px;padding-block:clamp(48px,7vw,94px);background:linear-gradient(115deg,color-mix(in srgb,var(--activity-accent) 14%,white),#fff 88%);border-bottom:0!important}
+.foonActivityHero:after{content:"";position:absolute;z-index:-1;width:min(45vw,430px);aspect-ratio:1;border-radius:50%;inset-inline-end:-7%;top:-45%;background:color-mix(in srgb,var(--activity-accent) 13%,transparent);box-shadow:0 0 0 55px color-mix(in srgb,var(--activity-accent) 6%,transparent),0 0 0 110px color-mix(in srgb,var(--activity-accent) 3%,transparent)}
+.foonActivityHero>p:first-child{font-weight:750;text-transform:uppercase;color:var(--activity-accent);letter-spacing:.08em!important}
+.foonActivityHero h1{font-weight:850;letter-spacing:-.035em;max-width:800px}
+.foonActivityHero>p:last-child{max-width:650px;opacity:.82}
+.foonActivityContent{max-width:1360px;padding-block:42px 72px}
+.foonActivityContent>h2{font-size:clamp(22px,3vw,30px)!important;font-weight:800;margin:0 0 22px}
+.foonActivitySearch{max-width:none;background:#fff;border:1px solid var(--activity-border);padding:8px;border-radius:18px;box-shadow:0 6px 24px #16203308}
+.foonActivitySearch input{border:0;background:transparent;min-height:44px;outline-offset:2px}
+.foonActivitySearch button{min-height:44px;font-weight:750}
+.foonActivityCategories{gap:10px;margin-block:22px}
+.foonActivityCategories a{min-height:44px;align-items:center;border-color:var(--activity-border);font-weight:650;transition:background .2s,transform .2s}
+.foonActivityCategories a:hover{transform:translateY(-2px);border-color:var(--activity-accent)}
+.foonActivityProducts{grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr));gap:20px}
+.foonActivityProduct{border-color:var(--activity-border);border-radius:var(--activity-radius);box-shadow:0 5px 20px #16203309;transition:transform .2s,box-shadow .2s}
+.foonActivityProduct:hover{transform:translateY(-4px);box-shadow:0 14px 32px #16203318}
+.foonActivityProductMedia{background:color-mix(in srgb,var(--activity-accent) 7%,#f4f5f8);overflow:hidden}
+.foonActivityProductMedia img{transition:transform .35s}
+.foonActivityProduct:hover img{transform:scale(1.045)}
+.foonActivityProductInfo{padding:16px;gap:10px}
+.foonActivityProductInfo small{font-size:12px;color:var(--activity-muted);font-weight:650}
+.foonActivityProductInfo h3{font-size:17px;font-weight:750;min-height:2.8em}
+.foonActivityProductInfo strong{font-size:19px;font-weight:850}
+.foonActivityEmpty{border:1px dashed color-mix(in srgb,var(--activity-accent) 45%,#d5dbe3);background:linear-gradient(145deg,#fff,color-mix(in srgb,var(--activity-accent) 5%,#fff));box-shadow:0 5px 20px #16203308}
+.foonActivityPagination a{min-height:44px;display:inline-flex;align-items:center;border-radius:14px;font-weight:700}
+.foonActivityStorefront[data-activity="cafe"]{--activity-accent:#88542d!important}
+.foonActivityStorefront[data-activity="sweets"]{--activity-accent:#c34868!important}
+.foonActivityStorefront[data-activity="grocery"]{--activity-accent:#167348!important}
+.foonActivityStorefront[data-activity="clothing"]{--activity-accent:#723b84!important}
+.foonActivityStorefront[data-activity="perfume"]{--activity-accent:#ae285b!important}
+.foonActivityStorefront[data-activity="accessories"]{--activity-accent:#b28733!important}
+.foonActivityStorefront[data-activity="gifts"]{--activity-accent:#b32242!important}
+.foonActivityStorefront[data-activity="ecommerce"]{--activity-accent:#135ca5!important}
+.foonActivityStorefront[data-activity="carwash"]{--activity-accent:#136caa!important}
+.foonActivityStorefront[data-activity="laundry"]{--activity-accent:#2877b8!important}
+.foonActivityStorefront[data-activity="automotive"]{--activity-accent:#ad3436!important}
+.foonActivityStorefront[data-activity="salon"]{--activity-accent:#ad4077!important}
+.foonActivityStorefront[data-activity="publicworks"]{--activity-accent:#99601c!important}
+.foonActivityStorefront[data-activity="accessories"] .foonActivityHero{background:linear-gradient(115deg,#19191b,#3d3429);color:#fff}
+.foonActivityStorefront[data-activity="accessories"] .foonActivityHero>p:first-child{color:#eac87b}
+.foonActivityStorefront[data-activity="perfume"] .foonActivityHero{background:linear-gradient(115deg,#f9e5eb,#fff4f7)}
+.foonActivityStorefront[data-activity="gifts"] .foonActivityHero{background:linear-gradient(115deg,#fff0f1,#fff7ef)}
+.foonActivityStorefront[data-activity="publicworks"] .foonActivityHero{background:linear-gradient(115deg,#f1e8d9,#f8f8f8)}
+.foonActivityStorefront-services .foonActivityProduct{display:flex;align-items:stretch}
+.foonActivityStorefront-services .foonActivityProductMedia{width:38%;min-width:110px}
+.foonActivityStorefront-services .foonActivityProductInfo{flex:1}
+@media(max-width:600px){
+ .foonActivityStorefront>header{min-height:60px;padding:10px 14px!important}
+ .foonActivityStorefront>header nav a{font-size:12px;padding:7px 10px;min-height:40px}
+ .foonActivityHero{min-height:180px;padding:42px 18px!important}
+ .foonActivityContent{padding:26px 12px 54px}
+ .foonActivityProducts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .foonActivityProductInfo{padding:11px;gap:7px}
+ .foonActivityProductInfo h3{font-size:14px;min-height:2.8em}
+ .foonActivityProductInfo strong{font-size:15px}
+ .foonActivitySearch{gap:4px;padding:5px}
+ .foonActivitySearch button{padding-inline:12px}
+ .foonActivityCategories{flex-wrap:nowrap;overflow-x:auto}
+ .foonActivityStorefront-services .foonActivityProducts{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.foonActivityStorefront *{transition:none!important}}
+
+/* Service listings share catalog data but use an explicit service presentation. */
+.foonActivityServiceTag{display:inline-flex;width:max-content;max-width:100%;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--activity-accent) 13%,white);color:var(--activity-accent)!important;font-weight:750}
+.foonActivityServiceContact{display:inline-flex;align-items:center;justify-content:center;min-height:42px;text-align:center;border-radius:12px;background:var(--activity-accent);color:#fff!important;text-decoration:none;font-weight:750;padding:9px 12px;overflow-wrap:anywhere}
+.foonActivityServiceContact:focus-visible{outline:3px solid #222;outline-offset:3px}
+
+
+/* Customer-facing service inquiries and appointment requests. */
+.foonServiceRequestAction{margin-top:6px;min-width:0}
+.foonServiceRequestAction>button,.foonServiceRequestButtons button{min-height:42px;cursor:pointer}
+.foonServiceRequestForm{border:1px solid var(--activity-border);border-radius:14px;padding:12px;background:#f9fbfc;display:grid;gap:12px}
+.foonServiceRequestForm form,.foonServiceRequestForm form label{display:grid;gap:8px;min-width:0}
+.foonServiceRequestForm input,.foonServiceRequestForm textarea{max-width:100%;width:100%;box-sizing:border-box;border:1px solid #cad5e1;border-radius:8px;padding:10px;font:inherit;background:#fff;color:#152031}
+.foonServiceRequestButtons{display:flex;gap:8px;flex-wrap:wrap}
+.foonServiceRequestButtons button{padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#172033}
+.foonServiceRequestButtons button:first-child{background:var(--activity-accent);color:white;border-color:var(--activity-accent)}
+.foonActivityServicePhone{display:inline-flex;min-height:40px;justify-content:center;align-items:center;padding:8px 12px;text-decoration:none;border:1px solid var(--activity-accent);border-radius:10px}
+.foonServiceRequestHistory{max-width:1300px;margin:10px auto 30px;padding:18px;border:1px solid #e4e8ee;border-radius:16px;background:#fff}
+.foonServiceRequestHistory header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.foonServiceRequestHistory header button{min-height:40px;cursor:pointer}
+.foonServiceHistoryList{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.foonServiceHistoryList article{display:grid;gap:6px;padding:12px;border:1px solid #edf0f4;border-radius:12px}
+@media(max-width:600px){.foonServiceRequestHistory{margin-inline:12px}.foonServiceRequestForm{padding:9px}}
+
+/* Activity-specific storefronts: a shared accessible frame with distinct template art direction. */
+.foonActivityStorefront {
+  --activity-page: #f7f8fb;
+  --activity-panel: #fff;
+  --activity-hero-ink: #172033;
+  --activity-soft: color-mix(in srgb, var(--activity-accent) 9%, white);
+  width: 100%;
+  min-height: 100vh;
+  margin-inline: auto;
+  background: var(--activity-page) !important;
+  color: var(--activity-ink) !important;
+  font-family: Arial, Tahoma, sans-serif;
+  text-align: start;
+  overflow-x: clip;
+}
+.foonActivityStorefront :is(h1, h2, h3, p, small, a, button, input, textarea, select) {
+  font-family: inherit;
+}
+.foonActivityStorefront :is(h1, h2, h3, p) { overflow-wrap: anywhere; }
+.foonActivityStorefront :is(a, button, input, textarea, select) { touch-action: manipulation; }
+.foonActivityStorefront :is(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--activity-accent) 76%, #111);
+  outline-offset: 3px;
+}
+.foonActivityStorefront > header {
+  padding-inline: max(16px, calc((100% - 1360px) / 2)) !important;
+  background: var(--activity-panel) !important;
+  border-color: var(--activity-border) !important;
+}
+.foonActivityStorefront > header nav a { color: var(--activity-ink); }
+.foonActivityHero {
+  padding-inline: max(18px, calc((100% - 1360px) / 2)) !important;
+  color: var(--activity-hero-ink);
+}
+.foonActivityHero h1 { max-width: 15ch; }
+.foonActivityContent { min-width: 0; }
+.foonActivityProducts { align-items: stretch; }
+.foonActivityProduct { min-width: 0; background: var(--activity-panel); }
+.foonActivityProductMedia { min-width: 0; }
+.foonActivityProductMedia img { display: block; }
+.foonActivityProductInfo { min-width: 0; align-content: start; }
+.foonActivityProductInfo :is(p, small, strong, a, button) { min-width: 0; overflow-wrap: anywhere; }
+.foonActivityProductInfo h3 { min-height: 0; }
+.foonActivityStorefront[data-layout="grid"] .foonActivityProducts {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+}
+.foonActivityStorefront[data-layout="gallery"] .foonActivityProducts {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr));
+}
+.foonActivityStorefront[data-layout="services"] .foonActivityProducts {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+}
+.foonActivityStorefront[data-layout="services"] .foonActivityProduct {
+  display: grid;
+  grid-template-columns: minmax(112px, 36%) minmax(0, 1fr);
+}
+.foonActivityStorefront[data-layout="services"] .foonActivityProductMedia {
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+}
+.foonActivityStorefront[data-layout="services"] .foonActivityProductInfo { align-content: center; }
+.foonActivitySearch { min-width: 0; }
+.foonActivitySearch :is(input, button) { min-height: 46px; }
+.foonActivityCategories { min-width: 0; padding-block: 2px 8px; }
+.foonActivityCategories a { flex: 0 0 auto; color: var(--activity-ink); }
+.foonActivityCategories a[aria-current="page"] { color: #fff; }
+.foonActivityCount { color: var(--activity-muted); }
+.foonActivityServicePhone { color: var(--activity-accent) !important; font-weight: 750; }
+
+/* Coffee and bakery retain warm, editorial presentation. */
+.foonActivityStorefront[data-template="coffee-bar"] .foonActivityHero,
+.foonActivityStorefront[data-template="bakery-showcase"] .foonActivityHero {
+  background: linear-gradient(125deg, #f0e2d2, #fffaf5 68%, #ead3bb) !important;
+}
+.foonActivityStorefront[data-template="coffee-bar"] .foonActivityHero h1,
+.foonActivityStorefront[data-template="bakery-showcase"] .foonActivityHero h1 { font-family: Georgia, "Times New Roman", serif; }
+.foonActivityStorefront[data-template="coffee-gallery"] .foonActivityProductMedia,
+.foonActivityStorefront[data-template="occasion-boxes"] .foonActivityProductMedia { aspect-ratio: 5 / 4; }
+.foonActivityStorefront[data-template="coffee-gallery"] .foonActivityProduct,
+.foonActivityStorefront[data-template="occasion-boxes"] .foonActivityProduct { border-radius: 24px; }
+.foonActivityStorefront[data-template="occasion-boxes"] .foonActivityHero { background: linear-gradient(130deg, #ffe6dc, #fff9f5 72%, #f6d1c4) !important; }
+
+/* Fresh market and commerce use clear, dense product grids. */
+.foonActivityStorefront[data-template="market-grid"] .foonActivityHero,
+.foonActivityStorefront[data-template="commerce-grid"] .foonActivityHero {
+  background: linear-gradient(120deg, #dcefe4, #f8fcf8 68%, #cce7d5) !important;
+}
+.foonActivityStorefront[data-template="market-offers"] {
+  --activity-page: #eef5ef;
+  --activity-panel: #fff;
+}
+.foonActivityStorefront[data-template="market-offers"] .foonActivityHero {
+  background: linear-gradient(120deg, #124b35, #19774f 70%, #2b8c5e) !important;
+  color: #fff;
+}
+.foonActivityStorefront[data-template="market-offers"] .foonActivityHero > p:first-child { color: #c9f0d8; }
+.foonActivityStorefront[data-template="market-offers"] .foonActivityHero:after { background: #ffffff1c; box-shadow: 0 0 0 55px #ffffff0c, 0 0 0 110px #ffffff08; }
+.foonActivityStorefront[data-template="commerce-featured"] .foonActivityHero { min-height: 300px; }
+
+/* Fashion, fragrance, jewelry, and gift stores keep their own silhouettes. */
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityHero,
+.foonActivityStorefront[data-template="fragrance-boutique"] .foonActivityHero {
+  text-align: center;
+  background: linear-gradient(135deg, #f5e7ef, #fff9fc 70%, #ead8ea) !important;
+}
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityHero h1,
+.foonActivityStorefront[data-template="fragrance-boutique"] .foonActivityHero h1 { margin-inline: auto; }
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityProducts,
+.foonActivityStorefront[data-template="fragrance-collection"] .foonActivityProducts {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 215px), 1fr));
+}
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityProductMedia,
+.foonActivityStorefront[data-template="fashion-grid"] .foonActivityProductMedia,
+.foonActivityStorefront[data-template="fragrance-collection"] .foonActivityProductMedia,
+.foonActivityStorefront[data-template="watch-showcase"] .foonActivityProductMedia { aspect-ratio: 4 / 5; }
+.foonActivityStorefront[data-template="fashion-editorial"] .foonActivityProduct,
+.foonActivityStorefront[data-template="fragrance-boutique"] .foonActivityProduct { border-radius: 4px; box-shadow: none; }
+.foonActivityStorefront[data-template="fragrance-boutique"] .foonActivityHero { background: linear-gradient(115deg, #f3dce5, #fff8fa 75%) !important; }
+.foonActivityStorefront[data-template="accessories-grid"] .foonActivityHero,
+.foonActivityStorefront[data-template="watch-showcase"] .foonActivityHero {
+  background: linear-gradient(120deg, #17191d, #3a342b 72%, #67542e) !important;
+  color: #fff;
+}
+.foonActivityStorefront[data-template="accessories-grid"] .foonActivityHero > p:first-child,
+.foonActivityStorefront[data-template="watch-showcase"] .foonActivityHero > p:first-child { color: #f0d289; }
+.foonActivityStorefront[data-template="accessories-grid"] .foonActivityProduct,
+.foonActivityStorefront[data-template="watch-showcase"] .foonActivityProduct { border-color: #d6c89f; }
+.foonActivityStorefront[data-template="gift-gallery"] .foonActivityProduct { border-radius: 24px; }
+.foonActivityStorefront[data-template="gift-occasion"] .foonActivityHero { background: linear-gradient(130deg, #f9dfe5, #fff9f1 70%, #f4dec5) !important; }
+
+/* Service activities use direct actions and scannable service cards. */
+.foonActivityStorefront[data-template^="wash-"] .foonActivityHero,
+.foonActivityStorefront[data-template^="laundry-"] .foonActivityHero { background: linear-gradient(120deg, #d9f0f0, #f8fcfc 70%, #cde8f0) !important; }
+.foonActivityStorefront[data-template="wash-packages"] .foonActivityProduct { border-radius: 24px; }
+.foonActivityStorefront[data-template="laundry-pickup"] .foonActivityProduct { border-style: dashed; }
+.foonActivityStorefront[data-template="auto-services"] .foonActivityProduct,
+.foonActivityStorefront[data-template="auto-booking"] .foonActivityProduct { border-inline-start: 4px solid var(--activity-accent); }
+.foonActivityStorefront[data-template^="salon-"] .foonActivityHero { background: linear-gradient(120deg, #f6dce9, #fff9fc 72%, #f0d8ea) !important; }
+.foonActivityStorefront[data-template="salon-booking"] .foonActivityProduct { border-radius: 28px 8px 28px 8px; }
+.foonActivityStorefront[data-template="projects-portfolio"] .foonActivityHero { background: linear-gradient(125deg, #e3e8ed, #fff 72%, #e8dccb) !important; }
+.foonActivityStorefront[data-template="projects-portfolio"] .foonActivityProductMedia { aspect-ratio: 16 / 10; }
+.foonActivityStorefront[data-template="service-quotation"] .foonActivityProduct { border-inline-start: 5px solid var(--activity-accent); }
+
+@media (min-width: 1000px) {
+  .foonActivityStorefront[data-template="fashion-editorial"] .foonActivityHero,
+  .foonActivityStorefront[data-template="fragrance-boutique"] .foonActivityHero { padding-block: clamp(90px, 10vw, 150px) !important; }
+  .foonActivityStorefront[data-template="fashion-editorial"] .foonActivityContent,
+  .foonActivityStorefront[data-template="projects-portfolio"] .foonActivityContent { max-width: 1440px; }
+}
+@media (max-width: 700px) {
+  .foonActivityStorefront > header { align-items: flex-start !important; }
+  .foonActivityStorefront > header nav { gap: 6px !important; }
+  .foonActivityStorefront > header nav a { min-height: 44px; padding-inline: 10px; }
+  .foonActivityHero { min-height: 180px; }
+  .foonActivityHero h1 { max-width: 100%; font-size: clamp(26px, 9vw, 38px) !important; }
+  .foonActivitySearch { flex-wrap: wrap; }
+  .foonActivitySearch input { flex: 1 1 150px; }
+  .foonActivitySearch button { min-width: 72px; }
+  .foonActivityStorefront[data-layout="services"] .foonActivityProducts { grid-template-columns: minmax(0, 1fr); }
+  .foonActivityStorefront[data-layout="services"] .foonActivityProduct { grid-template-columns: minmax(92px, 32%) minmax(0, 1fr); }
+  .foonActivityStorefront[data-layout="services"] .foonActivityProductInfo { padding: 10px; }
+}
+@media (max-width: 360px) {
+  .foonActivityStorefront > header { gap: 8px !important; }
+  .foonActivityStorefront > header > a { max-width: 100%; overflow-wrap: anywhere; }
+  .foonActivityStorefront > header nav { gap: 4px !important; }
+  .foonActivityStorefront > header nav a { padding-inline: 7px; font-size: 11px; }
+  .foonActivityContent { padding-inline: 10px; }
+  .foonActivityProducts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .foonActivityStorefront[data-layout="services"] .foonActivityProduct { grid-template-columns: minmax(78px, 30%) minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foonActivityStorefront *, .foonActivityStorefront *::before, .foonActivityStorefront *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+.foonActivityStorefront[data-template="wash-services"] .foonActivityHero,
+.foonActivityStorefront[data-template="laundry-services"] .foonActivityHero,
+.foonActivityStorefront[data-template="salon-services"] .foonActivityHero {
+  background: linear-gradient(120deg, var(--activity-soft), var(--activity-panel) 72%) !important;
+}
+
+
+/* The same in-place customer account journey for appointments and quotations. */
+.foonServiceRequestJourney{display:grid;gap:12px;min-width:0;max-width:100%}
+.foonServiceRequestJourney>.publicMenuInlineAuth{width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+.foonServiceRequestJourney>.publicMenuInlineAuth form{display:grid;gap:10px;min-width:0}
+.foonServiceRequestJourney>.publicMenuInlineAuth input{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.foonServiceRequestJourney .foonServiceRequestButtons button:disabled{opacity:.6;cursor:not-allowed}

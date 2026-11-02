@@ -1,0 +1,2490 @@
+{
+  "version": 1,
+  "purpose": "DEMO_ONLY_NOT_PRODUCTION_SEEDED",
+  "warning": "Requires authorized production DB access, licensed product-matched image assets and schema-aware importer. Do not expose demo items as real stock.",
+  "perActivity": {
+    "categories": 10,
+    "items": 10,
+    "images": 10
+  },
+  "activities": [
+    {
+      "code": "restaurant",
+      "slug": "foon-demo-restaurant",
+      "displayName": "FOON تجربة restaurant",
+      "categories": [
+        {
+          "name": "مشويات",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة مشويات",
+              "description": "بيانات تجريبية للعرض فقط — مشويات",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "مشويات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "برجر",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة برجر",
+              "description": "بيانات تجريبية للعرض فقط — برجر",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "برجر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بيتزا",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة بيتزا",
+              "description": "بيانات تجريبية للعرض فقط — بيتزا",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "بيتزا",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مقبلات",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة مقبلات",
+              "description": "بيانات تجريبية للعرض فقط — مقبلات",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "مقبلات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "سلطات",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة سلطات",
+              "description": "بيانات تجريبية للعرض فقط — سلطات",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "سلطات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "شوربات",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة شوربات",
+              "description": "بيانات تجريبية للعرض فقط — شوربات",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "شوربات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مأكولات بحرية",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة مأكولات بحرية",
+              "description": "بيانات تجريبية للعرض فقط — مأكولات بحرية",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "مأكولات بحرية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "أرز",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة أرز",
+              "description": "بيانات تجريبية للعرض فقط — أرز",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "أرز",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "حلويات",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة حلويات",
+              "description": "بيانات تجريبية للعرض فقط — حلويات",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "حلويات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مشروبات",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة مشروبات",
+              "description": "بيانات تجريبية للعرض فقط — مشروبات",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "مشروبات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "cafe",
+      "slug": "foon-demo-cafe",
+      "displayName": "FOON تجربة cafe",
+      "categories": [
+        {
+          "name": "إسبريسو",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة إسبريسو",
+              "description": "بيانات تجريبية للعرض فقط — إسبريسو",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "إسبريسو",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "قهوة مختصة",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة قهوة مختصة",
+              "description": "بيانات تجريبية للعرض فقط — قهوة مختصة",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "قهوة مختصة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "قهوة باردة",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة قهوة باردة",
+              "description": "بيانات تجريبية للعرض فقط — قهوة باردة",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "قهوة باردة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "شاي",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة شاي",
+              "description": "بيانات تجريبية للعرض فقط — شاي",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "شاي",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ماتشا",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة ماتشا",
+              "description": "بيانات تجريبية للعرض فقط — ماتشا",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "ماتشا",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عصائر",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة عصائر",
+              "description": "بيانات تجريبية للعرض فقط — عصائر",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "عصائر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "كرواسون",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة كرواسون",
+              "description": "بيانات تجريبية للعرض فقط — كرواسون",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "كرواسون",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "كيك",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة كيك",
+              "description": "بيانات تجريبية للعرض فقط — كيك",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "كيك",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ساندويتشات",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة ساندويتشات",
+              "description": "بيانات تجريبية للعرض فقط — ساندويتشات",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "ساندويتشات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "إضافات",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة إضافات",
+              "description": "بيانات تجريبية للعرض فقط — إضافات",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "إضافات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "sweets",
+      "slug": "foon-demo-sweets",
+      "displayName": "FOON تجربة sweets",
+      "categories": [
+        {
+          "name": "كيك",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة كيك",
+              "description": "بيانات تجريبية للعرض فقط — كيك",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "كيك",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "كب كيك",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة كب كيك",
+              "description": "بيانات تجريبية للعرض فقط — كب كيك",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "كب كيك",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "كوكيز",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة كوكيز",
+              "description": "بيانات تجريبية للعرض فقط — كوكيز",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "كوكيز",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "دونات",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة دونات",
+              "description": "بيانات تجريبية للعرض فقط — دونات",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "دونات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "شوكولاتة",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة شوكولاتة",
+              "description": "بيانات تجريبية للعرض فقط — شوكولاتة",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "شوكولاتة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تشيز كيك",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة تشيز كيك",
+              "description": "بيانات تجريبية للعرض فقط — تشيز كيك",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "تشيز كيك",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ماكرون",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة ماكرون",
+              "description": "بيانات تجريبية للعرض فقط — ماكرون",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "ماكرون",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "حلويات شرقية",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة حلويات شرقية",
+              "description": "بيانات تجريبية للعرض فقط — حلويات شرقية",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "حلويات شرقية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "آيس كريم",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة آيس كريم",
+              "description": "بيانات تجريبية للعرض فقط — آيس كريم",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "آيس كريم",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بوكسات",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة بوكسات",
+              "description": "بيانات تجريبية للعرض فقط — بوكسات",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "بوكسات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "grocery",
+      "slug": "foon-demo-grocery",
+      "displayName": "FOON تجربة grocery",
+      "categories": [
+        {
+          "name": "خضروات",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة خضروات",
+              "description": "بيانات تجريبية للعرض فقط — خضروات",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "خضروات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "فواكه",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة فواكه",
+              "description": "بيانات تجريبية للعرض فقط — فواكه",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "فواكه",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ألبان",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة ألبان",
+              "description": "بيانات تجريبية للعرض فقط — ألبان",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "ألبان",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مخبوزات",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة مخبوزات",
+              "description": "بيانات تجريبية للعرض فقط — مخبوزات",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "مخبوزات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "معلبات",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة معلبات",
+              "description": "بيانات تجريبية للعرض فقط — معلبات",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "معلبات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مشروبات",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة مشروبات",
+              "description": "بيانات تجريبية للعرض فقط — مشروبات",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "مشروبات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "وجبات خفيفة",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة وجبات خفيفة",
+              "description": "بيانات تجريبية للعرض فقط — وجبات خفيفة",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "وجبات خفيفة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "أرز وحبوب",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة أرز وحبوب",
+              "description": "بيانات تجريبية للعرض فقط — أرز وحبوب",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "أرز وحبوب",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "منظفات",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة منظفات",
+              "description": "بيانات تجريبية للعرض فقط — منظفات",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "منظفات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عناية شخصية",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة عناية شخصية",
+              "description": "بيانات تجريبية للعرض فقط — عناية شخصية",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "عناية شخصية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "clothing",
+      "slug": "foon-demo-clothing",
+      "displayName": "FOON تجربة clothing",
+      "categories": [
+        {
+          "name": "فساتين",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة فساتين",
+              "description": "بيانات تجريبية للعرض فقط — فساتين",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "فساتين",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "قمصان",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة قمصان",
+              "description": "بيانات تجريبية للعرض فقط — قمصان",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "قمصان",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بناطيل",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة بناطيل",
+              "description": "بيانات تجريبية للعرض فقط — بناطيل",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "بناطيل",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عبايات",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة عبايات",
+              "description": "بيانات تجريبية للعرض فقط — عبايات",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "عبايات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "جاكيتات",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة جاكيتات",
+              "description": "بيانات تجريبية للعرض فقط — جاكيتات",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "جاكيتات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ملابس رياضية",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة ملابس رياضية",
+              "description": "بيانات تجريبية للعرض فقط — ملابس رياضية",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "ملابس رياضية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ملابس أطفال",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة ملابس أطفال",
+              "description": "بيانات تجريبية للعرض فقط — ملابس أطفال",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "ملابس أطفال",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "أحذية",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة أحذية",
+              "description": "بيانات تجريبية للعرض فقط — أحذية",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "أحذية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "حقائب",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة حقائب",
+              "description": "بيانات تجريبية للعرض فقط — حقائب",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "حقائب",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "إكسسوارات",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة إكسسوارات",
+              "description": "بيانات تجريبية للعرض فقط — إكسسوارات",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "إكسسوارات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "perfume",
+      "slug": "foon-demo-perfume",
+      "displayName": "FOON تجربة perfume",
+      "categories": [
+        {
+          "name": "عطور شرقية",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة عطور شرقية",
+              "description": "بيانات تجريبية للعرض فقط — عطور شرقية",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "عطور شرقية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عطور زهرية",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة عطور زهرية",
+              "description": "بيانات تجريبية للعرض فقط — عطور زهرية",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "عطور زهرية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عطور خشبية",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة عطور خشبية",
+              "description": "بيانات تجريبية للعرض فقط — عطور خشبية",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "عطور خشبية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عطور رجالية",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة عطور رجالية",
+              "description": "بيانات تجريبية للعرض فقط — عطور رجالية",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "عطور رجالية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عطور نسائية",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة عطور نسائية",
+              "description": "بيانات تجريبية للعرض فقط — عطور نسائية",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "عطور نسائية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عطور للجنسين",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة عطور للجنسين",
+              "description": "بيانات تجريبية للعرض فقط — عطور للجنسين",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "عطور للجنسين",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بخور",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة بخور",
+              "description": "بيانات تجريبية للعرض فقط — بخور",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "بخور",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "معطرات منزلية",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة معطرات منزلية",
+              "description": "بيانات تجريبية للعرض فقط — معطرات منزلية",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "معطرات منزلية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مجموعات هدايا",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة مجموعات هدايا",
+              "description": "بيانات تجريبية للعرض فقط — مجموعات هدايا",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "مجموعات هدايا",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عطور صغيرة",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة عطور صغيرة",
+              "description": "بيانات تجريبية للعرض فقط — عطور صغيرة",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "عطور صغيرة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "accessories",
+      "slug": "foon-demo-accessories",
+      "displayName": "FOON تجربة accessories",
+      "categories": [
+        {
+          "name": "ساعات",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة ساعات",
+              "description": "بيانات تجريبية للعرض فقط — ساعات",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "ساعات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "أساور",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة أساور",
+              "description": "بيانات تجريبية للعرض فقط — أساور",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "أساور",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "خواتم",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة خواتم",
+              "description": "بيانات تجريبية للعرض فقط — خواتم",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "خواتم",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "قلائد",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة قلائد",
+              "description": "بيانات تجريبية للعرض فقط — قلائد",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "قلائد",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "أقراط",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة أقراط",
+              "description": "بيانات تجريبية للعرض فقط — أقراط",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "أقراط",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "نظارات",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة نظارات",
+              "description": "بيانات تجريبية للعرض فقط — نظارات",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "نظارات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "محافظ",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة محافظ",
+              "description": "بيانات تجريبية للعرض فقط — محافظ",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "محافظ",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "حقائب صغيرة",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة حقائب صغيرة",
+              "description": "بيانات تجريبية للعرض فقط — حقائب صغيرة",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "حقائب صغيرة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "إكسسوارات هاتف",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة إكسسوارات هاتف",
+              "description": "بيانات تجريبية للعرض فقط — إكسسوارات هاتف",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "إكسسوارات هاتف",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مجموعات",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة مجموعات",
+              "description": "بيانات تجريبية للعرض فقط — مجموعات",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "مجموعات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "gifts",
+      "slug": "foon-demo-gifts",
+      "displayName": "FOON تجربة gifts",
+      "categories": [
+        {
+          "name": "هدايا تخرج",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة هدايا تخرج",
+              "description": "بيانات تجريبية للعرض فقط — هدايا تخرج",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "هدايا تخرج",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "هدايا مواليد",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة هدايا مواليد",
+              "description": "بيانات تجريبية للعرض فقط — هدايا مواليد",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "هدايا مواليد",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "هدايا زواج",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة هدايا زواج",
+              "description": "بيانات تجريبية للعرض فقط — هدايا زواج",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "هدايا زواج",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بوكسات ورد",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة بوكسات ورد",
+              "description": "بيانات تجريبية للعرض فقط — بوكسات ورد",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "بوكسات ورد",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تغليف فاخر",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة تغليف فاخر",
+              "description": "بيانات تجريبية للعرض فقط — تغليف فاخر",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "تغليف فاخر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بطاقات تهنئة",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة بطاقات تهنئة",
+              "description": "بيانات تجريبية للعرض فقط — بطاقات تهنئة",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "بطاقات تهنئة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "هدايا مكتبية",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة هدايا مكتبية",
+              "description": "بيانات تجريبية للعرض فقط — هدايا مكتبية",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "هدايا مكتبية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "هدايا شخصية",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة هدايا شخصية",
+              "description": "بيانات تجريبية للعرض فقط — هدايا شخصية",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "هدايا شخصية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "هدايا موسمية",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة هدايا موسمية",
+              "description": "بيانات تجريبية للعرض فقط — هدايا موسمية",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "هدايا موسمية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "سلال هدايا",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة سلال هدايا",
+              "description": "بيانات تجريبية للعرض فقط — سلال هدايا",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "سلال هدايا",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ecommerce",
+      "slug": "foon-demo-ecommerce",
+      "displayName": "FOON تجربة ecommerce",
+      "categories": [
+        {
+          "name": "إلكترونيات",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة إلكترونيات",
+              "description": "بيانات تجريبية للعرض فقط — إلكترونيات",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "إلكترونيات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مستلزمات منزلية",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة مستلزمات منزلية",
+              "description": "بيانات تجريبية للعرض فقط — مستلزمات منزلية",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "مستلزمات منزلية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مطبخ",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة مطبخ",
+              "description": "بيانات تجريبية للعرض فقط — مطبخ",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "مطبخ",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "رياضة",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة رياضة",
+              "description": "بيانات تجريبية للعرض فقط — رياضة",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "رياضة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "سفر",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة سفر",
+              "description": "بيانات تجريبية للعرض فقط — سفر",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "سفر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ألعاب",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة ألعاب",
+              "description": "بيانات تجريبية للعرض فقط — ألعاب",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "ألعاب",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مكتب",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة مكتب",
+              "description": "بيانات تجريبية للعرض فقط — مكتب",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "مكتب",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "إضاءة",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة إضاءة",
+              "description": "بيانات تجريبية للعرض فقط — إضاءة",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "إضاءة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيم",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة تنظيم",
+              "description": "بيانات تجريبية للعرض فقط — تنظيم",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "تنظيم",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "هدايا تقنية",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة هدايا تقنية",
+              "description": "بيانات تجريبية للعرض فقط — هدايا تقنية",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "هدايا تقنية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "carwash",
+      "slug": "foon-demo-carwash",
+      "displayName": "FOON تجربة carwash",
+      "categories": [
+        {
+          "name": "غسيل خارجي",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة غسيل خارجي",
+              "description": "بيانات تجريبية للعرض فقط — غسيل خارجي",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "غسيل خارجي",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "غسيل داخلي",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة غسيل داخلي",
+              "description": "بيانات تجريبية للعرض فقط — غسيل داخلي",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "غسيل داخلي",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "غسيل شامل",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة غسيل شامل",
+              "description": "بيانات تجريبية للعرض فقط — غسيل شامل",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "غسيل شامل",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تلميع",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة تلميع",
+              "description": "بيانات تجريبية للعرض فقط — تلميع",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "تلميع",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تعقيم",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة تعقيم",
+              "description": "بيانات تجريبية للعرض فقط — تعقيم",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "تعقيم",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف مقاعد",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة تنظيف مقاعد",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف مقاعد",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "تنظيف مقاعد",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف محرك",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة تنظيف محرك",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف محرك",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "تنظيف محرك",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "حماية طلاء",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة حماية طلاء",
+              "description": "بيانات تجريبية للعرض فقط — حماية طلاء",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "حماية طلاء",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف زجاج",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة تنظيف زجاج",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف زجاج",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "تنظيف زجاج",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "باقات اشتراك",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة باقات اشتراك",
+              "description": "بيانات تجريبية للعرض فقط — باقات اشتراك",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "باقات اشتراك",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "laundry",
+      "slug": "foon-demo-laundry",
+      "displayName": "FOON تجربة laundry",
+      "categories": [
+        {
+          "name": "غسيل يومي",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة غسيل يومي",
+              "description": "بيانات تجريبية للعرض فقط — غسيل يومي",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "غسيل يومي",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "كي ملابس",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة كي ملابس",
+              "description": "بيانات تجريبية للعرض فقط — كي ملابس",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "كي ملابس",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف جاف",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة تنظيف جاف",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف جاف",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "تنظيف جاف",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "غسيل مفارش",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة غسيل مفارش",
+              "description": "بيانات تجريبية للعرض فقط — غسيل مفارش",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "غسيل مفارش",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "غسيل بطانيات",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة غسيل بطانيات",
+              "description": "بيانات تجريبية للعرض فقط — غسيل بطانيات",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "غسيل بطانيات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "غسيل ستائر",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة غسيل ستائر",
+              "description": "بيانات تجريبية للعرض فقط — غسيل ستائر",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "غسيل ستائر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف سجاد",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة تنظيف سجاد",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف سجاد",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "تنظيف سجاد",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف أحذية",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة تنظيف أحذية",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف أحذية",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "تنظيف أحذية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "خدمة مستعجلة",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة خدمة مستعجلة",
+              "description": "بيانات تجريبية للعرض فقط — خدمة مستعجلة",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "خدمة مستعجلة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "استلام وتوصيل",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة استلام وتوصيل",
+              "description": "بيانات تجريبية للعرض فقط — استلام وتوصيل",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "استلام وتوصيل",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "automotive",
+      "slug": "foon-demo-automotive",
+      "displayName": "FOON تجربة automotive",
+      "categories": [
+        {
+          "name": "تغيير زيت",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة تغيير زيت",
+              "description": "بيانات تجريبية للعرض فقط — تغيير زيت",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "تغيير زيت",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "فحص مكابح",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة فحص مكابح",
+              "description": "بيانات تجريبية للعرض فقط — فحص مكابح",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "فحص مكابح",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "إطارات",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة إطارات",
+              "description": "بيانات تجريبية للعرض فقط — إطارات",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "إطارات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "بطاريات",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة بطاريات",
+              "description": "بيانات تجريبية للعرض فقط — بطاريات",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "بطاريات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "فحص كمبيوتر",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة فحص كمبيوتر",
+              "description": "بيانات تجريبية للعرض فقط — فحص كمبيوتر",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "فحص كمبيوتر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تكييف",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة تكييف",
+              "description": "بيانات تجريبية للعرض فقط — تكييف",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "تكييف",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "صيانة دورية",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة صيانة دورية",
+              "description": "بيانات تجريبية للعرض فقط — صيانة دورية",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "صيانة دورية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "قطع غيار",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة قطع غيار",
+              "description": "بيانات تجريبية للعرض فقط — قطع غيار",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "قطع غيار",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف بخاخات",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة تنظيف بخاخات",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف بخاخات",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "تنظيف بخاخات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "فحص شامل",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة فحص شامل",
+              "description": "بيانات تجريبية للعرض فقط — فحص شامل",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "فحص شامل",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "salon",
+      "slug": "foon-demo-salon",
+      "displayName": "FOON تجربة salon",
+      "categories": [
+        {
+          "name": "قص شعر",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة قص شعر",
+              "description": "بيانات تجريبية للعرض فقط — قص شعر",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "قص شعر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تصفيف",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة تصفيف",
+              "description": "بيانات تجريبية للعرض فقط — تصفيف",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "تصفيف",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "صبغات",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة صبغات",
+              "description": "بيانات تجريبية للعرض فقط — صبغات",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "صبغات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عناية بالبشرة",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة عناية بالبشرة",
+              "description": "بيانات تجريبية للعرض فقط — عناية بالبشرة",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "عناية بالبشرة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مانيكير",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة مانيكير",
+              "description": "بيانات تجريبية للعرض فقط — مانيكير",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "مانيكير",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "باديكير",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة باديكير",
+              "description": "بيانات تجريبية للعرض فقط — باديكير",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "باديكير",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "مكياج",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة مكياج",
+              "description": "بيانات تجريبية للعرض فقط — مكياج",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "مكياج",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عناية بالشعر",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة عناية بالشعر",
+              "description": "بيانات تجريبية للعرض فقط — عناية بالشعر",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "عناية بالشعر",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عناية بالقدمين",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة عناية بالقدمين",
+              "description": "بيانات تجريبية للعرض فقط — عناية بالقدمين",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "عناية بالقدمين",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "باقات مناسبات",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة باقات مناسبات",
+              "description": "بيانات تجريبية للعرض فقط — باقات مناسبات",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "باقات مناسبات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "publicworks",
+      "slug": "foon-demo-publicworks",
+      "displayName": "FOON تجربة publicworks",
+      "categories": [
+        {
+          "name": "صيانة مبانٍ",
+          "sortOrder": 1,
+          "items": [
+            {
+              "name": "عينة صيانة مبانٍ",
+              "description": "بيانات تجريبية للعرض فقط — صيانة مبانٍ",
+              "priceSAR": 20,
+              "imageRequirement": {
+                "subject": "صيانة مبانٍ",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "كهرباء",
+          "sortOrder": 2,
+          "items": [
+            {
+              "name": "عينة كهرباء",
+              "description": "بيانات تجريبية للعرض فقط — كهرباء",
+              "priceSAR": 25,
+              "imageRequirement": {
+                "subject": "كهرباء",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "سباكة",
+          "sortOrder": 3,
+          "items": [
+            {
+              "name": "عينة سباكة",
+              "description": "بيانات تجريبية للعرض فقط — سباكة",
+              "priceSAR": 30,
+              "imageRequirement": {
+                "subject": "سباكة",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "دهانات",
+          "sortOrder": 4,
+          "items": [
+            {
+              "name": "عينة دهانات",
+              "description": "بيانات تجريبية للعرض فقط — دهانات",
+              "priceSAR": 35,
+              "imageRequirement": {
+                "subject": "دهانات",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ترميم",
+          "sortOrder": 5,
+          "items": [
+            {
+              "name": "عينة ترميم",
+              "description": "بيانات تجريبية للعرض فقط — ترميم",
+              "priceSAR": 40,
+              "imageRequirement": {
+                "subject": "ترميم",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تكييف",
+          "sortOrder": 6,
+          "items": [
+            {
+              "name": "عينة تكييف",
+              "description": "بيانات تجريبية للعرض فقط — تكييف",
+              "priceSAR": 45,
+              "imageRequirement": {
+                "subject": "تكييف",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنسيق حدائق",
+          "sortOrder": 7,
+          "items": [
+            {
+              "name": "عينة تنسيق حدائق",
+              "description": "بيانات تجريبية للعرض فقط — تنسيق حدائق",
+              "priceSAR": 50,
+              "imageRequirement": {
+                "subject": "تنسيق حدائق",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "عزل",
+          "sortOrder": 8,
+          "items": [
+            {
+              "name": "عينة عزل",
+              "description": "بيانات تجريبية للعرض فقط — عزل",
+              "priceSAR": 55,
+              "imageRequirement": {
+                "subject": "عزل",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "تنظيف مواقع",
+          "sortOrder": 9,
+          "items": [
+            {
+              "name": "عينة تنظيف مواقع",
+              "description": "بيانات تجريبية للعرض فقط — تنظيف مواقع",
+              "priceSAR": 60,
+              "imageRequirement": {
+                "subject": "تنظيف مواقع",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        },
+        {
+          "name": "استشارات فنية",
+          "sortOrder": 10,
+          "items": [
+            {
+              "name": "عينة استشارات فنية",
+              "description": "بيانات تجريبية للعرض فقط — استشارات فنية",
+              "priceSAR": 65,
+              "imageRequirement": {
+                "subject": "استشارات فنية",
+                "aspectRatio": "1:1",
+                "license": "licensed-or-original",
+                "status": "PENDING_ASSET"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+/*
+ * FOON reference command center (2026-10-21)
+ * Presentation only. The existing merchant role, branch, plan and activity
+ * filters remain the sole source of navigation and action permissions.
+ */
+.restaurantApp[data-activity]{
+ --rc-accent:#d92483;--rc-navy:#fff;--rc-page:#f5f6fa;
+ --rc-text:#1c2636;--rc-muted:#626e80;--rc-border:#e7e8ef;
+}
+.restaurantApp[data-theme="dark"][data-activity]{
+ --rc-navy:#252a34;--rc-page:#171a20;--rc-text:#f8f3e9;
+ --rc-muted:#c3ccd9;--rc-border:#424c5b;
+}
+.restaurantApp .restaurantSidebar{
+ background:var(--rc-surface,#fff);color:var(--rc-text);
+ border-inline-end:1px solid var(--rc-border);box-shadow:0 3px 18px #1720330b;
+ width:254px;padding-bottom:12px;
+}
+.restaurantApp .restaurantMain{margin-inline-start:254px;min-width:0}
+.restaurantApp .restaurantSideBrand{min-height:70px;padding:14px 20px;border-bottom:1px solid var(--rc-border)}
+.restaurantApp .restaurantSideBrand>span{width:36px;height:36px;border-radius:10px;background:var(--rc-accent);color:#fff}
+.restaurantApp .restaurantSideBrand b{color:var(--rc-text);font-size:18px}
+.restaurantApp .restaurantSideBrand small,.restaurantApp .restaurantNavLabel,
+.restaurantApp .restaurantNavContext{color:var(--rc-muted)}
+.restaurantApp .restaurantNavContext{border-bottom:1px solid var(--rc-border);padding-bottom:12px}
+.restaurantApp .restaurantSidebar nav .restaurantNavTaskGroup{
+ border-top-color:var(--rc-border);padding-block:6px;
+}
+.restaurantApp .restaurantSidebar nav .restaurantNavGroupToggle{
+ background:transparent;color:var(--rc-text);min-height:40px;
+ font-size:12px;font-weight:800;
+}
+.restaurantApp .restaurantSidebar nav .restaurantNavGroupToggle:hover{
+ background:color-mix(in srgb,var(--rc-accent) 8%,var(--rc-surface,#fff));
+ color:var(--rc-text);
+}
+.restaurantApp .restaurantSidebar nav .restaurantNavGroupItems>button{
+ color:var(--rc-text);font-size:12px;min-height:40px;
+}
+.restaurantApp .restaurantSidebar nav .restaurantNavGroupItems>button:hover{
+ background:color-mix(in srgb,var(--rc-accent) 8%,var(--rc-surface,#fff));color:var(--rc-text);
+}
+.restaurantApp .restaurantSidebar nav .restaurantNavGroupItems>button[aria-current="page"]{
+ background:color-mix(in srgb,var(--rc-accent) 12%,var(--rc-surface,#fff));
+ box-shadow:inset 3px 0 0 var(--rc-accent);color:var(--rc-accent);font-weight:800;
+}
+.restaurantApp .restaurantNavGroupCount{background:color-mix(in srgb,var(--rc-accent) 10%,transparent);color:var(--rc-accent)}
+.restaurantApp .restaurantSideFooter{padding:14px;gap:9px}
+.restaurantApp .restaurantSideFooter>a,
+.restaurantApp .restaurantSideFooter .restaurantPlanShortcut{
+ background:var(--rc-surface,#fff);border:1px solid var(--rc-border);
+ color:var(--rc-text)!important;border-radius:10px;padding:11px;
+}
+.restaurantApp .restaurantTopbar{
+ min-height:64px;background:var(--rc-surface,#fff);border-bottom:1px solid var(--rc-border);
+ box-shadow:0 1px 4px #131a2708;
+}
+.restaurantApp .restaurantContent{max-width:none;padding:20px 24px 28px}
+.restaurantApp .restaurantPageHeading{margin-bottom:12px}
+.restaurantApp .restaurantPanel,
+.restaurantApp .restaurantMetrics article,
+.restaurantApp .restaurantQuickActions>button,
+.restaurantApp .restaurantQuickActions>a{
+ border-radius:13px;border-color:var(--rc-border);box-shadow:0 2px 8px #1d24340a;
+}
+.restaurantApp .restaurantPanel{padding:19px}
+.restaurantApp .restaurantPanel h3{font-size:16px;line-height:1.4}
+.restaurantApp .restaurantPanel header p{font-size:12px;line-height:1.6}
+.restaurantApp .restaurantMetricIcon{border-radius:10px}
+.restaurantApp .restaurantMetricIcon.orange{background:#fde7f0;color:#c51f73}
+.restaurantApp .restaurantMetricIcon.blue{background:#e2f6ff;color:#008ac0}
+.restaurantApp .restaurantMetricIcon.violet{background:#f0e9ff;color:#8151cd}
+.restaurantApp .restaurantMetricIcon.teal{background:#e3f7ec;color:#208b5b}
+/* Shared overview structure: KPIs / analysis + profile / branch / orders / shortcuts. */
+.restaurantApp .restaurantReferenceOverview{
+ display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);
+ gap:15px;align-items:start;min-width:0;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantMetrics{
+ grid-column:1/-1;grid-row:1;display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));
+ gap:12px;margin:0;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantMetrics article{
+ min-width:0;padding:14px 17px;display:grid;align-content:start;gap:3px;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantMetrics article>small{
+ margin:2px 0 0;font-size:11px;line-height:1.5;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantMetrics p{margin:3px 0;font-size:13px;font-weight:700}
+.restaurantApp .restaurantReferenceOverview>.restaurantMetrics strong{
+ font-size:clamp(20px,2vw,27px);line-height:1.3;margin:0;
+ font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.restaurantApp[data-activity] .restaurantReferenceOverview>.restaurantHero{
+ grid-column:1;grid-row:2;margin:0;min-width:0;
+ padding:18px 20px;border-radius:14px;
+ background:linear-gradient(120deg,#d92284,#ae6899);color:#fff;
+ box-shadow:0 4px 15px #bf40832a;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroTop{gap:12px}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroTop h2{
+ font-size:clamp(17px,1.8vw,23px);line-height:1.35;color:#fff;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroTop small,
+.restaurantApp .restaurantReferenceOverview .restaurantHeroTop p{color:#fff3fa}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroTop p{font-size:12px;line-height:1.7}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroStats{
+ grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:15px;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroStats>div{
+ padding:9px;border:1px solid #ffffff30;background:#ffffff12;border-radius:10px;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroStats p{font-size:11px;color:#fff}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroStats strong{font-size:20px;margin:3px 0;color:#fff}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroStats small{font-size:10px;color:#fff5fb}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroActions>span{
+ color:#fff;background:#ffffff22;border-color:#ffffff50;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantHeroActions .restaurantPrimary{
+ background:#fff;color:#b3196c!important;border:1px solid #fff;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid{display:contents}
+.restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid>.restaurantPanel:first-child{
+ grid-column:2;grid-row:2/4;min-width:0;margin:0;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid>.restaurantPanel:nth-child(2){
+ grid-column:1;grid-row:3;min-width:0;margin:0;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart svg{color:var(--rc-accent)}
+.restaurantApp .restaurantReferenceOverview>.restaurantOrders{
+ grid-column:1;grid-row:4;min-width:0;margin:0;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+ grid-column:2;grid-row:4;gap:12px;
+ grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>button,
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>a{min-width:0;min-height:75px}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions~*{grid-column:1/-1;min-width:0}
+.restaurantApp .restaurantReferenceOverview.restaurantReferenceServices{display:grid;grid-template-columns:minmax(0,1fr)}
+.restaurantApp[data-activity] .restaurantReferenceServices>.restaurantHero{
+ grid-column:1;grid-row:auto;
+}
+.restaurantApp .restaurantReferenceServices>*{min-width:0}
+/* Staff dashboards and operational screens use the same shell, not the owner's data. */
+.restaurantApp .restaurantEmpty{background:color-mix(in srgb,var(--rc-page) 65%,var(--rc-surface,#fff));min-width:0}
+.restaurantApp .restaurantQuickActions>button:hover,.restaurantApp .restaurantQuickActions>a:hover{
+ border-color:var(--rc-accent);
+}
+.restaurantApp :is(.restaurantSidebar,.restaurantPanel,.restaurantMetrics article,
+ .restaurantQuickActions>button,.restaurantQuickActions>a){overflow-wrap:anywhere}
+@media(min-width:1024px){
+ .restaurantAppWide .restaurantSidebar{transform:translateX(110%);visibility:hidden;pointer-events:none}
+ .restaurantAppWide .restaurantMain{margin-inline-start:0}
+}
+@media(max-width:1199px){
+ .restaurantApp .restaurantReferenceOverview{grid-template-columns:minmax(0,1fr) minmax(260px,.85fr)}
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:1023px){
+ .restaurantApp .restaurantSidebar{display:none}
+ .restaurantApp .restaurantMain{margin-inline-start:0}
+ .restaurantApp .restaurantDrawer aside{background:var(--rc-surface,#fff);color:var(--rc-text)}
+ .restaurantApp .restaurantDrawer .restaurantNavGroupToggle,
+ .restaurantApp .restaurantDrawer .restaurantNavGroupItems>button{color:var(--rc-text)}
+ .restaurantApp .restaurantDrawer .restaurantNavGroupItems>button[aria-current="page"]{background:var(--rc-accent);color:#fff}
+}
+@media(max-width:850px){
+ .restaurantApp .restaurantReferenceOverview{grid-template-columns:minmax(0,1fr)}
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics{grid-column:1;grid-row:1}
+ .restaurantApp[data-activity] .restaurantReferenceOverview>.restaurantHero{grid-column:1;grid-row:2}
+ .restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid>.restaurantPanel:first-child{grid-column:1;grid-row:3}
+ .restaurantApp .restaurantReferenceOverview>.restaurantOverviewGrid>.restaurantPanel:nth-child(2){grid-column:1;grid-row:4}
+ .restaurantApp .restaurantReferenceOverview>.restaurantOrders{grid-column:1;grid-row:5}
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{grid-column:1;grid-row:6}
+}
+@media(max-width:600px){
+ .restaurantApp .restaurantContent{padding:12px 11px 22px}
+ .restaurantApp .restaurantReferenceOverview{gap:11px}
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics{gap:9px}
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics article{padding:11px}
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics strong{font-size:21px}
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics p{font-size:12px}
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{grid-template-columns:1fr}
+ .restaurantApp .restaurantReferenceOverview .restaurantHeroStats{gap:5px}
+ .restaurantApp .restaurantReferenceOverview .restaurantHeroStats>div{padding:7px}
+ .restaurantApp .restaurantReferenceOverview .restaurantHeroStats strong{font-size:18px}
+ .restaurantApp .restaurantPanel{padding:14px}
+}
+@media(max-width:359px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantMetrics{grid-template-columns:1fr 1fr}
+ .restaurantApp .restaurantReferenceOverview .restaurantHeroStats{grid-template-columns:1fr}
+}
+
+
+/* Activity shortcut tiles: always use the same resolved workspace palette.
+ * The legacy --surface fallback stayed white in dark mode, making white
+ * inherited labels unreadable. Keep every activity and role link intact. */
+.restaurantApp .foonActivityTools{margin-block:22px;min-width:0}
+.restaurantApp .foonActivityTools>h2{font-size:clamp(18px,2vw,22px);line-height:1.5;color:var(--rc-text,#182230);margin:0 0 6px}
+.restaurantApp .foonActivityTools>p{font-size:13px;line-height:1.7;color:var(--rc-muted,#64748b);margin:0 0 13px}
+.restaurantApp .foonActivityToolsGrid{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+ gap:12px;min-width:0;
+}
+.restaurantApp .foonActivityToolLink{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ min-width:0;min-height:70px;padding:13px 15px;
+ color:var(--rc-text,#182230);background:var(--rc-surface,#fff);
+ border:1px solid var(--rc-border,#e2e8f0);border-radius:12px;
+ box-shadow:0 2px 8px #151e2e0a;
+ font-size:13px;font-weight:700;line-height:1.6;
+ text-decoration:none;overflow-wrap:anywhere;
+ transition:border-color .16s ease,transform .16s ease; /* No background transition: avoids white-on-white contrast flash during theme change. */
+}
+.restaurantApp .foonActivityToolLink:hover{
+ border-color:var(--rc-accent,#d92483);
+ background:color-mix(in srgb,var(--rc-accent,#d92483) 8%,var(--rc-surface,#fff));
+ transform:translateY(-1px);
+}
+.restaurantApp .foonActivityToolLink:focus-visible{
+ outline:3px solid var(--rc-accent,#d92483);outline-offset:2px;
+}
+.restaurantApp[data-theme="light"] .foonActivityToolLink{
+ color:var(--rc-text,#182230);background:var(--rc-surface,#fff);
+}
+.restaurantApp[data-theme="dark"] .foonActivityToolLink{
+ color:var(--rc-text,#f8f3e9);background:var(--rc-surface,#242832);
+ border-color:var(--rc-border,#424c5b);
+}
+.restaurantApp[data-theme="dark"] .foonActivityToolLink:hover{
+ background:color-mix(in srgb,var(--rc-accent,#d92483) 12%,var(--rc-surface,#242832));
+}
+@media(max-width:600px){
+ .restaurantApp .foonActivityToolsGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .restaurantApp .foonActivityToolLink{min-height:66px;padding:11px;font-size:12px}
+}
+@media(max-width:359px){
+ .restaurantApp .foonActivityToolsGrid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ .restaurantApp .foonActivityToolLink{transition:none}
+ .restaurantApp .foonActivityToolLink:hover{transform:none}
+}
+
+
+/* The supplied visual reference places profile and recent orders on the
+ * right in RTL, analytics and quick actions in the left column. LTR mirrors
+ * naturally. The mobile layout remains single-column in task priority. */
+.restaurantApp .restaurantReferenceOverview>.restaurantOrders{align-self:stretch}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+ align-self:start;align-content:start;min-width:0;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>button,
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions>a{
+ min-height:78px;min-width:0;padding:12px;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions b{
+ color:var(--rc-text);line-height:1.5;
+}
+.restaurantApp .restaurantReferenceOverview>.restaurantQuickActions small{color:var(--rc-muted)}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart{
+ color:var(--rc-accent);min-width:0;overflow-x:auto;
+}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart>div{color:var(--rc-text)}
+.restaurantApp .restaurantReferenceOverview .restaurantSalesChart svg{max-width:100%;height:auto}
+/* Improve desktop usability without changing or hiding any authorized task. */
+.restaurantApp .restaurantReferenceOverview .restaurantPanel header{flex-wrap:wrap}
+.restaurantApp .restaurantSidebar nav button{min-width:0}
+.restaurantApp .restaurantNavGroupItems{min-width:0}
+.restaurantApp .restaurantPageFooter{color:var(--rc-muted)}
+.restaurantApp[data-theme="dark"] .restaurantSideBrand b,
+.restaurantApp[data-theme="dark"] .restaurantNavGroupToggle,
+.restaurantApp[data-theme="dark"] .restaurantNavGroupItems>button{
+ color:var(--rc-text);
+}
+.restaurantApp[data-theme="dark"] .restaurantSidebar{
+ background:var(--rc-surface,#242832);
+ color:var(--rc-text);
+ border-color:var(--rc-border,#424c5b);
+}
+.restaurantApp[data-theme="dark"] .restaurantSidebar :is(.restaurantSideBrand small,.restaurantNavContext,.restaurantNavLabel){
+ color:var(--rc-muted);
+}
+.restaurantApp[data-theme="dark"] .restaurantSidebar nav .restaurantNavGroupItems>button[aria-current="page"]{
+ color:#ffc0df;background:#55233e;box-shadow:inset 3px 0 0 #ff65b0;
+}
+.restaurantApp[data-theme="dark"] .restaurantSideFooter :is(a,.restaurantPlanShortcut){
+ background:var(--rc-surface,#242832);color:var(--rc-text)!important;border-color:var(--rc-border,#424c5b);
+}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantHeroTop h2,
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantHeroStats strong{
+ color:#fff;
+}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantSalesChart svg{color:#f080ba}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantOrders .restaurantEmpty{
+ background:var(--rc-surface,#242832);
+}
+.restaurantApp[data-theme="dark"] .restaurantReferenceOverview .restaurantOrders .restaurantEmpty :is(h3,p){
+ color:var(--rc-text);
+}
+.restaurantApp .foonActivityToolIcon{
+ width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;
+ background:color-mix(in srgb,var(--rc-accent,#d92483) 12%,var(--rc-surface,#fff));
+ border-radius:11px;color:var(--rc-accent,#d92483);
+}
+.restaurantApp .foonActivityToolIcon svg{width:19px;height:19px}
+.restaurantApp .foonActivityToolLabel{min-width:0;flex:1;text-align:start}
+.restaurantApp .foonActivityToolArrow{font-size:16px;color:var(--rc-accent,#d92483);flex:0 0 auto}
+.restaurantApp[data-theme="dark"] .foonActivityToolIcon{
+ color:#ff95cc;background:#512b44;
+}
+.restaurantApp[data-theme="dark"] .foonActivityToolArrow{color:#ff95cc}
+@media(max-width:1200px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+  grid-template-columns:1fr;
+ }
+}
+@media(max-width:850px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+ }
+}
+@media(max-width:600px){
+ .restaurantApp .restaurantReferenceOverview>.restaurantQuickActions{
+  grid-template-columns:1fr;
+ }
+ .restaurantApp .foonActivityToolIcon{width:31px;height:31px;flex-basis:31px}
+ .restaurantApp .foonActivityToolIcon svg{width:17px;height:17px}
+}
+
+/* Browser-verified regression: the workspace resolves to dark (#242832)
+ * but another presentation rule can still paint shortcut <a> backgrounds
+ * white. This scoped fallback keeps card foreground/background inseparable
+ * regardless of cross-route stylesheet ordering. */
+.restaurantApp[data-theme="light"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink{
+ background-color:#fff!important;
+ color:#182230!important;
+ border-color:#e7e8ef;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink{
+ background-color:#242832!important;
+ color:#f8f3e9!important;
+ border-color:#424c5b;
+}
+.restaurantApp[data-theme="dark"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink:hover{
+ background-color:#3a2b3a!important;
+}
+.restaurantApp[data-theme="light"] .restaurantContent .foonActivityToolsGrid > a.foonActivityToolLink:hover{
+ background-color:#fdf0f7!important;
+}

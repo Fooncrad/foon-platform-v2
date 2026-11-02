@@ -1,0 +1,9 @@
+"use client";
+import {useEffect,useRef,useState} from "react";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
+import styles from "./catalog-dialog.module.css";
+export default function CatalogAction({title,initial,confirmOnly=false,url=false,translations,onConfirm,onClose}:{title:string;initial?:string;confirmOnly?:boolean;url?:boolean;translations?:{en?:string|null;fr?:string|null};onConfirm:(value:string,translations?:{nameEn:string;nameFr:string})=>Promise<void>;onClose:()=>void}){
+ const locale=useUiLanguage(),t=(a:string,b:string,c:string)=>locale==="ar"?a:locale==="en"?b:c,ref=useRef<HTMLDialogElement>(null),[busy,setBusy]=useState(false);
+ useEffect(()=>{ref.current?.showModal()},[]);
+ return <dialog ref={ref} className={styles.dialog} aria-label={title} onCancel={onClose} dir={locale==="ar"?"rtl":"ltr"} style={{width:"min(560px,calc(100vw - 24px))",border:"1px solid #8885",borderRadius:20,padding:24}}><form style={{display:"grid",gap:16}} onSubmit={async e=>{e.preventDefault();const value=String(new FormData(e.currentTarget).get("value")??"");setBusy(true);try{await onConfirm(value,{nameEn:String(new FormData(e.currentTarget).get("en")??""),nameFr:String(new FormData(e.currentTarget).get("fr")??"")});onClose()}finally{setBusy(false)}}}><h2>{title}</h2>{!confirmOnly&&<label>{title}<input name="value" type={url?"url":"text"} required minLength={url?1:2} maxLength={url?1024:180} defaultValue={initial??""} dir={url?"ltr":undefined}/></label>}{translations&&<><label>English<input name="en" maxLength={180} defaultValue={translations.en??""}/></label><label>Français<input name="fr" maxLength={180} defaultValue={translations.fr??""}/></label></>}<button type="submit" disabled={busy}>{confirmOnly?t("تأكيد الحذف","Confirm deletion","Confirmer la suppression"):t("حفظ","Save","Enregistrer")}</button><button type="button" disabled={busy} onClick={onClose}>{t("إلغاء","Cancel","Annuler")}</button></form></dialog>;
+}

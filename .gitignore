@@ -1,0 +1,23 @@
+.next/
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# FOON offline edge: never commit local customer/order databases or backups
+/data/
+/backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
+
+# Local/browser verification artifacts are uploaded by CI, not committed.
+/work/
+/test-results/
+/playwright-report/

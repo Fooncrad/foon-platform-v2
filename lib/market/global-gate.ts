@@ -1,0 +1,6 @@
+import type {RowDataPacket} from "mysql2/promise";
+import {database} from "@/lib/db/mysql";
+export type MarketGate={closed:boolean;reason:{ar:string;en:string;fr:string}};
+export const defaultMarketGate:MarketGate={closed:false,reason:{ar:"السوق متوقف مؤقتًا، يرجى المحاولة لاحقًا.",en:"The marketplace is temporarily unavailable. Please try again later.",fr:"Le marché est temporairement indisponible. Veuillez réessayer plus tard."}};
+export function parseMarketGate(raw:unknown):MarketGate|null{if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;const x=raw as Record<string,unknown>;const r=x.reason;if(typeof x.closed!=="boolean"||!r||typeof r!=="object"||Array.isArray(r))return null;const v=r as Record<string,unknown>;if(!["ar","en","fr"].every(k=>typeof v[k]==="string"&&(v[k] as string).length<=300))return null;return {closed:x.closed,reason:{ar:String(v.ar),en:String(v.en),fr:String(v.fr)}};}
+export async function readMarketGate():Promise<MarketGate>{try{const [rows]=await database().execute<RowDataPacket[]>("SELECT config_value FROM platform_configuration WHERE config_key='market_global_gate' LIMIT 1");const raw=rows[0]?.config_value;const data=typeof raw==="string"?JSON.parse(raw):raw;return parseMarketGate(data)??defaultMarketGate;}catch{return defaultMarketGate;}}

@@ -1,0 +1,16 @@
+"use client";
+import {useEffect,useState} from "react";
+import BrandedQr from "@/app/components/branded-qr";
+import {defaultQrBranding,type QrBranding,parseQrBranding} from "@/lib/platform/qr-branding";
+import {useUiLanguage} from "@/lib/i18n/ui-language";
+export default function QrIdentitySettings({tenantId,slug,name}:{tenantId:string;slug:string;name:string}){
+ const language=useUiLanguage(),[value,setValue]=useState<QrBranding>(defaultQrBranding),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
+ const t=(ar:string,en:string,fr:string)=>language==="ar"?ar:language==="en"?en:fr;
+ useEffect(()=>{let active=true;fetch("/api/restaurant/qr-branding",{headers:{"x-foon-tenant":tenantId},cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{if(active&&parseQrBranding(j.settings))setValue(j.settings)}).catch(()=>{if(active)setNotice(t("تعذر تحميل الإعدادات","Could not load settings","Chargement impossible"))});return()=>{active=false}},[tenantId]);
+ const change=(patch:Partial<QrBranding>)=>setValue(v=>({...v,...patch}));
+ async function save(){setBusy(true);setNotice("");try{const r=await fetch("/api/restaurant/qr-branding",{method:"PUT",headers:{"content-type":"application/json","x-foon-tenant":tenantId},body:JSON.stringify({settings:value})});if(!r.ok)throw Error();setNotice(t("حُفظت إعدادات QR في حساب النشاط","QR settings saved to your business","Paramètres QR enregistrés"))}catch{setNotice(t("تعذر الحفظ","Save failed","Échec de l’enregistrement"))}finally{setBusy(false)}}
+ return <section className="restaurantPanel" style={{padding:20,display:"grid",gap:16}}><h2>{t("هوية رموز QR","QR identity","Identité des QR")}</h2><p>{t("خصّص مظهر رموز النشاط. الإعدادات محفوظة لكل متجر بشكل مستقل.","Customize and save your business QR identity.","Personnalisez les codes QR de votre activité.")}</p><div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+ <label>{t("لون الرمز","Code color","Couleur du QR")} <input type="color" value={value.ink} onChange={e=>change({ink:e.target.value})}/></label><label>{t("الخلفية","Background","Fond")} <input type="color" value={value.paper} onChange={e=>change({paper:e.target.value})}/></label>
+ <label>{t("الحجم","Size","Taille")} <select value={value.size} onChange={e=>change({size:Number(e.target.value) as QrBranding["size"]})}>{[200,240,300].map(n=><option key={n}>{n}</option>)}</select></label><label>{t("الإطار","Frame","Cadre")} <select value={value.frame} onChange={e=>change({frame:e.target.value as QrBranding["frame"]})}><option value="plain">Plain</option><option value="rounded">Rounded</option><option value="gold">Gold</option></select></label>
+ </div>{(["captionAr","captionEn","captionFr"] as const).map((key,i)=><label key={key}>{["العربية","English","Français"][i]}<input maxLength={80} value={value[key]} onChange={e=>change({[key]:e.target.value})}/></label>)}<label><input type="checkbox" checked={value.showLogo} onChange={e=>change({showLogo:e.target.checked})}/>{t("إظهار شعار النشاط","Show business logo","Afficher le logo")}</label><div style={{display:"flex",gap:12}}><button type="button" disabled={busy} onClick={save}>{t("حفظ إعدادات QR","Save QR settings","Enregistrer QR")}</button><BrandedQr scope="store" slug={slug} title={name} language={language}/></div>{notice&&<p role="status">{notice}</p>}</section>;
+}

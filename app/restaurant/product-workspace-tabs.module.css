@@ -1,0 +1,29 @@
+.workspace{min-width:0;width:100%;max-width:100%;--workspace-gold:#e2a93b;--workspace-outline:var(--border,#e2e5ea)}
+.workspace *{box-sizing:border-box}
+.heading{display:grid;gap:6px;margin:0 0 18px}
+.heading h2{margin:0;font-size:clamp(1.2rem,2vw,1.65rem);font-weight:800}
+.heading p{margin:0;color:var(--muted,#64748b);line-height:1.7}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 16px;padding:7px;background:var(--surface,#fff);border:1px solid var(--workspace-outline);border-radius:16px;max-width:100%;overflow-x:auto;scrollbar-width:thin}
+.tabs button{border:1px solid transparent;border-radius:12px;padding:11px 17px;min-height:44px;background:transparent;color:inherit;font:inherit;font-weight:750;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s}
+.tabs button:hover{background:color-mix(in srgb,var(--workspace-gold) 13%,transparent)}
+.tabs button.active,.tabs button[aria-selected="true"]{background:color-mix(in srgb,var(--workspace-gold) 20%,var(--surface,#fff));color:inherit;border-color:var(--workspace-gold);box-shadow:inset 0 -2px var(--workspace-gold)}
+.tabs button:focus-visible{outline:3px solid var(--workspace-gold);outline-offset:2px}
+.panel{min-width:0;max-width:100%;overflow-wrap:anywhere;animation:workspace-in .12s ease-in}
+.panel[hidden]{display:none!important}
+.panel :global(.adminPanel){min-width:0;max-width:100%}
+@keyframes workspace-in{from{opacity:.85}to{opacity:1}}
+@media(max-width:600px){.tabs{flex-wrap:nowrap;gap:4px;border-radius:12px;margin-bottom:12px;padding:5px}.tabs button{padding:10px 12px;font-size:13px}.panel{width:100%}}
+@media(prefers-reduced-motion:reduce){.panel{animation:none}.tabs button{transition:none}}
+
+/* Tabs must be visually distinguishable across all 15 activities and languages. */
+.tabs{gap:10px;border-radius:18px;position:relative;padding:9px;align-items:stretch}
+.tabs button{display:flex;align-items:center;justify-content:center;gap:9px;position:relative;flex:1 1 150px;line-height:1.4;white-space:normal;text-align:center;font-size:.93rem;font-weight:780;border-color:var(--workspace-outline);background:color-mix(in srgb,var(--surface,#fff) 96%,#e2a93b);min-height:54px;box-shadow:0 1px 5px #10182708}
+.tabs button.active,.tabs button[aria-selected="true"]{background:#e2a93b;color:#201a0d;border:2px solid #946207;box-shadow:0 3px 12px #e2a93b3d;font-weight:900}
+.tabIcon{width:22px;height:22px;flex:0 0 22px;display:inline-flex;align-items:center;justify-content:center;color:inherit}
+.tabIcon svg{display:block;width:100%;height:100%}
+.tabLabel{min-width:0;overflow-wrap:anywhere}
+.selectedMark{position:absolute;bottom:-8px;left:calc(50% - 5px);width:10px;height:10px;background:transparent;transform:rotate(45deg)}
+.tabs button.active .selectedMark{background:#e2a93b;border-inline-end:2px solid #946207;border-bottom:2px solid #946207}
+.activeDescription{display:flex;align-items:flex-start;gap:10px;line-height:1.8;margin:0 0 16px;padding:12px 15px;border:1px solid color-mix(in srgb,#e2a93b 70%,var(--workspace-outline));border-inline-start:4px solid #d6951f;border-radius:12px;background:color-mix(in srgb,#e2a93b 9%,var(--surface,#fff));font-weight:650;overflow-wrap:anywhere}
+.activeDot{display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#c48a18;margin-top:.6rem}
+@media(max-width:600px){.tabs{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;gap:7px;padding:8px 9px 13px}.tabs button{flex:0 0 auto;min-width:125px;max-width:170px;scroll-snap-align:start;min-height:48px;padding:9px 12px;font-size:.85rem}.tabIcon{width:19px;height:19px;flex-basis:19px}.activeDescription{font-size:.88rem;padding:10px 12px;margin-block:0 12px}}

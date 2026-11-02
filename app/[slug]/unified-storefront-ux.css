@@ -1,0 +1,767 @@
+/* One responsive visual language for public menus and all activity storefronts.
+   Activity capabilities (service requests, checkout, reservations) remain distinct. */
+.publicMenu .publicMenuHeaderActions,
+.foonActivityStorefront .foonActivityHeaderActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.publicMenu .publicMenuHeaderActions .publicMenuLanguageControl {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+}
+.publicMenu .publicMenuHeaderActions .publicMenuLanguageControl select,
+.foonActivityStorefront .foonActivityHeaderActions .foonActivityLanguageSelector select {
+  width: auto;
+  min-width: 98px;
+  max-width: 122px;
+  min-height: 42px;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--public-line, var(--activity-border));
+  border-radius: 12px;
+  color: var(--public-text, var(--activity-ink));
+  background: var(--public-surface, var(--activity-panel));
+}
+.publicMenu .publicMenuHeaderActions .foonStorefrontThemeToggle,
+.foonActivityStorefront .foonActivityHeaderActions .foonStorefrontThemeToggle {
+  flex: 0 0 auto;
+  min-height: 42px;
+  border-radius: 12px;
+}
+.publicMenu .publicMenuHeaderActions .publicMenuServices button {
+  min-height: 42px;
+  min-width: 42px;
+  border-radius: 12px;
+}
+.foonActivityStorefront > .foonActivityHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 68px;
+  padding: 10px clamp(12px, 2.5vw, 36px);
+}
+.foonActivityStorefront .foonActivityHeaderBrand {
+  display: flex;
+  align-items: center;
+  flex: 1 1 400px;
+  min-width: 0;
+  gap: clamp(10px, 1.8vw, 26px);
+}
+.foonActivityStorefront .foonActivityStoreName {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: clamp(16px, 1.7vw, 22px);
+  font-weight: 800;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--activity-ink);
+  text-decoration: none;
+}
+.foonActivityStorefront .foonActivityHeaderActions > button {
+  min-height: 42px;
+  min-width: 42px;
+  border: 1px solid var(--activity-border);
+  border-radius: 12px;
+  background: var(--activity-panel);
+  color: var(--activity-ink);
+  cursor: pointer;
+}
+.foonActivityStorefront .foonActivityHeaderActions .foonStorefrontThemeToggle {
+  background: var(--activity-panel);
+  color: var(--activity-ink);
+  border-color: var(--activity-border);
+}
+.foonActivityStorefront .foonActivityHeaderActions .foonActivityLanguageSelector select {
+  color: var(--activity-ink);
+  background: var(--activity-panel);
+  border-color: var(--activity-border);
+}
+.foonActivityStorefront .foonActivityHeaderNav {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.foonActivityStorefront .foonActivityHeaderNav a {
+  padding: 9px 13px;
+  min-height: 42px;
+  border-radius: 12px;
+}
+
+/* The same compact information/footer block on restaurants and other activities. */
+.publicMenu .foonStorefrontInfo,
+.foonActivityStorefront .foonStorefrontInfo {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 18px clamp(12px, 2vw, 26px);
+  margin: 18px auto 0;
+  border-top: 1px solid var(--public-line, var(--activity-border));
+  color: var(--public-text, var(--activity-ink));
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.publicMenu .foonStorefrontInfoLinks,
+.foonActivityStorefront .foonStorefrontInfoLinks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  min-width: 0;
+}
+.publicMenu .foonStorefrontInfoLinks a,
+.foonActivityStorefront .foonStorefrontInfoLinks a {
+  text-decoration: none;
+  color: inherit;
+}
+.publicMenu .foonStorefrontInfoLinks a:hover,
+.foonActivityStorefront .foonStorefrontInfoLinks a:hover {
+  text-decoration: underline;
+}
+.publicMenu .publicMenuFooter,
+.foonActivityStorefront .foonActivityFooter {
+  min-height: 44px;
+  margin: 0 auto;
+  padding: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--public-muted, var(--activity-muted));
+}
+.foonActivityStorefront .foonActivityFooter a { color: inherit; }
+
+/* Restaurant-like category rail, catalog and optional independent cart. */
+.foonActivityStorefront .foonActivityContent {
+  max-width: 1580px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-inline: auto;
+  padding-inline: clamp(12px, 2.4vw, 38px);
+}
+.foonActivityStorefront .foonActivityCatalog {
+  display: grid;
+  grid-template-columns: 174px minmax(0, 1fr);
+  gap: 18px;
+  width: 100%;
+  align-items: start;
+  min-width: 0;
+}
+.foonActivityStorefront .foonActivityCatalog:has(.foonActivityCartRail) {
+  grid-template-columns: 174px minmax(0, 1fr) minmax(250px, 288px);
+}
+.foonActivityStorefront .foonActivityCategoryRail {
+  min-width: 0;
+  position: sticky;
+  top: 84px;
+  max-height: min(78vh, 730px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--activity-border);
+  background: var(--activity-panel);
+  border-radius: 20px;
+  box-shadow: 0 7px 20px rgb(0 0 0 / 4%);
+}
+.foonActivityStorefront .foonActivityRailHeading {
+  display: block;
+  color: var(--activity-muted);
+  padding: 6px 8px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+.foonActivityStorefront .foonActivityCategoryRail .foonActivityCategories {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+.foonActivityStorefront .foonActivityCategoryRail .foonActivityCategories a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--activity-ink);
+  text-align: start;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  background: transparent;
+  font-size: 12px;
+}
+.foonActivityStorefront .foonActivityCategoryRail .foonActivityCategories a[aria-current="page"] {
+  color: #fff;
+  background: var(--activity-accent);
+}
+.foonActivityStorefront .foonActivityCatalogProducts,
+.foonActivityStorefront .foonActivityCartRail { min-width: 0; }
+.foonActivityStorefront .foonActivityCatalogProducts .foonActivityProducts {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  min-width: 0;
+  align-items: stretch;
+}
+.foonActivityStorefront[data-layout="services"] .foonActivityCatalogProducts .foonActivityProducts {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.foonActivityStorefront .foonActivityCartRail {
+  position: sticky;
+  top: 84px;
+  align-self: start;
+}
+.foonActivityStorefront .foonActivityCartRail .foonStorefrontCart {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  color: var(--activity-ink);
+  background: var(--activity-panel);
+  border-color: var(--activity-border);
+}
+.foonActivityStorefront .foonActivityCartRail .foonStorefrontCart :is(input, select, textarea) {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.foonActivityStorefront .foonActivityCatalog :is(#activity-categories, #activity-products, #activity-cart) {
+  scroll-margin-block-start: 88px;
+  scroll-margin-block-end: 100px;
+}
+/* Keep the last product-card update on laptops: 1:1 photograph and minimal text. */
+@media (min-width: 951px) {
+  .publicMenu .publicMenuItemBody .publicMenuItemSummary,
+  .foonActivityStorefront:not([data-layout="services"]) .foonActivityProductInfo > p {
+    display: none !important;
+  }
+  .publicMenu .publicMenuItem .publicMenuItemImage,
+  .foonActivityStorefront .foonActivityProductMedia {
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+  .publicMenu .publicMenuItem .publicMenuItemBody,
+  .foonActivityStorefront .foonActivityProductInfo { padding: 9px !important; gap: 3px !important; }
+  .publicMenu .publicMenuItem footer.publicMenuItemFooter { padding: 4px 9px 9px !important; }
+  .publicMenu .publicMenuItem .publicMenuProductPrice strong { font-size: clamp(13px, 1.05vw, 17px) !important; }
+}
+@media (min-width: 1536px) {
+  .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+}
+@media (min-width: 993px) and (max-width: 1400px) {
+  .publicMenu .publicMenuLayout .publicMenuItems { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+.foonActivityMobileDock { display: none; }
+@media (max-width: 1199px) {
+  .foonActivityStorefront .foonActivityCatalog,
+  .foonActivityStorefront .foonActivityCatalog:has(.foonActivityCartRail) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .foonActivityStorefront .foonActivityCategoryRail {
+    position: static;
+    max-height: none;
+    padding: 8px;
+    overflow: hidden;
+  }
+  .foonActivityStorefront .foonActivityRailHeading { padding: 2px 8px 6px; }
+  .foonActivityStorefront .foonActivityCategoryRail .foonActivityCategories {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 3px;
+    scroll-snap-type: x proximity;
+  }
+  .foonActivityStorefront .foonActivityCategoryRail .foonActivityCategories a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 40px;
+    scroll-snap-align: start;
+  }
+  .foonActivityStorefront .foonActivityCartRail {
+    position: static;
+    max-width: 100%;
+  }
+}
+@media (max-width: 950px) {
+  .publicMenu,
+  .foonActivityStorefront {
+    padding-bottom: calc(85px + env(safe-area-inset-bottom));
+  }
+  .publicMenu .publicMenuMobileDock,
+  .foonActivityStorefront .foonActivityMobileDock {
+    display: flex !important;
+    position: fixed !important;
+    inset-inline: 0 !important;
+    bottom: 0 !important;
+    z-index: 60;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    width: 100%;
+    max-width: 680px;
+    margin-inline: auto;
+    padding: 5px 8px calc(7px + env(safe-area-inset-bottom));
+    min-height: 62px;
+    box-sizing: border-box;
+    border: 1px solid var(--public-line, var(--activity-border));
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    background: var(--public-surface, var(--activity-panel));
+    box-shadow: 0 -4px 24px rgb(0 0 0 / 10%);
+    color: var(--public-text, var(--activity-ink));
+  }
+  .foonActivityStorefront .foonActivityMobileDock :is(a,button) {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 5px 3px;
+    border: 0;
+    border-radius: 10px;
+    color: inherit;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.25;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+  .foonActivityStorefront .foonActivityMobileDock :is(a,button) > span:first-child { font-size: 22px; line-height: 1; }
+  .foonActivityStorefront .foonActivityCatalog :is(#activity-categories,#activity-products,#activity-cart) { scroll-margin-block-start: 20px; scroll-margin-block-end: 92px; }
+  .foonActivityStorefront .foonActivityContent { padding-bottom: 24px !important; }
+  .publicMenu .publicMenuMobileDock > button:nth-of-type(2) { position: relative; }
+  .publicMenu .publicMenuMobileDock > button:nth-of-type(2) b {
+    inset-inline-end: calc(50% - 26px);
+    top: 1px;
+  }
+  .publicMenu .publicMenuFooter { padding-bottom: 12px !important; }
+}
+@media (max-width: 700px) {
+  .publicMenu .publicMenuHeaderBrand,
+  .foonActivityStorefront .foonActivityHeaderBrand {
+    flex-wrap: wrap;
+    gap: 6px 9px;
+  }
+  .publicMenu .publicMenuStoreName,
+  .foonActivityStorefront .foonActivityStoreName { flex: 1 1 100%; max-width: 100%; }
+  .publicMenu .publicMenuHeaderActions,
+  .foonActivityStorefront .foonActivityHeaderActions {
+    flex: 0 0 100%;
+    gap: 7px;
+    justify-content: flex-start;
+  }
+  .publicMenu .publicMenuHeaderActions .publicMenuLanguageControl,
+  .foonActivityStorefront .foonActivityHeaderActions .foonActivityLanguageSelector {
+    flex: 0 0 auto;
+  }
+  .publicMenu .publicMenuHeaderActions .publicMenuLanguageControl select,
+  .foonActivityStorefront .foonActivityHeaderActions .foonActivityLanguageSelector select {
+    min-width: 96px;
+    max-width: 110px;
+  }
+  .publicMenu .publicMenuHeaderActions .foonStorefrontThemeToggle,
+  .foonActivityStorefront .foonActivityHeaderActions .foonStorefrontThemeToggle {
+    min-width: 42px;
+    padding: 7px;
+  }
+  .foonActivityStorefront > .foonActivityHeader { padding: 10px 12px !important; gap: 6px; }
+  .foonActivityStorefront .foonActivityHeaderNav { width: 100%; justify-content: flex-start; }
+  .foonActivityStorefront .foonActivityCatalogProducts .foonActivityProducts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+  }
+  .foonActivityStorefront[data-layout="services"] .foonActivityCatalogProducts .foonActivityProducts {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+@media (min-width: 701px) and (max-width: 950px) {
+  .foonActivityStorefront .foonActivityCatalogProducts .foonActivityProducts { grid-template-columns: repeat(4, minmax(0,1fr)) !important; }
+  .foonActivityStorefront[data-layout="services"] .foonActivityCatalogProducts .foonActivityProducts { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+}
+@media (max-width: 340px) {
+  .publicMenu .publicMenuHeaderActions .foonStorefrontThemeToggle .foonStorefrontThemeLabel,
+  .foonActivityStorefront .foonActivityHeaderActions .foonStorefrontThemeToggle .foonStorefrontThemeLabel {
+    display: none;
+  }
+  .publicMenu .publicMenuHeaderActions .publicMenuLanguageControl select,
+  .foonActivityStorefront .foonActivityHeaderActions .foonActivityLanguageSelector select { max-width: 96px; }
+  .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+/* Prevent hidden desktop dock on preview containers being fixed over editor tools. */
+.menuPreviewViewport .publicMenu .publicMenuMobileDock {
+  position: sticky !important;
+  inset: auto !important;
+  margin: 0 !important;
+}
+
+
+/* Product hierarchy: readable name and price, square image, no compressed laptop cards. */
+.publicMenu .publicMenuItem,
+.foonActivityStorefront .foonActivityProduct {
+ min-width:0;
+ height:100%;
+ overflow:hidden;
+}
+.publicMenu .publicMenuItemBody h2,
+.foonActivityStorefront .foonActivityProductInfo h3 {
+ font-weight:800 !important;
+ font-size:clamp(14px,1.15vw,17px) !important;
+ line-height:1.45 !important;
+ overflow-wrap:anywhere;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage,
+.foonActivityStorefront .foonActivityProductMedia {
+ display:grid;
+ place-items:center;
+ aspect-ratio:1/1 !important;
+ width:100%;
+ height:auto !important;
+ padding:0 !important;
+ border:0;
+ overflow:hidden;
+ cursor:pointer;
+}
+.publicMenu .publicMenuItem .publicMenuItemImage img,
+.foonActivityStorefront .foonActivityProductMedia img {width:100%;height:100%;object-fit:cover !important;object-position:center;}
+.publicMenu .publicMenuItemFooter,
+.foonActivityStorefront .foonActivityProductPurchase {
+ margin-top:auto !important;
+ gap:8px !important;
+ align-items:center !important;
+}
+.publicMenu .publicMenuItem .publicMenuProductPrice,
+.foonActivityStorefront .foonActivityProductPurchase strong {
+ min-width:0;
+ font-variant-numeric:tabular-nums;
+ font-size:clamp(13px,1.2vw,18px) !important;
+}
+.publicMenu .publicMenuItemBody .publicMenuItemSummary,
+.foonActivityStorefront:not([data-layout="services"]) .foonActivityProductInfo > p {display:none !important;}
+@media(min-width:951px) and (max-width:1199px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+}
+@media(min-width:1200px) and (max-width:1499px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media(min-width:1500px) and (max-width:1899px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
+}
+@media(min-width:1900px) and (max-width:2299px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(5,minmax(0,1fr)) !important;}
+}
+@media(min-width:2300px){
+ .publicMenu:not([data-layout="list"]) .publicMenuLayout .publicMenuItems,
+ .foonActivityStorefront:not([data-layout="services"]) .foonActivityCatalogProducts .foonActivityProducts {grid-template-columns:repeat(6,minmax(0,1fr)) !important;}
+}
+/* Product details stay available on photo tap/click, without cluttering cards. */
+.foonActivityStorefront .foonActivityPhotoButton {font:inherit;color:inherit;background:transparent;border:none;border-radius:0;cursor:pointer;}
+.foonActivityStorefront .foonActivityPhotoButton:focus-visible {outline:3px solid var(--activity-accent);outline-offset:-3px;}
+.foonActivityProductDialog {width:min(96vw,640px);max-height:90dvh;overflow:auto;padding:0;border:1px solid var(--activity-border);border-radius:22px;background:var(--activity-panel);color:var(--activity-ink);box-shadow:0 25px 85px #0005;}
+.foonActivityProductDialog::backdrop {background:#0009;backdrop-filter:blur(3px);}
+.foonActivityProductDialogInner {display:grid;gap:16px;position:relative;max-width:100%;padding:clamp(14px,3vw,24px);}
+.foonActivityProductDialogInner h2{font-size:clamp(20px,3vw,28px);line-height:1.4;margin:0;}
+.foonActivityProductDialogInner p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:0;}
+.foonActivityDialogClose{position:sticky;top:0;justify-self:end;z-index:2;background:var(--activity-panel);color:inherit;border:1px solid var(--activity-border);border-radius:50%;width:42px;height:42px;font-size:22px;cursor:pointer;}
+.foonActivityDialogImage{display:block;width:100%;height:auto;max-height:65vh;aspect-ratio:1/1;object-fit:contain;border-radius:16px;background:var(--activity-bg);}
+.foonActivityDialogPurchase{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;font-weight:800;}
+.foonActivityDialogPurchase .foonCartAdd{width:auto !important;min-width:48px;max-width:none !important;flex:0 0 auto;margin:0;}
+.foonActivityDialogPurchase .foonCartAddLabel{position:static !important;width:auto !important;height:auto !important;clip-path:none !important;overflow:visible !important;margin:0 !important;white-space:normal !important;}
+
+
+/* Full product photographs inside details: no enforced square crop. */
+.publicMenu .publicMenuProductDialog {
+ width:min(94vw,820px);
+ max-width:94vw;
+}
+.publicMenu .publicMenuProductPhoto {
+ height:min(65dvh,630px);
+ min-height:250px;
+ background:var(--public-bg);
+}
+.publicMenu .publicMenuProductPhoto img {
+ object-fit:contain !important;
+ object-position:center !important;
+}
+.publicMenu .publicMenuProductGallery nav img {object-fit:cover !important;}
+.foonActivityStorefront .foonActivityProductDialog {width:min(94vw,820px);}
+.foonActivityStorefront .foonActivityDialogImage {
+ aspect-ratio:auto !important;
+ max-height:70dvh;
+ width:100%;
+ height:auto;
+ object-fit:contain !important;
+}
+/* Square logo stays inside the original header height and does not replace the name. */
+.publicMenu .foonStorefrontBrandIcon,
+.foonActivityStorefront .foonStorefrontBrandIcon {
+ display:block;
+ width:36px;
+ height:36px;
+ min-width:36px;
+ max-width:36px;
+ min-height:36px;
+ max-height:36px;
+ flex:0 0 36px;
+ object-fit:cover;
+ border-radius:9px;
+}
+.foonActivityStorefront .foonActivityStoreName {
+ display:flex;
+ align-items:center;
+ gap:9px;
+}
+.foonActivityStorefront .foonActivityStoreName span {
+ overflow:hidden;
+ white-space:nowrap;
+ text-overflow:ellipsis;
+ min-width:0;
+}
+@media(max-width:576px) {
+ .publicMenu .foonStorefrontBrandIcon,
+ .foonActivityStorefront .foonStorefrontBrandIcon {
+  width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;max-height:30px;flex-basis:30px;
+ }
+ .publicMenu .publicMenuProductPhoto{height:min(55dvh,470px);}
+}
+
+/* Merchant-controlled visibility is shared by restaurant and activity storefronts. */
+.publicMenu[data-public-catalog="off"] .publicMenuCatalog,
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityCatalog,
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityCount,
+.publicMenu[data-public-catalog="off"] .publicMenuMobileDock a[href="#menu-items"],
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityMobileDock a[href="#activity-products"],
+.foonActivityStorefront[data-public-catalog="off"] .foonActivityMobileDock a[href="#activity-categories"] {
+  display:none !important;
+}
+.publicMenu[data-public-search="off"] .publicMenuSearch,
+.foonActivityStorefront[data-public-search="off"] .foonActivitySearch {
+  display:none !important;
+}
+.publicMenu[data-public-categories="off"] .publicMenuCategoryRail,
+.publicMenu[data-public-categories="off"] .publicMenuQuickNav,
+.publicMenu[data-public-categories="off"] .publicMenuMobileDock > button:first-of-type,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCategoryRail,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityMobileDock a[href="#activity-categories"] {
+  display:none !important;
+}
+.publicMenu[data-public-categories="off"] .publicMenuCatalog,
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog {
+  grid-template-columns: minmax(0,1fr) !important;
+}
+.foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog:has(.foonActivityCartRail){
+  grid-template-columns: minmax(0,1fr) minmax(250px,288px) !important;
+}
+@media(max-width:1199px){
+ .foonActivityStorefront[data-public-categories="off"] .foonActivityCatalog:has(.foonActivityCartRail){
+  grid-template-columns:minmax(0,1fr) !important;
+ }
+}
+.publicMenu[data-public-contact="off"] .publicMenuBusinessDetails {display:none !important;}
+
+
+/* The QR belongs to the opening-hours/location control below the banner, not the header. */
+.foonActivityStorefront .foonActivityBusinessDetails {position:relative;display:inline-flex;align-items:center;flex:0 0 auto;}
+.foonActivityStorefront .foonActivityBusinessDetails > summary {
+ list-style:none;display:grid;place-items:center;cursor:pointer;
+ width:44px;height:44px;min-width:44px;border-radius:12px;
+ border:1px solid var(--activity-border);background:var(--activity-panel);color:var(--activity-ink);
+ font-size:24px;
+}
+.foonActivityStorefront .foonActivityBusinessDetails > summary::-webkit-details-marker {display:none;}
+.foonActivityStorefront .foonActivityBusinessPanel {
+ position:absolute;z-index:25;top:calc(100% + 8px);inset-inline-start:0;
+ width:min(310px,calc(100vw - 28px));padding:16px;display:grid;gap:12px;
+ border:1px solid var(--activity-border);border-radius:16px;
+ background:var(--activity-panel);color:var(--activity-ink);box-shadow:0 16px 36px #0002;
+}
+.foonActivityStorefront .foonActivityBusinessPanel h3,
+.foonActivityStorefront .foonActivityBusinessPanel p{margin:0;line-height:1.55;overflow-wrap:anywhere;}
+.foonActivityStorefront .foonActivityBusinessPanel button,
+.publicMenu .publicMenuBusinessPanel button {
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:42px;padding:9px 16px;border-radius:12px;border:1px solid currentColor;
+ font:inherit;cursor:pointer;
+}
+.foonActivityStorefront .foonActivityHeaderActions {justify-content:flex-end;}
+.foonActivityStorefront .foonActivityHeaderBrand {flex:1 1 100%;}
+.foonActivityStorefront .foonActivityHeaderNav {display:none;}
+@media (max-width:700px) {
+ .foonActivityStorefront .foonActivityBusinessPanel {inset-inline-start:auto;inset-inline-end:0;}
+}
+
+
+/* Keep business-hours/QR disclosures inside the mobile viewport.
+   The old absolute popover could extend past the right edge in LTR mode. */
+.publicMenu .publicMenuBusinessDetails,
+.foonActivityStorefront .foonActivityBusinessDetails {position:relative;min-width:0;}
+.publicMenu .publicMenuBusinessPanel,
+.foonActivityStorefront .foonActivityBusinessPanel {
+ box-sizing:border-box;
+ max-width:min(360px,calc(100vw - 24px));
+ overflow-wrap:anywhere;
+}
+@media(max-width:700px){
+ .publicMenu .publicMenuBusinessDetails[open] .publicMenuBusinessPanel,
+ .foonActivityStorefront .foonActivityBusinessDetails[open] .foonActivityBusinessPanel {
+  position:fixed !important;
+  top:clamp(84px,16vh,136px) !important;
+  inset-inline:12px !important;
+  inset-block-end:auto !important;
+  left:12px !important;
+  right:12px !important;
+  width:auto !important;
+  max-width:none !important;
+  max-height:min(66dvh,540px) !important;
+  overflow-y:auto;
+  overflow-x:hidden;
+  z-index:100 !important;
+  box-sizing:border-box;
+ }
+ .foonActivityStorefront .foonActivityHeaderNav {display:none !important;}
+ .foonActivityStorefront .foonActivityHeaderActions {flex-wrap:nowrap !important;}
+}
+
+
+/* Shared business-details QR and quick-access polish. */
+.foonActivityStorefront .foonActivityBusinessDetails > summary,
+.publicMenu .publicMenuBusinessDetails > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.foonActivityStorefront .foonStorefrontQrAction,
+.publicMenu .foonStorefrontQrAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--activity-border, var(--public-line));
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.foonActivityStorefront .foonStorefrontQrAction:focus-visible,
+.publicMenu .foonStorefrontQrAction:focus-visible {
+  outline: 3px solid var(--activity-accent, #c59a43);
+  outline-offset: 2px;
+}
+
+
+/* Customer product galleries: touch-friendly, bounded to the modal and 320px viewports. */
+.foonActivityProductDialog .foonActivityGallery{display:grid;gap:8px;min-width:0;max-width:100%;}
+.foonActivityProductDialog .foonActivityGalleryThumbs{display:flex;gap:8px;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;padding-block:4px;}
+.foonActivityProductDialog .foonActivityGalleryThumbs button{flex:0 0 64px;width:64px;height:64px;border:2px solid var(--activity-border,#9b9690);border-radius:10px;padding:3px;background:transparent;cursor:pointer;}
+.foonActivityProductDialog .foonActivityGalleryThumbs button[aria-pressed=true]{border-color:var(--activity-accent,#e2a93b);outline:2px solid var(--activity-accent,#e2a93b);outline-offset:1px;}
+.foonActivityProductDialog .foonActivityGalleryThumbs img{width:100%;height:100%;object-fit:cover;border-radius:6px;}
+.foonActivityProductDialog .foonActivityGalleryCount{justify-self:end;font-variant-numeric:tabular-nums;}
+.foonActivityProductDialog .foonActivityVariantPreview{display:grid;gap:8px;min-width:0;max-width:100%;}
+.foonActivityProductDialog .foonActivityVariantPreview>p{font-size:12px;line-height:1.6;color:var(--activity-ink,#333);}
+.foonActivityProductDialog .foonActivityVariantPhotoTabs{display:flex;flex-wrap:wrap;gap:8px;min-width:0;}
+.foonActivityProductDialog .foonActivityVariantPhotoTabs button{min-height:44px;max-width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--activity-border,#bbb);background:transparent;color:inherit;cursor:pointer;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityVariantPhotoTabs button[aria-pressed=true]{background:var(--activity-accent,#e2a93b);color:#171613;border-color:transparent;font-weight:750;}
+.foonActivityProductDialog .foonActivityGalleryThumbs button:focus-visible,
+.foonActivityProductDialog .foonActivityVariantPhotoTabs button:focus-visible{outline:3px solid var(--activity-accent,#e2a93b);outline-offset:2px;}
+
+
+/* Live variant selector shares the same gallery modal and never changes cart price alone. */
+.foonActivityProductDialog .foonActivityVariantChoiceForm{display:grid;gap:12px;min-width:0;max-width:100%;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm fieldset{display:grid;gap:8px;min-width:0;max-width:100%;margin:0;padding:10px;border:1px solid var(--activity-border,#8887);border-radius:12px;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm legend{font-weight:700;overflow-wrap:anywhere;padding-inline:4px;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label{display:flex;align-items:center;gap:10px;min-height:44px;min-width:0;max-width:100%;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label input{flex:0 0 auto;width:20px;height:20px;accent-color:var(--activity-accent,#e2a93b);}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label span{min-width:0;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm label small{margin-inline-start:auto;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.foonActivityProductDialog .foonActivityVariantChoiceForm [role=alert]{font-weight:600;overflow-wrap:anywhere;}
+.foonActivityProductDialog .foonActivityDialogPurchase .foonCartAdd:disabled{opacity:.45;cursor:not-allowed;}
+@media(max-width:360px){.foonActivityProductDialog .foonActivityVariantChoiceForm fieldset{padding:8px}.foonActivityProductDialog .foonActivityVariantChoiceForm label{flex-wrap:wrap;gap:6px}.foonActivityProductDialog .foonActivityVariantChoiceForm label small{margin-inline-start:0}}
+
+
+/* Keep the visual viewport steady throughout ordering, reservations and authentication.
+   Only the horizontal category/gallery rails may scroll sideways. */
+html:has(.publicMenu),
+html:has(.foonActivityStorefront) {
+  scrollbar-gutter: stable;
+}
+.publicMenu,
+.foonActivityStorefront {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+.publicMenu :is(.publicMenuLayout, .publicMenuItems, .publicMenuCart, .publicMenuProductScroll),
+.foonActivityStorefront :is(.foonActivityCatalog, .foonActivityCatalogProducts, .foonActivityProducts, .foonActivityCartRail, .foonStorefrontCart) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.publicMenu .publicMenuCart,
+.foonActivityStorefront .foonStorefrontCart {
+  overflow-anchor: none;
+}
+@media (max-width: 950px) {
+  /* iOS Safari zooms the page when a focused form control computes below 16px.
+     This overrides the smaller inherited fonts inside booking/login forms. */
+  .publicMenu :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea),
+  .foonActivityStorefront :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+    font-size: 16px !important;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .publicMenu :is(.publicMenuServiceDialog, .publicMenuCategoryDialog, .publicMenuProductDialog, .publicMenuEmptyCartDialog, .publicMenuQrDialog),
+  .foonActivityStorefront .foonActivityProductDialog {
+    box-sizing: border-box;
+    max-inline-size: calc(100dvw - 24px);
+    max-block-size: calc(100dvh - 24px);
+    overscroll-behavior: contain;
+  }
+  /* The fixed bottom dock must not cover fields while the keyboard is open. */
+  .publicMenu:has(.publicMenuCart :is(input, textarea, select):focus) .publicMenuMobileDock,
+  .foonActivityStorefront:has(.foonStorefrontCart :is(input, textarea, select):focus) .foonActivityMobileDock,
+  .foonActivityStorefront:has(.foonStorefrontCart .foonCartOptions) .foonActivityMobileDock {
+    /* Keep the fixed dock hidden while choosing options, including when focus
+       moves from a radio input to Confirm; otherwise it can swallow pointer-up. */
+    visibility: hidden;
+    pointer-events: none;
+  }
+}

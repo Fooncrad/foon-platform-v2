@@ -1,0 +1,8 @@
+.dialog { overflow-wrap:anywhere; box-sizing:border-box; }
+.dialog *, .dialog *::before, .dialog *::after { box-sizing:border-box; min-width:0; max-width:100%; }
+.dialog label { display:grid; gap:6px; }
+.dialog input:not([type=checkbox]), .dialog select, .dialog textarea { width:100%; padding:10px; border:1px solid #8994a64d; border-radius:10px; background:transparent; color:inherit; }
+.dialog input[type=checkbox] { width:auto; justify-self:start; }
+.dialog button { padding:10px 14px; border-radius:10px; white-space:normal; cursor:pointer; }
+.dialog button:disabled { cursor:wait; opacity:.6; }
+.dialog::backdrop { background:#07102499; backdrop-filter:blur(3px); }

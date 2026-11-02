@@ -1,0 +1,10 @@
+import {NextResponse} from "next/server";
+import {currentActiveAdminUserId} from "@/lib/auth/session";
+import {requirePlatformRole} from "@/lib/auth/authorization";
+import {assertSameOrigin} from "@/lib/security/origin";
+import {database} from "@/lib/db/mysql";
+import type {RowDataPacket} from "mysql2/promise";
+const types=["customer","owner","manager","staff","admin"];
+async function authorize(){const id=await currentActiveAdminUserId();if(!id)return false;try{await requirePlatformRole(id,["super_admin"]);return true}catch{return false}}
+export async function GET(){if(!await authorize())return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});try{const [rows]=await database().execute<RowDataPacket[]>("SELECT account_type,max_files,max_storage_mb,max_file_mb,enabled FROM media_library_settings ORDER BY account_type");return NextResponse.json({ok:true,settings:rows})}catch{return NextResponse.json({ok:false,code:"SETTINGS_UNAVAILABLE"},{status:503})}}
+export async function PUT(request:Request){try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403})}if(!await authorize())return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});const b=await request.json().catch(()=>null);if(!types.includes(b?.accountType)||!Number.isInteger(b.maxFiles)||b.maxFiles<1||b.maxFiles>10000||!Number.isInteger(b.maxStorageMb)||b.maxStorageMb<1||b.maxStorageMb>10000||!Number.isInteger(b.maxFileMb)||b.maxFileMb<1||b.maxFileMb>10||typeof b.enabled!=="boolean")return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});try{await database().execute("INSERT INTO media_library_settings(account_type,max_files,max_storage_mb,max_file_mb,enabled) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE max_files=VALUES(max_files),max_storage_mb=VALUES(max_storage_mb),max_file_mb=VALUES(max_file_mb),enabled=VALUES(enabled)",[b.accountType,b.maxFiles,b.maxStorageMb,b.maxFileMb,b.enabled?1:0]);return NextResponse.json({ok:true})}catch{return NextResponse.json({ok:false,code:"SETTINGS_UNAVAILABLE"},{status:503})}}

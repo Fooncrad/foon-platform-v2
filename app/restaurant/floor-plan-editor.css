@@ -1,0 +1,51 @@
+/* FOON Floor Plan Pro — scoped styles for the existing restaurant dashboard. */
+.foonFloorPro{--floor-accent:#b88934;--floor-border:#d8d0c2;--floor-ink:#26221c;--floor-muted:#615b52;color:var(--floor-ink);padding:clamp(12px,2vw,22px);min-width:0;max-width:100%;overflow:hidden}
+.foonFloorPro *{box-sizing:border-box}
+.foonFloorPro button,.foonFloorPro input,.foonFloorPro select{font:inherit}
+.foonFloorPro button{cursor:pointer;min-height:40px}
+.foonFloorPro button:disabled{cursor:not-allowed;opacity:.55}
+.foonFloorPro button:focus-visible,.foonFloorPro input:focus-visible,.foonFloorPro select:focus-visible{outline:3px solid var(--floor-accent);outline-offset:2px}
+.foonFloorProHeader,.foonFloorHeaderActions,.foonFloorToolbar,.foonFloorToolsLeft,.foonFloorZoom,.foonFloorStats,.foonFloorStageFooter{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.foonFloorProHeader{justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.foonFloorProHeader h2{font-size:clamp(1.15rem,2vw,1.6rem);margin:4px 0}
+.foonFloorProHeader p,.foonFloorStageFooter,.foonFloorInspector p{color:var(--floor-muted);line-height:1.6}
+.foonFloorEyebrow{font-size:.75rem;font-weight:700;letter-spacing:.12em;color:#86621f}
+.foonFloorHeaderActions{justify-content:flex-end}
+.foonFloorSaved,.foonFloorUnsaved{border-radius:999px;padding:6px 10px;font-size:.8rem;font-weight:600}
+.foonFloorSaved{background:#e5f5e9;color:#24643b}
+.foonFloorUnsaved{background:#fff2d5;color:#805414}
+.foonFloorPrimary{border:1px solid #9d7126;background:#b88934;color:#1b170f;border-radius:10px;padding:8px 14px;font-weight:700}
+.foonFloorPrimary:hover:not(:disabled){background:#c99a44}
+.foonFloorStats{margin:12px 0 18px;gap:8px}
+.foonFloorStats>span{padding:10px 13px;border:1px solid var(--floor-border);border-radius:10px;background:#faf8f3;font-size:.88rem}
+.foonFloorStats strong{font-variant-numeric:tabular-nums}
+.foonFloorToolbar{justify-content:space-between;padding:12px 0;border-block:1px solid var(--floor-border);margin-bottom:16px}
+.foonFloorToolsLeft{gap:10px}
+.foonFloorToolsLeft label,.foonFloorInspector label{display:flex;align-items:center;gap:7px;font-size:.9rem}
+.foonFloorPro input,.foonFloorPro select{max-width:100%;min-width:0;border:1px solid #bfb5a5;background:#fff;color:#222;border-radius:8px;padding:8px}
+.foonFloorToolsLeft input[type=number]{width:78px;direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
+.foonFloorZoom{gap:4px}
+.foonFloorZoom button{border:1px solid var(--floor-border);background:#fff;color:#28231b;border-radius:8px;padding:6px 12px}
+.foonFloorZoom span{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.foonFloorWorkspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,280px);gap:16px;min-width:0;align-items:start}
+.foonFloorStage,.foonFloorInspector{min-width:0}
+.foonFloorViewport{overflow:auto;max-width:100%;min-height:320px;max-height:min(72vh,760px);border:2px solid #c49a45;border-radius:14px;background:#f8f5ee;overscroll-behavior:contain}
+.foonFloorBoard{position:relative;min-height:320px;overflow:hidden;background-color:#f6f2e9;background-image:linear-gradient(#a79b7b26 1px,transparent 1px),linear-gradient(90deg,#a79b7b26 1px,transparent 1px);background-size:5% 5%;touch-action:pan-x pan-y}
+.foonFloorTable{position:absolute;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:70px;min-height:56px;max-width:110px;padding:6px;border:2px solid #aa946e;border-radius:12px;background:#fff;color:#26221c;box-shadow:0 2px 8px #0002;touch-action:none;user-select:none;transform:translate(-10%,-10%)}
+.foonFloorTable.is-selected{border-color:#9d7126;background:#ffe4a6;z-index:2}
+.foonFloorTable small{font-size:.73rem}
+.foonFloorEmpty{position:absolute;inset:0;display:grid;place-items:center;padding:16px;color:#615b52;text-align:center;pointer-events:none}
+.foonFloorStageFooter{justify-content:space-between;font-size:.79rem;margin-top:10px}
+.foonFloorInspector{border:1px solid var(--floor-border);border-radius:12px;background:#faf8f3;padding:15px;display:flex;flex-direction:column;gap:12px}
+.foonFloorInspector h3{font-size:1rem;margin:0}
+.foonFloorInspector label{flex-direction:column;align-items:stretch;gap:4px}
+.foonFloorInspector input{width:100%}
+.foonFloorCoords{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.foonFloorCoords input{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
+.foonFloorDanger{border:1px solid #c38b8b;border-radius:8px;background:#fff2f2;color:#812929;padding:8px}
+.foonFloorBooking{padding-top:12px;border-top:1px solid var(--floor-border)}
+.foonFloorBooking h4{margin:0 0 6px}
+.foonFloorBooking button{border:1px solid #9d7126;border-radius:8px;background:#fff8e8;color:#6c4b17;padding:8px 12px}
+.foonFloorMessage{margin:14px 0 0;padding:12px;border-radius:9px;background:#f5edda;color:#5b421b;overflow-wrap:anywhere}
+@media(max-width:850px){.foonFloorWorkspace{grid-template-columns:minmax(0,1fr)}.foonFloorInspector{width:100%}.foonFloorProHeader{gap:10px}}
+@media(max-width:480px){.foonFloorPro{padding:10px}.foonFloorProHeader,.foonFloorHeaderActions,.foonFloorToolbar,.foonFloorToolsLeft{align-items:stretch}.foonFloorHeaderActions{width:100%;justify-content:space-between}.foonFloorToolsLeft{width:100%}.foonFloorToolsLeft label{flex:1 1 115px}.foonFloorToolsLeft input[type=number]{width:100%}.foonFloorViewport{min-height:260px}.foonFloorBoard{min-height:260px}.foonFloorTable{min-width:58px;min-height:50px;padding:4px}.foonFloorCoords{grid-template-columns:1fr}.foonFloorStageFooter{gap:4px}}

@@ -1,0 +1,12 @@
+/* Same visual control in admin, merchant/staff, and customer account shells. */
+.foonWorkspaceThemeControl{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;color:inherit;font-size:12px;font-weight:700}
+.foonWorkspaceThemeControl>span{white-space:nowrap}
+.foonWorkspaceThemeControl select{appearance:auto;min-height:44px;max-width:150px;min-width:95px;padding:8px 10px;border:1px solid currentColor;border-radius:10px;background:transparent;color:inherit;cursor:pointer;font:inherit;color-scheme:inherit}
+.foonWorkspaceThemeControl select:focus-visible{outline:3px solid #e2a93b;outline-offset:3px}
+.adminShell .adminWorkspaceTheme,.restaurantApp .restaurantWorkspaceTheme,.customerDashboard .customerWorkspaceTheme{color:inherit}
+.adminShell .adminWorkspaceTheme select,.restaurantApp .restaurantWorkspaceTheme select,.customerDashboard .customerWorkspaceTheme select{background:var(--foon-workspace-surface,transparent);border-color:var(--foon-workspace-border,#9aa0a8);color:inherit}
+.adminShell{--foon-workspace-surface:var(--foon-surface);--foon-workspace-border:var(--foon-line)}
+.restaurantApp{--foon-workspace-surface:var(--rc-surface,#fff);--foon-workspace-border:var(--rc-border)}
+.customerDashboard{--foon-workspace-surface:var(--customer-surface,#24221e);--foon-workspace-border:var(--customer-line,#615b51)}
+@media(max-width:640px){.foonWorkspaceThemeControl{flex-wrap:wrap;gap:3px}.foonWorkspaceThemeControl>span{font-size:11px}.foonWorkspaceThemeControl select{min-width:98px;max-width:125px;font-size:12px;padding:8px}}
+@media(prefers-reduced-motion:reduce){.adminShell,.restaurantApp,.customerDashboard{transition:none}}

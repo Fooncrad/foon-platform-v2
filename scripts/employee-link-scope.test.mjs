@@ -1,0 +1,78 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {employeeMembershipRole,resolveBoundEmployeeUser} from "../lib/restaurant/employee-link-scope.ts";
+
+const tenant="11111111-1111-4111-8111-111111111111";
+const branch="22222222-2222-4222-8222-222222222222";
+const otherBranch="33333333-3333-4333-8333-333333333333";
+const user="44444444-4444-4444-8444-444444444444";
+const linked={userId:user,role:"waiter"};
+function mockDB({role="waiter",assignedBranch=branch,memberActive=true,enabled=true,userActive=true,customer=false,customerProfile=false,platformAdmin=false,tenantId=tenant}={}){
+ let queries=0;
+ return {get queries(){return queries;},async execute(sql,params){
+  queries++;
+  for(const expected of [
+   "BINARY a.tenant_id=BINARY m.tenant_id",
+   "BINARY a.user_id=BINARY m.user_id",
+   "BINARY a.branch_id=BINARY ?",
+   "a.enabled=TRUE",
+   "a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci",
+   "BINARY u.id=BINARY m.user_id","u.status='active'",
+   "BINARY m.tenant_id=BINARY ?","BINARY m.user_id=BINARY ?",
+   "m.role COLLATE utf8mb4_unicode_ci=? COLLATE utf8mb4_unicode_ci",
+   "m.status='active'","NOT EXISTS",
+   "BINARY customer.user_id=BINARY m.user_id",
+   "customer.role COLLATE utf8mb4_unicode_ci='customer'",
+   "customer.status='active'","tenant_customers tc",
+   "BINARY tc.user_id=BINARY m.user_id","platform_admins pa",
+   "BINARY pa.user_id=BINARY m.user_id"
+  ])assert.ok(sql.includes(expected),`missing authorization guard: ${expected}`);
+  const [requestedBranch,requestedTenant,requestedUser,requestedRole]=params;
+  return [[...(requestedBranch===assignedBranch&&requestedTenant===tenantId&&
+   requestedUser===user&&requestedRole===role&&memberActive&&enabled&&userActive&&!customer&&!customerProfile&&!platformAdmin?
+   [{user_id:user}]:[])]];
+ }};
+}
+test("active staff assigned to this branch resolves only with matching role",async()=>{
+ const db=mockDB();
+ assert.equal(await resolveBoundEmployeeUser(db,tenant,branch,linked),user);
+ assert.equal(db.queries,1);
+});
+test("customer membership or staff/customer dual role is never eligible",async()=>{
+ const db=mockDB({customer:true});
+ assert.equal(await resolveBoundEmployeeUser(db,tenant,branch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB(),tenant,branch,{userId:user,role:"customer"}),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({customerProfile:true}),tenant,branch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({platformAdmin:true}),tenant,branch,linked),"");
+});
+test("wrong branch, wrong tenant, changed role and disabled assignment all fail closed",async()=>{
+ assert.equal(await resolveBoundEmployeeUser(mockDB(),tenant,otherBranch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({tenantId:otherBranch}),tenant,branch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({role:"driver"}),tenant,branch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({enabled:false}),tenant,branch,linked),"");
+});
+test("inactive membership or deleted user may not have password/grants changed",async()=>{
+ assert.equal(await resolveBoundEmployeeUser(mockDB({memberActive:false}),tenant,branch,linked),"");
+ assert.equal(await resolveBoundEmployeeUser(mockDB({userActive:false}),tenant,branch,linked),"");
+});
+test("unknown ID or missing branch fails before SQL, supervisor maps to waiter only",async()=>{
+ const db=mockDB();
+ for(const [t,b,data] of [[tenant,null,linked],[tenant,branch,{userId:"bad",role:"waiter"}],
+ [tenant,branch,{userId:user,role:"owner"}],[tenant,branch,{userId:user,role:"manager"}]]){
+  assert.equal(await resolveBoundEmployeeUser(db,t,b,data),"");
+ }
+ assert.equal(db.queries,0);
+ assert.equal(employeeMembershipRole("supervisor"),"waiter");
+ assert.equal(employeeMembershipRole("driver"),"driver");
+ assert.equal(employeeMembershipRole("customer"),null);
+});
+
+test("mixed MariaDB collations cannot fall back to implicit role equality",async()=>{
+ const db={async execute(sql,params){
+  assert.match(sql,/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/);
+  assert.doesNotMatch(sql,/a\.role\s*=\s*m\.role/);
+  assert.deepEqual(params,[branch,tenant,user,"waiter"]);
+  return [[{user_id:user}]];
+ }};
+ assert.equal(await resolveBoundEmployeeUser(db,tenant,branch,linked),user);
+});

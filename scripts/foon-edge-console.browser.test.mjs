@@ -1,0 +1,23 @@
+import {test,expect} from "@playwright/test";
+import {localConsoleFixture} from "./foon-edge-console-fixture.mjs";
+let fixture;
+test.beforeAll(async()=>{fixture=await localConsoleFixture();});
+test.afterAll(async()=>{await fixture?.close();});
+test("offline local POS and KDS share durable orders at desktop and 320px widths",async({page,browser})=>{
+ await page.setViewportSize({width:1440,height:960});await page.goto(fixture.origin);
+ await page.getByLabel("اسم المستخدم",{exact:true}).fill("cashier");await page.getByLabel("كلمة المرور",{exact:true}).fill(fixture.password);await page.getByRole("button",{name:"دخول",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"نقطة البيع",exact:true})).toBeVisible();
+ await page.getByRole("button",{name:/مشروبات.*قهوة/}).click();await page.getByRole("button",{name:"حفظ الطلب",exact:true}).click();
+ await expect(page.locator(".order-card")).toHaveCount(1);await expect(page.locator(".order-card")).toContainText("بانتظار السحابة");
+ await page.reload();await expect(page.locator(".order-card")).toHaveCount(1);
+ const kitchenContext=await browser.newContext(),kitchen=await kitchenContext.newPage();
+ await kitchen.goto(fixture.origin);await kitchen.getByLabel("اسم المستخدم",{exact:true}).fill("kitchen");await kitchen.getByLabel("كلمة المرور",{exact:true}).fill(fixture.password);await kitchen.getByRole("button",{name:"دخول",exact:true}).click();
+ await expect(kitchen.getByRole("heading",{name:"المطبخ والطلبات",exact:true})).toBeVisible();await expect(kitchen.getByRole("button",{name:"حفظ الطلب",exact:true})).toBeHidden();
+ await kitchen.locator(".order-card").getByRole("button",{name:"قيد التحضير",exact:true}).click();await expect(kitchen.locator(".order-card .badge").first()).toHaveText("قيد التحضير");
+ await page.getByRole("button",{name:"تحديث",exact:true}).click();await expect(page.locator(".order-card .badge").first()).toHaveText("قيد التحضير");
+ await page.screenshot({path:"work/edge-console-desktop.png",fullPage:true});
+ await page.setViewportSize({width:320,height:740});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:"work/edge-console-mobile.png",fullPage:true});
+ await page.getByLabel("Language",{exact:true}).selectOption("en");await expect(page.getByRole("heading",{name:"Point of sale",exact:true})).toBeVisible();await expect(page.locator("html")).toHaveAttribute("dir","ltr");expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await page.getByLabel("Language",{exact:true}).selectOption("fr");await expect(page.getByRole("heading",{name:"Point de vente",exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await kitchenContext.close();
+});
