@@ -32,7 +32,7 @@ export default function OfflineMenuSave({menu,preview,language}:{menu:OfflineMen
    worker.postMessage({type:"SAVE_PUBLIC_MENU",slug,html:offlineMenuDocument(menu,Date.now(),language),images:[...new Set(images)]},[channel.port2]);
   })().catch(()=>{});
   return()=>{cancelled=true;};
- },[name,slug,items,categories,branches,options,branding,preview,language]);
+ },[menu,name,slug,items,categories,branches,options,branding,preview,language]);
  if(!saved)return null;
  const full=language==="ar"?"المنيو محفوظ للتصفح دون اتصال — جميع تفاصيل الأصناف متاحة":language==="fr"?"Menu enregistré pour consultation hors connexion":"Menu saved for offline browsing";
  const partial=language==="ar"?"بعض الصور لم تُحفظ؛ ستظل تفاصيل الأصناف متاحة.":language==="fr"?"Certaines images n'ont pas été enregistrées ; les détails restent consultables.":"Some images were not saved; menu details remain available.";
