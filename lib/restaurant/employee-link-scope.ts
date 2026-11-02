@@ -19,19 +19,27 @@ export async function resolveBoundEmployeeUser(
   SELECT m.user_id
   FROM memberships m
   JOIN employee_branch_assignments a
-   ON a.tenant_id=m.tenant_id AND a.user_id=m.user_id AND a.branch_id=?
-   AND a.enabled=TRUE AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
-  JOIN users u ON u.id=m.user_id AND u.status='active'
-  WHERE m.tenant_id=? AND m.user_id=? AND m.role=? AND m.status='active'
+   ON BINARY a.tenant_id=BINARY m.tenant_id
+   AND BINARY a.user_id=BINARY m.user_id
+   AND BINARY a.branch_id=BINARY ?
+   AND a.enabled=TRUE
+   AND a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci
+  JOIN users u ON BINARY u.id=BINARY m.user_id AND u.status='active'
+  WHERE BINARY m.tenant_id=BINARY ?
+   AND BINARY m.user_id=BINARY ?
+   AND m.role COLLATE utf8mb4_unicode_ci=? COLLATE utf8mb4_unicode_ci
+   AND m.status='active'
    AND NOT EXISTS (
     SELECT 1 FROM memberships customer
-    WHERE customer.user_id=m.user_id AND customer.role='customer' AND customer.status='active'
+    WHERE BINARY customer.user_id=BINARY m.user_id
+     AND customer.role COLLATE utf8mb4_unicode_ci='customer'
+     AND customer.status='active'
    )
    AND NOT EXISTS (
-    SELECT 1 FROM tenant_customers tc WHERE tc.user_id=m.user_id
+    SELECT 1 FROM tenant_customers tc WHERE BINARY tc.user_id=BINARY m.user_id
    )
    AND NOT EXISTS (
-    SELECT 1 FROM platform_admins pa WHERE pa.user_id=m.user_id
+    SELECT 1 FROM platform_admins pa WHERE BINARY pa.user_id=BINARY m.user_id
    )
   LIMIT 2
  `,[branchId,tenantId,userId,role]);
