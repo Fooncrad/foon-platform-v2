@@ -16,7 +16,7 @@ export function restrictedMembershipReason(rows:ReadonlyArray<{role:string;membe
 }
 export async function accountMembershipRestriction(db:Pool|PoolConnection,userId:string):Promise<string|null>{
  const [rows]=await db.execute<MembershipRow[]>(
-  "SELECT m.role,m.status AS membership_status,t.status AS tenant_status FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=?",
+  "SELECT m.role,m.status AS membership_status,t.status AS tenant_status FROM memberships m JOIN tenants t ON BINARY t.id=BINARY m.tenant_id WHERE BINARY m.user_id=BINARY ?",
   [userId]);
  return restrictedMembershipReason(rows);
 }
