@@ -184,6 +184,8 @@ export async function PATCH(req:Request){
     const [links]=await db.execute<RowDataPacket[]>("SELECT dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND layout_id=? AND floor_table_id=? FOR UPDATE",[c.tenant,c.branch,b.id,b.tableId]);
     if(!links.length){await db.rollback();return NextResponse.json({ok:false,code:"DINING_TABLE_LINK_REQUIRED"},{status:409})}
     const diningTableId=String(links[0].dining_table_id);
+    const [tableRows]=await db.execute<RowDataPacket[]>("SELECT id FROM restaurant_resources WHERE tenant_id=? AND id=? AND kind='dining_table' AND branch_id=? AND archived=FALSE LIMIT 1 FOR UPDATE",[c.tenant,diningTableId,c.branch]);
+    if(!tableRows.length){await db.rollback();return NextResponse.json({ok:false,code:"DINING_TABLE_BRANCH_SCOPE_REQUIRED"},{status:409})}
     if(b.employeeId===null){
      await db.execute("UPDATE restaurant_resources SET data=JSON_REMOVE(data,'$.waiterId'),version=version+1 WHERE tenant_id=? AND id=? AND kind='dining_table' AND branch_id=?",[c.tenant,diningTableId,c.branch]);
     }else{
