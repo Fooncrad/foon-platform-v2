@@ -63,3 +63,33 @@ test("tenant entitlement joins compare IDs and feature keys without MariaDB coll
   "BINARY s.tenant_id=BINARY ?"
  ])assert.ok(source.includes(fragment),fragment);
 });
+
+test("restaurant workspace loading uses collation-independent comparisons for tenant, user, plan and feature IDs",()=>{
+ const page=file("app/restaurant/page.tsx");
+ for(const fragment of [
+  "BINARY bp.tenant_id=BINARY t.id",
+  "BINARY t.id=BINARY ?",
+  "BINARY p.id=BINARY s.plan_id",
+  "BINARY s.tenant_id=BINARY ?",
+  "BINARY pf.plan_id=BINARY p.id",
+  "BINARY pf.feature_key=BINARY f.feature_key",
+  "BINARY bp.tenant_id=BINARY s.tenant_id",
+  "BINARY af.activity_code=BINARY bp.activity_code",
+  "BINARY t.id=BINARY m.tenant_id",
+  "BINARY u.id=BINARY m.user_id",
+  "BINARY m.user_id=BINARY ?",
+  "BINARY a.branch_id=BINARY b.id"
+ ])assert.ok(page.includes(fragment),fragment);
+ const workspace=file("lib/tenant/workspace.ts");
+ for(const fragment of [
+  "BINARY t.id=BINARY m.tenant_id",
+  "BINARY u.id=BINARY m.user_id",
+  "BINARY m.user_id=BINARY ?"
+ ])assert.ok(workspace.includes(fragment),fragment);
+ const activity=file("lib/tenant/workspace-activity.ts");
+ assert.ok(activity.includes("BINARY bp.tenant_id=BINARY t.id"));
+ assert.ok(activity.includes("BINARY t.id=BINARY ?"));
+ const authorization=file("lib/auth/authorization.ts");
+ assert.ok(authorization.includes("BINARY user_id=BINARY ?"));
+ assert.ok(authorization.includes("BINARY pa.user_id=BINARY ?"));
+});
