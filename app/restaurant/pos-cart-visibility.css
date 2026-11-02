@@ -22,7 +22,7 @@
 .restaurantPosModern .restaurantPosLoadMore{display:block;margin:15px auto 5px;min-height:44px;padding:9px 16px;border:1px solid var(--rc-accent,#b97f21);border-radius:12px;background:var(--rc-surface,#fff);font-weight:700;cursor:pointer}
 @media(max-width:600px){.restaurantPosModern .restaurantPosOrderSummary{position:relative}.restaurantPosModern .restaurantPosCartLine{grid-template-columns:minmax(0,1fr)}.restaurantPosModern .restaurantPosCartLineActions{justify-content:flex-start}.restaurantPosModern .restaurantPosCartLines{max-height:260px}}
 
-/* Remove the enclosing card frame around the cart; keep individual cart rows and controls intact. */
+/* Remove the enclosing card frame around the cart and render product rows as simple dividers. */
 .restaurantPosModern .restaurantPosOrderSummary{
   background:transparent;
   border:0;
@@ -53,4 +53,31 @@
   .restaurantPosModern .restaurantPosCartLine{
     padding:10px 0;
   }
+}
+
+/* Keep quantity and remove controls borderless too; show keyboard focus only when focused. */
+.restaurantPosModern .restaurantPosCartLineActions button,
+.restaurantPosModern .restaurantPosCartLineActions input{
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.restaurantPosModern .restaurantPosCartLineActions button{
+  min-width:32px;
+  padding-inline:4px;
+}
+.restaurantPosModern .restaurantPosCartLineActions button:hover{
+  color:var(--rc-accent,#b97f21);
+}
+.restaurantPosModern .restaurantPosCartLineActions input{
+  width:42px!important;
+  min-width:42px!important;
+  max-width:42px!important;
+  padding:4px 0;
+}
+.restaurantPosModern .restaurantPosCartLineActions button:focus-visible,
+.restaurantPosModern .restaurantPosCartLineActions input:focus-visible{
+  outline:2px solid var(--rc-accent,#b97f21);
+  outline-offset:2px;
 }
