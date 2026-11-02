@@ -26,6 +26,10 @@ test("subscription notices distinguish owner guidance from employee-safe guidanc
  assert.match(localizedSubscriptionNotice("expired","ar"),/انتهت مدة الاشتراك/);
  assert.match(localizedSubscriptionNotice("expired","en",true),/Contact the business owner/);
  assert.match(localizedSubscriptionNotice("pending","fr",true),/propriétaire ou le responsable/);
+ const soon=new Date(Date.now()+2*86400000).toISOString().slice(0,10);
+ assert.match(localizedSubscriptionNotice("active","en",false,soon),/expires in/);
+ assert.match(localizedSubscriptionNotice("active","fr",true,soon),/arrive bientôt à échéance/);
+ assert.equal(localizedSubscriptionNotice("active","en",false,"2099-01-01"),undefined);
  assert.match(localizedSubscriptionNotice(undefined,"ar"),/لا يوجد اشتراك نشط/);
 });
 
