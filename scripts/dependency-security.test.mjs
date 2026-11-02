@@ -17,15 +17,16 @@ test("Nodemailer is pinned to the addressparser security release",()=>{
 });
 
 test("The transitive Zod validation dependency cannot regress to an affected release",()=>{
- assert.equal(pkg.overrides?.zod,"4.6.6");
+ assert.equal(pkg.overrides?.zod,"4.6.7");
+ assert.equal(root.overrides?.zod,pkg.overrides.zod);
  const node=packages["node_modules/zod"];
- assert.equal(node?.version,"4.6.6");
- assert.equal(node.resolved,"https://registry.npmjs.org/zod/-/zod-4.6.6.tgz");
- assert.equal(node.integrity,"sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==");
+ assert.equal(node?.version,"4.6.7");
+ assert.equal(node.resolved,"https://registry.npmjs.org/zod/-/zod-4.6.7.tgz");
+ assert.equal(node.integrity,"sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==");
 });
 
 test("The lockfile has no additional old Zod or Nodemailer versions",()=>{
  const hits=Object.entries(packages).filter(([key])=>["zod","nodemailer"].some(name=>key==="node_modules/"+name||key.endsWith("/node_modules/"+name)));
  assert.deepEqual(hits.map(([key])=>key).sort(),["node_modules/nodemailer","node_modules/zod"]);
- assert.deepEqual(hits.map(([,node])=>node.version).sort(),["10.1.4","4.6.6"]);
+ assert.deepEqual(hits.map(([,node])=>node.version).sort(),["10.1.4","4.6.7"]);
 });
