@@ -43,3 +43,25 @@
 .restaurantPosModern .restaurantPosCategories button small{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:rgba(100,116,139,.13);font-size:10px;font-variant-numeric:tabular-nums}
 .restaurantPosModern .restaurantPosProductCategory{display:block;min-height:18px;color:var(--rc-muted,#64748b);font-size:11px;font-weight:650;overflow-wrap:anywhere}
 @media(max-width:480px){.restaurantPosOrdersToolbar{padding:10px}.restaurantPosOrdersToolbar .restaurantStatusFilters button{min-height:38px;padding:6px 10px}.restaurantPosOrdersHeading h3{font-size:15px}}
+
+
+/* Merchant-selectable POS appearance. Preference is stored separately for restaurants and retail stores. */
+.restaurantPosThemePicker{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.restaurantPosThemePicker>span{margin-inline-end:4px;color:var(--rc-muted,#64748b);font-size:12px;font-weight:750}
+.restaurantPosThemePicker button{min-height:34px;padding:5px 11px;border:1px solid var(--rc-border,#dce3eb);border-radius:9px;background:var(--rc-surface,#fff);color:var(--rc-text,#172033);font-size:12px;font-weight:750}
+.restaurantPosThemePicker button[aria-pressed=true]{border-color:#2563eb;background:#eff6ff;color:#1d4ed8;box-shadow:inset 0 0 0 1px #2563eb}
+.restaurantPosOrdersToolbar[data-pos-theme=hybrid],.restaurantPosModern[data-pos-theme=hybrid]{--rc-accent:#2563eb;--rc-surface:#fff;--rc-text:#172033;--rc-muted:#64748b;--rc-border:#dbe3ef;color:var(--rc-text)}
+.restaurantPosOrdersToolbar[data-pos-theme=hybrid] .restaurantPosNewOrdersCount[data-has-new=true]{border-color:#f59e0b;background:#fff7ed;color:#9a3412}
+.restaurantPosOrdersToolbar[data-pos-theme=light],.restaurantPosModern[data-pos-theme=light]{--rc-accent:#475569;--rc-surface:#fff;--rc-text:#172033;--rc-muted:#64748b;--rc-border:#dce3eb;background:#fff;color:#172033}
+.restaurantPosOrdersToolbar[data-pos-theme=dark],.restaurantPosModern[data-pos-theme=dark]{--rc-accent:#60a5fa;--rc-surface:#182235;--rc-text:#e5edf8;--rc-muted:#a9b8cc;--rc-border:#34445d;background:#111a2b;color:#e5edf8;color-scheme:dark}
+.restaurantPosOrdersToolbar[data-pos-theme=dark]{box-shadow:0 5px 18px rgba(0,0,0,.22)}
+.restaurantPosOrdersToolbar[data-pos-theme=dark] .restaurantPosNewOrdersCount{border-color:#475569;background:#26364e;color:#e5edf8}
+.restaurantPosOrdersToolbar[data-pos-theme=dark] .restaurantPosNewOrdersCount[data-has-new=true]{border-color:#f59e0b;background:#422b16;color:#fed7aa}
+.restaurantPosOrdersToolbar[data-pos-theme=dark] .restaurantStatusFilters button,.restaurantPosModern[data-pos-theme=dark] .restaurantPosCategories button,.restaurantPosModern[data-pos-theme=dark] .restaurantPosThemePicker button{border-color:#40516b;background:#1e2b40;color:#e5edf8}
+.restaurantPosOrdersToolbar[data-pos-theme=dark] .restaurantStatusFilters button[aria-pressed=true],.restaurantPosModern[data-pos-theme=dark] .restaurantPosCategories button[aria-pressed=true],.restaurantPosModern[data-pos-theme=dark] .restaurantPosThemePicker button[aria-pressed=true]{border-color:#60a5fa;background:#203b60;color:#bfdbfe}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosProduct{background:#182235;border-color:#34445d;color:#e5edf8}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosProductMedia{background:#202e43}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosBrowse input[type=search],.restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout :is(input,select,textarea){background:#182235;border-color:#40516b;color:#e5edf8}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout,.restaurantPosModern[data-pos-theme=dark] .restaurantPosOrderSummary{background:#111a2b;border-color:#34445d;color:#e5edf8}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout :is(button,.restaurantPrimary){border-color:#40516b}
+@media(max-width:480px){.restaurantPosThemePicker{gap:5px}.restaurantPosThemePicker>span{width:100%}.restaurantPosThemePicker button{flex:1 1 auto}}
