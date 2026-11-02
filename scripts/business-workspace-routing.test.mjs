@@ -27,7 +27,7 @@ test("activity URL mismatch redirects after checking the user's tenant membershi
  assert.match(route,/activity!==actual\)redirect\(activityWorkspaceUrl\(actual,workspace.tenant_id\)\)/);
  assert.match(route,/if\(!isActivityType\(activity\)\)notFound\(\)/);
  const profile=read("lib/tenant/workspace-activity.ts");
- assert.match(profile,/WHERE t.id=\? AND t.status='active'/);
+ assert.match(profile,/WHERE BINARY t.id=BINARY \? AND t.status='active'/);
  assert.match(profile,/return rows\[0\].kind==="restaurant"\?"restaurant":null/);
 });
 
