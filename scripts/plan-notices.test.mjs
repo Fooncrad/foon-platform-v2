@@ -17,6 +17,8 @@ test("plan, subscription, feature-limit and employee-access notices are complete
   }
  }
  assert.equal(localizedPlanNotice("UNKNOWN_CODE","en"),undefined);
+  assert.match(localizedPlanNotice("PLAN_LIMIT_REACHED","en","Products"),/Products/);
+  assert.match(localizedPlanNotice("PLAN_FEATURE_REQUIRED","fr","Commandes"),/Commandes/);
 });
 
 test("subscription notices distinguish owner guidance from employee-safe guidance",()=>{
@@ -38,9 +40,11 @@ test("all 15 business activities retain activity-specific capability presets whi
 test("all activity workspace surfaces use the same localized plan messages and subscription notice",()=>{
  const resource=file("app/restaurant/resource-manager.tsx");
  const dashboard=file("app/restaurant/merchant-dashboard.tsx");
+ const api=file("app/api/restaurant/operations/[module]/route.ts");
  assert.match(resource,/localizedPlanNotice\(key/);
  assert.match(dashboard,/localizedSubscriptionNotice\(data\.subscription\?\.status/);
  assert.match(dashboard,/aria-live="polite"/);
+ assert.match(api,/localizedPlanNotice\(code,locale,featureLabel\)/);
 });
 
 test("tenant entitlement joins compare IDs and feature keys without MariaDB collation coercion",()=>{
