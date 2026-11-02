@@ -37,3 +37,28 @@ test("assigned-service SQL uses binary-safe comparisons for mixed MariaDB collat
   "BINARY tenant_id=BINARY ? AND BINARY branch_id=BINARY ?"
  ]) assert(src.includes(phrase),phrase);
 });
+
+
+
+test("floor-plan API lists only active branch-linked waiter employees and persists table assignments",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const api=readFileSync(new URL("../app/api/restaurant/floor-plan-layouts/route.ts",import.meta.url),"utf8");
+ const ui=readFileSync(new URL("../app/restaurant/section-floor-layouts.tsx",import.meta.url),"utf8");
+ for(const phrase of [
+  "JOIN users u ON BINARY u.id=BINARY JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId'))",
+  "m.role='waiter'",
+  "a.enabled=TRUE AND a.role='waiter'",
+  "BINARY e.branch_id=BINARY ?",
+  "JSON_SET(data,'$.waiterId',?)",
+  "JSON_REMOVE(data,'$.waiterId')",
+  "DINING_TABLE_LINK_REQUIRED",
+  "WAITER_NOT_ELIGIBLE_FOR_BRANCH"
+ ]) assert(api.includes(phrase),phrase);
+ for(const phrase of [
+  'operation("waiterAssign"',
+  "waiters.map(w=>",
+  "Assigned waiter",
+  "النادل المعيّن",
+  "tableWaiterName(t.id)"
+ ]) assert(ui.includes(phrase),phrase);
+});
