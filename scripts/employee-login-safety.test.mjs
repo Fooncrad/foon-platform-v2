@@ -33,7 +33,7 @@ test("login server logs only a stage and safe incident reference for unexpected 
  const route=file("app/api/auth/login/route.ts");
  assert.match(route,/stage="membership_policy"/);
  assert.match(route,/stage="session_create"/);
- assert.match(route,/logIncident\(\{incidentId,code:"LOGIN_UNAVAILABLE",location:"auth\.login\."+stage,error\}\)/);
+ assert.ok(route.includes('logIncident({incidentId,code:"LOGIN_UNAVAILABLE",location:"auth.login."+stage,error})'));
  assert.match(route,/X-Foon-Incident-Id/);
  assert.doesNotMatch(route,/console\.(log|error)\([^\n]*email/);
 });
