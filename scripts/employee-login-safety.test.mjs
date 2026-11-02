@@ -23,6 +23,8 @@ test("login UI explains employee pending and suspended states in the selected la
  assert.match(page,/localizedPlanNotice\(String\(body\.code\),lang\)/);
  assert.match(page,/STAFF_ACCESS_PENDING/);
  assert.match(page,/STAFF_ACCESS_SUSPENDED/);
+ assert.match(page,/Reference: /);
+ assert.match(page,/Référence : /);
 });
 
 test("login server logs only a stage and safe incident reference for unexpected failures",()=>{
