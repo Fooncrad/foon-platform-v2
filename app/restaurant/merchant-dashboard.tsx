@@ -112,7 +112,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const dining=data.activityModules.includes("tables"),services=data.activityModules.includes("services");
  const fullAdminAccess=data.adminAccess&&!data.supportReadOnly;const personalMediaAllowed=data.role==="owner"||fullAdminAccess;
  const canManage=fullAdminAccess||["owner","manager"].includes(data.role)&&!data.supportReadOnly,canPayments=fullAdminAccess||["owner","manager","accountant"].includes(data.role)&&!data.supportReadOnly;
- const planNotice=data.adminAccess?undefined:localizedSubscriptionNotice(data.subscription?.status,uiLanguage,!canManage);
+ const planNotice=data.adminAccess?undefined:localizedSubscriptionNotice(data.subscription?.status,uiLanguage,!canManage,data.subscription?.endsAt);
  const router=useRouter(),searchRef=useRef<HTMLInputElement>(null),drawerCloseRef=useRef<HTMLButtonElement>(null);
  const pathname=usePathname(),routeParams=useSearchParams();
  const [wideWorkspace,setWideWorkspace]=useState(false);
