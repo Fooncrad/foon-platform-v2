@@ -66,10 +66,25 @@ export function localizedPlanNotice(code:string,locale:PlanNoticeLocale,featureL
 export function localizedSubscriptionNotice(
  status:string|null|undefined,
  locale:PlanNoticeLocale,
- employee=false
+ employee=false,
+ endsAt?:string|null
 ):string|undefined{
  if(!status)return localizedPlanNotice("NO_ACTIVE_SUBSCRIPTION",locale);
- if(status==="active")return undefined;
+ if(status==="active"){
+  if(!endsAt)return undefined;
+  const end=Date.parse(endsAt+"T23:59:59Z");
+  if(!Number.isFinite(end))return undefined;
+  const days=Math.ceil((end-Date.now())/86400000);
+  if(days<0||days>7)return undefined;
+  if(employee){
+   return locale==="en"?"The subscription is nearing its end. Some features may become unavailable; contact the business owner or manager.":
+    locale==="fr"?"L’abonnement arrive bientôt à échéance. Certaines fonctionnalités peuvent devenir indisponibles ; contactez le propriétaire ou le responsable.":
+    "اشتراك المنشأة على وشك الانتهاء. قد تتوقف بعض المميزات؛ تواصل مع مالك النشاط أو المدير.";
+  }
+  return locale==="en"?`The subscription expires in ${days} day(s). Renew it before the expiry date to avoid interruption.`:
+   locale==="fr"?`L’abonnement expire dans ${days} jour(s). Renouvelez-le avant son échéance pour éviter toute interruption.`:
+   `ينتهي الاشتراك خلال ${days} يوم. جدّد الاشتراك قبل تاريخ الانتهاء لتجنب توقف المميزات.`;
+ }
  const code=status==="pending"?"SUBSCRIPTION_PENDING":status==="expired"?"SUBSCRIPTION_EXPIRED":status==="cancelled"?"SUBSCRIPTION_CANCELLED":"NO_ACTIVE_SUBSCRIPTION";
  const copy=localizedPlanNotice(code,locale);
  if(!copy||!employee)return copy;
