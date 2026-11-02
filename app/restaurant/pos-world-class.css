@@ -26,3 +26,20 @@
 @media(max-width:800px){.restaurantPosModern{grid-template-columns:minmax(0,1fr)!important}.restaurantPosModern .restaurantPosMenu{grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr))}.restaurantPosModern .restaurantPosCheckout{position:static;max-height:none}}
 @media(max-width:400px){.restaurantPosModern .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.restaurantPosModern .restaurantPosProduct{padding:8px}}
 @media(prefers-reduced-motion:reduce){.restaurantPosModern *{scroll-behavior:auto!important}}
+
+/* POS cashier hierarchy: live orders first, then catalog navigation and products. */
+.restaurantPosOrdersToolbar{display:grid;gap:9px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--rc-border,#dce3eb);border-radius:14px;background:var(--rc-surface,#fff);box-shadow:0 3px 12px rgba(15,23,42,.045)}
+.restaurantPosOrdersHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.restaurantPosOrdersHeading small{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--rc-muted,#64748b)}
+.restaurantPosOrdersHeading h3{margin:2px 0 0;font-size:16px;line-height:1.35}
+.restaurantPosNewOrdersCount{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;padding:5px 11px;border:1px solid var(--rc-border,#dce3eb);border-radius:999px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.restaurantPosNewOrdersCount[data-has-new=true]{border-color:#d97706;background:#fff7ed;color:#9a3412}
+.restaurantPosOrdersToolbar .restaurantStatusFilters{display:flex;gap:7px;overflow-x:auto;overscroll-behavior-inline:contain;padding:2px 1px 5px;scrollbar-width:thin}
+.restaurantPosOrdersToolbar .restaurantStatusFilters button{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:40px;padding:7px 12px;border-radius:10px;white-space:nowrap}
+.restaurantPosOrdersToolbar .restaurantStatusCount{display:inline-grid;place-items:center;min-width:21px;height:21px;padding:0 5px;border-radius:999px;background:rgba(15,23,42,.09);font-size:11px;font-variant-numeric:tabular-nums}
+.restaurantPosModern .restaurantPosCategories{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding:4px 1px 8px;scrollbar-width:thin}
+.restaurantPosModern .restaurantPosCategories button{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;min-height:42px;padding:7px 12px;border:1px solid var(--rc-border,#dce3eb);border-radius:10px;background:var(--rc-surface,#fff);font-weight:700}
+.restaurantPosModern .restaurantPosCategories button[aria-pressed=true]{border-color:var(--rc-accent,#b78b28);background:color-mix(in srgb,var(--rc-accent,#b78b28) 12%,var(--rc-surface,#fff));}
+.restaurantPosModern .restaurantPosCategories button small{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:rgba(100,116,139,.13);font-size:10px;font-variant-numeric:tabular-nums}
+.restaurantPosModern .restaurantPosProductCategory{display:block;min-height:18px;color:var(--rc-muted,#64748b);font-size:11px;font-weight:650;overflow-wrap:anywhere}
+@media(max-width:480px){.restaurantPosOrdersToolbar{padding:10px}.restaurantPosOrdersToolbar .restaurantStatusFilters button{min-height:38px;padding:6px 10px}.restaurantPosOrdersHeading h3{font-size:15px}}
