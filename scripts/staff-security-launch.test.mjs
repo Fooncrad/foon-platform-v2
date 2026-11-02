@@ -23,7 +23,17 @@ test("employee accounts are provisioned only by explicit password and branch",()
  for(const s of [invite,tenantInvite])assert.match(s,/EMPLOYEE_INVITATIONS_DISABLED/);
  assert.match(provision,/hashPassword\(password\)/);
  assert.match(provision,/employee\.branch_id/);
- assert.match(provision,/ACCOUNT_ALREADY_EXISTS/);
+ assert.match(provision,/resolveBoundEmployeeUser/);
+ assert.match(provision,/EMPLOYEE_ACCOUNT_NOT_ELIGIBLE/);
+ assert.match(provision,/EMPLOYEE_ACCOUNT_AMBIGUOUS/);
+ assert.ok(provision.includes("const MAX_EMPLOYEE_BODY_BYTES=16*1024;"));
+ assert.ok(provision.includes("employeePayload(request)"));
+ assert.match(provision,/parseEmployeeProvisionPatch/);
+ assert.ok(!provision.includes("request.json()"));
+ assert.ok(provision.includes('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/'),"employee email validation must use the intended whitespace and dot escapes");
+ const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ assert.ok(emailPattern.test("waiter@example.test"));
+ assert.ok(!emailPattern.test("waiter@"));
  assert.match(provision,/employee\.password_reset/);
  assert.match(provision,/DELETE FROM auth_sessions WHERE user_id=\?/);
  assert.match(resources,/EMPLOYEE_MANAGER_ROLE_PROTECTED/);

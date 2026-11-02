@@ -6,6 +6,10 @@ import ts from 'typescript';
 import {resourceModules,ResourceError} from './restaurant-resource-schema.mjs';
 const source=readFileSync(new URL('../app/api/restaurant/operations/[module]/route.ts',import.meta.url),'utf8')+'\nexport {authorize};';
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+// Load the production selector so the isolated authorization harness exercises the real branch rules.
+const branchSelectionExports={};
+const branchSelectionSource=readFileSync(new URL('../lib/restaurant/operations-branch-selection.ts',import.meta.url),'utf8');
+vm.runInNewContext(ts.transpileModule(branchSelectionSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports:branchSelectionExports});
 function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'orders.view',allowed:1,branch_id:'a'}],assigned=true}={}){
  const exports={};const database=()=>({execute:async(sql)=>{
   if(sql.includes('employee_permission_grants'))return [grants];
@@ -17,6 +21,7 @@ function harness({role='waiter',assignmentRole=role,grants=[{permission_key:'ord
  '@/lib/auth/authorization':{requireTenantMembership:async(u,t,allowed)=>{if(!allowed.includes(role))throw Error();return {tenantId:t,role};}},
  '@/lib/db/mysql':{database},
  '@/lib/restaurant/branch-pin':{requireAdditionalBranchUnlock:async()=>{}},
+ '@/lib/restaurant/operations-branch-selection':branchSelectionExports,
  '@/lib/plans/entitlements':{tenantEntitlement:async()=>({enabled:true})},
  '@/lib/security/origin':{assertSameOrigin:()=>{}},
  '@/scripts/restaurant-resource-schema.mjs':{resourceModules,ResourceError}
