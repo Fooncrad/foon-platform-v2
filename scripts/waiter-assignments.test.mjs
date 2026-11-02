@@ -52,6 +52,7 @@ test("floor-plan API lists only active branch-linked waiter employees and persis
   "JSON_SET(data,'$.waiterId',?)",
   "JSON_REMOVE(data,'$.waiterId')",
   "DINING_TABLE_LINK_REQUIRED",
+  "DINING_TABLE_BRANCH_SCOPE_REQUIRED",
   "WAITER_NOT_ELIGIBLE_FOR_BRANCH"
  ]) assert(api.includes(phrase),phrase);
  for(const phrase of [
