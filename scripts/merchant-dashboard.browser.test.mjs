@@ -227,6 +227,9 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
+ const previousOrdersToggle=page.locator(".restaurantPosPreviousOrdersToggle");
+ await expect(previousOrdersToggle).toHaveAttribute("aria-expanded","false");
+ await expect(page.locator(".restaurantOrderCards article")).toHaveCount(0);
  await page.getByRole("combobox",{name:"المظهر"}).selectOption("dark");
  await expect(page.locator(".restaurantApp")).toHaveAttribute("data-theme","dark");
  await assertReadableSurface(page.locator(".restaurantPosProduct").filter({hasText:"قهوة المعاينة"}),"POS product");
@@ -235,6 +238,8 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const firstQuantity=page.locator('.restaurantPosCartLineActions input[type="number"]').first();await firstQuantity.fill('');await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();expect(await firstQuantity.evaluate(input=>input.validity.valueMissing)).toBe(true);await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);await firstQuantity.fill('1');
  await page.getByRole("button",{name:"إنشاء الطلب",exact:true}).click();
  await expect(page.getByText(/تم إنشاء الطلب/)).toBeVisible();
+ await previousOrdersToggle.click();
+ await expect(previousOrdersToggle).toHaveAttribute("aria-expanded","true");
  await page.getByRole("button",{name:"تسجيل دفع يدوي",exact:true}).click();
  await expect(page.locator(".restaurantOrderCards .restaurantPaymentBadge").getByText("مدفوع",{exact:true})).toBeVisible();
  // Plaintext POS storage is retired; offline sales use the separate encrypted
@@ -657,10 +662,15 @@ test("all 15 activities expose their own tools; service orders work in three lan
      }
      await navigation.getByRole('button',{name:'نظرة عامة',exact:true}).click();
      await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
+     const previousOrdersToggle=page.locator('.restaurantPosPreviousOrdersToggle');
+     await expect(previousOrdersToggle).toHaveAttribute('aria-expanded','false');
+     await expect(page.locator('.restaurantOrderCards article')).toHaveCount(0);
      const product=page.locator('.restaurantPosProduct').filter({hasText:productName});
      await expect(product).toContainText('7.25');
      await product.getByRole('button',{name:'+ إضافة إلى الطلب',exact:true}).click();
      await page.locator('.restaurantPosCheckout').getByRole('button',{name:'إنشاء الطلب',exact:true}).click();
+     await previousOrdersToggle.click();
+     await expect(previousOrdersToggle).toHaveAttribute('aria-expanded','true');
      await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('7.25');
      await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('SAR');
     }
