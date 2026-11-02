@@ -6894,5 +6894,9 @@ export const uiCopy:Record<string,readonly [string,string]>={
  "تخصص النشاط": ["Business category", "Catégorie d’activité"],
  "كل التخصصات": ["All categories", "Toutes les catégories"],
  "صفحات النتائج": ["Result pages", "Pages de résultats"],
+ "تعذر تحديث بيانات المنيو.": ["Could not refresh menu data.", "Impossible d’actualiser les données du menu."],
+ "4. إضافات الأصناف": ["4. Product add-ons", "4. Suppléments des articles"],
+ "قوالب حسب الدور": ["Role-based templates", "Modèles par rôle"],
+ "القالب يستبدل الاختيارات الحالية ويمكنك تعديل كل صلاحية بعد تطبيقه. لا يمنح صلاحيات إدارة الموظفين أو الأمان أو حذف السجلات تلقائيًا.": ["The template replaces the current selections; you can edit each permission after applying it. It does not automatically grant staff-management, security, or record-deletion permissions.", "Le modèle remplace les sélections actuelles ; vous pouvez modifier chaque autorisation après son application. Il n’accorde pas automatiquement les droits de gestion du personnel, de sécurité ou de suppression des enregistrements."]
 };
 export function uiText(value:string,language:UiLanguage):string{return language==="ar"?value:uiCopy[value]?.[language==="en"?0:1]??value;}
