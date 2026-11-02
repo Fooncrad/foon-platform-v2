@@ -16,6 +16,8 @@ test("employee login membership joins are independent of MariaDB text collations
  const source=file("lib/auth/account-login-policy.ts");
  assert.match(source,/BINARY t\.id=BINARY m\.tenant_id/);
  assert.match(source,/BINARY m\.user_id=BINARY \?/);
+ const authorization=file("lib/auth/authorization.ts");
+ for(const fragment of ["BINARY u.id=BINARY m.user_id","BINARY t.id=BINARY m.tenant_id","BINARY a.id=BINARY s.auth_session_id","BINARY pa.user_id=BINARY s.actor_user_id","BINARY u.id=BINARY pa.user_id"])assert.ok(authorization.includes(fragment),fragment);
 });
 
 test("login UI explains employee pending and suspended states in the selected language",()=>{
