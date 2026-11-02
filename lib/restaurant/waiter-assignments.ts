@@ -19,7 +19,7 @@ export async function assignedWaiterTableIds(
    ON BINARY s.id=BINARY JSON_UNQUOTE(JSON_EXTRACT(t.data,'$.sectionId'))
    AND BINARY s.tenant_id=BINARY t.tenant_id AND BINARY s.branch_id=BINARY t.branch_id
    AND s.kind='dining_section' AND s.status='active' AND s.archived=FALSE
-  WHERE t.tenant_id=? AND t.branch_id=? AND t.kind='dining_table'
+  WHERE BINARY t.tenant_id=BINARY ? AND BINARY t.branch_id=BINARY ? AND t.kind='dining_table'
    AND t.archived=FALSE
    AND BINARY COALESCE(
     NULLIF(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.data,'$.waiterId')),''),'null'),
