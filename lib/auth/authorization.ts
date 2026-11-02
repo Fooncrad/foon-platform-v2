@@ -15,7 +15,7 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
  if(platformAdmins.length){
   if(!sessionId)throw new Error("FORBIDDEN");
   const [support]=await database().execute<RowDataPacket[]>(
-   "SELECT s.id,s.platform_role,pa.role AS effective_role FROM platform_tenant_support_sessions s JOIN auth_sessions a ON BINARY a.id=BINARY s.auth_session_id AND BINARY a.user_id=BINARY s.actor_user_id AND a.expires_at>UTC_TIMESTAMP() JOIN platform_admins pa ON pBINARY a.user_id=BINARY s.actor_user_id AND pa.enabled=TRUE JOIN users u ON BINARY u.id=BINARY s.actor_user_id AND u.status='active' JOIN tenants t ON BINARY t.id=BINARY s.tenant_id AND t.status='active' WHERE s.auth_session_id=? AND s.actor_user_id=? AND s.tenant_id=? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
+   "SELECT s.id,s.platform_role,pa.role AS effective_role FROM platform_tenant_support_sessions s JOIN auth_sessions a ON BINARY a.id=BINARY s.auth_session_id AND BINARY a.user_id=BINARY s.actor_user_id AND a.expires_at>UTC_TIMESTAMP() JOIN platform_admins pa ON BINARY pa.user_id=BINARY s.actor_user_id AND pa.enabled=TRUE JOIN users u ON BINARY u.id=BINARY s.actor_user_id AND u.status='active' JOIN tenants t ON BINARY t.id=BINARY s.tenant_id AND t.status='active' WHERE BINARY s.auth_session_id=BINARY ? AND BINARY s.actor_user_id=BINARY ? AND BINARY s.tenant_id=BINARY ? AND s.ended_at IS NULL AND s.expires_at>UTC_TIMESTAMP() LIMIT 1",
    [sessionId,userId,id]
   );
   if(support.length){
