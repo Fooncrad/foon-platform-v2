@@ -79,3 +79,9 @@
 .restaurantPosOrdersToolbar[data-pos-theme=dark] .restaurantPosAddedProductsTopbar{border:0;background:transparent}
 .restaurantPosOrdersToolbar .restaurantStatusFilters{display:none!important}
 @media(max-width:640px){.restaurantPosOrdersToolbar{gap:5px;margin-bottom:6px;padding:7px 9px}.restaurantPosAddedProductsTopbar{flex-wrap:wrap;gap:5px 9px}}
+
+/* Keep the cashier cart and its totals visible at the top of the checkout column. */
+.restaurantPosModern .restaurantPosCheckout{align-self:start;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
+.restaurantPosModern .restaurantPosCheckout>.restaurantPosSectionHeading{position:sticky;top:0;z-index:3;padding:8px 0;background:var(--rc-surface,#fff);}
+.restaurantPosModern .restaurantPosCheckout .restaurantPosOrderSummary{min-width:0;}
+@media(max-width:760px){.restaurantPosModern .restaurantPosCheckout{position:static;top:auto;max-height:none;overflow:visible;scrollbar-gutter:auto;}.restaurantPosModern .restaurantPosCheckout>.restaurantPosSectionHeading{position:static;}}
