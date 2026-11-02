@@ -7,7 +7,7 @@ import "./pos-cart-visibility.css";
 import type {CheckoutPolicy,CheckoutTotals} from "@/lib/restaurant/checkout-pricing";
 import {combinationAvailable,type CombinationAvailability} from "@/lib/platform/catalog-measurements";
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
-import {useEffect,useRef,useState,type FormEvent} from "react";
+import {useEffect,useRef,useState,useSyncExternalStore,type FormEvent} from "react";
 import {createPortal} from "react-dom";
 import {operationApi} from "./resource-manager";
 import {MerchantIcon} from "./merchant-icon";
@@ -20,6 +20,9 @@ import {canRoleTransitionOrder} from "@/lib/restaurant/order-role-channel-policy
 import {scopedPosOrders,pendingPosOrders,isNetworkFailure,getOfflineStorageStatus} from "@/lib/restaurant/offline-pos";
 import type {MenuGroup} from "@/lib/restaurant/menu";
 import MenuChoices,{cartKey,choicePrice,choicesValid,type CartLine} from "./menu-choices";
+type PosTheme="hybrid"|"light"|"dark";
+function readPosTheme(key:string):PosTheme{try{const value=localStorage.getItem(key);return value==="light"||value==="dark"||value==="hybrid"?value:"hybrid";}catch{return "hybrid";}}
+function subscribePosTheme(callback:()=>void){window.addEventListener("storage",callback);window.addEventListener("foon-pos-theme-change",callback);return()=>{window.removeEventListener("storage",callback);window.removeEventListener("foon-pos-theme-change",callback);};}
 type Order={id:string;order_number:number;branch_id:string;status:string;payment_status:string;total:number|null;subtotal:number|null;discount:number|null;checkout_snapshot:(CheckoutTotals&{version?:number;seller:{name:string;taxNumber:string;address:string;phone:string}})|null;pickup_point:{name:string;address:string;instructions:string|null;mapUrl:string|null}|null;hotel_room:{roomNumber:string}|null;version:number;channel:string;table_id?:string|null;reservation_id?:string|null;currency?:string|null;dining_section_id:string|null;party_size:number|null;dining_snapshot:{name:string;sectionName:string}|null;customer_name:string|null;kitchen_notes?:string|null;order_notes?:string|null;created_at:string;items:{name:string;quantity:number;price:number|null;line_total:number|null}[]};
 const statuses:Record<string,string>={new:"جديد",preparing:"قيد التحضير",ready:"جاهز",completed:"مكتمل",cancelled:"ملغي"};
 const channels:Record<string,string>={dine_in:"داخل المطعم",takeaway:"سفري",delivery:"توصيل",pickup:"نقطة استلام",room_service:"خدمة الغرف",hotel_service:"خدمة الفندق",reservation:"حجز مع طلب",preorder:"طلب مسبق"};
@@ -41,9 +44,8 @@ export default function OrderWorkspace({tenantId,module,branch,branches,role,onC
  const ui=dining?orderUi[locale]:{...orderUi[locale],subtitle:locale==="en"?"Sales orders · automatically refreshed every 15 seconds":locale==="fr"?"Commandes de vente · actualisation toutes les 15 secondes":translateUi("طلبات البيع · تحديث تلقائي كل 15 ثانية"),order:locale==="en"?"Sales order":locale==="fr"?"Commande de vente":translateUi("طلب بيع"),noMenu:locale==="en"?"No sale items available.":locale==="fr"?"Aucun article disponible à la vente.":translateUi("لا توجد أصناف متاحة للبيع."),guest:locale==="en"?"Customer":locale==="fr"?"Client":translateUi("عميل")};
  const [quantityDrafts,setQuantityDrafts]=useState<Record<string,string>>({});
  const posThemeStorageKey=`foon-pos-theme:${dining?"restaurant":"retail"}`;
- const [posTheme,setPosTheme]=useState<"hybrid"|"light"|"dark">("hybrid");
- useEffect(()=>{try{const saved=localStorage.getItem(posThemeStorageKey);if(saved==="hybrid"||saved==="light"||saved==="dark")setPosTheme(saved);}catch{}},[posThemeStorageKey]);
- function choosePosTheme(theme:"hybrid"|"light"|"dark"){setPosTheme(theme);try{localStorage.setItem(posThemeStorageKey,theme);}catch{}}
+ const posTheme=useSyncExternalStore(subscribePosTheme,()=>readPosTheme(posThemeStorageKey),()=>"hybrid");
+ function choosePosTheme(theme:"hybrid"|"light"|"dark"){try{localStorage.setItem(posThemeStorageKey,theme);window.dispatchEvent(new Event("foon-pos-theme-change"));}catch{}}
  const [orders,setOrders]=useState<Order[]>([]),[menu,setMenu]=useState<{id:string;name:string;status:string;data:{price:number;measured?:boolean;unit?:string;variants?:CombinationAvailability[];categoryName?:string;category_name?:string;imageUrl?:string|null}}[]>([]),[tables,setTables]=useState<{id:string;name:string;status:string;data:{capacity:number;sectionId?:string}}[]>([]),[cart,setCart]=useState<Record<string,CartLine>>({}),[filter,setFilter]=useState("all"),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[orderBranch,setOrderBranch]=useState(branch||branches[0]?.id||"");
  const [options,setOptions]=useState<Record<string,MenuGroup[]>>({});
  const [posItemSearch,setPosItemSearch]=useState("");
