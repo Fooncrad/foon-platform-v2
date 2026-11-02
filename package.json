@@ -64,7 +64,8 @@
     "test:dependency-security": "node --test scripts/dependency-security.test.mjs",
     "test:mobile-authenticated": "playwright test scripts/mobile-authenticated.browser.test.mjs --workers=1 --reporter=line",
     "test:mobile-layout": "playwright test scripts/mobile-layout-guard.browser.test.mjs scripts/mobile-containment.browser.test.mjs --workers=1 --reporter=line",
-    "test:plan-notices": "node --experimental-strip-types --test scripts/plan-notices.test.mjs"
+    "test:plan-notices": "node --experimental-strip-types --test scripts/plan-notices.test.mjs",
+    "test:employee-login-safety": "node --experimental-strip-types --test scripts/employee-login-safety.test.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
