@@ -1,6 +1,7 @@
 "use client";
 import {useUiText,useUiLanguage} from "@/lib/i18n/ui-language";
 import {uiText} from "@/lib/i18n/ui-copy";
+import {localizedPlanNotice} from "@/lib/platform/plan-notices";
 import {missingResourceTranslations} from "@/lib/i18n/resource-coverage";
 import MediaPicker from "./media-picker";
 import BulkImport from "./menu/bulk-import";
@@ -79,6 +80,10 @@ function formatOperationError(code:unknown,module:string,status:number){
  const fieldKey=key.replace(/^(INVALID_|REQUIRED_)/,"");
  const field=resourceModules[module]?.fields.find(f=>f.key===fieldKey);
  const messages=translatedErrors[key];
+ const locale=index===1?"en":index===2?"fr":"ar";
+ const featureLabel=resourceModules[module]?.label?uiText(resourceModules[module].label,locale):module;
+ const planNotice=localizedPlanNotice(key,locale,featureLabel);
+ if(planNotice)return planNotice;
  const fallback: [string,string,string]=key.startsWith("REQUIRED_")?["حقل مطلوب","Required field","Champ obligatoire"]:key.startsWith("INVALID_")?["قيمة غير صحيحة","Invalid value","Valeur invalide"]:["تعذر إتمام العملية","Operation failed","Échec de l’opération"];
  const fieldName=field?.label?uiText(field.label,index===1?"en":index===2?"fr":"ar")+": ":"";
  return (messages?.[index]??(operationLabels[key]&&index===0?operationLabels[key]:fieldName+fallback[index]));

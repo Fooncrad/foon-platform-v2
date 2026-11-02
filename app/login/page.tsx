@@ -7,6 +7,7 @@ import Link from "next/link";
 import {getSystemMessage} from "@/lib/ui/system-messages";
 import RequiredLegalConsent from "@/app/components/required-legal-consent";
 import {ACCOUNT_HELP_CODES,accountHelpCode} from "@/lib/auth/public-login-url.mjs";
+import {localizedPlanNotice} from "@/lib/platform/plan-notices";
 type Lang="ar"|"en"|"fr";
 type Theme="light"|"dark";
 const strings={
@@ -23,7 +24,7 @@ export default function LoginPage(){
   try{
    const res=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:data.get("email"),password:data.get("password")})});
    const body=await res.json().catch(()=>({}));
-   if(!res.ok){if(ACCOUNT_HELP_CODES.has(String(body.code))){router.replace("/account-status?code="+encodeURIComponent(accountHelpCode(body.code)));return;}const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);setError(getSystemMessage(code,lang).detail);return;}
+   if(!res.ok){if(ACCOUNT_HELP_CODES.has(String(body.code))){router.replace("/account-status?code="+encodeURIComponent(accountHelpCode(body.code)));return;}if(body.code==="STAFF_ACCESS_PENDING"||body.code==="STAFF_ACCESS_SUSPENDED"){setErrorCode(String(body.code));setError(localizedPlanNotice(String(body.code),lang)??t.failure);return;}const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);const reference=typeof body.incidentId==="string"?body.incidentId:"";const referenceLabel=lang==="en"?" · Reference: ":lang==="fr"?" · Référence : ":" · رقم المرجع: ";setError(getSystemMessage(code,lang).detail+(reference?referenceLabel+reference:""));return;}
    if(body.emailVerificationRequired){router.replace("/verify-email");router.refresh();return;}
    const next=new URLSearchParams(window.location.search).get("next");router.replace(next&&/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)?next:"/account");router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}

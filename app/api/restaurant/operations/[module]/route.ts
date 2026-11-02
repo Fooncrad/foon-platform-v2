@@ -2,6 +2,8 @@ import {notifyCustomer} from "@/lib/notifications/customer";
 import {dispatchNotifications} from "@/lib/notifications/dispatch";
 import {NextResponse} from "next/server";
 import {normalizeLocale,publicError,logIncident,type PublicErrorCode} from "@/lib/platform/incidents";
+import {localizedPlanNotice} from "@/lib/platform/plan-notices";
+import {uiText} from "@/lib/i18n/ui-copy";
 import {randomUUID} from "node:crypto";
 import type {PoolConnection,RowDataPacket} from "mysql2/promise";
 import {currentUserId,currentSessionId} from "@/lib/auth/session";
@@ -81,7 +83,8 @@ function failure(error:unknown,request:Request,module:string){
  const cookieLocale=request.headers.get("cookie")?.match(/(?:^|;\s*)foon_language=(ar|en|fr)/)?.[1];
  const locale=normalizeLocale(cookieLocale??request.headers.get("accept-language"));
  const category:PublicErrorCode=status===401?"UNAUTHORIZED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status>=500?"SERVICE_UNAVAILABLE":"INVALID_INPUT";
- const message=publicError(category,status,incidentId,locale).error.message;
+ const featureLabel=resourceModules[module]?.label?uiText(resourceModules[module].label,locale):module;
+ const message=localizedPlanNotice(code,locale,featureLabel)??publicError(category,status,incidentId,locale).error.message;
  if(status>=500)logIncident({incidentId,code,location:"restaurant.operations."+module,error});
  else console.warn(JSON.stringify({level:"warn",incidentId,code,location:"restaurant.operations."+module,status,at:new Date().toISOString()}));
  return NextResponse.json({ok:false,code,message,incidentId,status},{status,headers:{"Cache-Control":"no-store","Content-Language":locale,"X-Foon-Incident-Id":incidentId}});
