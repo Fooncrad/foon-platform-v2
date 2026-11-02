@@ -10,7 +10,7 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
  // the current login session. Platform roles alone never grant tenant access.
  const sessionId=await currentSessionId();
  const [platformAdmins]=await database().execute<RowDataPacket[]>(
-  "SELECT role FROM platform_admins WHERE user_id=? AND enabled=TRUE LIMIT 1",[userId]
+  "SELECT role FROM platform_admins WHERE BINARY user_id=BINARY ? AND enabled=TRUE LIMIT 1",[userId]
  );
  if(platformAdmins.length){
   if(!sessionId)throw new Error("FORBIDDEN");
@@ -37,7 +37,7 @@ export async function requireTenantMembership(userId:string, rawTenantId:string,
 
 export async function requirePlatformRole(userId:string, allowed:readonly PlatformRole[]){
   const [rows]=await database().execute<RowDataPacket[]>(
-    "SELECT pa.role FROM platform_admins pa INNER JOIN users u ON BINARY u.id=BINARY pa.user_id WHERE pa.user_id=? AND pa.enabled=TRUE AND u.status='active' LIMIT 1",[userId]
+    "SELECT pa.role FROM platform_admins pa INNER JOIN users u ON BINARY u.id=BINARY pa.user_id WHERE BINARY pa.user_id=BINARY ? AND pa.enabled=TRUE AND u.status='active' LIMIT 1",[userId]
   );
   const role=rows[0]?.role as PlatformRole|undefined;
   if(!role || !allowed.includes(role)) throw new Error("FORBIDDEN");
