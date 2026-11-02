@@ -15,7 +15,7 @@ export async function resolveWorkspace(userId:string,requested?:string):Promise<
  // Cookie controls only the preferred account; membership is checked again.
  const preferred=(await cookies()).get(ACTIVE_TENANT_COOKIE)?.value;
  if(preferred){try{return await resolveWorkspace(userId,preferred);}catch{/* revoked membership or expired admin support */}}
- const [rows]=await database().execute<RowDataPacket[]>("SELECT m.tenant_id,m.role,t.name FROM memberships m JOIN tenants t ON t.id=m.tenant_id JOIN users u ON u.id=m.user_id WHERE m.user_id=? AND m.status='active' AND t.status='active' AND u.status='active' ORDER BY m.created_at LIMIT 1",[userId]);
+ const [rows]=await database().execute<RowDataPacket[]>("SELECT m.tenant_id,m.role,t.name FROM memberships m JOIN tenants t ON BINARY t.id=BINARY m.tenant_id JOIN users u ON BINARY u.id=BINARY m.user_id WHERE m.user_id=? AND m.status='active' AND t.status='active' AND u.status='active' ORDER BY m.created_at LIMIT 1",[userId]);
  if(!rows.length)throw Error("FORBIDDEN");
  return {tenant_id:String(rows[0].tenant_id),name:String(rows[0].name),role:String(rows[0].role),adminAccess:false,supportReadOnly:false};
 }
@@ -40,7 +40,7 @@ export async function resolveWorkspaceForActivity(userId:string,activity:string,
   }catch{/* cookie is stale, revoked or no longer authorized */}
  }
  const [memberships]=await database().execute<RowDataPacket[]>(
-  "SELECT m.tenant_id FROM memberships m JOIN tenants t ON t.id=m.tenant_id AND t.status='active' JOIN users u ON u.id=m.user_id AND u.status='active' WHERE m.user_id=? AND m.status='active' ORDER BY m.created_at",
+  "SELECT m.tenant_id FROM memberships m JOIN tenants t ON BINARY t.id=BINARY m.tenant_id AND t.status='active' JOIN users u ON BINARY u.id=BINARY m.user_id AND u.status='active' WHERE m.user_id=? AND m.status='active' ORDER BY m.created_at",
   [userId]
  );
  for(const row of memberships){
