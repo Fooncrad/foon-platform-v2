@@ -78,7 +78,7 @@ test("restaurant workspace loading uses collation-independent comparisons for te
   "BINARY t.id=BINARY m.tenant_id",
   "BINARY u.id=BINARY m.user_id",
   "BINARY m.user_id=BINARY ?",
-  "BINARY a.branch_id=BINARY b.id"
+  "BINARY b.id=BINARY a.branch_id"
  ])assert.ok(page.includes(fragment),fragment);
  const workspace=file("lib/tenant/workspace.ts");
  for(const fragment of [
