@@ -817,7 +817,36 @@ body{min-width:0;overflow-x:clip}
 /* Shared visually-hidden text used by accessible controls across every surface. */
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .foonLanguageSelector{display:inline-flex;align-items:center;min-width:0;max-width:100%}
-.foonLanguageSelector select{min-width:96px;max-width:125px;min-height:40px;padding:7px 8px;border:1px solid var(--border,#d9e2ee);border-radius:10px;background:var(--surface,#fff);color:var(--text,#172033);font:inherit;cursor:pointer}
+.foonLanguageSelector select{min-width:96px;max-width:125px;min-height:44px;padding:7px 8px;border:1px solid var(--border,#d9e2ee);border-radius:10px;background:var(--surface,#fff);color:var(--text,#172033);font:inherit;cursor:pointer}
+
+/* Global accessible focus rings & interactive action states */
+:is(button, a, input, select, textarea, summary, [role="button"]):focus-visible {
+  outline: 3px solid var(--foon-focus-accent, #0284c7);
+  outline-offset: 3px;
+}
+
+/* Accessible touch target sizes on mobile viewports (<680px) for main buttons */
+@media (max-width: 680px) {
+  :is(.primary, .secondary, .primary-link, .secondary-link, .foonActionButton, .foonCancelButton) {
+    min-height: 44px;
+  }
+}
+
+/* Global loading indicator spinner animation */
+@keyframes foonSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.foonSpinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: foonSpin 0.75s linear infinite;
+  vertical-align: middle;
+}
 
 
 /* Unified merchant add-on workflow for restaurant and activity catalogs. */
