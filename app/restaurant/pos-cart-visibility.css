@@ -21,3 +21,19 @@
 .restaurantPosModern .restaurantPosAddedQuantity{position:absolute;top:6px;inset-inline-start:6px;z-index:1;padding:3px 9px;border-radius:999px;background:var(--rc-accent,#b97f21);color:#fff;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .restaurantPosModern .restaurantPosLoadMore{display:block;margin:15px auto 5px;min-height:44px;padding:9px 16px;border:1px solid var(--rc-accent,#b97f21);border-radius:12px;background:var(--rc-surface,#fff);font-weight:700;cursor:pointer}
 @media(max-width:600px){.restaurantPosModern .restaurantPosOrderSummary{position:relative}.restaurantPosModern .restaurantPosCartLine{grid-template-columns:minmax(0,1fr)}.restaurantPosModern .restaurantPosCartLineActions{justify-content:flex-start}.restaurantPosModern .restaurantPosCartLines{max-height:260px}}
+
+/* Remove the enclosing card frame around the cart; keep individual cart rows and controls intact. */
+.restaurantPosModern .restaurantPosOrderSummary{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  padding:0;
+  box-shadow:none;
+}
+.restaurantPosModern .restaurantPosOrderSummaryHeader{
+  border-bottom:0;
+  padding-bottom:4px;
+}
+.restaurantPosModern .restaurantPosCartLines{
+  padding-top:4px;
+}
