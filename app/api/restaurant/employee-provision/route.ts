@@ -103,11 +103,19 @@ export async function GET(request:Request){
  const url=new URL(request.url),tenantId=url.searchParams.get("tenantId")??"",resourceId=url.searchParams.get("resourceId")??"";
  if(!/^[a-f0-9-]{36}$/i.test(tenantId)||!/^[a-f0-9-]{36}$/i.test(resourceId))return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
  try{await requireTenantMembership(actor,tenantId,["owner","manager"],false);}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
- const [rows]=await database().execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1",[resourceId,tenantId]);
- if(!rows.length)return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});
- try{await requireAdditionalBranchUnlock(tenantId,rows[0].branch_id?String(rows[0].branch_id):null,actor);}catch(error){return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
- const data=typeof rows[0].data==="string"?JSON.parse(rows[0].data):rows[0].data,userId=await resolveBoundEmployeeUser(database(),tenantId,rows[0].branch_id??null,data);
- if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
- const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (branch_id IS NULL OR branch_id <=> ?) AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
- return NextResponse.json({ok:true,linked:true,permissions:grants.map(row=>String(row.permission_key)).filter(key=>validPermissions.has(key))});
+ try{
+  const [rows]=await database().execute<RowDataPacket[]>("SELECT branch_id,data FROM restaurant_resources WHERE id=? AND tenant_id=? AND kind='employee' AND archived=FALSE LIMIT 1",[resourceId,tenantId]);
+  if(!rows.length)return NextResponse.json({ok:false,code:"EMPLOYEE_NOT_FOUND"},{status:404});
+  try{await requireAdditionalBranchUnlock(tenantId,rows[0].branch_id?String(rows[0].branch_id):null,actor);}catch(error){return NextResponse.json({ok:false,code:error instanceof BranchPinError?error.code:"FORBIDDEN"},{status:403});}
+  const rawData=rows[0].data;
+  const data=typeof rawData==="string"?JSON.parse(rawData):rawData;
+  if(!data||typeof data!=="object"||Array.isArray(data))return NextResponse.json({ok:false,code:"EMPLOYEE_RESOURCE_DATA_INVALID"},{status:500});
+  const userId=await resolveBoundEmployeeUser(database(),tenantId,rows[0].branch_id??null,data as Record<string,unknown>);
+  if(!/^[a-f0-9-]{36}$/i.test(userId))return NextResponse.json({ok:true,linked:false,permissions:[]});
+  const [grants]=await database().execute<RowDataPacket[]>("SELECT permission_key FROM employee_permission_grants WHERE tenant_id=? AND user_id=? AND (branch_id IS NULL OR branch_id <=> ?) AND allowed=TRUE",[tenantId,userId,rows[0].branch_id??null]);
+  return NextResponse.json({ok:true,linked:true,permissions:grants.map(row=>String(row.permission_key)).filter(key=>validPermissions.has(key))});
+ }catch(error){
+  console.error("[FOON employee permission load]",{tenantId,resourceId,error});
+  return NextResponse.json({ok:false,code:"EMPLOYEE_PERMISSION_LOAD_FAILED"},{status:503});
+ }
 }
