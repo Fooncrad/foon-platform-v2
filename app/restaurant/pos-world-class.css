@@ -147,3 +147,52 @@
   .restaurantPosModern .restaurantPosCategories{gap:6px;padding-block:6px 8px}
   .restaurantPosModern .restaurantPosCategories button{min-height:40px;padding-inline:10px}
 }
+
+
+/* Keep historical orders out of the active cashier flow until requested. */
+.restaurantPosPreviousOrdersBar{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  margin:8px 0 12px;
+}
+.restaurantPosPreviousOrdersToggle{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  min-height:42px;
+  padding:8px 14px;
+  border:1px solid var(--rc-border,#dce3eb);
+  border-radius:10px;
+  background:var(--rc-surface,#fff);
+  color:var(--rc-text,#172033);
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+}
+.restaurantPosPreviousOrdersToggle:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--rc-accent,#2563eb) 45%,transparent);
+  outline-offset:2px;
+}
+.restaurantPosPreviousOrdersCount{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:26px;
+  min-height:26px;
+  padding:0 7px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--rc-accent,#2563eb) 12%,var(--rc-surface,#fff));
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+}
+.restaurantPosPreviousOrdersChevron{font-size:18px;line-height:1}
+.restaurantPosModern[data-pos-theme=dark]~.restaurantPosPreviousOrdersBar .restaurantPosPreviousOrdersToggle,
+.restaurantPosOrdersToolbar[data-pos-theme=dark]~.restaurantPosPreviousOrdersBar .restaurantPosPreviousOrdersToggle{
+  border-color:#40516b;background:#182235;color:#e5edf8;
+}
+@media(max-width:640px){
+  .restaurantPosPreviousOrdersBar{justify-content:stretch;margin:6px 0 10px}
+  .restaurantPosPreviousOrdersToggle{width:100%;justify-content:space-between}
+}
