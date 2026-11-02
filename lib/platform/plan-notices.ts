@@ -54,10 +54,13 @@ const notices:Record<string,NoticeCopy>={
  ],
 };
 
-export function localizedPlanNotice(code:string,locale:PlanNoticeLocale):string|undefined{
+export function localizedPlanNotice(code:string,locale:PlanNoticeLocale,featureLabel?:string):string|undefined{
  const copy=notices[code];
  if(!copy)return undefined;
- return copy[locale==="en"?1:locale==="fr"?2:0];
+ const message=copy[locale==="en"?1:locale==="fr"?2:0];
+ if(!featureLabel||!["PLAN_FEATURE_REQUIRED","PLAN_LIMIT_REACHED","ACTIVITY_MODULE_UNAVAILABLE"].includes(code))return message;
+ const prefix=locale==="en"?"Feature":locale==="fr"?"Fonctionnalité":"الميزة";
+ return prefix+": "+featureLabel+" — "+message;
 }
 
 export function localizedSubscriptionNotice(
