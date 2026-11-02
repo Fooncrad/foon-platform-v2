@@ -51,10 +51,16 @@ export async function GET(req:Request){const c=await scope(req,false);if(c.error
  const items=[];for(const l of layouts){const plan=decode(l.layout_json);if(!plan)return NextResponse.json({ok:false,code:"FLOOR_LAYOUT_INVALID"},{status:409});items.push({id:String(l.id),sectionId:String(l.section_id),name:String(l.name),active:Boolean(l.is_active),plan})}
  const [operations]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,status FROM restaurant_floor_table_operations WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
  const [registeredTables]=await database().execute<RowDataPacket[]>("SELECT id,name,status,data FROM restaurant_resources WHERE tenant_id=? AND kind='dining_table' AND archived=FALSE AND (branch_id=? OR branch_id IS NULL) ORDER BY name LIMIT 1000",[c.tenant,c.branch]);
+ const [waiterRows]=await database().execute<RowDataPacket[]>(`SELECT e.id,e.name FROM restaurant_resources e
+  JOIN users u ON BINARY u.id=BINARY JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND u.status='active'
+  JOIN memberships m ON BINARY m.tenant_id=BINARY e.tenant_id AND BINARY m.user_id=BINARY u.id AND m.status='active' AND m.role='waiter'
+  JOIN employee_branch_assignments a ON BINARY a.tenant_id=BINARY e.tenant_id AND BINARY a.user_id=BINARY u.id AND BINARY a.branch_id=BINARY e.branch_id AND a.enabled=TRUE AND a.role='waiter'
+  WHERE BINARY e.tenant_id=BINARY ? AND BINARY e.branch_id=BINARY ? AND e.kind='employee' AND e.status='active' AND e.archived=FALSE
+   AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='waiter' ORDER BY e.name LIMIT 300`,[c.tenant,c.branch]);
  const [links]=await database().execute<RowDataPacket[]>("SELECT layout_id,floor_table_id,dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=?",[c.tenant,c.branch]);
  const [legacy]=await database().execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plans WHERE tenant_id=? AND branch_id=? LIMIT 1",[c.tenant,c.branch]);
  let legacyPlan=null;if(legacy.length){legacyPlan=decode(legacy[0].layout_json);if(!legacyPlan)return NextResponse.json({ok:false,code:"LEGACY_LAYOUT_INVALID"},{status:409})}
- return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,registeredTables:registeredTables.map(t=>({id:String(t.id),name:String(t.name),status:String(t.status),sectionId:String((typeof t.data==="string"?JSON.parse(t.data):t.data)?.sectionId||"")})),links:links.map(l=>({layoutId:String(l.layout_id),tableId:String(l.floor_table_id),diningTableId:String(l.dining_table_id)})),operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
+ return NextResponse.json({ok:true,sections:sections.map(s=>({id:String(s.id),name:String(s.name)})),layouts:items,registeredTables:registeredTables.map(t=>{const data=typeof t.data==="string"?JSON.parse(t.data):t.data;return {id:String(t.id),name:String(t.name),status:String(t.status),sectionId:String(data?.sectionId||""),waiterId:String(data?.waiterId||"")}}),waiters:waiterRows.map(w=>({id:String(w.id),name:String(w.name)})),links:links.map(l=>({layoutId:String(l.layout_id),tableId:String(l.floor_table_id),diningTableId:String(l.dining_table_id)})),operations:operations.map(o=>({layoutId:String(o.layout_id),tableId:String(o.floor_table_id),status:String(o.status)})),legacyPlan},{headers:{"Cache-Control":"private, no-store"}});
  }catch(error){
   const raw=error&&typeof error==="object"&&"code" in error?String(error.code):"";
   const sql=error&&typeof error==="object"&&"sqlMessage" in error?String(error.sqlMessage):"";
@@ -140,7 +146,7 @@ export async function PATCH(req:Request){
   try{
    await db.beginTransaction();
    // Match PUT lock order: branch before layout to avoid deadlocks.
-   if(b.action==="createAndLink")await db.execute("SELECT id FROM branches WHERE tenant_id=? AND id=? FOR UPDATE",[c.tenant,c.branch]);
+   if(b.action==="createAndLink"||b.action==="waiterAssign")await db.execute("SELECT id FROM branches WHERE tenant_id=? AND id=? FOR UPDATE",[c.tenant,c.branch]);
    const [layouts]=await db.execute<RowDataPacket[]>("SELECT layout_json FROM restaurant_floor_plan_layouts WHERE id=? AND tenant_id=? AND branch_id=? FOR UPDATE",[b.id,c.tenant,c.branch]);
    if(!layouts.length){await db.rollback();return NextResponse.json({ok:false,code:"LAYOUT_NOT_FOUND"},{status:404})}
    if(b.action==="createAndLink"&&typeof b.tableId==="string"&&/^[a-z0-9-]{1,60}$/i.test(b.tableId)){
@@ -171,6 +177,23 @@ export async function PATCH(req:Request){
      const [already]=await db.execute<RowDataPacket[]>("SELECT layout_id,floor_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND dining_table_id=? FOR UPDATE",[c.tenant,c.branch,b.diningTableId]);
      if(already.some(a=>String(a.layout_id)!==b.id||String(a.floor_table_id)!==b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"DINING_TABLE_ALREADY_LINKED"},{status:409})}
      await db.execute("INSERT INTO restaurant_floor_table_links(tenant_id,branch_id,layout_id,floor_table_id,dining_table_id) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE dining_table_id=VALUES(dining_table_id)",[c.tenant,c.branch,b.id,b.tableId,b.diningTableId]);
+    }
+   }else if(b.action==="waiterAssign"&&typeof b.tableId==="string"&&/^[a-z0-9-]{1,60}$/i.test(b.tableId)&&(b.employeeId===null||(typeof b.employeeId==="string"&&uuid.test(b.employeeId)))){
+    const layout=decode(layouts[0].layout_json);
+    if(!layout||!layout.tables.some(t=>t.id===b.tableId)){await db.rollback();return NextResponse.json({ok:false,code:"TABLE_NOT_IN_LAYOUT"},{status:400})}
+    const [links]=await db.execute<RowDataPacket[]>("SELECT dining_table_id FROM restaurant_floor_table_links WHERE tenant_id=? AND branch_id=? AND layout_id=? AND floor_table_id=? FOR UPDATE",[c.tenant,c.branch,b.id,b.tableId]);
+    if(!links.length){await db.rollback();return NextResponse.json({ok:false,code:"DINING_TABLE_LINK_REQUIRED"},{status:409})}
+    const diningTableId=String(links[0].dining_table_id);
+    if(b.employeeId===null){
+     await db.execute("UPDATE restaurant_resources SET data=JSON_REMOVE(data,'$.waiterId'),version=version+1 WHERE tenant_id=? AND id=? AND kind='dining_table' AND branch_id=?",[c.tenant,diningTableId,c.branch]);
+    }else{
+     const [waiters]=await db.execute<RowDataPacket[]>(`SELECT e.id FROM restaurant_resources e
+      JOIN users u ON BINARY u.id=BINARY JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.userId')) AND u.status='active'
+      JOIN memberships m ON BINARY m.tenant_id=BINARY e.tenant_id AND BINARY m.user_id=BINARY u.id AND m.status='active' AND m.role='waiter'
+      JOIN employee_branch_assignments a ON BINARY a.tenant_id=BINARY e.tenant_id AND BINARY a.user_id=BINARY u.id AND BINARY a.branch_id=BINARY e.branch_id AND a.enabled=TRUE AND a.role='waiter'
+      WHERE BINARY e.tenant_id=BINARY ? AND BINARY e.branch_id=BINARY ? AND BINARY e.id=BINARY ? AND e.kind='employee' AND e.status='active' AND e.archived=FALSE AND JSON_UNQUOTE(JSON_EXTRACT(e.data,'$.role'))='waiter' LIMIT 1 FOR UPDATE`,[c.tenant,c.branch,b.employeeId]);
+     if(!waiters.length){await db.rollback();return NextResponse.json({ok:false,code:"WAITER_NOT_ELIGIBLE_FOR_BRANCH"},{status:403})}
+     await db.execute("UPDATE restaurant_resources SET data=JSON_SET(data,'$.waiterId',?),version=version+1 WHERE tenant_id=? AND id=? AND kind='dining_table' AND branch_id=?",[String(b.employeeId),c.tenant,diningTableId,c.branch]);
     }
    }else if(b.action==="activate"&&typeof b.active==="boolean"){
     // Multiple active plans can coexist under the same dining section.
