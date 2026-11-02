@@ -35,5 +35,22 @@
   padding-bottom:4px;
 }
 .restaurantPosModern .restaurantPosCartLines{
-  padding-top:4px;
+  padding-top:2px;
+  gap:0;
+}
+.restaurantPosModern .restaurantPosCartLine{
+  border:0;
+  border-bottom:1px solid color-mix(in srgb,var(--rc-border,#d7dce5) 62%,transparent);
+  border-radius:0;
+  background:transparent;
+  padding:10px 2px;
+  gap:12px;
+}
+.restaurantPosModern .restaurantPosCartLine:last-child{
+  border-bottom:0;
+}
+@media(max-width:600px){
+  .restaurantPosModern .restaurantPosCartLine{
+    padding:10px 0;
+  }
 }
