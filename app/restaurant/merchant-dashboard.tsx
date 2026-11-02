@@ -106,6 +106,7 @@ function EmptyOperations({title,body}:{title:string;body:string}){return <div cl
 function trapFocus(event:ReactKeyboardEvent<HTMLElement>){if(event.key!=="Tab")return;const items=Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]),input,a[href],select,textarea'));if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
 export default function MerchantDashboard({data}:{data:MerchantData}){
  const translateUi=useUiText();
+ const uiLanguage=useUiLanguage();
 
  const activityNames:Record<string,[string,string,string]>={restaurant:[translateUi("المطعم"),"Restaurant","Restaurant"],cafe:[translateUi("المقهى"),"Café","Café"],sweets:[translateUi("متجر الحلويات"),"Sweets shop","Confiserie"],grocery:[translateUi("السوبر ماركت"),"Grocery store","Supermarché"],clothing:[translateUi("متجر الملابس"),"Clothing store","Boutique de vêtements"],perfume:[translateUi("متجر العطور"),"Perfume shop","Parfumerie"],accessories:[translateUi("متجر الإكسسوارات"),"Accessories shop","Boutique d’accessoires"],watches:[translateUi("متجر الساعات"),"Watch shop","Boutique de montres"],gifts:[translateUi("متجر الهدايا"),"Gift shop","Boutique de cadeaux"],ecommerce:[translateUi("المتجر الإلكتروني"),"Online store","Boutique en ligne"],carwash:[translateUi("مغسلة السيارات"),"Car wash","Lavage automobile"],laundry:[translateUi("مغسلة الملابس"),"Laundry","Blanchisserie"],automotive:[translateUi("ورشة السيارات"),"Auto workshop","Atelier automobile"],salon:[translateUi("الصالون"),"Salon","Salon"],publicworks:[translateUi("المقاولات"),"Contracting","Travaux publics"]};
  const activityName=activityNames[data.activityCode]??[translateUi("النشاط"),"Business","Activité"];
@@ -117,7 +118,6 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const pathname=usePathname(),routeParams=useSearchParams();
  const [wideWorkspace,setWideWorkspace]=useState(false);
  const [collapsedNavGroups,setCollapsedNavGroups]=useState<MerchantNavGroup[]>([]);
- const uiLanguage=useUiLanguage();
  const {mode:themeMode,resolved:themeResolved}=useWorkspaceTheme();
 
  const [requestedActive,setActive]=useState<Section>("overview"),[branch,setBranch]=useState(!["owner","manager"].includes(data.role)&&data.branches.length===1?data.branches[0].id:data.branches[0]?.id??""),[drawer,setDrawer]=useState(false),[searchOpen,setSearchOpen]=useState(false),[query,setQuery]=useState(""),[notifications,setNotifications]=useState(false),[profile,setProfile]=useState(false),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
