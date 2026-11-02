@@ -12,11 +12,20 @@ function mockDB({role="waiter",assignedBranch=branch,memberActive=true,enabled=t
  return {get queries(){return queries;},async execute(sql,params){
   queries++;
   for(const expected of [
-   "a.tenant_id=m.tenant_id","a.user_id=m.user_id","a.branch_id=?",
-   "a.enabled=TRUE","a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci","u.status='active'",
-   "m.tenant_id=?","m.user_id=?","m.role=?","m.status='active'",
-   "NOT EXISTS","customer.role='customer'","customer.status='active'",
-   "tenant_customers tc","tc.user_id=m.user_id","platform_admins pa","pa.user_id=m.user_id"
+   "BINARY a.tenant_id=BINARY m.tenant_id",
+   "BINARY a.user_id=BINARY m.user_id",
+   "BINARY a.branch_id=BINARY ?",
+   "a.enabled=TRUE",
+   "a.role COLLATE utf8mb4_unicode_ci=m.role COLLATE utf8mb4_unicode_ci",
+   "BINARY u.id=BINARY m.user_id","u.status='active'",
+   "BINARY m.tenant_id=BINARY ?","BINARY m.user_id=BINARY ?",
+   "m.role COLLATE utf8mb4_unicode_ci=? COLLATE utf8mb4_unicode_ci",
+   "m.status='active'","NOT EXISTS",
+   "BINARY customer.user_id=BINARY m.user_id",
+   "customer.role COLLATE utf8mb4_unicode_ci='customer'",
+   "customer.status='active'","tenant_customers tc",
+   "BINARY tc.user_id=BINARY m.user_id","platform_admins pa",
+   "BINARY pa.user_id=BINARY m.user_id"
   ])assert.ok(sql.includes(expected),`missing authorization guard: ${expected}`);
   const [requestedBranch,requestedTenant,requestedUser,requestedRole]=params;
   return [[...(requestedBranch===assignedBranch&&requestedTenant===tenantId&&
