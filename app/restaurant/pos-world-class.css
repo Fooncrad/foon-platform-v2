@@ -196,3 +196,105 @@
   .restaurantPosPreviousOrdersBar{justify-content:stretch;margin:6px 0 10px}
   .restaurantPosPreviousOrdersToggle{width:100%;justify-content:space-between}
 }
+
+
+/* FOON POS refreshed cashier layout — presentation only; checkout logic is unchanged. */
+.restaurantPosModern{
+  display:grid!important;
+  grid-template-columns:260px minmax(0,1fr) 420px!important;
+  align-items:start;
+  gap:20px!important;
+  min-height:100vh;
+  padding:20px;
+  background:#f8fafc;
+}
+.restaurantPosModern .restaurantPosCatalog{display:contents}
+.restaurantPosModern .restaurantPosBrowse{display:contents}
+.restaurantPosModern>.restaurantPosSectionHeading{grid-column:1/-1}
+.restaurantPosModern .restaurantPosBrowse input[type=search]{
+  grid-column:2;grid-row:2;width:100%;min-height:50px;padding:12px 16px;
+  border:1px solid #e2e8f0;border-radius:14px;background:#fff;font-size:16px;
+}
+.restaurantPosModern .restaurantPosCategories{
+  grid-column:1;grid-row:2/span 3;display:flex;flex-direction:column;align-items:stretch;
+  gap:8px;max-height:calc(100vh - 150px);overflow:auto;padding:14px;
+  border:1px solid #e2e8f0;border-radius:24px;background:#fff;
+}
+.restaurantPosModern .restaurantPosCategoriesLabel{padding:4px 6px}
+.restaurantPosModern .restaurantPosCategories button{justify-content:space-between;width:100%;border-radius:12px}
+.restaurantPosModern .restaurantPosViewFilters{grid-column:2;grid-row:3;margin:0}
+.restaurantPosModern .restaurantPosMenu{
+  grid-column:2;grid-row:4;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;
+}
+.restaurantPosModern .restaurantPosProduct{
+  padding:14px;border:1px solid #e2e8f0;border-radius:22px;background:#fff;
+  box-shadow:0 5px 18px rgba(15,23,42,.055);transition:transform .16s ease,box-shadow .16s ease;
+}
+.restaurantPosModern .restaurantPosProduct:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(15,23,42,.09)}
+.restaurantPosModern .restaurantPosProductMedia{height:190px;aspect-ratio:auto;border-radius:16px;background:#f1f5f9}
+.restaurantPosModern .restaurantPosProductMedia img{object-fit:cover}
+.restaurantPosModern .restaurantPosProductPrice{color:#2563eb;font-size:19px;font-weight:850}
+.restaurantPosModern .restaurantPosProduct>button{
+  min-height:46px;border:0;border-radius:12px;background:#10b981;color:#fff;font-weight:800;
+}
+.restaurantPosModern .restaurantPosCheckout{
+  grid-column:3;grid-row:1/-1;position:sticky;top:15px;max-height:calc(100vh - 30px);
+  overflow:auto;padding:20px;border:1px solid #e2e8f0;border-radius:24px;
+  background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.07);
+}
+.restaurantPosModern .restaurantPosCheckout>.restaurantPosSectionHeading{
+  position:sticky;top:-20px;z-index:4;margin:-4px 0 12px;padding:10px 0;background:#fff;
+}
+.restaurantPosModern .restaurantPosOrderSummary{background:#f8fafc;border-radius:16px;padding:12px}
+.restaurantPosModern .restaurantPosCartLine{padding:10px 0;border:0;border-bottom:1px solid #e2e8f0;border-radius:0;background:transparent}
+.restaurantPosModern .restaurantPosCartLineActions{gap:5px}
+.restaurantPosModern .restaurantPosCartLineActions button{
+  min-width:34px;min-height:36px;border:0;border-radius:8px;background:#f1f5f9;color:#334155;
+}
+.restaurantPosModern .restaurantPosCartLineActions input{
+  width:44px!important;min-width:44px!important;max-width:44px!important;
+  border:1px solid #e2e8f0;border-radius:8px;background:#fff;
+}
+.restaurantPosModern .restaurantPosCheckout label{display:grid;gap:6px;margin:12px 0;font-weight:700}
+.restaurantPosModern .restaurantPosCheckout :is(input,select,textarea){
+  min-height:44px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc;
+}
+.restaurantPosModern .restaurantPosInvoiceBreakdown{padding:14px;border-radius:16px;background:#eff6ff}
+.restaurantPosModern .restaurantPosCheckout .restaurantPrimary{
+  width:100%;min-height:52px;border:0;border-radius:13px;background:#10b981;color:#fff;font-weight:850;
+}
+.restaurantPosModern[data-pos-theme=dark]{background:#0f172a}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosCategories,
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosProduct,
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout{background:#182235;border-color:#34445d;color:#e5edf8}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosCheckout>.restaurantPosSectionHeading{background:#182235}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosOrderSummary,
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosInvoiceBreakdown{background:#202e43}
+.restaurantPosModern[data-pos-theme=dark] .restaurantPosCartLineActions button{background:#26364e;color:#e5edf8}
+@media(max-width:1200px){
+  .restaurantPosModern{grid-template-columns:220px minmax(0,1fr)!important}
+  .restaurantPosModern .restaurantPosCheckout{grid-column:1/-1;grid-row:auto;position:relative;top:auto;max-height:none;overflow:visible}
+}
+@media(max-width:760px){
+  .restaurantPosModern{display:flex!important;flex-direction:column;gap:14px!important;padding:10px}
+  .restaurantPosModern .restaurantPosCatalog{display:flex;flex-direction:column;width:100%;gap:12px}
+  .restaurantPosModern .restaurantPosBrowse{display:flex;flex-direction:column;width:100%;gap:10px}
+  .restaurantPosModern .restaurantPosCategories{display:flex;flex-direction:row;grid-column:auto;grid-row:auto;width:100%;max-height:none;overflow-x:auto;overflow-y:hidden;padding:8px;border-radius:14px}
+  .restaurantPosModern .restaurantPosCategories button{width:auto;flex:0 0 auto}
+  .restaurantPosModern .restaurantPosViewFilters,.restaurantPosModern .restaurantPosMenu{grid-column:auto;grid-row:auto;width:100%}
+  .restaurantPosModern .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .restaurantPosModern .restaurantPosProduct{padding:9px;border-radius:16px}
+  .restaurantPosModern .restaurantPosProductMedia{height:140px}
+  .restaurantPosModern .restaurantPosCheckout{width:100%;max-height:none;overflow:visible;padding:14px}
+  .restaurantPosModern .restaurantPosCheckout>.restaurantPosSectionHeading{position:static;margin:0 0 10px;padding:0}
+}
+@media(max-width:380px){
+  .restaurantPosModern{padding:8px}
+  .restaurantPosModern .restaurantPosMenu{gap:8px}
+  .restaurantPosModern .restaurantPosProductMedia{height:118px}
+  .restaurantPosModern .restaurantPosProduct>button{min-height:42px;padding:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .restaurantPosModern .restaurantPosProduct{transition:none}
+}
