@@ -18,6 +18,9 @@ export default async function AccountPage(){
   const current=await resolveWorkspace(id);
   const tenantId=current.tenant_id;
   const activity=await tenantWorkspaceActivity(tenantId);
+  // Cashier accounts open the dedicated POS surface directly instead of the
+  // merchant dashboard; the POS route independently rechecks role and grants.
+  if(current.role==="cashier"&&!current.adminAccess&&activity)redirect("/restaurant/pos?tenant="+encodeURIComponent(tenantId));
   if(activity)redirect(activityWorkspaceUrl(activity));
   // An invalid store profile must never be labeled a restaurant.
   redirect("/business?tenant="+encodeURIComponent(tenantId));
