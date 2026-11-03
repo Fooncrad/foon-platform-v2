@@ -52,7 +52,14 @@ async function unseal(key,id,kind,record){
 async function json(url,opts={}){
  const res=await fetch(url,{...opts,cache:"no-store",credentials:"same-origin",headers:{...(opts.headers||{}),"Cache-Control":"no-store"}});
  const body=await res.json().catch(()=>({}));
- if(!res.ok||!body.ok)throw new Error(res.status===401?"SESSION_EXPIRED":res.status===403?"ACCESS_DENIED":body.code||"SERVER_ERROR");
+ if(!res.ok||!body.ok){
+  const error=new Error(res.status===401?"SESSION_EXPIRED":res.status===403?"ACCESS_DENIED":body.code||"SERVER_ERROR");
+  error.status=res.status;
+  // A 2xx response with an unreadable/invalid envelope is ambiguous: the server
+  // may have committed the idempotent order, so retain it for a safe retry.
+  error.retryable=res.ok||[408,425,429].includes(res.status)||res.status>=500;
+  throw error;
+ }
  return body;
 }
 async function authorized(tenantId,branchId,expectedUser){
@@ -64,9 +71,9 @@ async function authorized(tenantId,branchId,expectedUser){
  return {user,data};
 }
 const localeLabels={
- ar:{unlock:"تم فتح النسخة المحلية.",locked:"البيانات مقفلة.",prepared:"تم إعداد النسخة مشفرة لهذا المستخدم والمتجر والفرع.",saved:"حُفظ الطلب مشفرًا ولم يصل للمطعم بعد.",empty:"أضف أصنافًا أولاً.",expired:"انتهت صلاحية النسخة. أعد إعدادها أثناء الاتصال.",bad:"عبارة المرور غير صحيحة، أو النسخة تالفة.",sync:"اكتملت محاولة المزامنة. راجع النتائج.",review:"الطلب يحتاج مراجعة قبل إعادة إرساله.",lockedOut:"انتهت مدة العمل المحلية؛ أعد فتح النسخة."},
- en:{unlock:"Local profile unlocked.",locked:"Private data locked.",prepared:"Encrypted local profile prepared.",saved:"Order encrypted locally; not yet delivered.",empty:"Add items first.",expired:"Local authorization expired. Prepare again online.",bad:"Incorrect passphrase or corrupted profile.",sync:"Sync attempt completed. Review results.",review:"Order requires manual review.",lockedOut:"Local session timed out. Unlock again."},
- fr:{unlock:"Profil local déverrouillé.",locked:"Données privées verrouillées.",prepared:"Profil local chiffré préparé.",saved:"Commande chiffrée localement, non envoyée.",empty:"Ajoutez des articles.",expired:"Autorisation locale expirée. Préparez de nouveau en ligne.",bad:"Phrase secrète incorrecte ou profil corrompu.",sync:"Synchronisation terminée. Vérifiez les résultats.",review:"Commande à vérifier.",lockedOut:"Session locale expirée. Déverrouillez à nouveau."}
+ ar:{unlock:"تم فتح النسخة المحلية.",locked:"البيانات مقفلة.",prepared:"تم إعداد النسخة مشفرة لهذا المستخدم والمتجر والفرع.",saved:"حُفظ الطلب مشفرًا ولم يصل للمطعم بعد.",empty:"أضف أصنافًا أولاً.",expired:"انتهت صلاحية النسخة. أعد إعدادها أثناء الاتصال.",bad:"عبارة المرور غير صحيحة، أو النسخة تالفة.",sync:"اكتملت محاولة المزامنة. راجع النتائج.",retryable:"تعذر الخادم أو الاتصال مؤقتًا؛ بقيت الطلبات محفوظة مشفرة وستبقى للمحاولة التالية.",review:"الطلب يحتاج مراجعة قبل إعادة إرساله.",lockedOut:"انتهت مدة العمل المحلية؛ أعد فتح النسخة.",activityOnlineOnly:"هذا النشاط يعتمد على دورة خدمات أو عمليات غير مدعومة في نقطة البيع المحلية؛ أنشئ الطلب عند توفر الإنترنت.",profileUpdateRequired:"اتصل بالإنترنت مرة واحدة لتحديث صلاحية النسخة المحلية ونشاط المتجر قبل فتحها."},
+ en:{unlock:"Local profile unlocked.",locked:"Private data locked.",prepared:"Encrypted local profile prepared.",saved:"Order encrypted locally; not yet delivered.",empty:"Add items first.",expired:"Local authorization expired. Prepare again online.",bad:"Incorrect passphrase or corrupted profile.",sync:"Sync attempt completed. Review results.",retryable:"The server or connection is temporarily unavailable. Orders remain encrypted locally for a later retry.",review:"Order requires manual review.",lockedOut:"Local session timed out. Unlock again.",activityOnlineOnly:"This activity uses a service or workflow lifecycle that is not supported by the local POS. Create it when online.",profileUpdateRequired:"Reconnect once to refresh this encrypted profile and the store activity before opening it."},
+ fr:{unlock:"Profil local déverrouillé.",locked:"Données privées verrouillées.",prepared:"Profil local chiffré préparé.",saved:"Commande chiffrée localement, non envoyée.",empty:"Ajoutez des articles.",expired:"Autorisation locale expirée. Préparez de nouveau en ligne.",bad:"Phrase secrète incorrecte ou profil corrompu.",sync:"Synchronisation terminée. Vérifiez les résultats.",retryable:"Le serveur ou la connexion est temporairement indisponible. Les commandes restent chiffrées localement pour une nouvelle tentative.",review:"Commande à vérifier.",lockedOut:"Session locale expirée. Déverrouillez à nouveau.",activityOnlineOnly:"Cette activité utilise un cycle de service non pris en charge par le point de vente local. Créez-la en ligne.",profileUpdateRequired:"Reconnectez-vous une fois pour actualiser ce profil chiffré et l’activité du magasin avant de l’ouvrir."}
 };
 const language=location.search.includes("lang=fr")?"fr":location.search.includes("lang=en")?"en":"ar",msg=k=>localeLabels[language][k];
 if(language!=="ar"){document.documentElement.lang=language;document.documentElement.dir="ltr";}
@@ -103,12 +110,15 @@ async function prepare(){
  const pass=$("setup-pass").value;
  if(pass.length<12||pass.length>128)throw new Error("PASSPHRASE_12_REQUIRED");
  const {user,data}=await authorized(tenant,branch);
+ const contract=data.offlineContract;
+ if(!contract||contract.version!==1||contract.activityCode!==data.activityCode)throw new Error(msg("profileUpdateRequired"));
+ if(!contract.enabled)throw new Error(msg("activityOnlineOnly"));
  const id=idOf(user,tenant,branch),prior=await get("profiles",id);
  const salt=prior?.salt||Array.from(bytes(16)),key=await keyFor(pass,salt);
  if(prior){try{await unseal(key,id,"profile",prior);}catch{throw new Error("EXISTING_PROFILE_PASSPHRASE_REQUIRED");}}
  const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
  // Deliberately exclude customers, orders, private staff data and auth tokens.
- const publicCatalog={userId:user,tenantId:tenant,branchId:branch,menu:data.menu||[],tables:data.tables||[],options:data.options||{},currency:String(data.currency||"SAR"),checkoutPolicy:data.checkoutPolicy||null,savedAt:now,expiresAt};
+ const publicCatalog={userId:user,tenantId:tenant,branchId:branch,activityCode:data.activityCode,offlineContract:contract,menu:data.menu||[],tables:data.tables||[],options:data.options||{},currency:String(data.currency||"SAR"),checkoutPolicy:data.checkoutPolicy||null,savedAt:now,expiresAt};
  const encrypted=await seal(key,id,"profile",publicCatalog);
  await put("profiles",{id,salt,...encrypted,savedAt:now,expiresAt,reauthRequired:false});
  $("setup-pass").value="";await refreshProfiles();$("profiles").value=id;
@@ -120,13 +130,13 @@ async function openProfile(id,pass){
  const key=await keyFor(pass,record.salt);
  let data;try{data=await unseal(key,id,"profile",record);}catch{throw new Error(msg("bad"));}
  if(id!==idOf(data.userId,data.tenantId,data.branchId))throw new Error("SCOPE_MISMATCH");
- if(record.reauthRequired||Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt)){
+ if(record.reauthRequired||Date.now()>Date.parse(data.expiresAt)||Date.now()>Date.parse(record.expiresAt)||!data.offlineContract||data.offlineContract.version!==1||data.offlineContract.activityCode!==data.activityCode){
   // Logout, account switch or expiry blocks offline access. Pending encrypted
   // orders are retained and can be recovered after new server authentication.
-  if(!navigator.onLine)throw new Error(msg("expired"));
+  if(!navigator.onLine)throw new Error(!data.offlineContract||data.offlineContract.version!==1||data.offlineContract.activityCode!==data.activityCode?msg("profileUpdateRequired"):msg("expired"));
   const access=await authorized(data.tenantId,data.branchId,data.userId);
   const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
-  data={...data,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},savedAt:now,expiresAt};
+  data={...data,activityCode:access.data.activityCode,offlineContract:access.data.offlineContract,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},currency:String(access.data.currency||data.currency),checkoutPolicy:access.data.checkoutPolicy||null,savedAt:now,expiresAt};
   record={...record,...await seal(key,id,"profile",data),savedAt:now,expiresAt,reauthRequired:false};
   await put("profiles",record);
  }
@@ -135,9 +145,9 @@ async function openProfile(id,pass){
  $("unlock-pass").value="";$("scope").textContent="فرع "+data.branchId.slice(-8)+" · "+new Date(data.expiresAt).toLocaleString();
  bump();renderCatalog();await renderQueue();notice(msg("unlock"));
 }
-const simpleItem=(item,options)=>item&&item.status==="active"&&item.data&&Number.isFinite(Number(item.data.price))&&Number(item.data.price)>=0&&!item.data.measured&&!(Array.isArray(item.data.variants)&&item.data.variants.length>0)&&!(Array.isArray(options?.[item.id])&&options[item.id].length>0);
+const simpleItem=(item,options)=>item&&item.status==="active"&&item.data&&item.data.productType!=="service"&&Number.isFinite(Number(item.data.price))&&Number(item.data.price)>=0&&!item.data.measured&&!(Array.isArray(item.data.variants)&&item.data.variants.length>0)&&!(Array.isArray(options?.[item.id])&&options[item.id].length>0);
 function permittedItems(){
- const {data}=valid();return (data.menu||[]).filter(item=>simpleItem(item,data.options));
+ const {data}=valid();if(data.offlineContract?.enabled!==true)return [];return (data.menu||[]).filter(item=>simpleItem(item,data.options));
 }
 function renderCatalog(){
  const {data}=valid(),catalog=$("catalog");catalog.replaceChildren();
@@ -149,7 +159,7 @@ function renderCatalog(){
   btn.addEventListener("click",()=>{valid();cart.set(item.id,(cart.get(item.id)||0)+1);renderCart();});
   el.append(name,price,document.createElement("br"),btn);catalog.append(el);
  }
- if(!catalog.children.length)catalog.textContent="لا توجد أصناف بسيطة متاحة دون اتصال؛ الأصناف ذات الخيارات أو المقاسات تُطلب بعد عودة الإنترنت.";
+ if(!catalog.children.length)catalog.textContent=data.offlineContract?.enabled===true?"لا توجد أصناف بسيطة متاحة دون اتصال؛ الأصناف ذات الخيارات أو المقاسات تُطلب بعد عودة الإنترنت.":msg("activityOnlineOnly");
  const tableSelect=$("table");tableSelect.replaceChildren(new Option("اختر الطاولة",""));
  for(const t of data.tables||[]){if(t.status==="available"){tableSelect.add(new Option(String(t.name||t.id),String(t.id)));}}
  $("channel").querySelector('option[value="dine_in"]').hidden=!(data.tables||[]).length;
@@ -202,6 +212,7 @@ async function renderQueue(){
 async function saveOrder(){
  const {data,key,record}=valid(),channel=$("channel").value;
  if(!cart.size)throw new Error(msg("empty"));
+ if(data.offlineContract?.enabled!==true||!data.offlineContract.channels.includes(channel))throw new Error("OFFLINE_ACTIVITY_CHANNEL_UNAVAILABLE");
  if(!["takeaway","dine_in"].includes(channel))throw new Error("INVALID_CHANNEL");
  const queue=(await decodedOrders()).map(x=>x.item).filter(Boolean);
  const tableId=channel==="dine_in"?$("table").value:null,partySize=channel==="dine_in"?Number($("party").value):null;
@@ -214,29 +225,62 @@ async function saveOrder(){
  }
  const items=[...cart].map(([id,quantity])=>({id,quantity,options:[]}));
  if(items.some(row=>!permittedItems().some(item=>item.id===row.id)||!Number.isInteger(row.quantity)||row.quantity<1||row.quantity>999))throw new Error("ITEM_NOT_ALLOWED");
- const id=crypto.randomUUID(),payload={branchId:data.branchId,currency:data.currency,channel,tableId,partySize,customerName:"",customerPhone:"",couponCode:null,kitchenNotes:null,orderNotes:null,items,requestKey:id};
+ const id=crypto.randomUUID(),payload={branchId:data.branchId,currency:data.currency,channel,tableId,partySize,customerName:"",customerPhone:"",couponCode:null,kitchenNotes:null,orderNotes:null,items,requestKey:id,offlineOwnerUserId:data.userId,offlineContractVersion:data.offlineContract.version,offlineActivityCode:data.offlineContract.activityCode};
  const order={id,payload,status:"pending",createdAt:new Date().toISOString()};
  const cipher=await seal(key,record.id,"order:"+id,order);
  await put("orders",{id:record.id+"|"+id,profileId:record.id,orderId:id,createdAt:order.createdAt,...cipher});
  cart.clear();renderCart();await renderQueue();notice(msg("saved"));
 }
 async function sync(){
- const {record,data}=valid();
+ const {record,data,key}=valid();
  if(!navigator.onLine)throw new Error("INTERNET_REQUIRED");
  if(!navigator.locks?.request)throw new Error("WEB_LOCKS_REQUIRED");
  const run=async()=>{
   const access=await authorized(data.tenantId,data.branchId,data.userId);
   if(access.user!==data.userId)throw new Error("USER_CHANGED");
+  const current=valid();if(current.record.id!==record.id||current.key!==key)throw new Error("USER_CHANGED");
+  const contract=access.data.offlineContract;
+  const contractChanged=!contract||!data.offlineContract||contract.version!==data.offlineContract.version||contract.activityCode!==data.offlineContract.activityCode||contract.enabled!==data.offlineContract.enabled||JSON.stringify(contract.channels)!==JSON.stringify(data.offlineContract.channels);
+  if(contractChanged||contract.enabled!==true){
+   for(const {row,item} of await decodedOrders())if(item&&item.status==="pending"){
+    const changed={...item,status:"needs_review",lastError:"OFFLINE_ACTIVITY_CONTRACT_CHANGED"};
+    const cipher=await seal(key,record.id,"order:"+item.id,changed);
+    await put("orders",{...row,...cipher});
+   }
+   await renderQueue();throw new Error("OFFLINE_ACTIVITY_CONTRACT_CHANGED_ORDERS_RETAINED");
+  }
   for(const {row,item} of await decodedOrders()){
    if(!item||item.status==="needs_review")continue;
+   let replayItem=item;
+   // Older encrypted rows are bound to this profile's user/tenant/branch key.
+   // Backfill only a missing owner; never rewrite a conflicting owner identity.
+   if(replayItem.payload?.offlineOwnerUserId==null){
+    replayItem={...replayItem,payload:{...replayItem.payload,offlineOwnerUserId:data.userId}};
+    const ownerCipher=await seal(key,record.id,"order:"+replayItem.id,replayItem);
+    await put("orders",{...row,...ownerCipher});
+   }else if(replayItem.payload.offlineOwnerUserId!==data.userId){
+    const changed={...replayItem,status:"needs_review",lastError:"OFFLINE_OWNER_MISMATCH"};
+    const cipher=await seal(key,record.id,"order:"+replayItem.id,changed);
+    await put("orders",{...row,...cipher});continue;
+   }
+   if(replayItem.payload?.offlineContractVersion!==contract.version||replayItem.payload?.offlineActivityCode!==contract.activityCode){
+    const changed={...replayItem,status:"needs_review",lastError:"OFFLINE_ACTIVITY_CONTRACT_CHANGED"};
+    const cipher=await seal(key,record.id,"order:"+replayItem.id,changed);
+    await put("orders",{...row,...cipher});continue;
+   }
    try{
-    await json("/api/restaurant/operations/pos",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":data.tenantId,"x-foon-branch":data.branchId},body:JSON.stringify(item.payload)});
+    // Re-check the same authenticated owner immediately before each replay.
+    // The API also compares offlineOwnerUserId to its current session actor.
+    const accessForOrder=await authorized(data.tenantId,data.branchId,data.userId);
+    const current=valid();
+    if(accessForOrder.user!==data.userId||current.record.id!==record.id||current.key!==key)throw new Error("USER_CHANGED");
+    await json("/api/restaurant/operations/pos",{method:"POST",headers:{"content-type":"application/json","x-foon-tenant":data.tenantId,"x-foon-branch":data.branchId},body:JSON.stringify(replayItem.payload)});
     await del("orders",row.id);
    }catch(error){
     if(["SESSION_EXPIRED","USER_CHANGED","ACCESS_DENIED"].includes(error.message)){lock("انتهت صلاحيات الحساب. تحقق من تسجيل الدخول قبل مزامنة الطلبات.");throw error;}
-    if(error instanceof TypeError||!navigator.onLine)throw new Error("NETWORK_UNAVAILABLE_ORDERS_RETAINED");
-    const changed={...item,status:"needs_review",lastError:String(error.message)};
-    const cipher=await seal(active.key,record.id,"order:"+item.id,changed);
+    if(error.retryable===true||error instanceof TypeError||!navigator.onLine)throw new Error(msg("retryable"));
+    const changed={...replayItem,status:"needs_review",lastError:String(error.message)};
+    const cipher=await seal(key,record.id,"order:"+replayItem.id,changed);
     await put("orders",{...row,...cipher});
    }
   }
@@ -251,7 +295,7 @@ async function refresh(){
  if(!navigator.onLine)throw new Error("INTERNET_REQUIRED");
  const access=await authorized(data.tenantId,data.branchId,data.userId);
  const now=new Date().toISOString(),expiresAt=new Date(Date.now()+TTL).toISOString();
- const update={...data,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},currency:String(access.data.currency||data.currency),checkoutPolicy:access.data.checkoutPolicy||null,savedAt:now,expiresAt};
+ const update={...data,activityCode:access.data.activityCode,offlineContract:access.data.offlineContract,menu:access.data.menu||[],tables:access.data.tables||[],options:access.data.options||{},currency:String(access.data.currency||data.currency),checkoutPolicy:access.data.checkoutPolicy||null,savedAt:now,expiresAt};
  const encrypted=await seal(active.key,record.id,"profile",update);
  const next={...record,...encrypted,savedAt:now,expiresAt,reauthRequired:false};
  await put("profiles",next);active={record:next,data:update,key:active.key};cart.clear();renderCatalog();await refreshProfiles();notice("تم تحديث بيانات الفرع بعد التحقق من الصلاحية.");
@@ -532,6 +576,7 @@ async function init(){
  action("unlock-btn",()=>openProfile($("profiles").value,$("unlock-pass").value));
  action("save-order",saveOrder);
  action("sync-btn",sync);
+ window.addEventListener("online",()=>{if(!active)return;void sync().catch(error=>{if(active&&error.message!=="SYNC_ALREADY_RUNNING"&&error.message!=="INTERNET_REQUIRED")notice("تعذرت المزامنة التلقائية: "+String(error.message||error)+" · بقيت الطلبات محفوظة محليًا.",true);});});
  action("refresh-btn",refresh);
  action("export-btn",exportEncrypted);
  action("legacy-recover",recoverLegacy);
