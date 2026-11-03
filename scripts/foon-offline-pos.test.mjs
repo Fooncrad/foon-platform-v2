@@ -5,7 +5,12 @@ import {stripTypeScriptTypes} from "node:module";
 import "fake-indexeddb/auto";
 const source=stripTypeScriptTypes(await readFile(new URL("../lib/restaurant/offline-pos.ts",import.meta.url),"utf8"),{mode:"strip"})+"\n//# sourceURL=offline-pos-runtime.mjs";
 const {queuePosOrder,pendingPosOrders,scopedPosOrders,exportPendingPosOrders,importPendingPosOrders,retryReviewedPosOrder,offlineTableBlock}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
-const id1="11111111-1111-4111-8111-111111111111",id2="22222222-2222-4222-8222-222222222222";
+const activitySource=stripTypeScriptTypes(await readFile(new URL("../lib/platform/activity-presets.ts",import.meta.url),"utf8"),{mode:"strip"});
+const {ACTIVITY_PRESETS}=await import("data:text/javascript;base64,"+Buffer.from(activitySource).toString("base64"));
+const contractSource=stripTypeScriptTypes(await readFile(new URL("../lib/restaurant/offline-pos-contract.ts",import.meta.url),"utf8"),{mode:"strip"});
+const {buildOfflinePosContract,offlinePosEnvelopeAllowed}=await import("data:text/javascript;base64,"+Buffer.from(contractSource).toString("base64"));
+const id1="11111111-1111-4111-8111-111111111111",id2="22222222-2222-4222-8222-222222222222",offlineUserId="99999999-9999-4999-8999-999999999999";
+const allowsOffline=(contract,body,actor=offlineUserId)=>offlinePosEnvelopeAllowed(contract,body,actor);
 const order=(id,quantity=1,branchId="branch")=>({id,tenantId:"tenant",branchId,createdAt:"2026-10-11T12:00:00Z",payload:{branchId,requestKey:id,items:[{id:"item",quantity}]},status:"pending"});
 const backup=orders=>JSON.stringify({format:"foon-pos-recovery-v1",tenantId:"tenant",orders});
 test("backup restore rolls back all inserts on a later conflict, then retries without duplicate orders",async()=>{
@@ -116,4 +121,128 @@ test("background POS sync checks do not overwrite order feedback when nothing is
  await manualError.sync(true);
  assert.match(manualError.messages[0],/تعذر فحص الطلبات المحلية/);
  assert.equal((component.match(/onClick=\{\(\)=>void syncOffline\(true\)\}/g)||[]).length,2,"both manual sync buttons should request a notice");
+});
+
+
+const offlineEnvelope=(activityCode,overrides={})=>({
+ offlineContractVersion:1,offlineActivityCode:activityCode,offlineOwnerUserId:offlineUserId,
+ branchId:id1,requestKey:id2,currency:"SAR",channel:"takeaway",tableId:null,partySize:null,
+ customerName:"",customerPhone:"",couponCode:null,kitchenNotes:null,orderNotes:null,
+ items:[{id:id1,quantity:1,options:[]}],...overrides
+});
+
+test("offline activity contract enables only simple catalog-sale activities and keeps service lifecycles online",()=>{
+ assert.equal(Object.keys(ACTIVITY_PRESETS).length,15);
+ const sales=["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce"];
+ const services=["carwash","laundry","automotive","salon","publicworks"];
+ assert.deepEqual([...sales,...services].sort(),Object.keys(ACTIVITY_PRESETS).sort(),"every registered activity must be explicitly classified");
+ for(const activity of sales){
+  const contract=buildOfflinePosContract(activity);
+  assert.equal(contract.enabled,true,activity);
+  assert.equal(contract.orderKind,"catalog_sale",activity);
+  assert.deepEqual(contract.channels,["restaurant","cafe"].includes(activity)?["takeaway","dine_in"]:["takeaway"],activity);
+  assert.equal(contract.itemPolicy,"simple_unmeasured_no_variants_options",activity);
+ }
+ for(const activity of services){
+  const contract=buildOfflinePosContract(activity);
+  assert.equal(contract.enabled,false,activity);
+  assert.equal(contract.orderKind,"service_order",activity);
+  assert.deepEqual(contract.channels,[],activity);
+ }
+ assert.equal(buildOfflinePosContract("unrecognized-activity").enabled,false);
+});
+
+test("offline replay envelope rejects activity drift, customer data, payments and unsupported order shapes",()=>{
+ const contract=buildOfflinePosContract("grocery");
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery")),true);
+ assert.equal(allowsOffline(contract,offlineEnvelope("clothing")),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{offlineContractVersion:2})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{offlineContractVersion:undefined})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{offlineActivityCode:undefined})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{channel:"delivery"})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{customerPhone:"0550000000"})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{couponCode:"SAVE10"})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{paymentStatus:"paid",paymentMethod:"cash"})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{items:[{id:id1,quantity:1,options:[id2]}]})),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{items:[{id:id1,quantity:1,options:[]}],branchId:""})),false);
+ assert.equal(allowsOffline(buildOfflinePosContract("salon"),offlineEnvelope("salon")),false);
+});
+
+test("restaurant dine-in requires a table and party size while other catalog activities remain takeaway-only",()=>{
+ const restaurant=buildOfflinePosContract("restaurant");
+ assert.equal(allowsOffline(restaurant,offlineEnvelope("restaurant",{channel:"dine_in",tableId:id2,partySize:3})),true);
+ assert.equal(allowsOffline(restaurant,offlineEnvelope("restaurant",{channel:"dine_in",tableId:null,partySize:3})),false);
+ assert.equal(allowsOffline(restaurant,offlineEnvelope("restaurant",{channel:"dine_in",tableId:id2,partySize:0})),false);
+ const clothing=buildOfflinePosContract("clothing");
+ assert.equal(allowsOffline(clothing,offlineEnvelope("clothing",{channel:"dine_in",tableId:id2,partySize:2})),false);
+});
+
+test("cloud POS and secure local POS enforce the activity contract and preserve idempotent replay",async()=>{
+ const operations=await readFile(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ const createStart=operations.indexOf("export async function createOrder");
+ const duplicate=operations.indexOf("if(existing.length){if(existing[0].request_fingerprint",createStart);
+ const contractGuard=operations.indexOf("allowsOffline(buildOfflinePosContract(profile.activityCode),body)",createStart);
+ assert.ok(createStart>=0&&duplicate>createStart&&contractGuard>duplicate,"activity validation must follow the idempotent accepted-order lookup");
+ assert.match(operations,/body\.offlineContractVersion!==undefined\|\|body\.offlineActivityCode!==undefined/);
+ const route=await readFile(new URL("../app/api/restaurant/operations/[module]/route.ts",import.meta.url),"utf8");
+ assert.match(route,/offlineContract:buildOfflinePosContract\(profile\.activityCode\)/);
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ assert.match(local,/offlineContractVersion:data\.offlineContract\.version,offlineActivityCode:data\.offlineContract\.activityCode/);
+ assert.match(local,/OFFLINE_ACTIVITY_CONTRACT_CHANGED_ORDERS_RETAINED/);
+ const syncStart=local.indexOf("async function sync()");
+ assert.match(local.slice(syncStart,syncStart+100),/const \{record,data,key\}=valid\(\)/,"sync must retain the profile encryption key in its closure");
+ assert.match(local,/item\.data\.productType!==\"service\"/);
+});
+
+test("cloud POS hands offline checkout to the encrypted local page without claiming the current cart was saved",async()=>{
+ const workspace=await readFile(new URL("../app/restaurant/order-workspace.tsx",import.meta.url),"utf8");
+ assert.match(workspace,/\/foon-offline-pos\.html\?tenant=/);
+ assert.match(workspace,/window\.open\(offlineUrl,\"_blank\"\)/);
+ assert.match(workspace,/لم يُحفظ الطلب الحالي ولم تُنقل بيانات العميل/);
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ assert.match(local,/window\.addEventListener\(\"online\",\(\)=>\{if\(!active\)return;void sync\(\)/);
+});
+
+
+test("secure local replay retains encrypted orders for transient server failures",async()=>{
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ const start=local.indexOf("async function json(");
+ const end=local.indexOf("\nasync function authorized(",start);
+ assert.ok(start>=0&&end>start,"secure POS JSON helper should be available");
+ const helper=local.slice(start,end);
+ const makeJson=(status,body)=>new Function("fetch",helper+"\nreturn json;")(
+  async()=>new Response(JSON.stringify(body),{status})
+ );
+ await assert.rejects(makeJson(503,{ok:false,code:"OPERATIONS_UNAVAILABLE"})("/sync"),error=>error.status===503&&error.retryable===true);
+ await assert.rejects(makeJson(429,{ok:false,code:"RATE_LIMITED"})("/sync"),error=>error.status===429&&error.retryable===true);
+ await assert.rejects(makeJson(409,{ok:false,code:"CONFLICT"})("/sync"),error=>error.status===409&&error.retryable===false);
+ await assert.rejects(makeJson(200,{ok:false})("/sync"),error=>error.status===200&&error.retryable===true);
+ const syncStart=local.indexOf("async function sync()");
+ const retryBranch=local.indexOf("if(error.retryable===true",syncStart);
+ const reviewBranch=local.indexOf('status:"needs_review"',retryBranch);
+ assert.ok(syncStart>=0&&retryBranch>syncStart&&reviewBranch>retryBranch,"transient failures must be handled before permanent failures are moved to review");
+ assert.match(local,/retryable:"تعذر الخادم أو الاتصال مؤقتًا/);
+ assert.match(local,/retryable:"The server or connection is temporarily unavailable/);
+ assert.match(local,/retryable:"Le serveur ou la connexion est temporairement indisponible/);
+});
+
+test("offline replay is bound to its encrypted profile owner and re-authenticates before each order",async()=>{
+ const contract=buildOfflinePosContract("grocery");
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery")),true);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery"),id1),false);
+ assert.equal(allowsOffline(contract,offlineEnvelope("grocery",{offlineOwnerUserId:undefined})),false);
+ const operations=await readFile(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
+ const ownerGuard=operations.indexOf("if(hasOfflineMetadata&&body.offlineOwnerUserId!==actor)");
+ assert.ok(ownerGuard>=0&&ownerGuard<operations.indexOf("if(requestKey){"),"server must bind owner before idempotency lookup");
+ assert.match(operations,/offlinePosEnvelopeAllowed\(buildOfflinePosContract\(profile\.activityCode\),body,actor\)/);
+ const route=await readFile(new URL("../app/api/restaurant/operations/[module]/route.ts",import.meta.url),"utf8");
+ assert.match(route,/OFFLINE_OWNER_MISMATCH/);
+ const local=await readFile(new URL("../public/foon-offline-pos.js",import.meta.url),"utf8");
+ assert.match(local,/offlineOwnerUserId:data\.userId/);
+ const contractChange=local.indexOf("if(contractChanged||contract.enabled!==true)");
+ const firstLoop=local.indexOf("for(const {row,item} of await decodedOrders())",contractChange);
+ const replayLoop=local.indexOf("for(const {row,item} of await decodedOrders())",firstLoop+1);
+ const ownerCheck=local.indexOf("accessForOrder=await authorized(data.tenantId,data.branchId,data.userId)",replayLoop);
+ const replayPost=local.indexOf('await json("/api/restaurant/operations/pos"',replayLoop);
+ assert.ok(replayLoop>firstLoop&&ownerCheck>replayLoop&&replayPost>ownerCheck,"every queued order must re-check the same owner before replay");
 });
