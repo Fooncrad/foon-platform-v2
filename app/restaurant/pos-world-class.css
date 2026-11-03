@@ -236,7 +236,7 @@
 .restaurantPosModern .restaurantPosProductMedia img{object-fit:cover}
 .restaurantPosModern .restaurantPosProductPrice{color:#2563eb;font-size:19px;font-weight:850}
 .restaurantPosModern .restaurantPosProduct>button{
-  min-height:46px;border:0;border-radius:12px;background:#10b981;color:#fff;font-weight:800;
+  min-height:46px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;
 }
 .restaurantPosModern .restaurantPosCheckout{
   grid-column:3;grid-row:1/-1;position:sticky;top:15px;max-height:calc(100vh - 30px);
@@ -262,7 +262,7 @@
 }
 .restaurantPosModern .restaurantPosInvoiceBreakdown{padding:14px;border-radius:16px;background:#eff6ff}
 .restaurantPosModern .restaurantPosCheckout .restaurantPrimary{
-  width:100%;min-height:52px;border:0;border-radius:13px;background:#10b981;color:#fff;font-weight:850;
+  width:100%;min-height:52px;border:0;border-radius:13px;background:#2563eb;color:#fff;font-weight:850;
 }
 .restaurantPosModern[data-pos-theme=dark]{background:#0f172a}
 .restaurantPosModern[data-pos-theme=dark] .restaurantPosCategories,
