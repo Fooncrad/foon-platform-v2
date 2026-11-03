@@ -17,10 +17,10 @@ export default async function AccountPage(){
  if(memberships.length){
   const current=await resolveWorkspace(id);
   const tenantId=current.tenant_id;
+  const activity=await tenantWorkspaceActivity(tenantId);
   // Cashier accounts open the dedicated POS surface directly instead of the
   // merchant dashboard; the POS route independently rechecks role and grants.
-  if(current.role==="cashier")redirect("/restaurant/pos?tenant="+encodeURIComponent(tenantId));
-  const activity=await tenantWorkspaceActivity(tenantId);
+  if(current.role==="cashier"&&!current.adminAccess&&activity)redirect("/restaurant/pos?tenant="+encodeURIComponent(tenantId));
   if(activity)redirect(activityWorkspaceUrl(activity));
   // An invalid store profile must never be labeled a restaurant.
   redirect("/business?tenant="+encodeURIComponent(tenantId));
