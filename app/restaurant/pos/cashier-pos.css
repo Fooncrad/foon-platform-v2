@@ -1,0 +1,59 @@
+.foonCashierPage{--cashier-blue:#2563eb;--cashier-ink:#172033;--cashier-muted:#64748b;--cashier-line:#e2e8f0;min-height:100vh;padding:14px clamp(10px,2vw,24px) 28px;background:#f4f7fb;color:var(--cashier-ink);direction:rtl}
+.foonCashierHeader{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:1800px;margin:0 auto 12px;padding:10px 14px;background:#fff;border:1px solid var(--cashier-line);border-radius:14px}
+.foonCashierBrand{display:flex;align-items:center;gap:10px}.foonCashierMark{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--cashier-blue);color:#fff;font-size:22px;font-weight:900}.foonCashierBrand div,.foonCashierBranch{display:grid;gap:2px}.foonCashierBrand strong{font-size:15px;letter-spacing:.04em}.foonCashierBrand small,.foonCashierBranch small{font-size:11px;color:var(--cashier-muted)}.foonCashierBranch{text-align:left}.foonCashierBranch strong{font-size:13px}
+.foonCashierPage>.restaurantPanel{max-width:1800px;margin:0 auto;padding:0;border:0;background:transparent;box-shadow:none}
+.foonCashierPage .restaurantPosQuickBar{margin:0 0 8px;padding:7px 10px;border:1px solid var(--cashier-line);border-radius:10px;background:#fff;font-size:12px}
+.foonCashierPage .restaurantPosOrdersToolbar{display:flex;align-items:center;gap:16px;margin:0 0 10px;padding:8px 12px;border:1px solid var(--cashier-line);border-radius:12px;background:#fff;box-shadow:none}
+.foonCashierPage .restaurantPosOrdersHeading{flex:0 0 auto}.foonCashierPage .restaurantPosOrdersHeading small{font-size:9px}.foonCashierPage .restaurantPosOrdersHeading h3{font-size:13px;margin:0}
+.foonCashierPage .restaurantPosAddedProductsTopbar{display:flex;flex:1 1 auto;justify-content:flex-start;gap:9px;padding:0;border:0;background:transparent}
+.foonCashierPage .restaurantPosThemePicker{flex:0 0 auto}.foonCashierPage .restaurantPosThemePicker>span{font-size:11px}
+.foonCashierPage .restaurantPosModern{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(330px,390px)!important;grid-template-areas:"catalog checkout";align-items:start;gap:14px!important;min-height:0;padding:0;background:transparent}
+.foonCashierPage .restaurantPosCatalog{display:grid;grid-template-columns:minmax(0,1fr);grid-area:catalog;gap:10px;min-width:0}
+.foonCashierPage .restaurantPosBrowse{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.foonCashierPage .restaurantPosSectionHeading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:2px 0}
+.foonCashierPage .restaurantPosSectionHeading small{font-size:10px;color:var(--cashier-muted);font-weight:800;letter-spacing:.07em}
+.foonCashierPage .restaurantPosSectionHeading h3{margin:1px 0 0;font-size:17px}
+.foonCashierPage .restaurantPosBrowse input[type=search]{min-height:46px;padding:10px 14px;border:1px solid var(--cashier-line);border-radius:11px;background:#fff;font-size:15px}
+.foonCashierPage .restaurantPosCategories{display:flex;flex-direction:row;align-items:center;gap:7px;margin:0;padding:2px 0 7px;border:0;overflow-x:auto;max-height:none}
+.foonCashierPage .restaurantPosCategories button{width:auto;min-height:37px;padding:6px 12px;border:1px solid var(--cashier-line);border-radius:9px;background:#fff;white-space:nowrap}
+.foonCashierPage .restaurantPosCategories button[aria-pressed=true]{border-color:var(--cashier-blue);background:#eff6ff;color:#1d4ed8;box-shadow:none}
+.foonCashierPage .restaurantPosViewFilters{display:flex;gap:6px;margin:0}
+.foonCashierPage .restaurantPosViewFilters button{min-height:34px;padding:5px 10px;border:1px solid var(--cashier-line);border-radius:8px;background:#fff;font-size:12px}
+.foonCashierPage .restaurantPosMenu{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,165px),1fr));gap:10px;align-items:stretch}
+.foonCashierPage .restaurantPosProduct{padding:9px;border:1px solid var(--cashier-line);border-radius:12px;background:#fff;box-shadow:0 1px 3px #0f172a08;transition:border-color .12s ease,box-shadow .12s ease}
+.foonCashierPage .restaurantPosProduct:hover{transform:none;border-color:#93c5fd;box-shadow:0 4px 12px #0f172a0d}
+.foonCashierPage .restaurantPosProductMedia{height:126px;aspect-ratio:auto;border-radius:8px;background:#f1f5f9}
+.foonCashierPage .restaurantPosProductMedia img{object-fit:contain}
+.foonCashierPage .restaurantPosProduct b{min-height:2.7em;font-size:13px}
+.foonCashierPage .restaurantPosProductPrice{font-size:16px;color:var(--cashier-blue)}
+.foonCashierPage .restaurantPosProduct>button{min-height:40px;border:0;border-radius:8px;background:var(--cashier-blue);color:#fff;font-weight:800}
+.foonCashierPage .restaurantPosCheckout{grid-area:checkout;position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;padding:13px;border:1px solid var(--cashier-line);border-radius:14px;background:#fff;box-shadow:0 3px 12px #0f172a08}
+.foonCashierPage .restaurantPosCheckout>.restaurantPosSectionHeading{padding:0 0 8px;border-bottom:1px solid var(--cashier-line)}
+.foonCashierPage .restaurantPosOrderSummary{position:static;margin:0 0 10px;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent}
+.foonCashierPage .restaurantPosCartLines{max-height:230px;gap:5px}
+.foonCashierPage .restaurantPosCartLine{grid-template-columns:minmax(0,1fr) auto;gap:5px;padding:6px 2px;border:0;border-bottom:1px solid #edf1f6;border-radius:0}
+.foonCashierPage .restaurantPosCartLineActions{gap:3px}
+.foonCashierPage .restaurantPosCartLineActions button{min-width:31px;min-height:34px;border:0;background:#f1f5f9;border-radius:7px}
+.foonCashierPage .restaurantPosCartLineActions .restaurantPosRemoveCartItem{background:transparent;color:#64748b}
+.foonCashierPage .restaurantPosCheckout>label{display:grid;gap:4px;margin:8px 0;font-size:12px;font-weight:700}
+.foonCashierPage .restaurantPosCheckout :is(input,select,textarea){min-height:38px;padding:7px 9px;border:1px solid var(--cashier-line);border-radius:8px;background:#fff;font-size:14px}
+.foonCashierPage .restaurantPosPaymentFields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;padding:9px;border:1px solid var(--cashier-line);border-radius:9px}
+.foonCashierPage .restaurantPosPaymentFields legend{padding:0 5px;font-size:12px;font-weight:800}
+.foonCashierPage .restaurantPosPaymentFields label{display:grid;gap:4px;font-size:11px}
+.foonCashierPage .restaurantPosInvoiceBreakdown{margin-top:10px;padding:10px;border-radius:9px;background:#eff6ff}
+.foonCashierPage .restaurantPosInvoiceBreakdown h4{margin:0 0 6px;font-size:13px}
+.foonCashierPage .restaurantPosCheckout .restaurantPrimary{width:100%;min-height:49px;margin-top:10px;border:0;border-radius:10px;background:var(--cashier-blue);color:#fff;font-size:16px;font-weight:900}
+.foonCashierPage .restaurantPosPreviousOrdersBar{max-width:1800px;margin:8px auto}
+.foonCashierPage .restaurantPosPreviousOrdersToggle{min-height:37px;padding:6px 11px;border-color:var(--cashier-line);background:#fff;font-size:12px}
+.foonCashierPage .restaurantPosWorkspace .restaurantOrderCards{max-width:1800px}
+.foonCashierPage .restaurantOfflineBackup{display:none}
+.foonCashierPage :is(button,input,select,textarea):focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
+.foonCashierAccess{max-width:560px;margin:12vh auto;padding:28px;border:1px solid var(--cashier-line);border-radius:16px;background:#fff;text-align:center}.foonCashierAccess>span{font-weight:900;color:var(--cashier-blue)}.foonCashierAccess h1{font-size:20px}.foonCashierAccess p{color:var(--cashier-muted);line-height:1.8}
+.foonCashierPage[data-pos-theme=dark],.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]){background:#0f172a;color:#e5edf8}
+.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .foonCashierHeader,.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosOrdersToolbar,.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosCheckout,.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosProduct{background:#182235;color:#e5edf8;border-color:#34445d}
+.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosBrowse input[type=search],.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosCategories button,.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosCheckout :is(input,select,textarea){background:#1e2b40;color:#e5edf8;border-color:#40516b}
+.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosInvoiceBreakdown{background:#203b60}
+@media(max-width:1050px){.foonCashierPage .restaurantPosModern{grid-template-columns:minmax(0,1fr) 340px!important;gap:10px!important}.foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(auto-fill,minmax(min(100%,145px),1fr))}}
+@media(max-width:760px){.foonCashierPage{padding:8px}.foonCashierHeader{margin-bottom:8px}.foonCashierPage .restaurantPosOrdersToolbar{flex-wrap:wrap;gap:8px}.foonCashierPage .restaurantPosModern{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"catalog" "checkout";}.foonCashierPage .restaurantPosCheckout{position:static;max-height:none;overflow:visible}.foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.foonCashierPage .restaurantPosProductMedia{height:112px}.foonCashierPage .restaurantPosPaymentFields{grid-template-columns:1fr 1fr}}
+@media(max-width:360px){.foonCashierPage .restaurantPosProduct{padding:7px}.foonCashierPage .restaurantPosProductMedia{height:92px}.foonCashierPage .restaurantPosCheckout{padding:9px}.foonCashierPage .restaurantPosCartLineActions button{min-width:28px}}
+@media(prefers-reduced-motion:reduce){.foonCashierPage *{transition:none!important}}
