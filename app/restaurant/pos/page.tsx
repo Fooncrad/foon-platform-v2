@@ -13,7 +13,7 @@ export default async function CashierPosPage({searchParams}:{searchParams:Promis
  const userId=await currentUserId();
  if(!userId)redirect("/login");
  const {tenant}=await searchParams;
- let workspace;
+ let workspace:Awaited<ReturnType<typeof resolveWorkspace>>;
  try{workspace=await resolveWorkspace(userId,tenant);}catch{redirect("/account");}
  if(workspace.role!=="cashier"||workspace.adminAccess)redirect("/account");
  const activity=await tenantWorkspaceActivity(workspace.tenant_id);
