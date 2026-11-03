@@ -68,7 +68,7 @@ test('driver order reads require one active matching employee in the scoped bran
  assert.equal(await activeDeliveryDriverEmployeeId(db,tenant,branch,user),employee);
  assert.deepEqual(calls[0].params,[branch,tenant,branch,user]);
  assert.match(calls[0].sql,/a\.role COLLATE utf8mb4_unicode_ci=m\.role COLLATE utf8mb4_unicode_ci/);
- assert.match(calls[0].sql,/JOIN users u ON u\.id=m\.user_id AND u\.status='active'/);
+ assert.match(calls[0].sql,/JOIN users u ON BINARY u\.id=BINARY m\.user_id AND u\.status='active'/);
  assert.match(calls[0].sql,/BINARY JSON_UNQUOTE\(JSON_EXTRACT\(e\.data,'\$\.userId'\)\)=BINARY \? LIMIT 2$/);
 });
 
