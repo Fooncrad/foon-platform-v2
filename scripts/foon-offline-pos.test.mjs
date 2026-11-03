@@ -181,7 +181,7 @@ test("cloud POS and secure local POS enforce the activity contract and preserve 
  const operations=await readFile(new URL("../lib/restaurant/operations.ts",import.meta.url),"utf8");
  const createStart=operations.indexOf("export async function createOrder");
  const duplicate=operations.indexOf("if(existing.length){if(existing[0].request_fingerprint",createStart);
- const contractGuard=operations.indexOf("allowsOffline(buildOfflinePosContract(profile.activityCode),body)",createStart);
+ const contractGuard=operations.indexOf("offlinePosEnvelopeAllowed(buildOfflinePosContract(profile.activityCode),body,actor)",createStart);
  assert.ok(createStart>=0&&duplicate>createStart&&contractGuard>duplicate,"activity validation must follow the idempotent accepted-order lookup");
  assert.match(operations,/body\.offlineContractVersion!==undefined\|\|body\.offlineActivityCode!==undefined/);
  const route=await readFile(new URL("../app/api/restaurant/operations/[module]/route.ts",import.meta.url),"utf8");
