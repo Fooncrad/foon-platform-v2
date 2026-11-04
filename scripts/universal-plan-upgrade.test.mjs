@@ -74,16 +74,16 @@ test("plan comparison is readable to owners and managers while submission remain
  const api=read("app/api/tenant/subscription-requests/route.ts");
  const get=api.slice(api.indexOf("export async function GET"),api.indexOf("export async function POST"));
  const post=api.slice(api.indexOf("export async function POST"));
- assert.match(api,/async function merchant\\(id:unknown,roles:\\("owner"\\|"manager"\\)\\[\\]=\\["owner"\\]\\)/);
- assert.match(get,/merchant\\(id,\\["owner","manager"\\]\\)/);
- assert.match(post,/merchant\\(id\\)/);
- assert.doesNotMatch(post,/merchant\\(id,\\["owner","manager"\\]\\)/);
+ assert.ok(api.includes('async function merchant(id:unknown,roles:("owner"|"manager")[]=["owner"])'));
+ assert.ok(get.includes('merchant(id,["owner","manager"])'));
+ assert.ok(post.includes("merchant(id)"));
+ assert.ok(!post.includes('merchant(id,["owner","manager"])'));
 });
 
 test("legacy tenants without a business profile retain the SAR plan-price fallback",()=>{
  const api=read("app/api/tenant/subscription-requests/route.ts");
- assert.match(api,/JOIN tenants t ON BINARY t\\.id=BINARY \\?/);
- assert.match(api,/LEFT JOIN tenant_business_profiles b ON BINARY b\\.tenant_id=BINARY t\\.id/);
- assert.match(api,/COALESCE\\(NULLIF\\(b\\.currency,''\\),'SAR'\\)/);
- assert.doesNotMatch(api,/JOIN tenant_business_profiles b ON b\\.tenant_id=\\? AND b\\.currency=pr\\.currency/);
+ assert.ok(api.includes("JOIN tenants t ON BINARY t.id=BINARY ?"));
+ assert.ok(api.includes("LEFT JOIN tenant_business_profiles b ON BINARY b.tenant_id=BINARY t.id"));
+ assert.ok(api.includes("COALESCE(NULLIF(b.currency,''),'SAR')"));
+ assert.ok(!api.includes("JOIN tenant_business_profiles b ON b.tenant_id=? AND b.currency=pr.currency"));
 });
