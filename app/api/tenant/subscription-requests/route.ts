@@ -12,17 +12,17 @@ export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
 const reply=(value:object,status=200)=>NextResponse.json(value,{status,headers});
 const uuid=(x:unknown):x is string=>typeof x==="string"&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(x);
-async function merchant(id:unknown,roles:("owner"|"manager")[]=["owner"]){
+async function merchant(id:unknown){
  const user=await currentUserId();if(!user)return {status:401};
  if(!uuid(id))return {status:400};
  try{
-  const role=await requireTenantMembership(user,id,roles,false);
+  const role=await requireTenantMembership(user,id,["owner"],false);
   return role.adminAccess?{status:403}:{status:200,tenantId:id};
  }catch{return {status:403};}
 }
 export async function GET(request:Request){
  const id=new URL(request.url).searchParams.get("tenantId");
- const auth=await merchant(id,["owner","manager"]);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
+ const auth=await merchant(id);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
  try{
   const [profile]=await database().execute<RowDataPacket[]>("SELECT COALESCE(NULLIF(p.activity_code,''),CASE WHEN t.kind='restaurant' THEN 'restaurant' ELSE '' END) AS activity_code FROM tenants t LEFT JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.id=? LIMIT 1",[id]);
   const activity=String(profile[0]?.activity_code??"");
