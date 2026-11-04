@@ -345,8 +345,21 @@
   .foonCashierPage .restaurantPosMenu{max-height:none;min-height:180px;overflow:visible}
   .foonCashierPage .restaurantPosCheckout{position:sticky;top:6px;max-height:calc(100dvh - 12px);overflow-y:auto}
 }
-@media(max-width:900px){
-  .foonCashierPage .restaurantPosModern{min-height:0;height:auto;overflow:visible}
+@media(min-width:641px) and (max-width:900px){
+  /* Browser zoom can shrink the CSS viewport; keep checkout beside the catalog. */
+  .foonCashierPage .restaurantPosModern{
+    min-height:calc(100dvh - 90px);
+    height:auto;
+    overflow:visible;
+    grid-template-columns:minmax(0,1fr) minmax(270px,32%)!important;
+    grid-template-areas:"checkout catalog";
+    align-items:start;
+  }
+  .foonCashierPage .restaurantPosMenu{max-height:calc(100dvh - 300px);min-height:180px;overflow-y:auto}
+  .foonCashierPage .restaurantPosCheckout{position:sticky;top:6px;max-height:calc(100dvh - 12px);overflow-y:auto}
+}
+@media(max-width:640px){
+  .foonCashierPage .restaurantPosModern{min-height:0;height:auto;overflow:visible;grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"catalog" "checkout"}
   .foonCashierPage .restaurantPosMenu{max-height:none;min-height:180px;overflow:visible}
   .foonCashierPage .restaurantPosCheckout{position:static;max-height:none;overflow:visible}
 }
