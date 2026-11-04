@@ -118,6 +118,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const pathname=usePathname(),routeParams=useSearchParams();
  const [wideWorkspace,setWideWorkspace]=useState(()=>routeParams.get("section")==="pos");
  const [collapsedNavGroups,setCollapsedNavGroups]=useState<MerchantNavGroup[]>([]);
+ const syncedActive=useRef<Section|null>(null);
  const {mode:themeMode,resolved:themeResolved}=useWorkspaceTheme();
 
  const [requestedActive,setActive]=useState<Section>("overview"),[branch,setBranch]=useState(!["owner","manager"].includes(data.role)&&data.branches.length===1?data.branches[0].id:data.branches[0]?.id??""),[drawer,setDrawer]=useState(false),[searchOpen,setSearchOpen]=useState(false),[query,setQuery]=useState(""),[notifications,setNotifications]=useState(false),[profile,setProfile]=useState(false),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
@@ -194,7 +195,9 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   // Schedule state synchronization outside the effect body to avoid render cascades.
   let cancelled=false;
   const target=requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview";
-  queueMicrotask(()=>{if(!cancelled){setActive(target);setWideWorkspace(target==="pos");setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
+  const sectionChanged=syncedActive.current!==target;
+  syncedActive.current=target;
+  queueMicrotask(()=>{if(!cancelled){setActive(target);if(sectionChanged)setWideWorkspace(target==="pos");setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
   return ()=>{cancelled=true;};
  },[pathname,routeParams,data.tenantId,visibleKeys]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
@@ -234,7 +237,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route=activityWorkspaceUrl(data.activityCode),paymentRoute=activityPaymentsUrl(data.activityCode);
- function navigate(section:Section){if(!visible.some(m=>m.key===section))return;setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(section)));if(section==="overview")setRevision(v=>v+1);setActive(section);setWideWorkspace(section==="pos");setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
+ function navigate(section:Section){if(!visible.some(m=>m.key===section))return;setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(section)));if(section==="overview")setRevision(v=>v+1);syncedActive.current=section;setActive(section);setWideWorkspace(section==="pos");setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
  async function switchTenant(nextTenant:string){
   if(nextTenant===data.tenantId||busy)return;
   setBusy(true);setMessage("");
