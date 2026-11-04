@@ -62,4 +62,9 @@ test("POS opens in focused mode and adapts catalog density to every activity pro
  assert.match(posCss,/data-activity="grocery"[\s\S]*?height:104px/);
  assert.match(posCss,/aspect-ratio:1\/1/);
  assert.match(posCss,/data-activity="salon"[\s\S]*?min\(100%,225px\)/);
+ assert.match(posCss,/\.restaurantApp\[data-activity="grocery"\] \.restaurantPosProductPrice small/);
+ assert.match(posCss,/data-activity="cafe".*?\.menuChoicePicker fieldset/);
+ assert.match(posCss,/data-activity="clothing".*?\.menuChoicePicker fieldset/);
+ assert.match(posCss,/data-activity="salon".*?\.menuChoicePicker/);
+ assert.match(posCss,/@media\(max-width:680px\)[\s\S]*?data-activity="grocery"[\s\S]*?grid-template-columns:repeat\(2/);
 });

@@ -341,3 +341,38 @@
 .restaurantApp:is([data-activity="carwash"],[data-activity="laundry"],[data-activity="automotive"],[data-activity="salon"],[data-activity="publicworks"]) .restaurantPosProductMedia{
   height:132px;
 }
+.restaurantApp:is([data-activity="cafe"],[data-activity="sweets"]) .restaurantPosProduct .menuChoicePicker fieldset,
+.restaurantApp:is([data-activity="clothing"],[data-activity="perfume"],[data-activity="accessories"],[data-activity="watches"]) .restaurantPosProduct .menuChoicePicker fieldset{
+  padding:10px;
+  border:1px solid color-mix(in srgb,var(--pos-primary) 28%,var(--pos-line));
+  border-radius:12px;
+  background:color-mix(in srgb,var(--pos-primary) 5%,var(--pos-card));
+}
+.restaurantApp:is([data-activity="cafe"],[data-activity="sweets"]) .restaurantPosProduct .menuChoicePicker legend,
+.restaurantApp:is([data-activity="clothing"],[data-activity="perfume"],[data-activity="accessories"],[data-activity="watches"]) .restaurantPosProduct .menuChoicePicker legend{
+  padding-inline:4px;
+  color:var(--pos-primary);
+  font-weight:800;
+}
+.restaurantApp[data-activity="grocery"] .restaurantPosProductPrice{
+  justify-content:flex-start;
+  min-height:2.5em;
+  align-content:center;
+  font-size:15px;
+}
+.restaurantApp[data-activity="grocery"] .restaurantPosProductPrice small{
+  padding:3px 7px;
+  border-radius:8px;
+  background:color-mix(in srgb,var(--pos-primary) 8%,var(--pos-card));
+  color:var(--pos-muted);
+}
+.restaurantApp:is([data-activity="carwash"],[data-activity="laundry"],[data-activity="automotive"],[data-activity="salon"],[data-activity="publicworks"]) .restaurantPosProduct .menuChoicePicker{
+  padding:10px;
+  border-inline-start:3px solid var(--pos-primary);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--pos-primary) 5%,var(--pos-card));
+}
+@media(max-width:680px){
+  .restaurantApp[data-activity="grocery"] .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .restaurantApp:is([data-activity="carwash"],[data-activity="laundry"],[data-activity="automotive"],[data-activity="salon"],[data-activity="publicworks"]) .restaurantPosMenu{grid-template-columns:repeat(1,minmax(0,1fr))}
+}
