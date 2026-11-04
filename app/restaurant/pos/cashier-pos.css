@@ -7,7 +7,7 @@
 .foonCashierPage .restaurantPosOrdersHeading{flex:0 0 auto}.foonCashierPage .restaurantPosOrdersHeading small{font-size:9px}.foonCashierPage .restaurantPosOrdersHeading h3{font-size:13px;margin:0}
 .foonCashierPage .restaurantPosAddedProductsTopbar{display:flex;flex:1 1 auto;justify-content:flex-start;gap:9px;padding:0;border:0;background:transparent}
 .foonCashierPage .restaurantPosThemePicker{flex:0 0 auto}.foonCashierPage .restaurantPosThemePicker>span{font-size:11px}
-.foonCashierPage .restaurantPosModern{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(330px,390px)!important;grid-template-areas:"catalog checkout";align-items:start;gap:14px!important;min-height:0;padding:0;background:transparent}
+.foonCashierPage .restaurantPosModern{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(330px,390px)!important;grid-template-areas:"checkout catalog";align-items:start;gap:14px!important;min-height:0;padding:0;background:transparent}
 .foonCashierPage .restaurantPosCatalog{display:grid;grid-template-columns:minmax(0,1fr);grid-area:catalog;gap:10px;min-width:0}
 .foonCashierPage .restaurantPosBrowse{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
 .foonCashierPage .restaurantPosSectionHeading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:2px 0}
@@ -242,7 +242,7 @@
   margin:0;
 }
 .foonCashierPage .restaurantPosPreviousOrdersToggle{min-height:32px}
-.foonCashierPage .restaurantOfflineBackup{display:none!important}
+.foonCashierPage .restaurantPosToolsWrap .restaurantOfflineBackup{display:block!important;margin:8px 0;padding:10px;border:1px solid var(--cashier-line);border-radius:8px;background:#fff}
 .foonCashierPage .restaurantPosWorkspace> :not(.restaurantPosModern):not(.restaurantPosQuickBar):not(.restaurantPosToolsWrap):not(.restaurantActionToast):not(.restaurantPosPreviousOrdersBar){flex:0 0 auto}
 @media(min-width:1500px){
   .foonCashierPage{padding:12px 18px}
