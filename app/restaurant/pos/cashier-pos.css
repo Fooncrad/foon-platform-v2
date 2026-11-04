@@ -123,7 +123,7 @@
   display:grid!important;
   grid-template-columns:minmax(0,1fr) minmax(340px,390px)!important;
   grid-template-rows:minmax(0,1fr);
-  grid-template-areas:"catalog checkout";
+  grid-template-areas:"checkout catalog";
   align-items:stretch;
   gap:12px!important;
   padding:0;
