@@ -24,7 +24,7 @@ export async function GET(request:Request){
  const id=new URL(request.url).searchParams.get("tenantId");
  const auth=await merchant(id);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
  try{
-  const [profile]=await database().execute<RowDataPacket[]>("SELECT COALESCE(p.activity_code,CASE WHEN t.kind='restaurant' THEN 'restaurant' ELSE '' END) AS activity_code FROM tenants t LEFT JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.id=? LIMIT 1",[id]);
+  const [profile]=await database().execute<RowDataPacket[]>("SELECT COALESCE(NULLIF(p.activity_code,''),CASE WHEN t.kind='restaurant' THEN 'restaurant' ELSE '' END) AS activity_code FROM tenants t LEFT JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.id=? LIMIT 1",[id]);
   const activity=String(profile[0]?.activity_code??"");
   const featureKey=["carwash","automotive","laundry","salon","publicworks"].includes(activity)?"catalog":"digital_menu";
   const categoryTable=activity==="restaurant"?"restaurant_menu_categories":"catalog_categories";

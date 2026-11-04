@@ -43,6 +43,7 @@ test("upgrade choices display genuine activity-specific plan grants and present 
   assert.ok(api.includes(term),term);
  assert.match(api,/LEFT JOIN tenant_business_profiles p ON p\.tenant_id=t\.id/);
  assert.match(api,/CASE WHEN t\.kind=\x27restaurant\x27 THEN \x27restaurant\x27/);
+ assert.match(api,/NULLIF\(p\.activity_code,\x27\x27\)/);
  assert.match(api,/featureKey=\["carwash","automotive","laundry","salon","publicworks"\]/);
  assert.match(api,/requireTenantMembership\(user,id,\["owner"\]/);
  assert.match(api,/status:'pending'|status:"pending"|status=\x27pending\x27/);
