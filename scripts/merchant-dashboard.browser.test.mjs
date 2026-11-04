@@ -229,6 +229,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
  await expect(page.locator(".restaurantApp")).toHaveClass(/restaurantPosFocus/);
  await page.getByRole("button",{name:"الخروج من وضع تكبير نقطة البيع",exact:true}).click();
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantPosFocus/);
  const previousOrdersToggle=page.locator(".restaurantPosPreviousOrdersToggle");
  await expect(previousOrdersToggle).toHaveAttribute("aria-expanded","false");
  await expect(page.locator(".restaurantOrderCards article")).toHaveCount(0);

@@ -55,7 +55,8 @@ test("global responsiveness never changes POS fullscreen or color themes",()=>{
 test("POS opens in focused mode and adapts catalog density to every activity profile",()=>{
  assert.match(merchant,/useState\(\(\)=>routeParams\.get\("section"\)==="pos"\)/);
  assert.match(merchant,/setWideWorkspace\(section==="pos"\)/);
- assert.match(merchant,/setWideWorkspace\(target==="pos"\)/);
+ assert.match(merchant,/posFocusDismissed=useRef\(false\)/);
+ assert.match(merchant,/setWideWorkspace\(target==="pos"&&!posFocusDismissed\.current\)/);
  for(const activity of ["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]){
   assert.ok(posCss.includes(`data-activity="${activity}"`),`Missing POS layout profile for ${activity}`);
  }
