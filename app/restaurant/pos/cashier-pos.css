@@ -57,15 +57,3 @@
 @media(max-width:760px){.foonCashierPage{padding:8px}.foonCashierHeader{margin-bottom:8px}.foonCashierPage .restaurantPosOrdersToolbar{flex-wrap:wrap;gap:8px}.foonCashierPage .restaurantPosModern{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"catalog" "checkout";}.foonCashierPage .restaurantPosCheckout{position:static;max-height:none;overflow:visible}.foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.foonCashierPage .restaurantPosProductMedia{height:112px}.foonCashierPage .restaurantPosPaymentFields{grid-template-columns:1fr 1fr}}
 @media(max-width:360px){.foonCashierPage .restaurantPosProduct{padding:7px}.foonCashierPage .restaurantPosProductMedia{height:92px}.foonCashierPage .restaurantPosCheckout{padding:9px}.foonCashierPage .restaurantPosCartLineActions button{min-width:28px}}
 @media(prefers-reduced-motion:reduce){.foonCashierPage *{transition:none!important}}
-
-/* Cashier cart access in compact / expanded view: switch between catalog and checkout. */
-.foonCashierPage .restaurantPosCartToggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:7px 13px;border:0;border-radius:9px;background:#2563eb;color:#fff;font-size:12px;font-weight:850;white-space:nowrap;cursor:pointer}
-.foonCashierPage .restaurantPosCartToggle span{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:99px;background:#fff;color:#1d4ed8;font-size:11px;font-variant-numeric:tabular-nums}
-.foonCashierPage:has(.restaurantPosModern[data-pos-theme=dark]) .restaurantPosCartToggle{background:#3b82f6;color:#fff}
-@media(max-width:900px){
- .foonCashierPage .restaurantPosModern:not([data-cart-open=true]) .restaurantPosCheckout{display:none!important}
- .foonCashierPage .restaurantPosModern[data-cart-open=true] .restaurantPosCatalog{display:none!important}
- .foonCashierPage .restaurantPosModern[data-cart-open=true] .restaurantPosCheckout{display:block!important;grid-area:checkout;width:100%;max-height:none;min-height:0;overflow:visible}
- .foonCashierPage .restaurantPosModern[data-cart-open=true]{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"checkout"!important;overflow:visible!important;height:auto!important}
- .foonCashierPage .restaurantPosCartToggle{margin-inline-start:auto}
-}

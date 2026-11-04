@@ -319,6 +319,7 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const roomServicePayload={storeSlug:"operations-owner-a",branchId:a.branch,channel:"room_service",roomNumber:"101",requestKey:randomUUID(),items:[{id:item,quantity:1,options:[option]}]};
   const unregisteredRoom=await call("/api/customer/orders","POST",{...roomServicePayload,roomNumber:"999",requestKey:randomUUID()},customer.cookie);assert.equal(unregisteredRoom.status,409);assert.equal(unregisteredRoom.body.code,"HOTEL_ROOM_UNAVAILABLE");
   const roomServiceOrder=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceOrder.status,201,JSON.stringify(roomServiceOrder.body));assert.equal(roomServiceOrder.body.total,25);
+  const staffRoomService=await call("/api/restaurant/operations/pos","POST",{branchId:a.branch,channel:"room_service",roomNumber:"101",items:[{id:item,quantity:1,options:[option]}]},a.cookie,a.tenant);assert.equal(staffRoomService.status,201,JSON.stringify(staffRoomService.body));
   const roomServiceReplay=await call("/api/customer/orders","POST",roomServicePayload,customer.cookie);assert.equal(roomServiceReplay.status,201);assert.equal(roomServiceReplay.body.id,roomServiceOrder.body.id);
   const [[roomServiceSnapshot]]=await db.execute("SELECT channel,checkout_snapshot FROM restaurant_orders WHERE id=? AND tenant_id=?",[roomServiceOrder.body.id,a.tenant]);assert.equal(roomServiceSnapshot.channel,"room_service");const savedRoomSnapshot=typeof roomServiceSnapshot.checkout_snapshot==="string"?JSON.parse(roomServiceSnapshot.checkout_snapshot):roomServiceSnapshot.checkout_snapshot;assert.equal(savedRoomSnapshot.hotelRoom.roomNumber,"101");
   // A saved room entered with Arabic-Indic digits must be usable from the
@@ -688,6 +689,9 @@ test("restaurant operations preserve tenant, role, plan, pricing and transaction
   const paidItem=await save(a,"menu","Paid Tea",{price:7,categoryId:categoryA});
   const paidKey=randomUUID(),paidBody={branchId:a.branch,channel:"takeaway",items:[{id:paidItem,quantity:1}],paymentStatus:"paid",paymentMethod:"cash",requestKey:paidKey};
   const paid=await call("/api/restaurant/operations/pos","POST",paidBody,a.cookie,a.tenant);assert.equal(paid.status,201,JSON.stringify(paid.body));
+  const transferBody={...paidBody,requestKey:randomUUID(),paymentMethod:"bank_transfer"};
+  const transferPaid=await call("/api/restaurant/operations/pos","POST",transferBody,a.cookie,a.tenant);assert.equal(transferPaid.status,201,JSON.stringify(transferPaid.body));
+  const [[transferPayment]]=await db.execute("SELECT JSON_UNQUOTE(JSON_EXTRACT(checkout_snapshot, '$.manualPayment.method')) AS method FROM restaurant_orders WHERE id=?",[transferPaid.body.id]);assert.equal(transferPayment.method,"bank_transfer");
   const paidReplay=await call("/api/restaurant/operations/pos","POST",paidBody,a.cookie,a.tenant);assert.equal(paidReplay.status,201);assert.equal(paidReplay.body.id,paid.body.id);
   
   // Same requestKey with a different payment claim must never modify an existing order.

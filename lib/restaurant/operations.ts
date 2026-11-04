@@ -570,7 +570,7 @@ export async function createOrder(db:PoolConnection,tenantId:string,actor:string
 // Reuses updateOrder so role, transition, receipt-print and audit rules stay identical.
 export async function recordManualPaymentAtCreate(db:PoolConnection,tenantId:string,actor:string,role:string,orderId:string,body:Record<string,unknown>){
  if(body.paymentStatus===undefined||body.paymentStatus===null||body.paymentStatus==="unpaid")return;
- if(body.paymentStatus!=="paid"||!["cash","card","other"].includes(String(body.paymentMethod)))throw new ResourceError("INVALID_INPUT");
+ if(body.paymentStatus!=="paid"||!["cash","card","bank_transfer","other"].includes(String(body.paymentMethod)))throw new ResourceError("INVALID_INPUT");
  if(!["owner","manager","cashier"].includes(role))throw new ResourceError("FORBIDDEN");
  const [rows]=await db.execute<RowDataPacket[]>("SELECT payment_status,version FROM restaurant_orders WHERE id=? AND tenant_id=? FOR UPDATE",[orderId,tenantId]);
  if(!rows[0])throw new ResourceError("ORDER_NOT_FOUND");
