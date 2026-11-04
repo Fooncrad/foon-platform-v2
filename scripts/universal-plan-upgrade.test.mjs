@@ -40,9 +40,9 @@ test("category and item entitlement blocks provide a recovery path in every edit
 test("upgrade choices display genuine activity-specific plan grants and present correct quota",()=>{
  const api=read("app/api/tenant/subscription-requests/route.ts");
  for(const term of ["tenantEntitlement","restaurant_menu_categories","catalog_categories","package_plan_activity_features","package_plan_prices","catalog_limit","catalog_enabled","quota:{used:"])
+  assert.ok(api.includes(term),term);
  assert.match(api,/LEFT JOIN tenant_business_profiles p ON p\.tenant_id=t\.id/);
  assert.match(api,/CASE WHEN t\.kind=\x27restaurant\x27 THEN \x27restaurant\x27/);
-  assert.ok(api.includes(term),term);
  assert.match(api,/featureKey=\["carwash","automotive","laundry","salon","publicworks"\]/);
  assert.match(api,/requireTenantMembership\(user,id,\["owner"\]/);
  assert.match(api,/status:'pending'|status:"pending"|status=\x27pending\x27/);
