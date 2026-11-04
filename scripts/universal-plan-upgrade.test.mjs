@@ -49,7 +49,7 @@ test("upgrade choices display genuine activity-specific plan grants and present 
  assert.match(api,/BINARY af\.activity_code=BINARY t\.activity_code/);
  assert.match(api,/\[featureKey,featureKey,id\]/);
  assert.match(api,/featureKey=\["carwash","automotive","laundry","salon","publicworks"\]/);
- assert.ok(api.includes("requireTenantMembership(user,id,roles,false)"));
+ assert.ok(api.includes('requireTenantMembership(user,id,["owner"],false)'));
  assert.match(api,/status:'pending'|status:"pending"|status=\x27pending\x27/);
  const ui=read("app/restaurant/payments/merchant-subscription-request.tsx");
  for(const term of ["availablePlans","catalog_limit","catalog_enabled","quota.used","atLimit","pending","/contact","MerchantSubscriptionRequest"])
@@ -70,14 +70,16 @@ test("paid upgrades still require manual admin approval and never bypass an enti
  assert.match(cap,/assertCatalogCapacity/);
 });
 
-test("plan comparison is readable to owners and managers while submission remains owner-only",()=>{
+test("subscription payment history and submission APIs remain owner-only while managers see read-only plan features",()=>{
  const api=read("app/api/tenant/subscription-requests/route.ts");
+ const dashboard=read("app/restaurant/merchant-dashboard.tsx");
  const get=api.slice(api.indexOf("export async function GET"),api.indexOf("export async function POST"));
  const post=api.slice(api.indexOf("export async function POST"));
- assert.ok(api.includes('async function merchant(id:unknown,roles:("owner"|"manager")[]=["owner"])'));
- assert.ok(get.includes('merchant(id,["owner","manager"])'));
+ assert.ok(api.includes('requireTenantMembership(user,id,["owner"],false)'));
+ assert.ok(get.includes("merchant(id)"));
  assert.ok(post.includes("merchant(id)"));
- assert.ok(!post.includes('merchant(id,["owner","manager"])'));
+ assert.ok(dashboard.includes('data.role==="manager"&&<p className="restaurantFinePrint"'));
+ assert.ok(dashboard.includes("Only the business owner can request a plan upgrade."));
 });
 
 test("legacy tenants without a business profile retain the SAR plan-price fallback",()=>{
