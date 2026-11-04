@@ -27,12 +27,11 @@ test('subscription POST caps JSON and preserves owner and pending-payment checks
  assert.match(route,/readLimitedJson\(request,2048\)/);
  assert.doesNotMatch(route,/request\.json\(\)/);
  assert.match(route,/BODY_TOO_LARGE/);
+ assert.ok(route.includes('requireTenantMembership(user,id,["owner"],false)'));
  const get=route.slice(route.indexOf('export async function GET'),route.indexOf('export async function POST'));
  const post=route.slice(route.indexOf('export async function POST'));
- assert.ok(route.includes('async function merchant(id:unknown,roles:("owner"|"manager")[]=["owner"])'));
- assert.ok(get.includes('merchant(id,["owner","manager"])'));
- assert.ok(post.includes('merchant(id)'));
- assert.ok(!post.includes('merchant(id,["owner","manager"])'));
+ assert.ok(get.includes("merchant(id)"));
+ assert.ok(post.includes("merchant(id)"));
  assert.match(route,/status='active' FOR UPDATE/);
  assert.match(route,/status='pending' LIMIT 1/);
 });
