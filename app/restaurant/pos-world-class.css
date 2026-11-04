@@ -305,3 +305,39 @@
   grid-column:1/3;
   grid-row:1;
 }
+.restaurantApp[data-theme=dark] .restaurantPosModern :is(.restaurantPosSectionHeading h3,.restaurantPosProduct>b,.restaurantPosProductPrice,.restaurantPosCartLineName b){color:var(--pos-ink)}
+.restaurantApp[data-theme=dark] .restaurantPosModern :is(.restaurantPosCategories button,.restaurantPosViewFilters button,.restaurantPosOrderSummaryHeader span,.restaurantPosCartLineName small,.restaurantPosEmptyCart){color:var(--pos-muted)}
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosCategories button[aria-pressed=true],
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosViewFilters button[aria-pressed=true]{border-color:#3b82f6;background:#1d4ed833;color:#bfdbfe}
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosProductMedia{background:#0f172a}
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosAddedQuantity{background:#1d4ed8}
+.restaurantApp[data-theme=dark] .restaurantPosModern :is(.restaurantPosCartLine,.restaurantPosCartLineActions button,.restaurantPosCartLineActions input,.restaurantPosInvoiceBreakdown,.restaurantPosPaymentFields,.restaurantPosFullField textarea,.restaurantPosPaymentChoices label){border-color:var(--pos-line);background:#0f172a;color:var(--pos-ink)}
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosInvoiceBreakdown h4{color:var(--pos-ink)}
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosInvoiceBreakdown>div>span:last-child,
+.restaurantApp[data-theme=dark] .restaurantPosModern .restaurantPosInvoiceBreakdown>p{color:var(--pos-muted)}
+
+/* Activity profiles tune the catalog for the way each business sells. */
+.restaurantApp:is([data-activity="restaurant"],[data-activity="cafe"],[data-activity="sweets"]) .restaurantPosMenu{
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,185px),1fr));
+}
+.restaurantApp[data-activity="grocery"] .restaurantPosMenu{
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,145px),1fr));
+}
+.restaurantApp[data-activity="grocery"] .restaurantPosProductMedia{
+  height:104px;
+  aspect-ratio:4/3;
+}
+.restaurantApp:is([data-activity="clothing"],[data-activity="perfume"],[data-activity="accessories"],[data-activity="watches"],[data-activity="gifts"],[data-activity="ecommerce"]) .restaurantPosMenu{
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,175px),1fr));
+}
+.restaurantApp:is([data-activity="clothing"],[data-activity="perfume"],[data-activity="accessories"],[data-activity="watches"],[data-activity="gifts"],[data-activity="ecommerce"]) .restaurantPosProductMedia{
+  height:auto;
+  min-height:120px;
+  aspect-ratio:1/1;
+}
+.restaurantApp:is([data-activity="carwash"],[data-activity="laundry"],[data-activity="automotive"],[data-activity="salon"],[data-activity="publicworks"]) .restaurantPosMenu{
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,225px),1fr));
+}
+.restaurantApp:is([data-activity="carwash"],[data-activity="laundry"],[data-activity="automotive"],[data-activity="salon"],[data-activity="publicworks"]) .restaurantPosProductMedia{
+  height:132px;
+}

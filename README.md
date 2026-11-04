@@ -37,6 +37,7 @@ Migration `0024_restaurant_operations.sql` adds tenant-scoped operational resour
 
 - Menu categories/items, tables, inventory, suppliers, purchases, employees/attendance, coupons/campaign drafts, reservations/waitlist, remote tasks/workers/messages/deliveries, branch settings and storefront branding have persisted create/edit/archive flows.
 - POS and customer ordering calculate prices and coupon discounts on the server. Request keys prevent duplicate orders after a retry. Order-state transitions, manual payment/refund records and kitchen access are controlled by tenant roles.
+- POS opens as a focused workspace and adapts product density for hospitality, grocery, retail and service activities while keeping the same server-authoritative checkout.
 - Receiving a purchase updates inventory atomically; received purchase quantities are immutable. Record versions protect concurrent changes. Staff linking requires an existing active account; managers cannot promote or suspend managers or owners.
 - Storefront image uploads accept PNG/JPEG/WebP up to 2 MB per image with a 50 MB tenant storage cap. Public menus use saved branding and available menu items. Customer orders are tied to their store/customer relationship.
 - Reports use stored paid orders, including branch and product totals. Session management exposes no token hashes and can revoke only the signed-in user's other sessions. Background dashboard reads do not extend the super-admin inactivity timeout.

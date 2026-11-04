@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const source=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const css=source("app/site-wide-responsive-polish.css");
+const posCss=source("app/restaurant/pos-world-class.css");
+const merchant=source("app/restaurant/merchant-dashboard.tsx");
 const layout=source("app/layout.tsx");
 const admin=source("app/admin/layout.tsx");
 
@@ -49,4 +51,15 @@ test("global responsiveness never changes POS fullscreen or color themes",()=>{
  assert.doesNotMatch(css,/(?:position|display)\s*:\s*none\s*!important/);
  assert.doesNotMatch(css,/overflow-x:hidden/);
  assert.match(css,/@media print/);
+});
+test("POS opens in focused mode and adapts catalog density to every activity profile",()=>{
+ assert.match(merchant,/useState\(\(\)=>routeParams\.get\("section"\)==="pos"\)/);
+ assert.match(merchant,/setWideWorkspace\(section==="pos"\)/);
+ assert.match(merchant,/setWideWorkspace\(target==="pos"\)/);
+ for(const activity of ["restaurant","cafe","sweets","grocery","clothing","perfume","accessories","watches","gifts","ecommerce","carwash","laundry","automotive","salon","publicworks"]){
+  assert.ok(posCss.includes(`data-activity="${activity}"`),`Missing POS layout profile for ${activity}`);
+ }
+ assert.match(posCss,/data-activity="grocery"[\s\S]*?height:104px/);
+ assert.match(posCss,/aspect-ratio:1\/1/);
+ assert.match(posCss,/data-activity="salon"[\s\S]*?min\(100%,225px\)/);
 });

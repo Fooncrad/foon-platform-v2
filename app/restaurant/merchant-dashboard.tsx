@@ -116,7 +116,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const planNotice=data.adminAccess?undefined:localizedSubscriptionNotice(data.subscription?.status,uiLanguage,!canManage,data.subscription?.endsAt);
  const router=useRouter(),searchRef=useRef<HTMLInputElement>(null),drawerCloseRef=useRef<HTMLButtonElement>(null);
  const pathname=usePathname(),routeParams=useSearchParams();
- const [wideWorkspace,setWideWorkspace]=useState(false);
+ const [wideWorkspace,setWideWorkspace]=useState(()=>routeParams.get("section")==="pos");
  const [collapsedNavGroups,setCollapsedNavGroups]=useState<MerchantNavGroup[]>([]);
  const {mode:themeMode,resolved:themeResolved}=useWorkspaceTheme();
 
@@ -194,7 +194,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   // Schedule state synchronization outside the effect body to avoid render cascades.
   let cancelled=false;
   const target=requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview";
-  queueMicrotask(()=>{if(!cancelled){setActive(target);setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
+  queueMicrotask(()=>{if(!cancelled){setActive(target);setWideWorkspace(target==="pos");setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
   return ()=>{cancelled=true;};
  },[pathname,routeParams,data.tenantId,visibleKeys]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
@@ -234,7 +234,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  const selected=visible.find(m=>m.key===active)??visible[0];
  const shownBranches=data.branches.filter(b=>!branch||b.id===branch);
  const route=activityWorkspaceUrl(data.activityCode),paymentRoute=activityPaymentsUrl(data.activityCode);
- function navigate(section:Section){if(!visible.some(m=>m.key===section))return;setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(section)));if(section==="overview")setRevision(v=>v+1);setActive(section);setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
+ function navigate(section:Section){if(!visible.some(m=>m.key===section))return;setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(section)));if(section==="overview")setRevision(v=>v+1);setActive(section);setWideWorkspace(section==="pos");setDrawer(false);setSearchOpen(false);setQuery("");setMessage("");window.history.pushState(null,"",activitySectionUrl(data.activityCode,section));}
  async function switchTenant(nextTenant:string){
   if(nextTenant===data.tenantId||busy)return;
   setBusy(true);setMessage("");
@@ -309,5 +309,3 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   {searchOpen&&<div className="restaurantSearchOverlay" role="dialog" aria-modal="true" aria-label={tr("بحث في أقسام المطعم","Search business sections","Rechercher les sections")} onKeyDown={trapFocus}><button className="restaurantBackdrop" tabIndex={-1} aria-label={tr("إغلاق البحث","Close search","Fermer la recherche")} onClick={()=>setSearchOpen(false)}/><div className="restaurantSearchDialog"><header><MerchantIcon name="search"/><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} aria-label={tr("ابحث عن قسم","Search for a section","Rechercher une section")} placeholder={tr("ابحث عن قسم في المطعم…","Search for a section…","Rechercher une section…")}/><button onClick={()=>setSearchOpen(false)} aria-label={translateUi("إغلاق البحث")}>×</button></header><nav>{visible.filter(m=>navTitle(m.key,m.label).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(m=><button key={m.key} onClick={()=>navigate(m.key)}><MerchantIcon name={activitySectionIcon(data.activityCode,m.key,m.icon)}/>{navTitle(m.key,m.label)}<MerchantIcon name="arrow"/></button>)}</nav>{!visible.some(m=>navTitle(m.key,m.label).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))&&<p>{tr("لا توجد أقسام مطابقة.","No matching sections.","Aucune section correspondante.")}</p>}</div></div>}
  </div>;
 }
-
-
