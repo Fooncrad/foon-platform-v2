@@ -49,7 +49,7 @@ test("upgrade choices display genuine activity-specific plan grants and present 
  assert.match(api,/BINARY af\.activity_code=BINARY t\.activity_code/);
  assert.match(api,/\[featureKey,featureKey,id\]/);
  assert.match(api,/featureKey=\["carwash","automotive","laundry","salon","publicworks"\]/);
- assert.match(api,/requireTenantMembership\(user,id,\["owner"\]/);
+ assert.ok(api.includes("requireTenantMembership(user,id,roles,false)"));
  assert.match(api,/status:'pending'|status:"pending"|status=\x27pending\x27/);
  const ui=read("app/restaurant/payments/merchant-subscription-request.tsx");
  for(const term of ["availablePlans","catalog_limit","catalog_enabled","quota.used","atLimit","pending","/contact","MerchantSubscriptionRequest"])
