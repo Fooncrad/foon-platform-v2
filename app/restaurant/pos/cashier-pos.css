@@ -293,3 +293,60 @@
   .foonCashierPage .restaurantPosProductMedia{height:82px;flex-basis:82px}
   .foonCashierPage .restaurantPosProduct>button{font-size:12px}
 }
+
+
+/* Cashier zoom safety: keep catalog and checkout visible at every desktop viewport height. */
+.foonCashierPage{
+  height:auto;
+  min-height:100dvh;
+  overflow:visible;
+}
+.foonCashierPage>.restaurantPanel{
+  min-height:0;
+  height:auto;
+  overflow:visible;
+}
+.foonCashierPage .restaurantPosModern{
+  height:auto;
+  min-height:calc(100dvh - 94px);
+  max-height:none;
+  overflow:visible;
+  grid-template-rows:minmax(0,1fr);
+  align-items:stretch;
+}
+.foonCashierPage .restaurantPosCatalog{
+  min-height:0;
+  height:auto;
+  overflow:visible;
+}
+.foonCashierPage .restaurantPosMenu{
+  min-height:240px;
+  max-height:calc(100dvh - 300px);
+  overflow-y:auto;
+}
+.foonCashierPage .restaurantPosCheckout{
+  position:sticky;
+  top:8px;
+  height:auto;
+  min-height:0;
+  max-height:calc(100dvh - 32px);
+  overflow-y:auto;
+  align-self:start;
+}
+.foonCashierPage .restaurantPosCheckout>.restaurantPrimary{
+  position:sticky;
+  bottom:0;
+}
+@media(max-height:620px) and (min-width:901px){
+  .foonCashierPage{height:auto;min-height:100dvh;overflow:visible}
+  .foonCashierPage>.restaurantPanel{overflow:visible}
+  .foonCashierPage .restaurantPosModern{min-height:0;height:auto;overflow:visible;align-items:start}
+  .foonCashierPage .restaurantPosCatalog{height:auto;overflow:visible}
+  .foonCashierPage .restaurantPosMenu{max-height:none;min-height:180px;overflow:visible}
+  .foonCashierPage .restaurantPosCheckout{position:sticky;top:6px;max-height:calc(100dvh - 12px);overflow-y:auto}
+}
+@media(max-width:900px){
+  .foonCashierPage .restaurantPosModern{min-height:0;height:auto;overflow:visible}
+  .foonCashierPage .restaurantPosMenu{max-height:none;min-height:180px;overflow:visible}
+  .foonCashierPage .restaurantPosCheckout{position:static;max-height:none;overflow:visible}
+}
