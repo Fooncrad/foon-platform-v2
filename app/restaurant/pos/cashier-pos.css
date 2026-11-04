@@ -57,3 +57,239 @@
 @media(max-width:760px){.foonCashierPage{padding:8px}.foonCashierHeader{margin-bottom:8px}.foonCashierPage .restaurantPosOrdersToolbar{flex-wrap:wrap;gap:8px}.foonCashierPage .restaurantPosModern{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"catalog" "checkout";}.foonCashierPage .restaurantPosCheckout{position:static;max-height:none;overflow:visible}.foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.foonCashierPage .restaurantPosProductMedia{height:112px}.foonCashierPage .restaurantPosPaymentFields{grid-template-columns:1fr 1fr}}
 @media(max-width:360px){.foonCashierPage .restaurantPosProduct{padding:7px}.foonCashierPage .restaurantPosProductMedia{height:92px}.foonCashierPage .restaurantPosCheckout{padding:9px}.foonCashierPage .restaurantPosCartLineActions button{min-width:28px}}
 @media(prefers-reduced-motion:reduce){.foonCashierPage *{transition:none!important}}
+
+
+/* Cashier-first screen: keep the selling flow dominant and remove manager-style chrome. */
+.foonCashierPage{
+  box-sizing:border-box;
+  width:100%;
+  min-height:100dvh;
+  height:100dvh;
+  overflow:hidden;
+  padding:10px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background:#eef2f7;
+}
+.foonCashierPage *,
+.foonCashierPage *::before,
+.foonCashierPage *::after{box-sizing:border-box}
+.foonCashierHeader{
+  flex:0 0 54px;
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:7px 14px;
+  border-radius:10px;
+  box-shadow:0 1px 3px #0f172a0a;
+}
+.foonCashierPage>.restaurantPanel{
+  flex:1 1 auto;
+  width:100%;
+  max-width:none;
+  min-height:0;
+  height:auto;
+  margin:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.foonCashierPage .restaurantActionToast{flex:0 0 auto;margin:0}
+.foonCashierPage .restaurantPosQuickBar{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:nowrap;
+  gap:12px;
+  min-height:34px;
+  margin:0;
+  padding:5px 10px;
+  overflow-x:auto;
+  white-space:nowrap;
+  border-radius:8px;
+}
+.foonCashierPage .restaurantPosToolsWrap{flex:0 0 auto;max-height:28vh;overflow:auto}
+.foonCashierPage .restaurantPosSyncBar{margin:0;padding:8px 10px}
+.foonCashierPage .restaurantPosOrdersToolbar{display:none!important}
+.foonCashierPage .restaurantPosModern{
+  flex:1 1 auto;
+  width:100%;
+  min-height:0;
+  height:100%;
+  max-height:none;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(340px,390px)!important;
+  grid-template-rows:minmax(0,1fr);
+  grid-template-areas:"catalog checkout";
+  align-items:stretch;
+  gap:12px!important;
+  padding:0;
+  overflow:hidden;
+  background:transparent;
+}
+.foonCashierPage .restaurantPosCatalog{
+  grid-area:catalog;
+  min-width:0;
+  min-height:0;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  overflow:hidden;
+}
+.foonCashierPage .restaurantPosCatalog>.restaurantPosSectionHeading{
+  flex:0 0 auto;
+  padding:2px 2px 0;
+}
+.foonCashierPage .restaurantPosCatalog>.restaurantPosSectionHeading h3{font-size:19px}
+.foonCashierPage .restaurantPosBrowse{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.foonCashierPage .restaurantPosBrowse input[type=search]{
+  width:100%;
+  min-height:46px;
+  border-radius:9px;
+  background:#fff;
+  font-size:15px;
+}
+.foonCashierPage .restaurantPosCategories{
+  flex:0 0 auto;
+  min-height:42px;
+  padding:0 0 4px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:thin;
+}
+.foonCashierPage .restaurantPosCategories button{
+  flex:0 0 auto;
+  min-height:36px;
+  padding:6px 13px;
+  font-weight:700;
+}
+.foonCashierPage .restaurantPosViewFilters{flex:0 0 auto}
+.foonCashierPage .restaurantPosMenu{
+  flex:1 1 auto;
+  min-height:0;
+  align-content:start;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px;
+  padding:2px 3px 12px 2px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+.foonCashierPage .restaurantPosProduct{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  padding:9px;
+  border-radius:10px;
+  box-shadow:0 1px 2px #0f172a0a;
+}
+.foonCashierPage .restaurantPosProductMedia{height:112px;flex:0 0 112px}
+.foonCashierPage .restaurantPosProduct b{min-height:2.5em;line-height:1.35}
+.foonCashierPage .restaurantPosProductPrice{margin-top:auto}
+.foonCashierPage .restaurantPosProduct>button{margin-top:4px;min-height:38px}
+.foonCashierPage .restaurantPosCheckout{
+  grid-area:checkout;
+  width:100%;
+  min-width:0;
+  min-height:0;
+  height:100%;
+  max-height:none;
+  position:relative;
+  top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:12px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  border-radius:11px;
+  box-shadow:0 2px 8px #0f172a0a;
+}
+.foonCashierPage .restaurantPosCheckout>.restaurantPosSectionHeading{flex:0 0 auto}
+.foonCashierPage .restaurantPosOrderSummary{flex:0 0 auto;min-height:90px}
+.foonCashierPage .restaurantPosCartLines{
+  max-height:min(28vh,250px);
+  overflow-y:auto;
+}
+.foonCashierPage .restaurantPosCheckout>label,
+.foonCashierPage .restaurantPosPaymentFields{flex:0 0 auto}
+.foonCashierPage .restaurantPosPaymentFields{grid-template-columns:1fr 1fr}
+.foonCashierPage .restaurantPosInvoiceBreakdown{flex:0 0 auto;margin-top:2px}
+.foonCashierPage .restaurantPosCheckout>.restaurantPrimary{
+  position:sticky;
+  bottom:0;
+  z-index:3;
+  flex:0 0 auto;
+  min-height:52px;
+  margin-top:auto;
+  box-shadow:0 -5px 12px #fff;
+}
+.foonCashierPage .restaurantPosCheckout>.restaurantFinePrint{flex:0 0 auto;margin:0}
+.foonCashierPage .restaurantPosPreviousOrdersBar{
+  flex:0 0 auto;
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+.foonCashierPage .restaurantPosPreviousOrdersToggle{min-height:32px}
+.foonCashierPage .restaurantOfflineBackup{display:none!important}
+.foonCashierPage .restaurantPosWorkspace> :not(.restaurantPosModern):not(.restaurantPosQuickBar):not(.restaurantPosToolsWrap):not(.restaurantActionToast):not(.restaurantPosPreviousOrdersBar){flex:0 0 auto}
+@media(min-width:1500px){
+  .foonCashierPage{padding:12px 18px}
+  .foonCashierPage .restaurantPosModern{grid-template-columns:minmax(0,1fr) minmax(370px,420px)!important;gap:14px!important}
+  .foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px}
+  .foonCashierPage .restaurantPosProductMedia{height:132px;flex-basis:132px}
+}
+@media(max-width:900px){
+  .foonCashierPage{height:auto;min-height:100dvh;overflow:visible;padding:8px}
+  .foonCashierPage>.restaurantPanel{overflow:visible}
+  .foonCashierPage .restaurantPosModern{
+    height:auto;
+    max-height:none;
+    overflow:visible;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:auto auto;
+    grid-template-areas:"catalog" "checkout";
+  }
+  .foonCashierPage .restaurantPosCatalog{height:auto;overflow:visible}
+  .foonCashierPage .restaurantPosMenu{
+    flex:0 0 auto;
+    min-height:180px;
+    max-height:none;
+    grid-template-columns:repeat(auto-fill,minmax(145px,1fr));
+    overflow:visible;
+  }
+  .foonCashierPage .restaurantPosCheckout{
+    height:auto;
+    max-height:none;
+    overflow:visible;
+  }
+  .foonCashierPage .restaurantPosCheckout>.restaurantPrimary{position:static;box-shadow:none}
+}
+@media(max-width:560px){
+  .foonCashierPage{padding:6px;gap:6px}
+  .foonCashierHeader{flex-basis:48px;padding:6px 9px}
+  .foonCashierMark{width:34px;height:34px}
+  .foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .foonCashierPage .restaurantPosProduct{padding:7px}
+  .foonCashierPage .restaurantPosProductMedia{height:98px;flex-basis:98px}
+  .foonCashierPage .restaurantPosCheckout{padding:9px}
+  .foonCashierPage .restaurantPosPaymentFields{grid-template-columns:1fr}
+  .foonCashierPage .restaurantPosCategories{max-width:100%}
+  .foonCashierPage .restaurantPosQuickBar{font-size:11px}
+}
+@media(max-width:360px){
+  .foonCashierPage .restaurantPosMenu{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .foonCashierPage .restaurantPosProductMedia{height:82px;flex-basis:82px}
+  .foonCashierPage .restaurantPosProduct>button{font-size:12px}
+}
