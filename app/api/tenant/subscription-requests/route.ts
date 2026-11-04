@@ -12,17 +12,17 @@ export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store"};
 const reply=(value:object,status=200)=>NextResponse.json(value,{status,headers});
 const uuid=(x:unknown):x is string=>typeof x==="string"&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(x);
-async function merchant(id:unknown){
+async function merchant(id:unknown,roles:("owner"|"manager")[]=["owner"]){
  const user=await currentUserId();if(!user)return {status:401};
  if(!uuid(id))return {status:400};
  try{
-  const role=await requireTenantMembership(user,id,["owner"],false);
+  const role=await requireTenantMembership(user,id,roles,false);
   return role.adminAccess?{status:403}:{status:200,tenantId:id};
  }catch{return {status:403};}
 }
 export async function GET(request:Request){
  const id=new URL(request.url).searchParams.get("tenantId");
- const auth=await merchant(id);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
+ const auth=await merchant(id,["owner","manager"]);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
  try{
   const [profile]=await database().execute<RowDataPacket[]>("SELECT COALESCE(NULLIF(p.activity_code,''),CASE WHEN t.kind='restaurant' THEN 'restaurant' ELSE '' END) AS activity_code FROM tenants t LEFT JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.id=? LIMIT 1",[id]);
   const activity=String(profile[0]?.activity_code??"");
@@ -67,9 +67,12 @@ export async function POST(request:Request){
   const [pending]=await db.execute<RowDataPacket[]>("SELECT id FROM platform_payment_requests WHERE tenant_id=? AND status='pending' LIMIT 1",[id]);
   if(pending.length){await db.rollback();return reply({ok:false,code:"PAYMENT_ALREADY_PENDING"},409);}
   const [prices]=await db.execute<RowDataPacket[]>(
-   "SELECT pr.price,pr.currency FROM package_plan_prices pr JOIN package_plans p ON p.id=pr.plan_id AND p.enabled=TRUE AND p.code<>'free' "+
-   "JOIN tenant_business_profiles b ON b.tenant_id=? AND b.currency=pr.currency "+
-   "WHERE pr.plan_id=? AND pr.billing_cycle=? AND pr.enabled=TRUE AND pr.price>0 LIMIT 1",
+   "SELECT pr.price,pr.currency FROM package_plan_prices pr "+
+   "JOIN package_plans p ON BINARY p.id=BINARY pr.plan_id AND p.enabled=TRUE AND p.code<>'free' "+
+   "JOIN tenants t ON BINARY t.id=BINARY ? "+
+   "LEFT JOIN tenant_business_profiles b ON BINARY b.tenant_id=BINARY t.id "+
+   "WHERE BINARY pr.currency=BINARY COALESCE(NULLIF(b.currency,''),'SAR') "+
+   "AND BINARY pr.plan_id=BINARY ? AND pr.billing_cycle=? AND pr.enabled=TRUE AND pr.price>0 LIMIT 1",
    [id,payload.planId,payload.billingCycle]);
   if(!prices.length){await db.rollback();return reply({ok:false,code:"PAID_PLAN_NOT_AVAILABLE"},409);}
   const amount=String(prices[0].price),currency=String(prices[0].currency);
