@@ -332,3 +332,67 @@
   .foonCashierPage .restaurantPosMenu{max-height:none;min-height:180px;overflow:visible}
   .foonCashierPage .restaurantPosCheckout{position:static;max-height:none;overflow:visible}
 }
+
+
+/* Desktop browser zoom: keep checkout beside the catalog even when zoom
+   reduces the CSS viewport below the phone breakpoint. Real touch devices
+   retain the stacked mobile layout. */
+@media (hover: hover) and (pointer: fine) and (max-width: 900px) {
+  .foonCashierPage {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow: visible !important;
+  }
+  .foonCashierPage > .restaurantPanel {
+    min-height: 0;
+    height: auto;
+    overflow: visible !important;
+  }
+  .foonCashierPage .restaurantPosModern {
+    display: grid !important;
+    width: 100%;
+    height: auto !important;
+    min-height: calc(100dvh - 110px);
+    max-height: none !important;
+    overflow: visible !important;
+    grid-template-columns: minmax(210px, min(38vw, 280px)) minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "checkout catalog" !important;
+    align-items: start;
+    gap: 8px !important;
+  }
+  .foonCashierPage .restaurantPosCatalog {
+    grid-area: catalog !important;
+    min-width: 0;
+    min-height: 0;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .foonCashierPage .restaurantPosMenu {
+    min-width: 0;
+    min-height: 180px;
+    max-height: 58dvh !important;
+    overflow-y: auto !important;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  }
+  .foonCashierPage .restaurantPosCheckout {
+    grid-area: checkout !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: sticky !important;
+    top: 8px;
+    width: 100%;
+    min-width: 0;
+    height: auto !important;
+    min-height: 220px;
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto !important;
+    align-self: start;
+  }
+  .foonCashierPage .restaurantPosCheckout > .restaurantPrimary {
+    position: sticky;
+    bottom: 0;
+    flex: 0 0 auto;
+  }
+}
