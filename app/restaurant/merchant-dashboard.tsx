@@ -204,9 +204,8 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
   let cancelled=false;
   const target=requested&&visibleKeys.split("|").includes(requested)?requested as Section:"overview";
   const sectionChanged=syncedActive.current!==target;
-  if(sectionChanged)posFocusDismissed.current=false;
   syncedActive.current=target;
-  queueMicrotask(()=>{if(!cancelled){setActive(target);if(sectionChanged)setWideWorkspace(target==="pos"&&!posFocusDismissed.current);setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
+  queueMicrotask(()=>{if(!cancelled){setActive(target);if(sectionChanged)setWideWorkspaceState(target==="pos"&&!posFocusDismissed.current);setCollapsedNavGroups(groups=>groups.filter(key=>key!==merchantNavGroupFor(target)));}});
   return ()=>{cancelled=true;};
  },[pathname,routeParams,data.tenantId,visibleKeys,setWideWorkspace]);
  // Old bookmarked links may contain tenant/section query parameters. Validate
