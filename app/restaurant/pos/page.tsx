@@ -35,6 +35,6 @@ export default async function CashierPosPage({searchParams}:{searchParams:Promis
  const modules=defaultActivityModules(activity);
  return <main className="foonCashierPage" dir="auto" data-activity={activity}>
   <header className="foonCashierHeader"><div className="foonCashierBrand"><span className="foonCashierMark">F</span><div><strong>FOON POS</strong><small>نقطة البيع · الكاشير</small></div></div><div className="foonCashierBranch"><small>فرع العمل</small><strong>{branches[0].name}</strong></div></header>
-  <CashierPosClient tenantId={workspace.tenant_id} branch={branches[0].id} branches={branches} dining={modules.includes("tables")}/>
+  <CashierPosClient tenantId={workspace.tenant_id} branch={branches[0].id} branches={branches} dining={modules.includes("tables")} roomService={modules.includes("room_service")}/>
  </main>;
 }
