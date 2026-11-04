@@ -29,10 +29,10 @@ test('subscription POST caps JSON and preserves owner and pending-payment checks
  assert.match(route,/BODY_TOO_LARGE/);
  const get=route.slice(route.indexOf('export async function GET'),route.indexOf('export async function POST'));
  const post=route.slice(route.indexOf('export async function POST'));
- assert.match(route,/async function merchant\\(id:unknown,roles:\\("owner"\\|"manager"\\)\\[\\]=\\["owner"\\]\\)/);
- assert.match(get,/merchant\\(id,\\["owner","manager"\\]\\)/);
- assert.match(post,/merchant\\(id\\)/);
- assert.doesNotMatch(post,/merchant\\(id,\\["owner","manager"\\]\\)/);
+ assert.ok(route.includes('async function merchant(id:unknown,roles:("owner"|"manager")[]=["owner"])'));
+ assert.ok(get.includes('merchant(id,["owner","manager"])'));
+ assert.ok(post.includes('merchant(id)'));
+ assert.ok(!post.includes('merchant(id,["owner","manager"])'));
  assert.match(route,/status='active' FOR UPDATE/);
  assert.match(route,/status='pending' LIMIT 1/);
 });
