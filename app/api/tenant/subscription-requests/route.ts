@@ -33,11 +33,11 @@ export async function GET(request:Request){
    database().execute<RowDataPacket[]>(
     "SELECT pp.id AS plan_id,pp.name_ar,pp.name_en,pp.name_fr,pr.billing_cycle,pr.currency,pr.price, "+
     "COALESCE(af.enabled,pf.enabled,0) AS catalog_enabled,CASE WHEN af.plan_id IS NOT NULL THEN af.limit_value ELSE pf.limit_value END AS catalog_limit "+
-    "FROM tenant_business_profiles t JOIN package_plan_prices pr ON pr.currency=t.currency AND pr.enabled=TRUE "+
-    "JOIN package_plans pp ON pp.id=pr.plan_id AND pp.enabled=TRUE AND pp.code<>'free' "+
-    "LEFT JOIN package_plan_features pf ON pf.plan_id=pp.id AND pf.feature_key=? "+
-    "LEFT JOIN package_plan_activity_features af ON af.plan_id=pp.id AND af.activity_code=? AND af.feature_key=? "+
-    "WHERE t.tenant_id=? AND pr.price>0 ORDER BY pp.sort_order,pr.billing_cycle",[featureKey,activity,featureKey,id]),
+    "FROM tenants tenant LEFT JOIN tenant_business_profiles t ON BINARY t.tenant_id=BINARY tenant.id JOIN package_plan_prices pr ON BINARY pr.currency=BINARY COALESCE(NULLIF(t.currency,''),'SAR') AND pr.enabled=TRUE "+
+    "JOIN package_plans pp ON BINARY pp.id=BINARY pr.plan_id AND pp.enabled=TRUE AND pp.code<>'free' "+
+    "LEFT JOIN package_plan_features pf ON BINARY pf.plan_id=BINARY pp.id AND BINARY pf.feature_key=BINARY ? "+
+    "LEFT JOIN package_plan_activity_features af ON BINARY af.plan_id=BINARY pp.id AND BINARY af.activity_code=BINARY t.activity_code AND BINARY af.feature_key=BINARY ? "+
+    "WHERE BINARY tenant.id=BINARY ? AND pr.price>0 ORDER BY pp.sort_order,pr.billing_cycle",[featureKey,featureKey,id]),
    database().execute<RowDataPacket[]>("SELECT id,plan_id,amount,currency,billing_cycle,status,transfer_reference,review_note,created_at FROM platform_payment_requests WHERE tenant_id=? ORDER BY created_at DESC LIMIT 30",[id]),
    database().execute<RowDataPacket[]>("SELECT r.payment_request_id,r.receipt_number,r.amount,r.currency,r.issued_at,p.billing_cycle,pl.name_ar,pl.name_en,pl.name_fr FROM platform_payment_receipts r JOIN platform_payment_requests p ON p.id=r.payment_request_id AND p.tenant_id=r.tenant_id AND p.status='approved' JOIN package_plans pl ON pl.id=p.plan_id WHERE r.tenant_id=? ORDER BY r.issued_at DESC LIMIT 50",[id]),
    database().execute<RowDataPacket[]>("SELECT COUNT(*) AS used FROM "+categoryTable+" WHERE tenant_id=?",[id]),

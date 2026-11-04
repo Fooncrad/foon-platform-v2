@@ -44,6 +44,10 @@ test("upgrade choices display genuine activity-specific plan grants and present 
  assert.match(api,/LEFT JOIN tenant_business_profiles p ON p\.tenant_id=t\.id/);
  assert.match(api,/CASE WHEN t\.kind=\x27restaurant\x27 THEN \x27restaurant\x27/);
  assert.match(api,/NULLIF\(p\.activity_code,\x27\x27\)/);
+ assert.match(api,/FROM tenants tenant LEFT JOIN tenant_business_profiles t ON BINARY t\.tenant_id=BINARY tenant\.id/);
+ assert.match(api,/COALESCE\(NULLIF\(t\.currency,\x27\x27\),\x27SAR\x27\)/);
+ assert.match(api,/af\.activity_code=t\.activity_code/);
+ assert.match(api,/\[featureKey,featureKey,id\]/);
  assert.match(api,/af\.activity_code=\? AND af\.feature_key=\?/);
  assert.match(api,/\[featureKey,activity,featureKey,id\]/);
  assert.match(api,/featureKey=\["carwash","automotive","laundry","salon","publicworks"\]/);
