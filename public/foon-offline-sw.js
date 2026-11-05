@@ -1,6 +1,6 @@
 const CACHE="foon-pos-shell-v5";
 const SHELL=["/offline","/foon-offline-pos.html","/foon-offline-pos.js"];
-const MENU_CACHE="foon-public-menu-v1",MAX_AGE=7*86400000;
+const MENU_CACHE="foon-public-menu-v1",DISPLAY_CACHE="foon-display-public-v1",MAX_AGE=7*86400000;
 // These roots belong to authenticated dashboards, never to public cached menus.
 // Keep activity aliases aligned with ACTIVITY_ROUTE_SLUGS in lib/tenant/workspace-routes.ts.
 const privateRoots=new Set(["restaurant","cafe","sweets","grocery","fashion","perfume","accessories","watches","gifts","ecommerce","carwash","car","laundry","salon","contracting","workspace","business","driver","account","customer","admin","login","register","employee-invite","forgot-password","reset-password","verify-email","receipts"]);
@@ -99,8 +99,47 @@ self.addEventListener("fetch",event=>{
    catch{return cached??Response.error();}
   })());return;
  }
+ if(url.origin===self.location.origin&&/^\\/api\\/display\\/[A-Za-z0-9_-]{32,80}$/.test(url.pathname)&&request.method==="GET"){
+  event.respondWith((async()=>{
+   const cache=await caches.open(DISPLAY_CACHE);
+   try{
+    const response=await fetch(request);
+    if(response.status===401){
+     for(const key of await cache.keys())if(new URL(key.url).pathname===url.pathname)await cache.delete(key);
+     return response;
+    }
+    if(response.ok&&response.headers.get("x-foon-display-offline")==="public"){
+     const savedAt=String(Date.now()),copy=response.clone();
+     await cache.put(request,new Response(copy.body,{headers:new Headers([...copy.headers,["x-foon-saved",savedAt]])}));
+     try{
+      const payload=await response.clone().json();
+      for(const slide of (Array.isArray(payload.slides)?payload.slides:[]).slice(0,80)){
+       const path=typeof slide.media_url==="string"?slide.media_url:"";
+       if(!publicImage(path))continue;
+       try{
+        const asset=await fetch(path,{credentials:"omit",redirect:"error"});
+        if(!asset.ok||!/^image\\/(png|jpeg|webp)$/.test(asset.headers.get("content-type")||""))continue;
+        const blob=await asset.blob();if(blob.size>4000000)continue;
+        await cache.put(path,new Response(blob,{headers:{"content-type":asset.headers.get("content-type")||"image/webp","x-foon-saved":savedAt}}));
+       }catch{/* Keep the cached playlist even if one asset cannot be fetched. */}
+      }
+     }catch{/* A malformed payload is never promoted to a usable offline player. */}
+    }
+    return response;
+   }catch{
+    const saved=await cache.match(request);
+    return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:Response.error();
+   }
+  })());return;
+ }
  if(url.origin===self.location.origin&&publicImage(url.pathname)&&request.destination==="image"){
-  event.respondWith(fetch(request).catch(async()=>{const saved=await (await caches.open(MENU_CACHE)).match(url.pathname);return saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE?saved:Response.error();}));return;
+  event.respondWith(fetch(request).catch(async()=>{
+   for(const name of [MENU_CACHE,DISPLAY_CACHE]){
+    const saved=await (await caches.open(name)).match(url.pathname);
+    if(saved&&Date.now()-Number(saved.headers.get("x-foon-saved")||0)<=MAX_AGE)return saved;
+   }
+   return Response.error();
+  }));return;
  }
  if(request.mode!=="navigate")return;
  // Private navigation is network-only. Never store or replay SSR/RSC HTML.
