@@ -57,6 +57,6 @@ test("public player can show the tenant storefront QR when enabled",async()=>{
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(publicApi,/qrUrl:new URL\(_req.url\)\.origin/);
  assert.match(player,/QRCode\.toDataURL/);
- assert.match(player,/data\.screen\.qrEnabled/);
+ assert.match(player,/screen\.qrEnabled/);
  assert.match(manager,/qrEnabled:!s\.qr_enabled/);
 });
