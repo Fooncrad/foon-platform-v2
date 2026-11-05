@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS display_screens (
  qr_foreground VARCHAR(20) NOT NULL DEFAULT '#111827',
  qr_background VARCHAR(20) NOT NULL DEFAULT '#ffffff',
  display_layout ENUM('single','double','triple','quad','split') NOT NULL DEFAULT 'single',
- public_link_enabled BOOLEAN NOT NULL DEFAULT TRUE,
  created_by VARCHAR(36) NOT NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
