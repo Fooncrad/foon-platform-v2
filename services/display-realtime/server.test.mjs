@@ -3,14 +3,16 @@ import assert from "node:assert/strict";
 import {createHmac} from "node:crypto";
 process.env.FOON_DISPLAY_REALTIME_SECRET="test-secret-that-is-long-enough-for-hmac";
 process.env.FOON_DISPLAY_ALLOWED_ORIGINS="https://nfoodz.com";
-const {verifyTicket}=await import("./server.mjs");
+const {verifyTicket,consumeTicket}=await import("./server.mjs");
 const ticket=(data,secret=process.env.FOON_DISPLAY_REALTIME_SECRET)=>{
  const payload=Buffer.from(JSON.stringify(data)).toString("base64url");
  return payload+"."+createHmac("sha256",secret).update(payload).digest("base64url");
 };
 test("relay accepts a correctly signed, short-lived screen ticket",()=>{
  const value=ticket({v:1,sub:"screen-1",tenant:"tenant-1",exp:1100,nonce:"n"});
- assert.deepEqual(verifyTicket(value,1000),{screenId:"screen-1",tenantId:"tenant-1"});
+ assert.deepEqual(verifyTicket(value,1000),{screenId:"screen-1",tenantId:"tenant-1",nonce:"n",expiresAt:1100});
+ assert.deepEqual(consumeTicket(value,1000),{screenId:"screen-1",tenantId:"tenant-1",nonce:"n",expiresAt:1100});
+ assert.equal(consumeTicket(value,1000),null);
 });
 test("relay rejects expired, overlong, tampered and cross-version tickets",()=>{
  assert.equal(verifyTicket(ticket({v:1,sub:"s",tenant:"t",exp:999,nonce:"n"}),1000),null);
