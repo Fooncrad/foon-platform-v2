@@ -1,6 +1,5 @@
 import {createHash} from "node:crypto";
 import {NextResponse} from "next/server";
-import type {RowDataPacket} from "mysql2/promise";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
@@ -8,11 +7,23 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const digest=(value:string)=>createHash("sha256").update(value).digest("hex");
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
-const allowedPlatforms=new Set(["windows","linux","android","macos","ios","other"]);
-function validReport(value:unknown):value is Record<string,unknown>{
+type PlayerHealthReport={
+ platform:"windows"|"linux"|"android"|"macos"|"ios"|"other";
+ playerVersion:string;
+ viewportWidth:number;
+ viewportHeight:number;
+ online:boolean;
+ visible:boolean;
+ h264:boolean;
+ webm:boolean;
+ playbackState:"playing"|"idle"|"error";
+ errorCode:string|null;
+};
+const allowedPlatforms=new Set<PlayerHealthReport["platform"]>(["windows","linux","android","macos","ios","other"]);
+function validReport(value:unknown):value is PlayerHealthReport{
  if(!value||typeof value!=="object"||Array.isArray(value))return false;
  const v=value as Record<string,unknown>;
- return typeof v.platform==="string"&&allowedPlatforms.has(v.platform)&&
+ return typeof v.platform==="string"&&allowedPlatforms.has(v.platform as PlayerHealthReport["platform"])&&
   typeof v.playerVersion==="string"&&v.playerVersion.length<=64&&
   typeof v.viewportWidth==="number"&&Number.isInteger(v.viewportWidth)&&v.viewportWidth>=0&&v.viewportWidth<=16384&&
   typeof v.viewportHeight==="number"&&Number.isInteger(v.viewportHeight)&&v.viewportHeight>=0&&v.viewportHeight<=16384&&
@@ -30,7 +41,7 @@ export async function POST(req:Request,{params}:{params:Promise<{token:string}>}
  try{
   const [result]=await database().execute(
    "UPDATE display_screens SET player_health_json=?,player_health_at=UTC_TIMESTAMP(),player_error_code=?,last_seen_at=UTC_TIMESTAMP() WHERE token_hash=? AND enabled=TRUE AND paused=FALSE AND EXISTS (SELECT 1 FROM tenants t WHERE t.id=display_screens.tenant_id AND t.status='active')",
-   [JSON.stringify(body),body.errorCode, digest(token)]
+   [JSON.stringify(body),body.errorCode,digest(token)]
   );
   if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false},404);
   return reply({ok:true});
