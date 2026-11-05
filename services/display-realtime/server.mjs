@@ -1,6 +1,7 @@
 import {createServer} from "node:http";
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {WebSocketServer} from "ws";
+import {pathToFileURL} from "node:url";
 
 const port=Number(process.env.PORT||8789);
 const secret=process.env.FOON_DISPLAY_REALTIME_SECRET||"";
@@ -27,7 +28,7 @@ function authorized(req){
  const expected=Buffer.from(secret);
  return supplied.length===expected.length&&timingSafeEqual(supplied,expected);
 }
-const server=createServer((req,res)=>{
+export const server=createServer((req,res)=>{
  if(req.method==="GET"&&req.url==="/health"){res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});res.end(JSON.stringify({ok:true,service:"foon-display-realtime"}));return;}
  if(req.method!=="POST"||req.url!=="/publish"){res.writeHead(404);res.end();return;}
  if(!authorized(req)){res.writeHead(401,{"cache-control":"no-store"});res.end();return;}
@@ -41,7 +42,7 @@ const server=createServer((req,res)=>{
   res.writeHead(202,{"content-type":"application/json","cache-control":"no-store"});res.end(JSON.stringify({ok:true,delivered}));
  });
 });
-const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});
+export const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});
 server.on("upgrade",(req,socket,head)=>{
  let url;try{url=new URL(req.url||"/","http://localhost");}catch{socket.destroy();return;}
  const origin=req.headers.origin||"";
@@ -50,6 +51,10 @@ server.on("upgrade",(req,socket,head)=>{
  wss.handleUpgrade(req,socket,head,ws=>{ws.screenId=identity.screenId;ws.tenantId=identity.tenantId;wss.emit("connection",ws,req);});
 });
 wss.on("connection",ws=>{ws.on("error",()=>{});});
-const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.readyState===1)ws.ping();}},25000);
-server.listen(port,"0.0.0.0");
-for(const signal of ["SIGINT","SIGTERM"])process.on(signal,()=>{clearInterval(heartbeat);wss.close();server.close(()=>process.exit(0));});
+export function start(){
+ const heartbeat=setInterval(()=>{for(const ws of wss.clients){if(ws.readyState===1)ws.ping();}},25000);
+ server.listen(port,"0.0.0.0");
+ for(const signal of ["SIGINT","SIGTERM"])process.on(signal,()=>{clearInterval(heartbeat);wss.close();server.close(()=>process.exit(0));});
+ return server;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)start();
