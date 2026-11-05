@@ -14,7 +14,7 @@ test("merchant display management requires tenant membership, plan entitlement a
  const api=await read("app/api/restaurant/displays/route.ts");
  assert.match(api,/requireTenantMembership/);
  assert.match(api,/\["owner","manager"\]/);
- assert.match(api,/tenantEntitlement\(tenant,"campaigns"\)/);
+ assert.match(api,/tenantEntitlement\(tenant,"display_advertising"\)/);
  assert.match(api,/WHERE id=\? AND tenant_id=\?/);
 });
 test("slide media must be a same-tenant FOON asset, never an arbitrary external URL",async()=>{
@@ -33,7 +33,8 @@ test("merchant workspace exposes the displays module and a fullscreen public pla
  const dashboard=await read("app/restaurant/merchant-dashboard.tsx");
  const manager=await read("app/restaurant/display-manager.tsx");
  const player=await read("app/display/[token]/display-player.tsx");
- assert.match(dashboard,/restaurant\/displays\?tenant=/);
+ assert.match(dashboard,/key:"displays",label:"إعلانات الشاشات",icon:"dashboard",feature:"display_advertising"/);
+ assert.match(dashboard,/active==="displays"\?\<DisplayManager/);
  assert.match(manager,/إدارة شاشات الإعلانات/);
  assert.match(player,/position:"fixed",inset:0/);
 });
