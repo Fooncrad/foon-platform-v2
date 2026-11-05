@@ -156,8 +156,12 @@ test("live display creatives resolve tenant-owned restaurant menu and activity c
  assert.match(migration,/source_type ENUM/);
  assert.match(admin,/sourceType==="restaurant_menu_item"/);
  assert.match(admin,/sourceType==="catalog_product"/);
+ assert.match(admin,/sourceType==="restaurant_menu_category"/);
+ assert.match(admin,/sourceType==="catalog_category"/);
  assert.match(sources,/restaurant_menu_items/);
  assert.match(sources,/catalog_products/);
+ assert.match(sources,/restaurant_menu_categories/);
+ assert.match(sources,/catalog_categories/);
  assert.match(player,/COALESCE\(s\.title_ar,mi\.name,cp\.name_ar\)/);
  assert.match(player,/catalog_images/);
  assert.match(manager,/\/api\/restaurant\/displays\/sources/);
