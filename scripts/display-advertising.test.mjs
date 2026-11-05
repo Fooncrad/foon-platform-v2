@@ -26,7 +26,7 @@ test("public playback uses an unguessable token hash and only active scheduled s
  const api=await read("app/api/display/[token]/route.ts");
  assert.match(api,/createHash\("sha256"\)/);
  assert.match(api,/token_hash=\?/);
- assert.match(api,/enabled=TRUE AND \(starts_at IS NULL OR starts_at<=UTC_TIMESTAMP\(\)\)/);
+ assert.match(api,/enabled=TRUE AND \(campaign_match_key IS NULL OR campaign_match_key=\?\) AND \(starts_at IS NULL OR starts_at<=UTC_TIMESTAMP\(\)\)/);
  assert.match(api,/ends_at IS NULL OR ends_at>UTC_TIMESTAMP\(\)/);
 });
 test("merchant workspace exposes the displays module and a fullscreen public player",async()=>{
@@ -87,4 +87,61 @@ test("player heartbeat and transition/badge effects are wired end to end",async(
  assert.match(player,/foon-display-kenburns/);
  assert.match(player,/item\.badge_text/);
  assert.match(manager,/is_online/);
+});
+
+test("kiosk PIN protection uses salted scrypt, signed short-lived sessions and failed-attempt lockout",async()=>{
+ const helper=await read("lib/display/kiosk-security.ts");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const publicApi=await read("app/api/display/[token]/route.ts");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(helper,/scryptSync/);
+ assert.match(helper,/timingSafeEqual/);
+ assert.match(helper,/createHmac/);
+ assert.match(publicApi,/kiosk_failed_attempts/);
+ assert.match(publicApi,/KIOSK_TEMPORARILY_LOCKED/);
+ assert.match(publicApi,/HttpOnly; Secure; SameSite=Strict/);
+ assert.match(admin,/kiosk_pin_hash/);
+ assert.match(player,/unlockKiosk/);
+ assert.match(player,/شاشة محمية/);
+});
+test("campaign matching keys filter only the matching slides",async()=>{
+ const migration=await read("migrations/9999_display_advertising_kiosk_campaign_matching.sql");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const publicApi=await read("app/api/display/[token]/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(migration,/campaign_match_key VARCHAR\(80\)/);
+ assert.match(admin,/INVALID_CAMPAIGN_KEY/);
+ assert.match(admin,/campaign_match_key/);
+ assert.match(publicApi,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+ assert.match(manager,/Campaign key/);
+ assert.match(player,/URLSearchParams\(window\.location\.search\)\.get\("campaign"\)/);
+});
+test("public display offline cache stores only unprotected playlists and same-origin image assets",async()=>{
+ const api=await read("app/api/display/[token]/route.ts");
+ const worker=await read("public/foon-offline-sw.js");
+ const page=await read("app/display/[token]/page.tsx");
+ assert.match(api,/X-FOON-Display-Offline/);
+ assert.match(worker,/x-foon-display-offline/);
+ assert.match(worker,/DISPLAY_CACHE/);
+ assert.match(worker,/publicImage\(path\)/);
+ assert.match(page,/OfflineWorker/);
+});
+
+
+test("display player combines authenticated WebSocket invalidations with polling recovery",async()=>{
+ const player=await read("app/display/[token]/display-player.tsx");
+ const ticketRoute=await read("app/api/display/[token]/realtime-ticket/route.ts");
+ const realtime=await read("lib/display/realtime.ts");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const relay=await read("services/display-realtime/server.mjs");
+ assert.match(player,/new WebSocket\(/);
+ assert.match(player,/realtime-ticket/);
+ assert.match(player,/setInterval\(\(\)=>void load\(\)/);
+ assert.match(ticketRoute,/verifyKioskSession/);
+ assert.match(ticketRoute,/createDisplayRealtimeTicket/);
+ assert.match(realtime,/createHmac/);
+ assert.match(admin,/publishDisplayInvalidation/);
+ assert.match(relay,/verifyTicket/);
+ assert.match(relay,/display\.invalidate/);
 });

@@ -8,6 +8,8 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
 import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
+import {createKioskPinRecord} from "@/lib/display/kiosk-security";
+import {publishDisplayInvalidation} from "@/lib/display/realtime";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
@@ -24,10 +26,10 @@ function fail(e:unknown){const status=Number((e as {status?:number})?.status)||5
 export async function GET(req:Request){
  let ctx;try{ctx=await context(req);}catch(e){return fail(e);}
  try{
-  const [screens]=await database().execute<RowDataPacket[]>("SELECT id,name,branch_id,refresh_seconds,enabled,paused,qr_enabled,qr_position,qr_size,qr_foreground,qr_background,display_layout,last_seen_at,CASE WHEN last_seen_at>=UTC_TIMESTAMP()-INTERVAL 60 SECOND THEN TRUE ELSE FALSE END AS is_online,created_at FROM display_screens WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[ctx.tenant]);
+  const [screens]=await database().execute<RowDataPacket[]>("SELECT id,name,branch_id,refresh_seconds,enabled,paused,qr_enabled,qr_position,qr_size,qr_foreground,qr_background,display_layout,kiosk_pin_hash,last_seen_at,CASE WHEN last_seen_at>=UTC_TIMESTAMP()-INTERVAL 60 SECOND THEN TRUE ELSE FALSE END AS is_online,created_at FROM display_screens WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[ctx.tenant]);
   const ids=screens.map(x=>String(x.id));let slides:RowDataPacket[]=[];
-  if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at,enabled FROM display_slides WHERE tenant_id=? AND screen_id IN ("+marks+") ORDER BY sort_order,created_at",[ctx.tenant,...ids]);slides=rows;}
-  return reply({ok:true,screens:screens.map(s=>({...s,slides:slides.filter(x=>x.screen_id===s.id)}))});
+  if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,media_url,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at,enabled FROM display_slides WHERE tenant_id=? AND screen_id IN ("+marks+") ORDER BY sort_order,created_at",[ctx.tenant,...ids]);slides=rows;}
+  return reply({ok:true,screens:screens.map(s=>({...s,kiosk_protected:Boolean(s.kiosk_pin_hash),kiosk_pin_hash:undefined,slides:slides.filter(x=>x.screen_id===s.id)}))});
  }catch{return reply({ok:false,code:"DISPLAY_LIST_FAILED"},503);}
 }
 export async function POST(req:Request){
@@ -36,11 +38,22 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="kioskPin"){
+   if(typeof body.screenId!=="string"||typeof body.pin!=="string"||body.pin.length>8)return reply({ok:false,code:"INVALID_INPUT"},400);
+   const pin=body.pin.trim();
+   if(pin!==""&&!/^\d{4,8}$/.test(pin))return reply({ok:false,code:"INVALID_KIOSK_PIN"},400);
+   const record=pin?createKioskPinRecord(pin):null;
+   const [result]=await database().execute("UPDATE display_screens SET kiosk_pin_salt=?,kiosk_pin_hash=?,kiosk_failed_attempts=0,kiosk_locked_until=NULL WHERE id=? AND tenant_id=?",[record?.salt??null,record?.hash??null,body.screenId,ctx.tenant]);
+   if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
+   return reply({ok:true,enabled:Boolean(record)});
+  }
   if(action==="rotate"){
    if(typeof body.screenId!=="string")return reply({ok:false,code:"INVALID_INPUT"},400);
    const token=randomBytes(32).toString("base64url");
    const [result]=await database().execute("UPDATE display_screens SET token_hash=? WHERE id=? AND tenant_id=?",[digest(token),body.screenId,ctx.tenant]);
    if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
    return reply({ok:true,token});
   }
   if(action==="screen"){
@@ -49,6 +62,7 @@ export async function POST(req:Request){
    if(branch){const [b]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branch,ctx.tenant]);if(!b.length)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);}
    const id=randomUUID(),token=randomBytes(32).toString("base64url");
    await database().execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[id,ctx.tenant,branch,body.name.trim(),digest(token),ctx.user]);
+   await publishDisplayInvalidation(ctx.tenant,id);
    return reply({ok:true,id,token},201);
   }
   if(action==="slide"){
@@ -69,7 +83,10 @@ export async function POST(req:Request){
    const id=randomUUID();
    const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
    const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
-   await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
+   const campaignKey=typeof body.campaignMatchKey==="string"?body.campaignMatchKey.trim().slice(0,80):"";
+   if(campaignKey&&!/^[a-z0-9_-]{1,80}$/i.test(campaignKey))return reply({ok:false,code:"INVALID_CAMPAIGN_KEY"},400);
+   await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,campaignKey||null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
+   await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
@@ -93,6 +110,7 @@ export async function PATCH(req:Request){
    if(body.refreshSeconds!==undefined)allowed.refresh_seconds=Math.max(5,Math.min(120,Number(body.refreshSeconds)||15));
    const entries=Object.entries(allowed);if(!entries.length)return reply({ok:false,code:"NO_CHANGES"},400);
    await database().query("UPDATE display_screens SET "+entries.map(([k])=>k+"=?").join(",")+" WHERE id=? AND tenant_id=?",[...entries.map(([,v])=>v),body.id,ctx.tenant]);
+   await publishDisplayInvalidation(ctx.tenant,String(body.id));
    return reply({ok:true});
   }
   if(body.kind==="slide"){
@@ -104,11 +122,11 @@ export async function PATCH(req:Request){
      const direction=body.move==="up"?"<":">",order=body.move==="up"?"DESC":"ASC";
      const [neighbor]=await conn.query<RowDataPacket[]>("SELECT id,sort_order FROM display_slides WHERE screen_id=? AND tenant_id=? AND sort_order "+direction+" ? ORDER BY sort_order "+order+",created_at "+order+" LIMIT 1 FOR UPDATE",[current[0].screen_id,ctx.tenant,current[0].sort_order]);
      if(neighbor.length){await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[current[0].sort_order,neighbor[0].id,ctx.tenant]);await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[neighbor[0].sort_order,current[0].id,ctx.tenant]);}
-     await conn.commit();return reply({ok:true});
+     await conn.commit();await publishDisplayInvalidation(ctx.tenant,String(current[0].screen_id));return reply({ok:true});
     }catch{await conn.rollback();return reply({ok:false,code:"SLIDE_REORDER_FAILED"},503);}finally{conn.release();}
    }
-   if(body.enabled!==undefined){await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);return reply({ok:true});}
-   await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);return reply({ok:true});
+   if(body.enabled!==undefined){const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});}
+   const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});
   }
   return reply({ok:false,code:"INVALID_KIND"},400);
  }catch{return reply({ok:false,code:"DISPLAY_UPDATE_FAILED"},503);}
