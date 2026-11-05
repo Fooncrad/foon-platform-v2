@@ -38,6 +38,46 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="campaign"){
+   const requestedBranches=Array.isArray(body.branchIds)?body.branchIds.filter((x):x is string=>typeof x==="string"&&/^[a-f0-9-]{36}$/i.test(x)):null;
+   if(body.branchIds!==undefined&&(!requestedBranches||requestedBranches.length>50||requestedBranches.length!==body.branchIds.length))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
+   if(requestedBranches?.length){
+    const [validBranches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND enabled=TRUE AND id IN ("+requestedBranches.map(()=>"?").join(",")+")",[ctx.tenant,...requestedBranches]);
+    if(validBranches.length!==new Set(requestedBranches).size)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);
+   }
+   const sourceType=typeof body.sourceType==="string"?body.sourceType:"media";
+   const sourceId=typeof body.sourceId==="string"&&/^[a-f0-9-]{36}$/i.test(body.sourceId)?body.sourceId:null;
+   if(!["media","restaurant_menu_item","catalog_product","restaurant_menu_category","catalog_category"].includes(sourceType))return reply({ok:false,code:"INVALID_SOURCE"},400);
+   const mediaUrl=sourceType==="media"&&typeof body.mediaUrl==="string"&&/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl)?body.mediaUrl:null;
+   const videoUrl=sourceType==="media"&&typeof body.videoUrl==="string"&&body.videoUrl.trim()?body.videoUrl.trim():null;
+   if(sourceType==="media"?(Boolean(mediaUrl)===Boolean(videoUrl)):(!sourceId||body.mediaUrl||body.videoUrl))return reply({ok:false,code:"INVALID_MEDIA"},400);
+   if(videoUrl){try{const parsed=new URL(videoUrl);const host=parsed.hostname.toLowerCase();const privateHost=host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal")||host.includes(":")||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);if(parsed.protocol!=="https:"||parsed.username||parsed.password||privateHost||! /\.(mp4|webm)$/i.test(parsed.pathname))return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}catch{return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}}
+   if(mediaUrl){const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE id=? AND tenant_id=? LIMIT 1",[mediaUrl.slice("/api/restaurant/assets/".length),ctx.tenant]);if(!assets.length)return reply({ok:false,code:"MEDIA_NOT_FOUND"},404);}
+   const sourceTables:Record<string,[string,string]>={restaurant_menu_item:["restaurant_menu_items","enabled=TRUE"],catalog_product:["catalog_products","enabled=TRUE AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0') NOT IN ('1','true')"],restaurant_menu_category:["restaurant_menu_categories","enabled=TRUE"],catalog_category:["catalog_categories","enabled=TRUE"]};
+   if(sourceType!=="media"){const [table,condition]=sourceTables[sourceType];const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM "+table+" WHERE id=? AND tenant_id=? AND "+condition+" LIMIT 1",[sourceId,ctx.tenant]);if(!rows.length)return reply({ok:false,code:"SOURCE_NOT_FOUND"},404);}
+   const duration=Math.max(5,Math.min(120,Number(body.durationSeconds)||10));
+   const startsAt=body.startsAt==null||body.startsAt===""?null:typeof body.startsAt==="string"?body.startsAt:null;
+   const endsAt=body.endsAt==null||body.endsAt===""?null:typeof body.endsAt==="string"?body.endsAt:null;
+   const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
+   if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
+   const [targetScreens]=await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 100",[ctx.tenant,...(requestedBranches??[])]);
+   if(!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
+   const campaignId=randomUUID(),campaignKey=campaignId.replace(/-/g,"");
+   const conn=await database().getConnection();
+   try{
+    await conn.beginTransaction();
+    for(const screen of targetScreens){
+     const [lastOrder]=await conn.execute<RowDataPacket[]>("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM display_slides WHERE screen_id=? AND tenant_id=?",[screen.id,ctx.tenant]);
+     const id=randomUUID(),sortOrder=Number(lastOrder[0]?.next_order??0);
+     const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
+     const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
+     await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screen.id,ctx.tenant,mediaUrl,sourceType,sourceId,videoUrl,body.videoLoop!==false,transition,badge,campaignKey,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
+    }
+    await conn.commit();
+   }catch(error){await conn.rollback();throw error;}finally{conn.release();}
+   await Promise.all(targetScreens.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.id))));
+   return reply({ok:true,campaignId,campaignKey,screenCount:targetScreens.length,branchIds:[...new Set(targetScreens.map(s=>s.branch_id).filter(Boolean))]},201);
+  }
   if(action==="kioskPin"){
    if(typeof body.screenId!=="string"||typeof body.pin!=="string"||body.pin.length>8)return reply({ok:false,code:"INVALID_INPUT"},400);
    const pin=body.pin.trim();
