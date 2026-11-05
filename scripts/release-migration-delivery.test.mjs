@@ -39,7 +39,6 @@ test("only explicitly approved migration prefixes may repeat",()=>{
  assert.match(sql,/CREATE TABLE IF NOT EXISTS branch_delivery_locations/);
  const displayGrant=readFileSync(join(fileURLToPath(directory),"0156_display_advertising_entitlement.sql"),"utf8");
  assert.match(displayGrant,/p\.code='enterprise'/);
- assert.match(displayGrant,/p\\.code=.enterprise./);
 });
 test("delivery preferences safely handle empty allowed-country lists",()=>{
  const code=readFileSync(new URL("../app/api/customer/delivery-preferences/route.ts",import.meta.url),"utf8");
