@@ -173,8 +173,20 @@ export async function PATCH(req:Request){
      await conn.commit();await publishDisplayInvalidation(ctx.tenant,String(current[0].screen_id));return reply({ok:true});
     }catch{await conn.rollback();return reply({ok:false,code:"SLIDE_REORDER_FAILED"},503);}finally{conn.release();}
    }
-   if(body.enabled!==undefined){const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});}
-   const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});
+   const [targets]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,campaign_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);
+   if(!targets.length)return reply({ok:false,code:"SLIDE_NOT_FOUND"},404);
+   const campaignId=typeof targets[0].campaign_id==="string"?targets[0].campaign_id:"";
+   const screenIds=campaignId?(await database().execute<RowDataPacket[]>("SELECT DISTINCT screen_id FROM display_slides WHERE campaign_id=? AND tenant_id=?",[campaignId,ctx.tenant]))[0]:[{screen_id:targets[0].screen_id}];
+   if(body.enabled!==undefined){
+    if(campaignId)await database().execute("UPDATE display_slides SET enabled=? WHERE campaign_id=? AND tenant_id=?",[Boolean(body.enabled),campaignId,ctx.tenant]);
+    else await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);
+    await Promise.all(screenIds.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.screen_id))));
+    return reply({ok:true,updatedScreens:screenIds.length});
+   }
+   if(campaignId)await database().execute("DELETE FROM display_slides WHERE campaign_id=? AND tenant_id=?",[campaignId,ctx.tenant]);
+   else await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);
+   await Promise.all(screenIds.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.screen_id))));
+   return reply({ok:true,deletedScreens:screenIds.length});
   }
   return reply({ok:false,code:"INVALID_KIND"},400);
  }catch{return reply({ok:false,code:"DISPLAY_UPDATE_FAILED"},503);}
