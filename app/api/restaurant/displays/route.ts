@@ -18,7 +18,7 @@ async function context(req:Request,write=false){
  const user=await currentUserId();if(!user)throw Object.assign(new Error("UNAUTHENTICATED"),{status:401});
  const tenant=req.headers.get("x-foon-tenant")??"";if(!tenant)throw Object.assign(new Error("TENANT_REQUIRED"),{status:400});
  let member;try{member=await requireTenantMembership(user,tenant,["owner","manager"],write);}catch{throw Object.assign(new Error("FORBIDDEN"),{status:403});}
- if(!(await tenantEntitlement(tenant,"campaigns")).enabled)throw Object.assign(new Error("PLAN_FEATURE_REQUIRED"),{status:403});
+ if(!(await tenantEntitlement(tenant,"display_advertising")).enabled)throw Object.assign(new Error("PLAN_FEATURE_REQUIRED"),{status:403});
  if(write)await requireAllAdditionalBranchesUnlocked(member.tenantId,user);
  return {user,tenant:member.tenantId};
 }
