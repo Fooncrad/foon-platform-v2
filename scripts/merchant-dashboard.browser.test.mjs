@@ -227,6 +227,11 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await page.getByRole("button",{name:"حفظ البيانات",exact:true}).click();
  await expect(page.getByText("تم حفظ التغييرات بنجاح، ويمكنك مراجعتها في القائمة أدناه.",{exact:true})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نقطة البيع",exact:true}).click();
+ await expect(page.locator(".restaurantApp")).toHaveClass(/restaurantPosFocus/);
+ await page.getByRole("button",{name:"الخروج من وضع تكبير نقطة البيع",exact:true}).click();
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantPosFocus/);
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantAppWide/);
+ await expect(page.getByRole("navigation",{name:"أقسام النشاط"})).toBeVisible();
  const previousOrdersToggle=page.locator(".restaurantPosPreviousOrdersToggle");
  await expect(previousOrdersToggle).toHaveAttribute("aria-expanded","false");
  await expect(page.locator(".restaurantOrderCards article")).toHaveCount(0);
@@ -261,6 +266,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const posHeaders={origin,'x-foon-tenant':visualTenant.tenant};
  const afterOffline=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});
  expect((await afterOffline.json()).orders).toHaveLength(1);
+ await page.getByRole("button",{name:"الخروج من وضع تكبير نقطة البيع",exact:true}).click();
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantPosFocus/);
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantAppWide/);
+ await expect(page.getByRole("navigation",{name:"أقسام النشاط"})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 SAR",{exact:true})).toBeVisible();
  await captureScreenshot(page,{path:"work/merchant-desktop.png",fullPage:true});
@@ -611,9 +620,16 @@ test("all 15 activities expose their own tools; service orders work in three lan
     }
     if(!dining){
      await navigation.getByRole('button',{name:'نقطة البيع',exact:true}).click();
+     await expect(page.locator('.restaurantApp')).toHaveClass(/restaurantPosFocus/);
      await expect(page.locator('select[name="channel"] option[value="dine_in"]')).toHaveCount(0);
      await expect(page.locator('.restaurantListTools')).toHaveCount(0);
      await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
+     await page.getByRole('button',{name:'الخروج من وضع تكبير نقطة البيع',exact:true}).click();
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantPosFocus/);
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantAppWide/);
+     await expect(navigation).toBeVisible();
+     const restoredSection=services.has(activity)?'دليل الخدمات':'المنتجات والأقسام';
+     await expect(navigation.getByRole('button',{name:restoredSection,exact:true})).toBeVisible();
     }
     if(activity!=="restaurant"){
      const headers={origin,"x-foon-tenant":account.tenant.id};
@@ -673,6 +689,12 @@ test("all 15 activities expose their own tools; service orders work in three lan
      await expect(previousOrdersToggle).toHaveAttribute('aria-expanded','true');
      await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('7.25');
      await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('SAR');
+     // POS deliberately hides the navigation while expanded; restore the
+     // workspace before testing service navigation on non-dining activities.
+     await page.getByRole('button',{name:'الخروج من وضع تكبير نقطة البيع',exact:true}).click();
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantPosFocus/);
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantAppWide/);
+     await expect(navigation).toBeVisible();
     }
     if(services.has(activity)&&activity!=="laundry"){
      await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
