@@ -21,7 +21,7 @@ async function context(req:Request,write=false){
  let member;try{member=await requireTenantMembership(user,tenant,["owner","manager"],write);}catch{throw Object.assign(new Error("FORBIDDEN"),{status:403});}
  if(!(await tenantEntitlement(tenant,"display_advertising")).enabled)throw Object.assign(new Error("PLAN_FEATURE_REQUIRED"),{status:403});
  if(write)await requireAllAdditionalBranchesUnlocked(member.tenantId,user);
- return {user,tenant:member.tenantId};
+ return {user,tenant:member.tenantId,role:member.role};
 }
 function fail(e:unknown){const status=Number((e as {status?:number})?.status)||503;return reply({ok:false,code:e instanceof Error?e.message:"DISPLAY_UNAVAILABLE"},status);}
 export async function GET(req:Request){
@@ -76,6 +76,7 @@ export async function POST(req:Request){
      await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screen.id,ctx.tenant,campaignId,mediaUrl,sourceType,sourceId,videoUrl,body.videoLoop!==false,transition,badge,null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
     }
     if(body.includeMenuBanner===true){
+     if(!(await tenantEntitlement(ctx.tenant,"branding.colors")).enabled)throw Object.assign(new Error("MENU_COVER_FEATURE_REQUIRED"),{status:403});
      let coverUrl=mediaUrl;
      if(!coverUrl&&sourceType==="restaurant_menu_item"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM restaurant_menu_items WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
      if(!coverUrl&&sourceType==="catalog_product"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM catalog_images WHERE product_id=? AND tenant_id=? ORDER BY sort_order,id LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
@@ -84,7 +85,7 @@ export async function POST(req:Request){
      if(!coverUrl||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(coverUrl))throw Object.assign(new Error("BANNER_REQUIRES_FOON_IMAGE"),{status:400});
      const [existing]=await conn.execute<RowDataPacket[]>("SELECT id,name,status,data,version FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND archived=FALSE AND status='active' LIMIT 1 FOR UPDATE",[ctx.tenant]);
      const previous=existing[0];
-     await saveResource(conn,ctx.tenant,ctx.user,"owner","storefront",previous?{id:String(previous.id),version:Number(previous.version),name:String(previous.name),status:String(previous.status),branchId:null,data:{...parseData(previous.data),coverUrl}}:{name:"واجهة النشاط",status:"active",branchId:null,data:{coverUrl}});
+     await saveResource(conn,ctx.tenant,ctx.user,ctx.role,"storefront",previous?{id:String(previous.id),version:Number(previous.version),name:String(previous.name),status:String(previous.status),branchId:null,data:{...parseData(previous.data),coverUrl}}:{name:"واجهة النشاط",status:"active",branchId:null,data:{coverUrl}});
     }
     await conn.commit();
    }catch(error){await conn.rollback();throw error;}finally{conn.release();}
