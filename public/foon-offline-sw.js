@@ -99,7 +99,7 @@ self.addEventListener("fetch",event=>{
    catch{return cached??Response.error();}
   })());return;
  }
- if(url.origin===self.location.origin&&/^\\/api\\/display\\/[A-Za-z0-9_-]{32,80}$/.test(url.pathname)&&request.method==="GET"){
+ if(url.origin===self.location.origin&&/^\/api\/display\/[A-Za-z0-9_-]{32,80}$/.test(url.pathname)&&request.method==="GET"){
   event.respondWith((async()=>{
    const cache=await caches.open(DISPLAY_CACHE);
    try{
@@ -118,7 +118,7 @@ self.addEventListener("fetch",event=>{
        if(!publicImage(path))continue;
        try{
         const asset=await fetch(path,{credentials:"omit",redirect:"error"});
-        if(!asset.ok||!/^image\\/(png|jpeg|webp)$/.test(asset.headers.get("content-type")||""))continue;
+        if(!asset.ok||!/^image\/(png|jpeg|webp)$/.test(asset.headers.get("content-type")||""))continue;
         const blob=await asset.blob();if(blob.size>4000000)continue;
         await cache.put(path,new Response(blob,{headers:{"content-type":asset.headers.get("content-type")||"image/webp","x-foon-saved":savedAt}}));
        }catch{/* Keep the cached playlist even if one asset cannot be fetched. */}
