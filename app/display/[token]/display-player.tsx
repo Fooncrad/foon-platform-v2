@@ -7,6 +7,28 @@ export default function DisplayPlayer({token}:{token:string}){
  const [data,setData]=useState<Payload|null>(null),[index,setIndex]=useState(0),[error,setError]=useState(false),[qr,setQr]=useState(""),[pinRequired,setPinRequired]=useState(false),[pin,setPin]=useState(""),[pinError,setPinError]=useState("");
  const load=useCallback(async()=>{try{const campaign=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("campaign"):"";const query=campaign&&/^[a-z0-9_-]{1,80}$/i.test(campaign)?"?campaign="+encodeURIComponent(campaign):"";const r=await fetch("/api/display/"+encodeURIComponent(token)+query,{cache:"no-store"});if(r.status===401){setPinRequired(true);setData(null);setError(false);return;}if(!r.ok)throw Error("DISPLAY_UNAVAILABLE");const d=await r.json();setData(d);setPinRequired(false);setError(false);}catch{setError(true);}},[token]);
  useEffect(()=>{void load();const interval=Math.max(5000,Math.min(120000,(data?.screen.refreshSeconds??15)*1000));const timer=setInterval(()=>void load(),interval);return()=>clearInterval(timer);},[load,data?.screen.refreshSeconds]);
+ useEffect(()=>{
+  if(!data?.screen.id)return;
+  let stopped=false,socket:WebSocket|null=null,retry:ReturnType<typeof setTimeout>|undefined,delay=3000;
+  const connect=async()=>{
+   try{
+    const response=await fetch("/api/display/"+encodeURIComponent(token)+"/realtime-ticket",{cache:"no-store"});
+    if(!response.ok)throw new Error("REALTIME_TICKET_UNAVAILABLE");
+    const auth=await response.json() as {url:string;ticket:string};
+    if(stopped)return;
+    const url=new URL(auth.url);url.searchParams.set("ticket",auth.ticket);
+    socket=new WebSocket(url.toString());
+    socket.onopen=()=>{delay=3000;void load();};
+    socket.onmessage=event=>{
+     try{const message=JSON.parse(String(event.data));if(message?.type==="display.invalidate"&&(!message.screenId||message.screenId===data.screen.id))void load();}catch{/* Ignore malformed gateway messages. */}
+    };
+    socket.onclose=()=>{if(!stopped){retry=setTimeout(()=>void connect(),delay);delay=Math.min(30000,delay*2);}};
+    socket.onerror=()=>socket?.close();
+   }catch{if(!stopped){retry=setTimeout(()=>void connect(),delay);delay=Math.min(30000,delay*2);}}
+  };
+  void connect();
+  return()=>{stopped=true;if(retry)clearTimeout(retry);socket?.close(1000,"player cleanup");};
+ },[data?.screen.id,token,load]);
  useEffect(()=>{let active=true;if(!data?.screen.qrEnabled||!data.screen.qrUrl){setQr("");return;}void QRCode.toDataURL(data.screen.qrUrl,{width:Math.max(80,Math.min(240,data.screen.qrSize||140)),margin:1,errorCorrectionLevel:"M",color:{dark:data.screen.qrForeground||"#111827",light:data.screen.qrBackground||"#ffffff"}}).then(value=>{if(active)setQr(value);}).catch(()=>{if(active)setQr("");});return()=>{active=false;};},[data?.screen.qrEnabled,data?.screen.qrUrl]);
  async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await fetch("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({}));setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
  const layout=data?.screen.displayLayout??"single";
