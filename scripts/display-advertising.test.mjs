@@ -147,6 +147,23 @@ test("display player combines authenticated WebSocket invalidations with polling
  assert.match(relay,/display\.invalidate/);
 });
 
+test("live display creatives resolve tenant-owned restaurant menu and activity catalog products",async()=>{
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const sources=await read("app/api/restaurant/displays/sources/route.ts");
+ const player=await read("app/api/display/[token]/route.ts");
+ const migration=await read("migrations/9999_display_catalog_sources.sql");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(migration,/source_type ENUM/);
+ assert.match(admin,/sourceType==="restaurant_menu_item"/);
+ assert.match(admin,/sourceType==="catalog_product"/);
+ assert.match(sources,/restaurant_menu_items/);
+ assert.match(sources,/catalog_products/);
+ assert.match(player,/COALESCE\(s\.title_ar,mi\.name,cp\.name_ar\)/);
+ assert.match(player,/catalog_images/);
+ assert.match(manager,/\/api\/restaurant\/displays\/sources/);
+ assert.match(manager,/sourceId:chosenSource\?\.id/);
+});
+
 test("display manager can import tenant-authorized images from the FOON account library",async()=>{
  const manager=await read("app/restaurant/display-manager.tsx");
  const library=await read("app/api/account/library/route.ts");
