@@ -50,3 +50,13 @@ test("display creatives upload through the existing tenant asset pipeline and su
  assert.match(manager,/datetime-local/);
  assert.match(player,/screen\.refreshSeconds/);
 });
+
+test("public player can show the tenant storefront QR when enabled",async()=>{
+ const publicApi=await read("app/api/display/[token]/route.ts");
+ const player=await read("app/display/[token]/display-player.tsx");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(publicApi,/qrUrl:new URL\(_req.url\)\.origin/);
+ assert.match(player,/QRCode\.toDataURL/);
+ assert.match(player,/data\.screen\.qrEnabled/);
+ assert.match(manager,/qrEnabled:!s\.qr_enabled/);
+});
