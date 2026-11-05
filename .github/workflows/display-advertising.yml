@@ -42,6 +42,7 @@ jobs:
       - run: npm run test:display-advertising
       - run: npm run test:migrations
       - run: npm run db:migrate
+      - run: node --test scripts/display-advertising.schema.integration.test.mjs
       - run: npm run typecheck
       - run: npm run build
         env:
