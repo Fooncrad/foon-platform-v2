@@ -39,6 +39,24 @@ export default function DisplayPlayer({token}:{token:string}){
  const layoutCount=Math.min(requestedLayoutCount,data?.slides.length??1);
  const visibleSlides=data?.slides.length?Array.from({length:Math.min(layoutCount,data.slides.length)},(_,offset)=>data.slides[(index+offset)%data.slides.length]):[];
  const slide=data?.slides[index];
+ useEffect(()=>{
+  if(!data?.screen.id)return;
+  const report=async()=>{
+   const video=document.createElement("video");
+   const agent=navigator.userAgent.toLowerCase();
+   const platform=/android/.test(agent)?"android":/iphone|ipad|ipod/.test(agent)?"ios":/windows/.test(agent)?"windows":/macintosh|mac os/.test(agent)?"macos":/linux/.test(agent)?"linux":"other";
+   const errorCode=error?"PLAYLIST_UNAVAILABLE":null;
+   const payload={platform,playerVersion:"web-1",viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,online:navigator.onLine,visible:document.visibilityState==="visible",h264:Boolean(video.canPlayType('video/mp4; codecs="avc1.42E01E"')),webm:Boolean(video.canPlayType('video/webm; codecs="vp9"')),playbackState:error?"error":slide?"playing":"idle",errorCode};
+   try{await fetch("/api/display/"+encodeURIComponent(token)+"/health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),keepalive:true});}catch{/* The next heartbeat reports recovery. */}
+  };
+  void report();
+  const timer=setInterval(()=>void report(),30000);
+  const onVisibility=()=>void report();
+  window.addEventListener("online",onVisibility);
+  window.addEventListener("offline",onVisibility);
+  document.addEventListener("visibilitychange",onVisibility);
+  return()=>{clearInterval(timer);window.removeEventListener("online",onVisibility);window.removeEventListener("offline",onVisibility);document.removeEventListener("visibilitychange",onVisibility);};
+ },[token,data?.screen.id,error,slide?.id]);
  const transition=(effect:string)=>effect==="zoom"?"foon-display-zoom .9s ease-out":effect==="slide"?"foon-display-slide .7s ease-out":effect==="kenburns"?"foon-display-kenburns 12s ease-in-out infinite alternate":"foon-display-fade .7s ease-out";
  useEffect(()=>{if(!data?.screen.id||!data.slides.length)return;const seconds=Math.max(5,Math.min(120,Number(data.slides[index]?.duration_seconds)||10));const timer=setTimeout(()=>setPlayback({screenId:data.screen.id,index:(index+layoutCount)%data.slides.length}),seconds*1000);return()=>clearTimeout(timer);},[data?.screen.id,data?.slides.length,index,layoutCount,data?.slides]);
  return <main style={{position:"fixed",inset:0,background:"#05080d",color:"white",overflow:"hidden",fontFamily:"Arial,sans-serif"}}><style jsx global>{`@keyframes foon-display-fade{from{opacity:0}to{opacity:1}}@keyframes foon-display-zoom{from{opacity:.5;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}@keyframes foon-display-slide{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}@keyframes foon-display-kenburns{from{transform:scale(1)}to{transform:scale(1.08)}}`}</style>
