@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS display_screens (
  created_by VARCHAR(36) NOT NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ last_seen_at DATETIME NULL,
  UNIQUE KEY display_screens_token_hash_uq (token_hash),
  KEY display_screens_tenant_branch_idx (tenant_id, branch_id, enabled),
  CONSTRAINT display_screens_tenant_fk FOREIGN KEY (tenant_id) REFERENCES tenants(id),
