@@ -102,7 +102,7 @@ export async function PATCH(req:Request){
      const [current]=await conn.execute<RowDataPacket[]>("SELECT id,screen_id,sort_order FROM display_slides WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,ctx.tenant]);
      if(!current.length){await conn.rollback();return reply({ok:false,code:"SLIDE_NOT_FOUND"},404);}
      const direction=body.move==="up"?"<":">",order=body.move==="up"?"DESC":"ASC";
-     const [neighbor]=await conn.execute<RowDataPacket[]>("SELECT id,sort_order FROM display_slides WHERE screen_id=? AND tenant_id=? AND sort_order "+direction+" ? ORDER BY sort_order "+order+",created_at "+order+" LIMIT 1 FOR UPDATE",[current[0].screen_id,ctx.tenant,current[0].sort_order]);
+     const [neighbor]=await conn.query<RowDataPacket[]>("SELECT id,sort_order FROM display_slides WHERE screen_id=? AND tenant_id=? AND sort_order "+direction+" ? ORDER BY sort_order "+order+",created_at "+order+" LIMIT 1 FOR UPDATE",[current[0].screen_id,ctx.tenant,current[0].sort_order]);
      if(neighbor.length){await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[current[0].sort_order,neighbor[0].id,ctx.tenant]);await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[neighbor[0].sort_order,current[0].id,ctx.tenant]);}
      await conn.commit();return reply({ok:true});
     }catch{await conn.rollback();return reply({ok:false,code:"SLIDE_REORDER_FAILED"},503);}finally{conn.release();}
