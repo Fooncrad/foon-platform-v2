@@ -36,6 +36,13 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="rotate"){
+   if(typeof body.screenId!=="string")return reply({ok:false,code:"INVALID_INPUT"},400);
+   const token=randomBytes(32).toString("base64url");
+   const [result]=await database().execute("UPDATE display_screens SET token_hash=? WHERE id=? AND tenant_id=?",[digest(token),body.screenId,ctx.tenant]);
+   if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   return reply({ok:true,token});
+  }
   if(action==="screen"){
    if(typeof body.name!=="string"||!body.name.trim()||body.name.length>120)return reply({ok:false,code:"INVALID_NAME"},400);
    const branch=typeof body.branchId==="string"&&body.branchId?body.branchId:null;
