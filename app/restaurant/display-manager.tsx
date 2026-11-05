@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
-type Slide={id:string;source_type:string;source_id:string|null;media_url:string|null;external_video_url:string|null;campaign_match_key:string|null;title_ar:string|null;title_en:string|null;title_fr:string|null;subtitle_ar:string|null;subtitle_en:string|null;subtitle_fr:string|null;duration_seconds:number;sort_order:number;enabled:boolean;transition_effect:string;badge_text:string|null};
+type Slide={id:string;campaign_id:string|null;source_type:string;source_id:string|null;media_url:string|null;external_video_url:string|null;campaign_match_key:string|null;title_ar:string|null;title_en:string|null;title_fr:string|null;subtitle_ar:string|null;subtitle_en:string|null;subtitle_fr:string|null;duration_seconds:number;sort_order:number;enabled:boolean;transition_effect:string;badge_text:string|null};
 type Screen={id:string;name:string;branch_id:string|null;kiosk_protected:boolean;refresh_seconds:number;enabled:boolean;paused:boolean;qr_enabled:boolean;qr_position:string;qr_size:number;display_layout:string;is_online:boolean;player_health_at:string|null;player_error_code:string|null;slides:Slide[]};
 type LibraryFile={id:string;name:string;size:number;createdAt:string};
 type ContentSource={id:string;sourceType:"restaurant_menu_item"|"catalog_product"|"restaurant_menu_category"|"catalog_category";name:string;nameEn:string;nameFr:string;description:string;imageUrl:string|null;price:number|null;currency:string;category:string;productType?:string};
