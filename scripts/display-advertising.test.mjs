@@ -6,7 +6,7 @@ test("display advertising schema is additive and tenant/branch scoped",async()=>
  const sql=await read("migrations/9999_display_advertising.sql");
  assert.match(sql,/CREATE TABLE IF NOT EXISTS display_screens/);
  assert.match(sql,/CREATE TABLE IF NOT EXISTS display_slides/);
- assert.match(sql,/tenant_id CHAR\(36\) NOT NULL/);
+ assert.match(sql,/tenant_id VARCHAR\(36\) NOT NULL/);
  assert.match(sql,/ON DELETE CASCADE/);
  assert.doesNotMatch(sql,/DROP TABLE|TRUNCATE|DELETE FROM/i);
 });
