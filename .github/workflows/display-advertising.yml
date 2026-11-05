@@ -20,6 +20,18 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: foon-display-ci-only
+          MARIADB_DATABASE: foon_display_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:foon-display-ci-only@127.0.0.1:3306/foon_display_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,6 +41,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run test:display-advertising
       - run: npm run test:migrations
+      - run: npm run db:migrate
       - run: npm run typecheck
       - run: npm run build
         env:
