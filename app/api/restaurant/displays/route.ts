@@ -27,7 +27,7 @@ export async function GET(req:Request){
  try{
   const [screens]=await database().execute<RowDataPacket[]>("SELECT id,name,branch_id,refresh_seconds,enabled,paused,qr_enabled,qr_position,qr_size,qr_foreground,qr_background,display_layout,kiosk_pin_hash,last_seen_at,CASE WHEN last_seen_at>=UTC_TIMESTAMP()-INTERVAL 60 SECOND THEN TRUE ELSE FALSE END AS is_online,created_at FROM display_screens WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[ctx.tenant]);
   const ids=screens.map(x=>String(x.id));let slides:RowDataPacket[]=[];
-  if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at,enabled FROM display_slides WHERE tenant_id=? AND screen_id IN ("+marks+") ORDER BY sort_order,created_at",[ctx.tenant,...ids]);slides=rows;}
+  if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,media_url,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at,enabled FROM display_slides WHERE tenant_id=? AND screen_id IN ("+marks+") ORDER BY sort_order,created_at",[ctx.tenant,...ids]);slides=rows;}
   return reply({ok:true,screens:screens.map(s=>({...s,kiosk_protected:Boolean(s.kiosk_pin_hash),kiosk_pin_hash:undefined,slides:slides.filter(x=>x.screen_id===s.id)}))});
  }catch{return reply({ok:false,code:"DISPLAY_LIST_FAILED"},503);}
 }
@@ -79,7 +79,9 @@ export async function POST(req:Request){
    const id=randomUUID();
    const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
    const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
-   await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
+   const campaignKey=typeof body.campaignMatchKey==="string"?body.campaignMatchKey.trim().slice(0,80):"";
+   if(campaignKey&&!/^[a-z0-9_-]{1,80}$/i.test(campaignKey))return reply({ok:false,code:"INVALID_CAMPAIGN_KEY"},400);
+   await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,campaignKey||null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
