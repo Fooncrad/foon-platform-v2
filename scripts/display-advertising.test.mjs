@@ -115,7 +115,7 @@ test("campaign matching keys filter only the matching slides",async()=>{
  assert.match(admin,/campaign_match_key/);
  assert.match(publicApi,/campaign_match_key IS NULL OR campaign_match_key=\?/);
  assert.match(manager,/Campaign key/);
- assert.match(player,/searchParams.get\("campaign"\)/);
+ assert.match(player,/URLSearchParams\(window\.location\.search\)\.get\("campaign"\)/);
 });
 test("public display offline cache stores only unprotected playlists and same-origin image assets",async()=>{
  const api=await read("app/api/display/[token]/route.ts");
