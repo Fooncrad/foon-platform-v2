@@ -190,6 +190,8 @@ test("one display campaign fans out atomically to every active screen in selecte
  assert.match(migration,/ADD COLUMN campaign_id CHAR\(36\) NULL/);
  assert.match(migration,/display_slides_campaign_id_idx/);
  assert.match(api,/action==="campaign"/);
+ assert.match(api,/includeDisplays=body\.includeDisplays!==false/);
+ assert.match(api,/NO_CAMPAIGN_DESTINATIONS/);
  assert.match(api,/SELECT id,branch_id FROM display_screens WHERE tenant_id=\? AND enabled=TRUE AND paused=FALSE/);
  assert.match(api,/requestedBranches/);
  assert.match(api,/beginTransaction\(\)/);
@@ -203,6 +205,7 @@ test("one display campaign fans out atomically to every active screen in selecte
  assert.match(manager,/campaignScope/);
  assert.match(manager,/campaignBranchIds/);
  assert.match(manager,/action:"campaign"/);
+ assert.match(manager,/Show campaign on displays/);
  assert.match(manager,/نشر الحملة على الشاشات/);
  assert.match(player,/campaign_match_key IS NULL OR campaign_match_key=\?/);
 });
@@ -223,6 +226,7 @@ test("unified campaign can publish the same FOON image into the public menu cove
  const publicMenu=await read("app/[slug]/public-menu.tsx");
  const activityStorefront=await read("app/[slug]/activity-storefront.tsx");
  assert.match(manager,/includeMenuBanner/);
+ assert.match(manager,/includeDisplays/);
  assert.match(manager,/Also show the campaign image in the menu cover banner/);
  assert.match(api,/body\.includeMenuBanner===true/);
  assert.match(api,/BANNER_REQUIRES_FOON_IMAGE/);
