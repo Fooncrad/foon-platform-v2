@@ -14,7 +14,7 @@ const SECTION_GROUP:Record<string,MerchantNavGroup>={
  assigned:"daily",overview:"daily",orders:"daily",pos:"daily",kds:"daily",tables:"daily",roomService:"daily",serviceOrders:"daily",quotes:"daily",reservations:"daily",pickupPoints:"daily",
  menu:"catalog",inventory:"catalog",
  branches:"team",team:"team",remote:"team",
- customers:"growth",marketing:"growth",
+ customers:"growth",marketing:"growth",displays:"growth",
  reports:"reports",printers:"reports",payments:"reports",
  storefront:"settings",publicControls:"settings",security:"settings",health:"settings",subscription:"settings"
 };
