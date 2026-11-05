@@ -9,7 +9,7 @@ on:
       - "app/restaurant/displays/**"
       - "app/display/**"
       - "migrations/9999_display_advertising.sql"
-      - "migrations/0310_display_kiosk_campaign_matching.sql"
+      - "migrations/9999_display_advertising_kiosk_campaign_matching.sql"
       - "lib/display/**"
       - "public/foon-offline-sw.js"
       - "scripts/display-advertising.schema.integration.test.mjs"
