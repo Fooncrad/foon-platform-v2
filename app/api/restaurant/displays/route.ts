@@ -153,7 +153,7 @@ export async function POST(req:Request){
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
- }catch{return reply({ok:false,code:"DISPLAY_SAVE_FAILED"},503);}
+ }catch(error){const status=Number((error as {status?:number})?.status);return reply({ok:false,code:status&&error instanceof Error?error.message:"DISPLAY_SAVE_FAILED"},status||503);}
 }
 export async function PATCH(req:Request){
  try{assertSameOrigin(req);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
