@@ -230,6 +230,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.locator(".restaurantApp")).toHaveClass(/restaurantPosFocus/);
  await page.getByRole("button",{name:"الخروج من وضع تكبير نقطة البيع",exact:true}).click();
  await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantPosFocus/);
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantAppWide/);
  await expect(page.getByRole("navigation",{name:"أقسام النشاط"})).toBeVisible();
  const previousOrdersToggle=page.locator(".restaurantPosPreviousOrdersToggle");
  await expect(previousOrdersToggle).toHaveAttribute("aria-expanded","false");
@@ -265,6 +266,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const posHeaders={origin,'x-foon-tenant':visualTenant.tenant};
  const afterOffline=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});
  expect((await afterOffline.json()).orders).toHaveLength(1);
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantAppWide/);
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 SAR",{exact:true})).toBeVisible();
  await captureScreenshot(page,{path:"work/merchant-desktop.png",fullPage:true});
@@ -620,6 +622,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
      await expect(page.locator('.restaurantListTools')).toHaveCount(0);
      await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
      await page.getByRole('button',{name:'الخروج من وضع تكبير نقطة البيع',exact:true}).click();
+     await expect(navigation.getByRole('button',{name:'المواعيد',exact:true})).toBeVisible();
      await expect(navigation).toBeVisible();
     }
     if(activity!=="restaurant"){
