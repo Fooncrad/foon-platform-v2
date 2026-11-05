@@ -30,7 +30,9 @@ export async function publishDisplayInvalidation(tenantId:string,screenId:string
  const base=endpoint(),key=secret();
  if(!base||key.length<32)return false;
  try{
-  const response=await fetch(new URL("/publish",base),{
+  const parsed=new URL(base);
+  if(parsed.protocol!=="https:")return false;
+  const response=await fetch(new URL("/publish",parsed),{
    method:"POST",
    headers:{"content-type":"application/json","authorization":"Bearer "+key},
    body:JSON.stringify({type:"display.invalidate",tenantId,screenId,occurredAt:new Date().toISOString()}),
