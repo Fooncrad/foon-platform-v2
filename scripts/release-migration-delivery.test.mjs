@@ -10,7 +10,8 @@ test("only grandfathered legacy migration prefixes may repeat",()=>{
  // Never rename migrations already applied to customer databases.
  const legacyDuplicates=new Map([
   ["0018",["0018_automatic_free_stores.sql","0018_customer_notifications.sql"]],
-  ["0060",["0060_order_notes.sql","0060_tenant_business_profiles.sql"]]
+  ["0060",["0060_order_notes.sql","0060_tenant_business_profiles.sql"]],
+  ["9999",["9999_display_advertising.sql","9999_display_advertising_kiosk_campaign_matching.sql"]]
  ]);
  const files=readdirSync(directory).filter(file=>/^\d{4}_.+\.sql$/.test(file));
  const byPrefix=new Map();
