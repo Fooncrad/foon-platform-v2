@@ -44,6 +44,13 @@ export const server=createServer((req,res)=>{
 });
 export const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});
 const consumedTickets=new Map();
+export function consumeTicket(ticket,now=Math.floor(Date.now()/1000)){
+ for(const [nonce,expiresAt] of consumedTickets){if(expiresAt<=now)consumedTickets.delete(nonce);}
+ const identity=verifyTicket(ticket,now);
+ if(!identity||consumedTickets.has(identity.nonce))return null;
+ consumedTickets.set(identity.nonce,identity.expiresAt);
+ return identity;
+}
 server.on("upgrade",(req,socket,head)=>{
  let url;try{url=new URL(req.url||"/","http://localhost");}catch{socket.destroy();return;}
  const origin=req.headers.origin||"";
