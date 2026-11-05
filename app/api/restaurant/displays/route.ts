@@ -9,6 +9,7 @@ import {readLimitedJson} from "@/lib/security/limited-json";
 import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {createKioskPinRecord} from "@/lib/display/kiosk-security";
+import {publishDisplayInvalidation} from "@/lib/display/realtime";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
@@ -44,6 +45,7 @@ export async function POST(req:Request){
    const record=pin?createKioskPinRecord(pin):null;
    const [result]=await database().execute("UPDATE display_screens SET kiosk_pin_salt=?,kiosk_pin_hash=?,kiosk_failed_attempts=0,kiosk_locked_until=NULL WHERE id=? AND tenant_id=?",[record?.salt??null,record?.hash??null,body.screenId,ctx.tenant]);
    if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
    return reply({ok:true,enabled:Boolean(record)});
   }
   if(action==="rotate"){
@@ -51,6 +53,7 @@ export async function POST(req:Request){
    const token=randomBytes(32).toString("base64url");
    const [result]=await database().execute("UPDATE display_screens SET token_hash=? WHERE id=? AND tenant_id=?",[digest(token),body.screenId,ctx.tenant]);
    if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
    return reply({ok:true,token});
   }
   if(action==="screen"){
@@ -59,6 +62,7 @@ export async function POST(req:Request){
    if(branch){const [b]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branch,ctx.tenant]);if(!b.length)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);}
    const id=randomUUID(),token=randomBytes(32).toString("base64url");
    await database().execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[id,ctx.tenant,branch,body.name.trim(),digest(token),ctx.user]);
+   await publishDisplayInvalidation(ctx.tenant,id);
    return reply({ok:true,id,token},201);
   }
   if(action==="slide"){
@@ -82,6 +86,7 @@ export async function POST(req:Request){
    const campaignKey=typeof body.campaignMatchKey==="string"?body.campaignMatchKey.trim().slice(0,80):"";
    if(campaignKey&&!/^[a-z0-9_-]{1,80}$/i.test(campaignKey))return reply({ok:false,code:"INVALID_CAMPAIGN_KEY"},400);
    await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,campaignKey||null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
+   await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
@@ -105,6 +110,7 @@ export async function PATCH(req:Request){
    if(body.refreshSeconds!==undefined)allowed.refresh_seconds=Math.max(5,Math.min(120,Number(body.refreshSeconds)||15));
    const entries=Object.entries(allowed);if(!entries.length)return reply({ok:false,code:"NO_CHANGES"},400);
    await database().query("UPDATE display_screens SET "+entries.map(([k])=>k+"=?").join(",")+" WHERE id=? AND tenant_id=?",[...entries.map(([,v])=>v),body.id,ctx.tenant]);
+   await publishDisplayInvalidation(ctx.tenant,String(body.id));
    return reply({ok:true});
   }
   if(body.kind==="slide"){
