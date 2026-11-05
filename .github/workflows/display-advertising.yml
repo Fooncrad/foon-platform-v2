@@ -11,6 +11,8 @@ on:
       - "migrations/9999_display_advertising.sql"
       - "migrations/9999_display_advertising_kiosk_campaign_matching.sql"
       - "lib/display/**"
+      - "services/display-realtime/**"
+      - "docs/display-realtime-gateway.md"
       - "public/foon-offline-sw.js"
       - "scripts/display-advertising.schema.integration.test.mjs"
       - "scripts/display-kiosk-security.test.mjs"
@@ -45,6 +47,8 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run test:display-advertising
+      - run: npm --prefix services/display-realtime install --no-audit --no-fund
+      - run: npm --prefix services/display-realtime test
       - run: npm run test:migrations
       - run: npm run db:migrate
       - run: node --test scripts/display-advertising.schema.integration.test.mjs
