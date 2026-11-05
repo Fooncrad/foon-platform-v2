@@ -26,7 +26,7 @@ test("public playback uses an unguessable token hash and only active scheduled s
  const api=await read("app/api/display/[token]/route.ts");
  assert.match(api,/createHash\("sha256"\)/);
  assert.match(api,/token_hash=\?/);
- assert.match(api,/enabled=TRUE AND \(campaign_match_key IS NULL OR campaign_match_key=\?\) AND \(starts_at IS NULL OR starts_at<=UTC_TIMESTAMP\(\)\)/);
+ assert.match(api,/s.enabled=TRUE AND \(s.campaign_match_key IS NULL OR s.campaign_match_key=\?\) AND \(s.starts_at IS NULL OR s.starts_at<=UTC_TIMESTAMP\(\)\)/);
  assert.match(api,/ends_at IS NULL OR ends_at>UTC_TIMESTAMP\(\)/);
 });
 test("merchant workspace exposes the displays module and a fullscreen public player",async()=>{
@@ -45,7 +45,7 @@ test("display creatives upload through the existing tenant asset pipeline and su
  const manager=await read("app/restaurant/display-manager.tsx");
  const player=await read("app/display/[token]/display-player.tsx");
  assert.match(api,/INVALID_SCHEDULE/);
- assert.match(publicApi,/starts_at IS NULL OR starts_at<=UTC_TIMESTAMP/);
+ assert.match(publicApi,/s.starts_at IS NULL OR s.starts_at<=UTC_TIMESTAMP/);
  assert.match(manager,/FormData\(\)/);
  assert.match(manager,/\/api\/restaurant\/assets/);
  assert.match(manager,/datetime-local/);
@@ -114,7 +114,7 @@ test("campaign matching keys filter only the matching slides",async()=>{
  assert.match(migration,/campaign_match_key VARCHAR\(80\)/);
  assert.match(admin,/INVALID_CAMPAIGN_KEY/);
  assert.match(admin,/campaign_match_key/);
- assert.match(publicApi,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+ assert.match(publicApi,/s.campaign_match_key IS NULL OR s.campaign_match_key=\?/);
  assert.match(manager,/Campaign key/);
  assert.match(player,/URLSearchParams\(window\.location\.search\)\.get\("campaign"\)/);
 });
