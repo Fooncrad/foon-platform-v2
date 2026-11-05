@@ -52,7 +52,11 @@ test("paid receipt approval is the only automatic commission credit path",()=>{
 });
 test("owner must submit server-priced paid cycle; no employee or admin impersonation",()=>{
  const route=src("../app/api/tenant/subscription-requests/route.ts");
- assert.match(route,/requireTenantMembership\(user,id,\["owner"\]/);
+ assert.ok(route.includes('requireTenantMembership(user,id,["owner"],false)'));
+ const get=route.slice(route.indexOf("export async function GET"),route.indexOf("export async function POST"));
+ const post=route.slice(route.indexOf("export async function POST"));
+ assert.ok(get.includes("merchant(id)"));
+ assert.ok(post.includes("merchant(id)"));
  assert.match(route,/role.adminAccess/);
  assert.match(route,/p.code<>'free'/);
  assert.match(route,/pr.price>0/);
