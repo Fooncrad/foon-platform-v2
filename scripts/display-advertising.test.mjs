@@ -146,3 +146,16 @@ test("display player combines authenticated WebSocket invalidations with polling
  assert.match(relay,/verifyTicket/);
  assert.match(relay,/display\.invalidate/);
 });
+
+test("display manager can import tenant-authorized images from the FOON account library",async()=>{
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const library=await read("app/api/account/library/route.ts");
+ const assets=await read("app/api/restaurant/assets/route.ts");
+ assert.match(manager,/fetch\("\/api\/account\/library"/);
+ assert.match(manager,/librarySelection/);
+ assert.match(manager,/libraryId:librarySelection/);
+ assert.match(manager,/\/api\/restaurant\/assets/);
+ assert.match(library,/user_media_library/);
+ assert.match(assets,/body\.libraryId/);
+ assert.match(assets,/user_media_library WHERE user_id=\?/);
+});
