@@ -5,7 +5,7 @@ type Payload={screen:{id:string;name:string;refreshSeconds:number;qrEnabled:bool
 export default function DisplayPlayer({token}:{token:string}){
  const [data,setData]=useState<Payload|null>(null),[index,setIndex]=useState(0),[error,setError]=useState(false);
  const load=useCallback(async()=>{try{const r=await fetch("/api/display/"+encodeURIComponent(token),{cache:"no-store"});if(!r.ok)throw Error("DISPLAY_UNAVAILABLE");const d=await r.json();setData(d);setError(false);}catch{setError(true);}},[token]);
- useEffect(()=>{void load();const timer=setInterval(()=>void load(),15000);return()=>clearInterval(timer);},[load]);
+ useEffect(()=>{void load();const interval=Math.max(5000,Math.min(120000,(data?.screen.refreshSeconds??15)*1000));const timer=setInterval(()=>void load(),interval);return()=>clearInterval(timer);},[load,data?.screen.refreshSeconds]);
  useEffect(()=>{setIndex(0);if(!data?.slides.length)return;const seconds=Math.max(5,Math.min(120,Number(data.slides[index]?.duration_seconds)||10));const timer=setTimeout(()=>setIndex(i=>(i+1)%data.slides.length),seconds*1000);return()=>clearTimeout(timer);},[data,index]);
  const slide=data?.slides[index];
  return <main style={{position:"fixed",inset:0,background:"#05080d",color:"white",overflow:"hidden",fontFamily:"Arial,sans-serif"}}>
