@@ -89,7 +89,7 @@ self.addEventListener("fetch",event=>{
   })());return;
  }
  if(request.method!=="GET")return;
- if(url.origin===self.location.origin&&/^\\/api\\/display\\/[A-Za-z0-9_-]{32,80}$/.test(url.pathname)){
+ if(url.origin===self.location.origin&&/^\/api\\/display\\/[A-Za-z0-9_-]{32,80}$/.test(url.pathname)){
   event.respondWith((async()=>{
    const playlists=await caches.open("foon-display-playlists-v1");
    try{
@@ -101,7 +101,7 @@ self.addEventListener("fetch",event=>{
      const media=await caches.open("foon-display-media-v1");
      const urls=[...new Set((Array.isArray(data.slides)?data.slides:[]).map(slide=>slide?.media_url).filter(value=>typeof value==="string"))];
      for(const path of urls.slice(0,160)){
-      if(!/^\\/api\\/restaurant\\/assets\\/[a-f0-9-]{36}$/i.test(path))continue;
+      if(!/^\/api\\/restaurant\\/assets\\/[a-f0-9-]{36}$/i.test(path))continue;
       try{
        const asset=await fetch(path,{credentials:"omit",redirect:"error"});
        if(!asset.ok||!/^image\\/(png|jpeg|webp)$/.test(asset.headers.get("content-type")??""))continue;
