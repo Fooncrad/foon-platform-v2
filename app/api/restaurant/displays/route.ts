@@ -8,6 +8,7 @@ import {assertSameOrigin} from "@/lib/security/origin";
 import {readLimitedJson} from "@/lib/security/limited-json";
 import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin";
 import {tenantEntitlement} from "@/lib/plans/entitlements";
+import {createKioskPinRecord} from "@/lib/display/kiosk-security";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
@@ -24,10 +25,10 @@ function fail(e:unknown){const status=Number((e as {status?:number})?.status)||5
 export async function GET(req:Request){
  let ctx;try{ctx=await context(req);}catch(e){return fail(e);}
  try{
-  const [screens]=await database().execute<RowDataPacket[]>("SELECT id,name,branch_id,refresh_seconds,enabled,paused,qr_enabled,qr_position,qr_size,qr_foreground,qr_background,display_layout,last_seen_at,CASE WHEN last_seen_at>=UTC_TIMESTAMP()-INTERVAL 60 SECOND THEN TRUE ELSE FALSE END AS is_online,created_at FROM display_screens WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[ctx.tenant]);
+  const [screens]=await database().execute<RowDataPacket[]>("SELECT id,name,branch_id,refresh_seconds,enabled,paused,qr_enabled,qr_position,qr_size,qr_foreground,qr_background,display_layout,kiosk_pin_hash,last_seen_at,CASE WHEN last_seen_at>=UTC_TIMESTAMP()-INTERVAL 60 SECOND THEN TRUE ELSE FALSE END AS is_online,created_at FROM display_screens WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[ctx.tenant]);
   const ids=screens.map(x=>String(x.id));let slides:RowDataPacket[]=[];
   if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at,enabled FROM display_slides WHERE tenant_id=? AND screen_id IN ("+marks+") ORDER BY sort_order,created_at",[ctx.tenant,...ids]);slides=rows;}
-  return reply({ok:true,screens:screens.map(s=>({...s,slides:slides.filter(x=>x.screen_id===s.id)}))});
+  return reply({ok:true,screens:screens.map(s=>({...s,kiosk_protected:Boolean(s.kiosk_pin_hash),kiosk_pin_hash:undefined,slides:slides.filter(x=>x.screen_id===s.id)}))});
  }catch{return reply({ok:false,code:"DISPLAY_LIST_FAILED"},503);}
 }
 export async function POST(req:Request){
@@ -36,6 +37,15 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="kioskPin"){
+   if(typeof body.screenId!=="string"||typeof body.pin!=="string"||body.pin.length>8)return reply({ok:false,code:"INVALID_INPUT"},400);
+   const pin=body.pin.trim();
+   if(pin!==""&&!/^\d{4,8}$/.test(pin))return reply({ok:false,code:"INVALID_KIOSK_PIN"},400);
+   const record=pin?createKioskPinRecord(pin):null;
+   const [result]=await database().execute("UPDATE display_screens SET kiosk_pin_salt=?,kiosk_pin_hash=?,kiosk_failed_attempts=0,kiosk_locked_until=NULL WHERE id=? AND tenant_id=?",[record?.salt??null,record?.hash??null,body.screenId,ctx.tenant]);
+   if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   return reply({ok:true,enabled:Boolean(record)});
+  }
   if(action==="rotate"){
    if(typeof body.screenId!=="string")return reply({ok:false,code:"INVALID_INPUT"},400);
    const token=randomBytes(32).toString("base64url");
