@@ -15,6 +15,8 @@ test("display player reports bounded browser health without claiming native disp
  assert.match(player,/\/health/);
  assert.match(player,/setInterval\(\(\)=>void report\(\),30000\)/);
  assert.match(player,/document\.addEventListener\("visibilitychange"/);
+ assert.match(player,/MEDIA_PLAYBACK_ERROR/);
+ assert.match(player,/onError=\{\(\)=>setMediaError/);
  assert.match(manager,/player_health_at/);
  assert.match(manager,/player_error_code/);
  assert.match(migration,/player_health_json JSON/);
