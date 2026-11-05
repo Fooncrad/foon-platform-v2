@@ -42,7 +42,7 @@ const menuTabHints:Record<string,{ar:string;en:string;fr:string}>={
  menuImages:{ar:"اربط الصور بالصنف المطلوب، ولا تخلط بينها وبين صورة قسم المنيو.",en:"Attach images to a product; these are separate from menu category images.",fr:"Associez les images aux articles, séparément des images des catégories."},
  templates:{ar:"غيّر مظهر المنيو دون تغيير ربط الأقسام بالأصناف أو مجموعات الإضافات.",en:"Customize appearance without changing product categories or add-on relationships.",fr:"Personnalisez l’apparence sans modifier les catégories ni les groupes d’options."}
 };
-export default function ServiceWorkspace({tenantId,section,branch,branches,onChanged,grants,fullAccess=true,dining=true,waitlistEnabled=false,businessLabel="المطعم",language="ar",currency="SAR"}:{businessLabel?:string;dining?:boolean;language?:"ar"|"en"|"fr";currency?:string;tenantId:string;section:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void;grants?:string[];fullAccess?:boolean}){
+export default function ServiceWorkspace({tenantId,section,branch,branches,onChanged,grants,fullAccess=true,dining=true,waitlistEnabled=false,businessLabel="المطعم",language="ar",currency="SAR"}:{businessLabel?:string;dining?:boolean;waitlistEnabled?:boolean;language?:"ar"|"en"|"fr";currency?:string;tenantId:string;section:string;branch:string;branches:{id:string;name:string}[];onChanged:()=>void;grants?:string[];fullAccess?:boolean}){
  const translateUi=useUiText();
  const [selectedTab,setTab]=useState(groups[section]?.[0].key??section);
  const tabs=groups[section]?.filter(item=>(item.key!=="waitlist"||waitlistEnabled)&&(fullAccess||grants?.includes(item.key+".view")));
