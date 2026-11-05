@@ -105,7 +105,7 @@ test("kiosk PIN protection uses salted scrypt, signed short-lived sessions and f
  assert.match(player,/شاشة محمية/);
 });
 test("campaign matching keys filter only the matching slides",async()=>{
- const migration=await read("migrations/0310_display_kiosk_campaign_matching.sql");
+ const migration=await read("migrations/9999_display_advertising_kiosk_campaign_matching.sql");
  const admin=await read("app/api/restaurant/displays/route.ts");
  const publicApi=await read("app/api/display/[token]/route.ts");
  const manager=await read("app/restaurant/display-manager.tsx");
