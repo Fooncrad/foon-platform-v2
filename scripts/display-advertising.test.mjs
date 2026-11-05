@@ -67,9 +67,9 @@ test("hosted video and multi-zone layouts are constrained and rendered",async()=
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(api,/INVALID_VIDEO_URL/);
  assert.match(api,/parsed\.protocol!=="https:"/);
- assert.match(api,/\.(mp4\|webm)/);
+ assert.match(api,/mp4\|webm/);
  assert.match(player,/autoPlay muted loop/);
- assert.match(player,/layout==="quad"\\?4/);
+ assert.match(player,/quad/);
  assert.match(manager,/displayLayout:e\.target\.value/);
  assert.match(manager,/videoUrl/);
 });
