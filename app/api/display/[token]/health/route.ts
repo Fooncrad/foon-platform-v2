@@ -29,7 +29,7 @@ export async function POST(req:Request,{params}:{params:Promise<{token:string}>}
  if(!validReport(body))return reply({ok:false,code:"INVALID_PLAYER_HEALTH"},400);
  try{
   const [result]=await database().execute(
-   "UPDATE display_screens SET player_health_json=?,player_health_at=UTC_TIMESTAMP(),player_error_code=?,last_seen_at=UTC_TIMESTAMP() WHERE token_hash=? AND enabled=TRUE AND paused=FALSE",
+   "UPDATE display_screens SET player_health_json=?,player_health_at=UTC_TIMESTAMP(),player_error_code=?,last_seen_at=UTC_TIMESTAMP() WHERE token_hash=? AND enabled=TRUE AND paused=FALSE AND EXISTS (SELECT 1 FROM tenants t WHERE t.id=display_screens.tenant_id AND t.status='active')",
    [JSON.stringify(body),body.errorCode, digest(token)]
   );
   if(Number((result as {affectedRows?:number}).affectedRows??0)!==1)return reply({ok:false},404);
