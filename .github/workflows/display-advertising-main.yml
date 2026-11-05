@@ -10,7 +10,7 @@ on:
       - "app/display/**"
       - "lib/display/**"
       - "migrations/9999_display_advertising*.sql"
-      - "migrations/0157_display_player_health_telemetry.sql"
+      - "migrations/9999_display_player_health_telemetry.sql"
       - "services/display-realtime/**"
       - "docs/display-*.md"
       - "public/foon-offline-sw.js"
