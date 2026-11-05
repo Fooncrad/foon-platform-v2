@@ -128,3 +128,20 @@ test("public display offline cache stores only unprotected playlists and same-or
  assert.match(page,/OfflineWorker/);
 });
 
+
+test("display player combines authenticated WebSocket invalidations with polling recovery",async()=>{
+ const player=await read("app/display/[token]/display-player.tsx");
+ const ticketRoute=await read("app/api/display/[token]/realtime-ticket/route.ts");
+ const realtime=await read("lib/display/realtime.ts");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const relay=await read("services/display-realtime/server.mjs");
+ assert.match(player,/new WebSocket\(/);
+ assert.match(player,/realtime-ticket/);
+ assert.match(player,/setInterval\(\(\)=>void load\(\)/);
+ assert.match(ticketRoute,/verifyKioskSession/);
+ assert.match(ticketRoute,/createDisplayRealtimeTicket/);
+ assert.match(realtime,/createHmac/);
+ assert.match(admin,/publishDisplayInvalidation/);
+ assert.match(relay,/verifyTicket/);
+ assert.match(relay,/display\.invalidate/);
+});
