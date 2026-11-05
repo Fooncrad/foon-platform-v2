@@ -37,3 +37,15 @@ test("merchant workspace exposes the displays module and a fullscreen public pla
  assert.match(manager,/إدارة شاشات الإعلانات/);
  assert.match(player,/position:"fixed",inset:0/);
 });
+
+test("display creatives upload through the existing tenant asset pipeline and support schedules",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(api,/INVALID_SCHEDULE/);
+ assert.match(api,/starts_at IS NULL OR starts_at<=UTC_TIMESTAMP/);
+ assert.match(manager,/FormData\(\)/);
+ assert.match(manager,/\/api\/restaurant\/assets/);
+ assert.match(manager,/datetime-local/);
+ assert.match(player,/screen\.refreshSeconds/);
+});
