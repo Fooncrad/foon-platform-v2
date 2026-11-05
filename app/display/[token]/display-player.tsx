@@ -56,7 +56,7 @@ export default function DisplayPlayer({token}:{token:string}){
   window.addEventListener("offline",onVisibility);
   document.addEventListener("visibilitychange",onVisibility);
   return()=>{clearInterval(timer);window.removeEventListener("online",onVisibility);window.removeEventListener("offline",onVisibility);document.removeEventListener("visibilitychange",onVisibility);};
- },[token,data?.screen.id,error,slide?.id]);
+ },[token,data?.screen.id,error,data?.slides.length]);
  const transition=(effect:string)=>effect==="zoom"?"foon-display-zoom .9s ease-out":effect==="slide"?"foon-display-slide .7s ease-out":effect==="kenburns"?"foon-display-kenburns 12s ease-in-out infinite alternate":"foon-display-fade .7s ease-out";
  useEffect(()=>{if(!data?.screen.id||!data.slides.length)return;const seconds=Math.max(5,Math.min(120,Number(data.slides[index]?.duration_seconds)||10));const timer=setTimeout(()=>setPlayback({screenId:data.screen.id,index:(index+layoutCount)%data.slides.length}),seconds*1000);return()=>clearTimeout(timer);},[data?.screen.id,data?.slides.length,index,layoutCount,data?.slides]);
  return <main style={{position:"fixed",inset:0,background:"#05080d",color:"white",overflow:"hidden",fontFamily:"Arial,sans-serif"}}><style jsx global>{`@keyframes foon-display-fade{from{opacity:0}to{opacity:1}}@keyframes foon-display-zoom{from{opacity:.5;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}@keyframes foon-display-slide{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}@keyframes foon-display-kenburns{from{transform:scale(1)}to{transform:scale(1.08)}}`}</style>
