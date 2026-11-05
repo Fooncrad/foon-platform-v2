@@ -230,6 +230,7 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  await expect(page.locator(".restaurantApp")).toHaveClass(/restaurantPosFocus/);
  await page.getByRole("button",{name:"الخروج من وضع تكبير نقطة البيع",exact:true}).click();
  await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantPosFocus/);
+ await expect(page.getByRole("navigation",{name:"أقسام النشاط"})).toBeVisible();
  const previousOrdersToggle=page.locator(".restaurantPosPreviousOrdersToggle");
  await expect(previousOrdersToggle).toHaveAttribute("aria-expanded","false");
  await expect(page.locator(".restaurantOrderCards article")).toHaveCount(0);
@@ -619,6 +620,7 @@ test("all 15 activities expose their own tools; service orders work in three lan
      await expect(page.locator('.restaurantListTools')).toHaveCount(0);
      await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
      await page.getByRole('button',{name:'الخروج من وضع تكبير نقطة البيع',exact:true}).click();
+     await expect(navigation).toBeVisible();
     }
     if(activity!=="restaurant"){
      const headers={origin,"x-foon-tenant":account.tenant.id};
