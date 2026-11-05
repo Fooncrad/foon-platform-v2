@@ -40,8 +40,11 @@ export async function POST(req:Request){
  const action=body?.action;
  try{
   if(action==="campaign"){
+   const includeDisplays=body.includeDisplays!==false;
+   const includeMenuBanner=body.includeMenuBanner===true;
+   if(!includeDisplays&&!includeMenuBanner)return reply({ok:false,code:"NO_CAMPAIGN_DESTINATIONS"},400);
    const requestedBranches=Array.isArray(body.branchIds)?body.branchIds.filter((x):x is string=>typeof x==="string"&&/^[a-f0-9-]{36}$/i.test(x)):null;
-   if(body.branchIds!==undefined&&(!requestedBranches||requestedBranches.length===0||requestedBranches.length>50||requestedBranches.length!==body.branchIds.length))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
+   if(includeDisplays&&body.branchIds!==undefined&&(!requestedBranches||requestedBranches.length===0||requestedBranches.length>50||requestedBranches.length!==body.branchIds.length))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
    if(requestedBranches?.length){
     const [validBranches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND enabled=TRUE AND id IN ("+requestedBranches.map(()=>"?").join(",")+")",[ctx.tenant,...requestedBranches]);
     if(validBranches.length!==new Set(requestedBranches).size)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);
@@ -61,8 +64,8 @@ export async function POST(req:Request){
    const endsAt=body.endsAt==null||body.endsAt===""?null:typeof body.endsAt==="string"?body.endsAt:null;
    const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
    if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
-   const [targetScreens]=await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]);
-   if(!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
+   const [targetScreens]=includeDisplays?await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE AND (branch_id IS NULL OR EXISTS (SELECT 1 FROM branches b WHERE b.id=display_screens.branch_id AND b.tenant_id=display_screens.tenant_id AND b.enabled=TRUE))"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]):[[] as RowDataPacket[]];
+   if(includeDisplays&&!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
    if(targetScreens.length>100)return reply({ok:false,code:"TOO_MANY_DISPLAYS",max:100},413);
    const campaignId=randomUUID();
    const conn=await database().getConnection();
@@ -75,7 +78,7 @@ export async function POST(req:Request){
      const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
      await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screen.id,ctx.tenant,campaignId,mediaUrl,sourceType,sourceId,videoUrl,body.videoLoop!==false,transition,badge,null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
     }
-    if(body.includeMenuBanner===true){
+    if(includeMenuBanner){
      if(!(await tenantEntitlement(ctx.tenant,"branding.colors")).enabled)throw Object.assign(new Error("MENU_COVER_FEATURE_REQUIRED"),{status:403});
      let coverUrl=mediaUrl;
      if(!coverUrl&&sourceType==="restaurant_menu_item"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM restaurant_menu_items WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
@@ -90,7 +93,7 @@ export async function POST(req:Request){
     await conn.commit();
    }catch(error){await conn.rollback();throw error;}finally{conn.release();}
    await Promise.all(targetScreens.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.id))));
-   return reply({ok:true,campaignId,campaignKey,screenCount:targetScreens.length,branchIds:[...new Set(targetScreens.map(s=>s.branch_id).filter(Boolean))]},201);
+   return reply({ok:true,campaignId,screenCount:targetScreens.length,menuBannerUpdated:includeMenuBanner,branchIds:[...new Set(targetScreens.map(s=>s.branch_id).filter(Boolean))]},201);
   }
   if(action==="kioskPin"){
    if(typeof body.screenId!=="string"||typeof body.pin!=="string"||body.pin.length>8)return reply({ok:false,code:"INVALID_INPUT"},400);
