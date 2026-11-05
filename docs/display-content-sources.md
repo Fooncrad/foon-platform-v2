@@ -5,6 +5,7 @@ The display playlist supports three creative sources:
 - `media`: an image already imported into the tenant's display asset store, or a hosted HTTPS MP4/WebM URL.
 - `restaurant_menu_item`: a live reference to an enabled restaurant menu item.
 - `catalog_product`: a live reference to an enabled product/service in the shared activity catalog.
+- `restaurant_menu_category` and `catalog_category`: live category references; the player uses the category cover when available (or the first enabled menu-item image for a restaurant category).
 
 For menu/catalog references, the public player resolves the current name, description, image and price when it refreshes the playlist. A product that is disabled or archived is omitted from playback. The manager reads only records belonging to the active tenant and requires the display-advertising entitlement plus owner/manager membership.
 
