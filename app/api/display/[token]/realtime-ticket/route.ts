@@ -13,7 +13,7 @@ export async function GET(req:Request,{params}:{params:Promise<{token:string}>})
  const wsUrl=process.env.NEXT_PUBLIC_FOON_DISPLAY_REALTIME_URL??"";
  if(!/^wss:\/\//i.test(wsUrl))return NextResponse.json({ok:false,code:"REALTIME_NOT_CONFIGURED"},{status:503,headers:{"Cache-Control":"no-store"}});
  try{
-  const [rows]=await database().execute<RowDataPacket[]>("SELECT id,tenant_id,kiosk_pin_hash FROM display_screens s JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.token_hash=? AND s.enabled=TRUE AND s.paused=FALSE LIMIT 1",[hash(token)]);
+  const [rows]=await database().execute<RowDataPacket[]>("SELECT s.id,s.tenant_id,s.kiosk_pin_hash FROM display_screens s JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.token_hash=? AND s.enabled=TRUE AND s.paused=FALSE LIMIT 1",[hash(token)]);
   if(!rows.length)return NextResponse.json({ok:false},{status:404});
   const pinHash=rows[0].kiosk_pin_hash;
   if(pinHash&&!verifyKioskSession(token,String(pinHash),readCookie(req,"foon_display_kiosk")))return NextResponse.json({ok:false,code:"KIOSK_AUTH_REQUIRED"},{status:401});
