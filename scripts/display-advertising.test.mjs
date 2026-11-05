@@ -26,7 +26,7 @@ test("public playback uses an unguessable token hash and only active scheduled s
  const api=await read("app/api/display/[token]/route.ts");
  assert.match(api,/createHash\("sha256"\)/);
  assert.match(api,/token_hash=\?/);
- assert.match(api,/enabled=TRUE AND \(starts_at IS NULL OR starts_at<=UTC_TIMESTAMP\(\)\)/);
+ assert.match(api,/enabled=TRUE AND \(campaign_match_key IS NULL OR campaign_match_key=\?\) AND \(starts_at IS NULL OR starts_at<=UTC_TIMESTAMP\(\)\)/);
  assert.match(api,/ends_at IS NULL OR ends_at>UTC_TIMESTAMP\(\)/);
 });
 test("merchant workspace exposes the displays module and a fullscreen public player",async()=>{
