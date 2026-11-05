@@ -188,7 +188,7 @@ export default function MerchantDashboard({data}:{data:MerchantData}){
  };
  const visible=modules.filter(m=>{
   const capability=sectionCapability[m.key];
-  return allowedSection(m.key)&&(!capability||data.activityModules.includes(capability)||(m.key==="menu"&&data.activityModules.includes("services"))||(m.key==="reservations"&&data.activityModules.includes("bookings")));
+  return allowedSection(m.key)&&(!capability||data.activityModules.includes(capability)||(m.key==="menu"&&data.activityModules.includes("services"))||(m.key==="reservations"&&(data.activityModules.includes("bookings")||["carwash","automotive","salon","publicworks"].includes(data.activityCode))));
  });
 
  // Keep internal section state in sync with clean deep links and browser back/forward.
