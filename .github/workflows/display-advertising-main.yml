@@ -1,0 +1,56 @@
+name: FOON Display Advertising — main
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/api/display/**"
+      - "app/api/restaurant/displays/**"
+      - "app/restaurant/display-manager.tsx"
+      - "app/restaurant/displays/**"
+      - "app/display/**"
+      - "lib/display/**"
+      - "migrations/9999_display_advertising*.sql"
+      - "services/display-realtime/**"
+      - "docs/display-*.md"
+      - "public/foon-offline-sw.js"
+      - "scripts/display-*.test.mjs"
+      - "scripts/display-advertising.schema.integration.test.mjs"
+      - "package.json"
+      - ".github/workflows/display-advertising-main.yml"
+  push:
+    branches: [feat/foon-display-player-multiplatform-20261105]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: foon-display-ci-only
+          MARIADB_DATABASE: foon_display_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: mysql://root:foon-display-ci-only@127.0.0.1:3306/foon_display_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:display-advertising
+      - run: npm --prefix services/display-realtime install --no-audit --no-fund
+      - run: npm --prefix services/display-realtime test
+      - run: npm run test:migrations
+      - run: npm run db:migrate
+      - run: node --test scripts/display-advertising.schema.integration.test.mjs
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
