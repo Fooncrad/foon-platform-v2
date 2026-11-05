@@ -122,11 +122,11 @@ export async function PATCH(req:Request){
      const direction=body.move==="up"?"<":">",order=body.move==="up"?"DESC":"ASC";
      const [neighbor]=await conn.query<RowDataPacket[]>("SELECT id,sort_order FROM display_slides WHERE screen_id=? AND tenant_id=? AND sort_order "+direction+" ? ORDER BY sort_order "+order+",created_at "+order+" LIMIT 1 FOR UPDATE",[current[0].screen_id,ctx.tenant,current[0].sort_order]);
      if(neighbor.length){await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[current[0].sort_order,neighbor[0].id,ctx.tenant]);await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[neighbor[0].sort_order,current[0].id,ctx.tenant]);}
-     await conn.commit();return reply({ok:true});
+     await conn.commit();await publishDisplayInvalidation(ctx.tenant,String(current[0].screen_id));return reply({ok:true});
     }catch{await conn.rollback();return reply({ok:false,code:"SLIDE_REORDER_FAILED"},503);}finally{conn.release();}
    }
-   if(body.enabled!==undefined){await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);return reply({ok:true});}
-   await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);return reply({ok:true});
+   if(body.enabled!==undefined){const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});}
+   const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});
   }
   return reply({ok:false,code:"INVALID_KIND"},400);
  }catch{return reply({ok:false,code:"DISPLAY_UPDATE_FAILED"},503);}
