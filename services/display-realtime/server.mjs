@@ -38,7 +38,7 @@ export const server=createServer((req,res)=>{
   if(event?.type!=="display.invalidate"||typeof event.screenId!=="string"||typeof event.tenantId!=="string"||event.screenId.length>64||event.tenantId.length>64){res.writeHead(400);res.end();return;}
   const message=JSON.stringify({type:"display.invalidate",screenId:event.screenId});
   let delivered=0;
-  for(const client of wss.clients){if(client.readyState===1&&client.screenId===event.screenId){client.send(message);delivered++;}}
+  for(const client of wss.clients){if(client.readyState===1&&client.screenId===event.screenId&&client.tenantId===event.tenantId){client.send(message);delivered++;}}
   res.writeHead(202,{"content-type":"application/json","cache-control":"no-store"});res.end(JSON.stringify({ok:true,delivered}));
  });
 });
