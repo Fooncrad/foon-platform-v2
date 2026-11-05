@@ -689,6 +689,12 @@ test("all 15 activities expose their own tools; service orders work in three lan
      await expect(previousOrdersToggle).toHaveAttribute('aria-expanded','true');
      await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('7.25');
      await expect(page.locator('.restaurantOrderCards article').filter({hasText:productName})).toContainText('SAR');
+     // POS deliberately hides the navigation while expanded; restore the
+     // workspace before testing service navigation on non-dining activities.
+     await page.getByRole('button',{name:'الخروج من وضع تكبير نقطة البيع',exact:true}).click();
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantPosFocus/);
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantAppWide/);
+     await expect(navigation).toBeVisible();
     }
     if(services.has(activity)&&activity!=="laundry"){
      await navigation.getByRole('button',{name:'المواعيد',exact:true}).click();
