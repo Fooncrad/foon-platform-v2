@@ -73,3 +73,16 @@ test("hosted video and multi-zone layouts are constrained and rendered",async()=
  assert.match(manager,/displayLayout:e\.target\.value/);
  assert.match(manager,/videoUrl/);
 });
+
+test("player heartbeat and transition/badge effects are wired end to end",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const publicApi=await read("app/api/display/[token]/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(api,/AS is_online/);
+ assert.match(publicApi,/SET last_seen_at=UTC_TIMESTAMP/);
+ assert.match(api,/transition_effect,badge_text/);
+ assert.match(player,/foon-display-kenburns/);
+ assert.match(player,/item\.badge_text/);
+ assert.match(manager,/is_online/);
+});
