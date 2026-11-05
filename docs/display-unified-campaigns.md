@@ -11,7 +11,7 @@ The default destination selection in the campaign composer is:
 - `storefront_banner = true`
 - `branch_scope = all`
 
-“All branches and devices” means all enabled, tenant-owned display screens and the tenant's public storefront. It never means arbitrary/unpaired devices. Explicit branch/device selections narrow the scope.
+“All” means one identical campaign creative and one campaign schedule broadcast to every enabled, paired display screen across all branches owned by the tenant, plus the tenant's public storefront when that destination is enabled. If the tenant has branches, the merchant may select one or more branches; the same ad is then broadcast to every enabled, paired screen in each selected branch. Branch selection changes the audience only, never the creative per screen or per branch. Do not create separate ads or require separate publishing actions per screen. Unpaired or disabled devices are excluded. If the tenant has no branches, “All” targets all enabled, paired screens belonging directly to that tenant.
 
 ## Delivery architecture
 
@@ -42,7 +42,7 @@ The default destination selection in the campaign composer is:
 
 - One campaign can publish to both screens and storefront banner by default.
 - The merchant can disable either destination independently.
-- “All” reaches every enabled, paired screen in the tenant and the storefront, while selected scope is branch/device constrained.
+- “All” broadcasts the exact same ad to every enabled, paired screen in every tenant branch; selecting branches broadcasts that same ad to every enabled, paired screen in only those branches. The merchant publishes once, not once per screen or branch.
 - The same campaign can be previewed in each destination's aspect ratio before publishing.
 - Publish, pause, schedule, edit, and end propagate without visiting each screen.
 - Screen health and last-seen telemetry remain visible to the merchant.
