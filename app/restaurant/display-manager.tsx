@@ -1,10 +1,10 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-type Slide={id:string;media_url:string;title_ar:string|null;title_en:string|null;title_fr:string|null;subtitle_ar:string|null;subtitle_en:string|null;subtitle_fr:string|null;duration_seconds:number;enabled:boolean};
-type Screen={id:string;name:string;branch_id:string|null;refresh_seconds:number;enabled:boolean;paused:boolean;qr_enabled:boolean;slides:Slide[]};
+type Slide={id:string;media_url:string|null;external_video_url:string|null;title_ar:string|null;title_en:string|null;title_fr:string|null;subtitle_ar:string|null;subtitle_en:string|null;subtitle_fr:string|null;duration_seconds:number;enabled:boolean};
+type Screen={id:string;name:string;branch_id:string|null;refresh_seconds:number;enabled:boolean;paused:boolean;qr_enabled:boolean;qr_position:string;qr_size:number;display_layout:string;slides:Slide[]};
 export default function DisplayManager({tenantId,branches,language}:{tenantId:string;branches:{id:string;name:string}[];language:"ar"|"en"|"fr"}){
  const t=(ar:string,en:string,fr:string)=>language==="en"?en:language==="fr"?fr:ar;
- const [screens,setScreens]=useState<Screen[]>([]),[name,setName]=useState(""),[branch,setBranch]=useState(""),[selected,setSelected]=useState(""),[media,setMedia]=useState(""),[duration,setDuration]=useState("10"),[titleAr,setTitleAr]=useState(""),[titleEn,setTitleEn]=useState(""),[titleFr,setTitleFr]=useState(""),[startsAt,setStartsAt]=useState(""),[endsAt,setEndsAt]=useState(""),[token,setToken]=useState(""),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[notice,setNotice]=useState("");
+ const [screens,setScreens]=useState<Screen[]>([]),[name,setName]=useState(""),[branch,setBranch]=useState(""),[selected,setSelected]=useState(""),[media,setMedia]=useState(""),[videoUrl,setVideoUrl]=useState(""),[duration,setDuration]=useState("10"),[titleAr,setTitleAr]=useState(""),[titleEn,setTitleEn]=useState(""),[titleFr,setTitleFr]=useState(""),[startsAt,setStartsAt]=useState(""),[endsAt,setEndsAt]=useState(""),[token,setToken]=useState(""),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[notice,setNotice]=useState("");
  const headers={"content-type":"application/json","x-foon-tenant":tenantId};
  const load=useCallback(async()=>{const r=await fetch("/api/restaurant/displays",{headers:{"x-foon-tenant":tenantId},cache:"no-store"});const d=await r.json();if(!r.ok)throw Error(d.code);setScreens(d.screens??[]);},[tenantId]);
  useEffect(()=>{void load().catch(()=>setNotice(t("تعذر تحميل الشاشات","Could not load displays","Impossible de charger les écrans")));},[load]);
