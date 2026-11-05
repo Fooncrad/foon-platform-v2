@@ -64,10 +64,12 @@ export async function POST(req:Request){
    const endsAt=body.endsAt==null||body.endsAt===""?null:typeof body.endsAt==="string"?body.endsAt:null;
    const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
    if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
+   const [lastOrder]=await database().execute<RowDataPacket[]>("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM display_slides WHERE screen_id=? AND tenant_id=?",[body.screenId,ctx.tenant]);
+   const sortOrder=typeof body.sortOrder==="number"?Math.max(0,Math.min(10000,Math.floor(body.sortOrder))):Number(lastOrder[0]?.next_order??0);
    const id=randomUUID();
    const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
    const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
-   await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,Math.max(0,Number(body.sortOrder)||0),startsAt,endsAt]);
+   await database().query("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,external_video_url,video_loop,transition_effect,badge_text,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,mediaUrl,videoUrl,body.videoLoop!==false,transition,badge,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
