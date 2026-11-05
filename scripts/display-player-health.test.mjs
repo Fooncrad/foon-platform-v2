@@ -6,7 +6,7 @@ test("display player reports bounded browser health without claiming native disp
  const route=await read("app/api/display/[token]/health/route.ts");
  const player=await read("app/display/[token]/display-player.tsx");
  const manager=await read("app/restaurant/display-manager.tsx");
- const migration=await read("migrations/0157_display_player_health_telemetry.sql");
+ const migration=await read("migrations/9999_display_player_health_telemetry.sql");
  assert.match(route,/assertSameOrigin/);
  assert.match(route,/readLimitedJson\(req,2048\)/);
  assert.match(route,/allowedPlatforms/);
