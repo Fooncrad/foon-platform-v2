@@ -60,3 +60,16 @@ test("public player can show the tenant storefront QR when enabled",async()=>{
  assert.match(player,/screen\.qrEnabled/);
  assert.match(manager,/qrEnabled:!s\.qr_enabled/);
 });
+
+test("hosted video and multi-zone layouts are constrained and rendered",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const player=await read("app/display/[token]/display-player.tsx");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(api,/INVALID_VIDEO_URL/);
+ assert.match(api,/parsed\.protocol!=="https:"/);
+ assert.match(api,/\.(mp4\|webm)/);
+ assert.match(player,/autoPlay muted loop/);
+ assert.match(player,/layoutCount===4/);
+ assert.match(manager,/displayLayout:e\.target\.value/);
+ assert.match(manager,/videoUrl/);
+});
