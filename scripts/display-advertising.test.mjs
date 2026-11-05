@@ -228,9 +228,9 @@ test("unified campaign can publish the same FOON image into the public menu cove
  assert.match(manager,/includeMenuBanner/);
  assert.match(manager,/includeDisplays/);
  assert.match(manager,/Also show the campaign image in the menu cover banner/);
- assert.match(api,/body\.includeMenuBanner===true/);
+ assert.match(api,/includeMenuBanner=body\.includeMenuBanner===true/);
  assert.match(api,/BANNER_REQUIRES_FOON_IMAGE/);
- assert.match(api,/saveResource\(conn,ctx\.tenant,ctx\.user,"owner","storefront"/);
+ assert.match(api,/saveResource\(conn,ctx\.tenant,ctx\.user,ctx\.role,"storefront"/);
  assert.match(api,/coverUrl/);
  assert.match(publicMenu,/branding\.coverUrl/);
  assert.match(activityStorefront,/branding\.coverUrl/);
