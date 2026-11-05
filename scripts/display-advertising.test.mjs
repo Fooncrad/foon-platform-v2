@@ -82,6 +82,8 @@ test("player heartbeat and transition/badge effects are wired end to end",async(
  assert.match(api,/AS is_online/);
  assert.match(publicApi,/SET last_seen_at=UTC_TIMESTAMP/);
  assert.match(api,/transition_effect,badge_text/);
+ assert.match(api,/SLIDE_REORDER_FAILED/);
+ assert.match(api,/body.move==="up"\|\|body.move==="down"/);
  assert.match(player,/foon-display-kenburns/);
  assert.match(player,/item\.badge_text/);
  assert.match(manager,/is_online/);
