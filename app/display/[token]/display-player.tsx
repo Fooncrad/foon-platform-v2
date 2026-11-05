@@ -10,7 +10,8 @@ export default function DisplayPlayer({token}:{token:string}){
  useEffect(()=>{let active=true;if(!data?.screen.qrEnabled||!data.screen.qrUrl){setQr("");return;}void QRCode.toDataURL(data.screen.qrUrl,{width:Math.max(80,Math.min(240,data.screen.qrSize||140)),margin:1,errorCorrectionLevel:"M",color:{dark:data.screen.qrForeground||"#111827",light:data.screen.qrBackground||"#ffffff"}}).then(value=>{if(active)setQr(value);}).catch(()=>{if(active)setQr("");});return()=>{active=false;};},[data?.screen.qrEnabled,data?.screen.qrUrl]);
  useEffect(()=>{setIndex(0);if(!data?.slides.length)return;const seconds=Math.max(5,Math.min(120,Number(data.slides[index]?.duration_seconds)||10));const timer=setTimeout(()=>setIndex(i=>(i+layoutCount)%data.slides.length),seconds*1000);return()=>clearTimeout(timer);},[data,index,layoutCount]);
  const layout=data?.screen.displayLayout??"single";
- const layoutCount=layout==="double"||layout==="split"?2:layout==="triple"?3:layout==="quad"?4:1;
+ const requestedLayoutCount=layout==="double"||layout==="split"?2:layout==="triple"?3:layout==="quad"?4:1;
+ const layoutCount=Math.min(requestedLayoutCount,data?.slides.length??1);
  const visibleSlides=data?.slides.length?Array.from({length:Math.min(layoutCount,data.slides.length)},(_,offset)=>data.slides[(index+offset)%data.slides.length]):[];
  const slide=data?.slides[index];
  return <main style={{position:"fixed",inset:0,background:"#05080d",color:"white",overflow:"hidden",fontFamily:"Arial,sans-serif"}}>
