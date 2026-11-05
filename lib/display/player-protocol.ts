@@ -34,7 +34,7 @@ export type PlayerCompatibility = {
 };
 
 const validDimension = (value: unknown): value is number =>
-  Number.isInteger(value) && Number(value) > 0 && Number(value) <= 16384;
+  typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 16384;
 
 export function validatePlayerCapabilities(value: unknown): value is PlayerCapabilities {
   if (!value || typeof value !== "object") return false;
