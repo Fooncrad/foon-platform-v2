@@ -15,7 +15,7 @@ const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
 async function context(req:Request,write=false){
  const user=await currentUserId();if(!user)throw Object.assign(new Error("UNAUTHENTICATED"),{status:401});
  const tenant=req.headers.get("x-foon-tenant")??"";if(!tenant)throw Object.assign(new Error("TENANT_REQUIRED"),{status:400});
- let member;try{member=await requireTenantMembership(user,tenant,["owner","manager"],true);}catch{throw Object.assign(new Error("FORBIDDEN"),{status:403});}
+ let member;try{member=await requireTenantMembership(user,tenant,["owner","manager"],write);}catch{throw Object.assign(new Error("FORBIDDEN"),{status:403});}
  if(!(await tenantEntitlement(tenant,"campaigns")).enabled)throw Object.assign(new Error("PLAN_FEATURE_REQUIRED"),{status:403});
  if(write)await requireAllAdditionalBranchesUnlocked(member.tenantId,user);
  return {user,tenant:member.tenantId};
@@ -46,7 +46,7 @@ export async function POST(req:Request){
   }
   if(action==="slide"){
    if(typeof body.screenId!=="string"||typeof body.mediaUrl!=="string"||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl))return reply({ok:false,code:"INVALID_MEDIA"},400);
-   const [screens]=await database().execute<RowDataPacket[]>("SELECT id FROM display_screens WHERE id=? AND tenant_id=? LIMIT 1",[body.screenId,ctx.tenant]);if(!screens.length)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);
+   const [screens]=await database().execute<RowDataPacket[]>("SELECT id FROM display_screens WHERE id=? AND tenant_id=? LIMIT 1",[body.screenId,ctx.tenant]);if(!screens.length)return reply({ok:false,code:"SCREEN_NOT_FOUND"},404);\n   const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE id=? AND tenant_id=? LIMIT 1",[body.mediaUrl.slice("/api/restaurant/assets/".length),ctx.tenant]);if(!assets.length)return reply({ok:false,code:"MEDIA_NOT_FOUND"},404);
    const duration=Math.max(5,Math.min(120,Number(body.durationSeconds)||10));
    const id=randomUUID();
    await database().execute("INSERT INTO display_slides(id,screen_id,tenant_id,media_url,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,body.screenId,ctx.tenant,body.mediaUrl,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,Math.max(0,Number(body.sortOrder)||0),body.startsAt||null,body.endsAt||null]);
@@ -67,7 +67,7 @@ export async function PATCH(req:Request){
    if(typeof body.qrEnabled==="boolean")allowed.qr_enabled=body.qrEnabled;
    if(body.refreshSeconds!==undefined)allowed.refresh_seconds=Math.max(5,Math.min(120,Number(body.refreshSeconds)||15));
    const entries=Object.entries(allowed);if(!entries.length)return reply({ok:false,code:"NO_CHANGES"},400);
-   const [result]=await database().execute("UPDATE display_screens SET "+entries.map(([k])=>k+"=?").join(",")+" WHERE id=? AND tenant_id=?",[...entries.map(([,v])=>v),body.id,ctx.tenant]);
+   await database().execute("UPDATE display_screens SET "+entries.map(([k])=>k+"=?").join(",")+" WHERE id=? AND tenant_id=?",[...entries.map(([,v])=>v),body.id,ctx.tenant]);
    return reply({ok:true});
   }
   if(body.kind==="slide"){
@@ -82,5 +82,5 @@ export async function DELETE(req:Request){
  let ctx;try{ctx=await context(req,true);}catch(e){return fail(e);}
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,1024) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  if(typeof body?.id!=="string")return reply({ok:false,code:"INVALID_INPUT"},400);
- try{const [result]=await database().execute("DELETE FROM display_screens WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);return reply({ok:true});}catch{return reply({ok:false,code:"DISPLAY_DELETE_FAILED"},503);}
+ try{await database().execute("DELETE FROM display_screens WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);return reply({ok:true});}catch{return reply({ok:false,code:"DISPLAY_DELETE_FAILED"},503);}
 }
