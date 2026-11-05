@@ -18,8 +18,8 @@ export function verifyTicket(ticket,now=Math.floor(Date.now()/1000)){
  if(actual.length!==expected.length||!timingSafeEqual(actual,expected))return null;
  try{
   const data=JSON.parse(Buffer.from(payload,"base64url").toString("utf8"));
-  if(data.v!==1||typeof data.sub!=="string"||typeof data.tenant!=="string"||!Number.isInteger(data.exp)||data.exp<=now||data.exp>now+120)return null;
-  return {screenId:data.sub,tenantId:data.tenant};
+  if(data.v!==1||typeof data.sub!=="string"||typeof data.tenant!=="string"||typeof data.nonce!=="string"||!Number.isInteger(data.exp)||data.exp<=now||data.exp>now+120)return null;
+  return {screenId:data.sub,tenantId:data.tenant,nonce:data.nonce,expiresAt:data.exp};
  }catch{return null;}
 }
 function authorized(req){
@@ -43,6 +43,7 @@ export const server=createServer((req,res)=>{
  });
 });
 export const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});
+const consumedTickets=new Map();
 server.on("upgrade",(req,socket,head)=>{
  let url;try{url=new URL(req.url||"/","http://localhost");}catch{socket.destroy();return;}
  const origin=req.headers.origin||"";
