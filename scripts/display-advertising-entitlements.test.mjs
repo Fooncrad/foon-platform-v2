@@ -23,20 +23,20 @@ test("display advertising is registered, granted to Business, and enforced indep
  const page=await read("app/restaurant/displays/page.tsx");
  const assets=await read("app/api/restaurant/assets/route.ts");
  assert.match(catalog,/display_advertising/);
- assert.match(migration,/p\\.code=.enterprise./);
+ assert.match(migration,/p\.code='enterprise'/);
  assert.match(migration,/INSERT IGNORE INTO package_plan_features/);
- assert.match(api,/tenantEntitlement\\(tenant,"display_advertising"\\)/);
- assert.doesNotMatch(api,/tenantEntitlement\\(tenant,"campaigns"\\)/);
- assert.match(page,/tenantEntitlement\\(workspace\\.tenant_id,"display_advertising"\\)/);
- assert.match(assets,/tenantEntitlement\\(tenant,\x27display_advertising\x27\\)/);
+ assert.match(api,/tenantEntitlement\(tenant,"display_advertising"\)/);
+ assert.doesNotMatch(api,/tenantEntitlement\(tenant,"campaigns"\)/);
+ assert.match(page,/tenantEntitlement\(workspace\.tenant_id,"display_advertising"\)/);
+ assert.match(assets,/tenantEntitlement\(tenant,'display_advertising'\)/);
 });
 
 test("all merchant activity dashboards expose the shared display section only to managers",async()=>{
  const dashboard=await read("app/restaurant/merchant-dashboard.tsx");
  const navigation=await read("lib/ux/merchant-navigation.ts");
  const routes=await read("lib/tenant/workspace-routes.ts");
- assert.match(dashboard,/key:"displays",label:"إعلانات الشاشات",icon:"dashboard",feature:"display_advertising",roles:\\["owner","manager"\\]/);
- assert.match(dashboard,/active==="displays"\\?\\<DisplayManager/);
+ assert.match(dashboard,/key:"displays",label:"إعلانات الشاشات",icon:"dashboard",feature:"display_advertising",roles:\["owner","manager"\]/);
+ assert.match(dashboard,/active==="displays"\?<DisplayManager/);
  assert.match(navigation,/displays:"growth"/);
- assert.match(routes,/section==="displays"\\?path\\+"\\?section=displays"/);
+ assert.match(routes,/section==="displays"\?path\+"\?section=displays"/);
 });
