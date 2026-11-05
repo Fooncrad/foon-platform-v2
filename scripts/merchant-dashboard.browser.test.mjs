@@ -266,7 +266,10 @@ test("reference dashboard: authenticated tenant data, responsive layout and work
  const posHeaders={origin,'x-foon-tenant':visualTenant.tenant};
  const afterOffline=await page.request.get(origin+'/api/restaurant/operations/pos',{headers:posHeaders});
  expect((await afterOffline.json()).orders).toHaveLength(1);
+ await page.getByRole("button",{name:"الخروج من وضع تكبير نقطة البيع",exact:true}).click();
+ await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantPosFocus/);
  await expect(page.locator(".restaurantApp")).not.toHaveClass(/restaurantAppWide/);
+ await expect(page.getByRole("navigation",{name:"أقسام النشاط"})).toBeVisible();
  await page.getByRole("navigation",{name:"أقسام النشاط"}).getByRole("button",{name:"نظرة عامة",exact:true}).click();
  await expect(page.locator(".restaurantMetrics article").first().getByText("10.00 SAR",{exact:true})).toBeVisible();
  await captureScreenshot(page,{path:"work/merchant-desktop.png",fullPage:true});
@@ -622,8 +625,11 @@ test("all 15 activities expose their own tools; service orders work in three lan
      await expect(page.locator('.restaurantListTools')).toHaveCount(0);
      await expect(page.locator('.restaurantPosCheckout')).not.toContainText('المطبخ');
      await page.getByRole('button',{name:'الخروج من وضع تكبير نقطة البيع',exact:true}).click();
-     await expect(navigation.getByRole('button',{name:'المواعيد',exact:true})).toBeVisible();
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantPosFocus/);
+     await expect(page.locator('.restaurantApp')).not.toHaveClass(/restaurantAppWide/);
      await expect(navigation).toBeVisible();
+     const restoredSection=services.has(activity)?'دليل الخدمات':'المنتجات والأقسام';
+     await expect(navigation.getByRole('button',{name:restoredSection,exact:true})).toBeVisible();
     }
     if(activity!=="restaurant"){
      const headers={origin,"x-foon-tenant":account.tenant.id};
