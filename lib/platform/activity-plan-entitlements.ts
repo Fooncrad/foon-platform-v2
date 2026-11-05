@@ -20,7 +20,7 @@ const COMMON_FEATURES=new Set([
  "catalog","storefront","qr_menu","menu_templates","customer_invoices","internal_invoices",
  "invoice_printing","credit_notes","payments","vat_management","customers","employees",
  "multi_branch","analytics","coupons","loyalty","reviews","campaigns","content_library",
- "storage","sales","departments","department_printers","department_routing"
+ "storage","sales","display_advertising","departments","department_printers","department_routing"
 ]);
 /** Creator account privileges are not merchant subscription features. */
 const CREATOR_ONLY=new Set(["creator_profile","content_marketplace","content_pricing","media_library","watermark"]);
