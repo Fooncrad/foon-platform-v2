@@ -215,3 +215,19 @@ test("editing or deleting one campaign slide applies to the whole campaign",asyn
  assert.match(api,/updatedScreens/);
  assert.match(api,/deletedScreens/);
 });
+
+
+test("unified campaign can publish the same FOON image into the public menu cover",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const publicMenu=await read("app/[slug]/public-menu.tsx");
+ const activityStorefront=await read("app/[slug]/activity-storefront.tsx");
+ assert.match(manager,/includeMenuBanner/);
+ assert.match(manager,/Also show the campaign image in the menu cover banner/);
+ assert.match(api,/body\.includeMenuBanner===true/);
+ assert.match(api,/BANNER_REQUIRES_FOON_IMAGE/);
+ assert.match(api,/saveResource\(conn,ctx\.tenant,ctx\.user,"owner","storefront"/);
+ assert.match(api,/coverUrl/);
+ assert.match(publicMenu,/branding\.coverUrl/);
+ assert.match(activityStorefront,/branding\.coverUrl/);
+});
