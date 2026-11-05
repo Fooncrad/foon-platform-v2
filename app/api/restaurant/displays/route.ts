@@ -60,9 +60,10 @@ export async function POST(req:Request){
    const endsAt=body.endsAt==null||body.endsAt===""?null:typeof body.endsAt==="string"?body.endsAt:null;
    const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
    if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
-   const [targetScreens]=await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 100",[ctx.tenant,...(requestedBranches??[])]);
+   const [targetScreens]=await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]);
    if(!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
-   const campaignId=randomUUID(),campaignKey=campaignId.replace(/-/g,"");
+   if(targetScreens.length>100)return reply({ok:false,code:"TOO_MANY_DISPLAYS",max:100},413);
+   const campaignId=randomUUID();
    const conn=await database().getConnection();
    try{
     await conn.beginTransaction();
