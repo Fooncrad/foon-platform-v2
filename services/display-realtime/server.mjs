@@ -55,7 +55,7 @@ server.on("upgrade",(req,socket,head)=>{
  let url;try{url=new URL(req.url||"/","http://localhost");}catch{socket.destroy();return;}
  const origin=req.headers.origin||"";
  const identity=url.pathname==="/ws"&&allowedOrigins.has(origin)?consumeTicket(url.searchParams.get("ticket")):null;
- if(!identity){socket.write("HTTP/1.1 401 Unauthorized\\r\\nConnection: close\\r\\n\\r\\n");socket.destroy();return;}
+ if(!identity){socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");socket.destroy();return;}
  wss.handleUpgrade(req,socket,head,ws=>{ws.screenId=identity.screenId;ws.tenantId=identity.tenantId;wss.emit("connection",ws,req);});
 });
 wss.on("connection",ws=>{ws.on("error",()=>{});});
