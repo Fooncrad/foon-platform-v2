@@ -88,3 +88,42 @@ test("player heartbeat and transition/badge effects are wired end to end",async(
  assert.match(player,/item\.badge_text/);
  assert.match(manager,/is_online/);
 });
+
+test("kiosk PIN protection uses salted scrypt, signed short-lived sessions and failed-attempt lockout",async()=>{
+ const helper=await read("lib/display/kiosk-security.ts");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const publicApi=await read("app/api/display/[token]/route.ts");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(helper,/scryptSync/);
+ assert.match(helper,/timingSafeEqual/);
+ assert.match(helper,/createHmac/);
+ assert.match(publicApi,/kiosk_failed_attempts/);
+ assert.match(publicApi,/KIOSK_TEMPORARILY_LOCKED/);
+ assert.match(publicApi,/HttpOnly; Secure; SameSite=Strict/);
+ assert.match(admin,/kiosk_pin_hash/);
+ assert.match(player,/unlockKiosk/);
+ assert.match(player,/شاشة محمية/);
+});
+test("campaign matching keys filter only the matching slides",async()=>{
+ const migration=await read("migrations/0310_display_kiosk_campaign_matching.sql");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const publicApi=await read("app/api/display/[token]/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(migration,/campaign_match_key VARCHAR\(80\)/);
+ assert.match(admin,/INVALID_CAMPAIGN_KEY/);
+ assert.match(admin,/campaign_match_key/);
+ assert.match(publicApi,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+ assert.match(manager,/Campaign key/);
+ assert.match(player,/searchParams.get\("campaign"\)/);
+});
+test("public display offline cache stores only unprotected playlists and same-origin image assets",async()=>{
+ const api=await read("app/api/display/[token]/route.ts");
+ const worker=await read("public/foon-offline-sw.js");
+ const page=await read("app/display/[token]/page.tsx");
+ assert.match(api,/X-FOON-Display-Offline/);
+ assert.match(worker,/x-foon-display-offline/);
+ assert.match(worker,/DISPLAY_CACHE/);
+ assert.match(worker,/publicImage\(path\)/);
+ assert.match(page,/OfflineWorker/);
+});
