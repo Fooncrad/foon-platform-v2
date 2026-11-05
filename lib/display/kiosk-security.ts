@@ -1,6 +1,6 @@
 import {createHmac,randomBytes,scryptSync,timingSafeEqual} from "node:crypto";
 
-const PIN_PATTERN = /^\\d{4,8}$/;
+const PIN_PATTERN = /^\d{4,8}$/;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 export function createKioskPinRecord(pin:string) {
@@ -27,7 +27,7 @@ export function createKioskSession(token:string,pinHash:string,now=Date.now()) {
 export function verifyKioskSession(token:string,pinHash:string,value:string|undefined,now=Date.now()) {
  if(!value)return false;
  const [expiresText,nonce,signature,...extra]=value.split(".");
- if(extra.length||!/^\\d{13}$/.test(expiresText)||!/^[a-f0-9]{32}$/i.test(nonce)||!/^[a-f0-9]{64}$/i.test(signature))return false;
+ if(extra.length||!/^\d{13}$/.test(expiresText)||!/^[a-f0-9]{32}$/i.test(nonce)||!/^[a-f0-9]{64}$/i.test(signature))return false;
  const expiresAt=Number(expiresText);
  if(!Number.isSafeInteger(expiresAt)||expiresAt<=now||expiresAt>now+SESSION_TTL_MS+60_000)return false;
  const expected=createHmac("sha256",pinHash).update(token+"."+expiresText+"."+nonce).digest();
