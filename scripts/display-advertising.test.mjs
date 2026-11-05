@@ -69,7 +69,7 @@ test("hosted video and multi-zone layouts are constrained and rendered",async()=
  assert.match(api,/parsed\.protocol!=="https:"/);
  assert.match(api,/\.(mp4\|webm)/);
  assert.match(player,/autoPlay muted loop/);
- assert.match(player,/layoutCount===4/);
+ assert.match(player,/layout==="quad"\\?4/);
  assert.match(manager,/displayLayout:e\.target\.value/);
  assert.match(manager,/videoUrl/);
 });
