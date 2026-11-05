@@ -33,12 +33,15 @@ test("only explicitly approved migration prefixes may repeat",()=>{
   ["0153","0153_platform_payment_transfer_evidence.sql"],
   ["0154","0154_platform_approved_transfer_claims.sql"],
   ["0155","0155_branch_delivery_locations.sql"],
-  ["0156","0156_display_advertising_entitlement.sql"]
+  ["0156","0156_display_advertising_entitlement.sql"],
+  ["0157","0157_display_player_health_telemetry.sql"]
  ])assert.deepEqual(byPrefix.get(number),[name]);
  const sql=readFileSync(join(fileURLToPath(directory),byPrefix.get("0155")[0]),"utf8");
  assert.match(sql,/CREATE TABLE IF NOT EXISTS branch_delivery_locations/);
  const displayGrant=readFileSync(join(fileURLToPath(directory),"0156_display_advertising_entitlement.sql"),"utf8");
  assert.match(displayGrant,/p\.code='enterprise'/);
+ const displayHealth=readFileSync(join(fileURLToPath(directory),"0157_display_player_health_telemetry.sql"),"utf8");
+ assert.match(displayHealth,/player_health_json JSON/);
 });
 test("delivery preferences safely handle empty allowed-country lists",()=>{
  const code=readFileSync(new URL("../app/api/customer/delivery-preferences/route.ts",import.meta.url),"utf8");
