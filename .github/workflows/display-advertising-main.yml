@@ -20,7 +20,7 @@ on:
       - "package.json"
       - ".github/workflows/display-advertising-main.yml"
   push:
-    branches: [feat/foon-display-player-multiplatform-20261105]
+    branches: [feat/foon-display-player-multiplatform-20261105, feat/display-remote-content-studio]
 permissions:
   contents: read
 jobs:
