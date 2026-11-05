@@ -5,10 +5,10 @@ import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 
 const directory=new URL("../migrations/",import.meta.url);
-test("only grandfathered legacy migration prefixes may repeat",()=>{
+test("only explicitly approved migration prefixes may repeat",()=>{
  // The migrator tracks *full filenames* in schema_migrations, not numeric prefixes.
  // Never rename migrations already applied to customer databases.
- const legacyDuplicates=new Map([
+ const approvedDuplicates=new Map([
   ["0018",["0018_automatic_free_stores.sql","0018_customer_notifications.sql"]],
   ["0060",["0060_order_notes.sql","0060_tenant_business_profiles.sql"]],
   ["9999",["9999_display_advertising.sql","9999_display_advertising_kiosk_campaign_matching.sql"]]
@@ -21,11 +21,11 @@ test("only grandfathered legacy migration prefixes may repeat",()=>{
  }
  for(const [number,names] of byPrefix){
   if(names.length===1)continue;
-  assert.deepEqual(names.slice().sort(),legacyDuplicates.get(number)?.slice().sort(),
+  assert.deepEqual(names.slice().sort(),approvedDuplicates.get(number)?.slice().sort(),
    `Unexpected duplicate migration number ${number}: ${names.join(", ")}`);
  }
  // A missing historic file is also an unsafe, unreviewed migration rewrite.
- for(const [number,names] of legacyDuplicates){
+ for(const [number,names] of approvedDuplicates){
   assert.deepEqual(byPrefix.get(number)?.slice().sort(),names.slice().sort());
  }
  for(const [number,name] of [
