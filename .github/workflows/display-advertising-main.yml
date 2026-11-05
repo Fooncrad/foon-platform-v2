@@ -14,6 +14,7 @@ on:
       - "migrations/9999_display_catalog_sources.sql"
       - "services/display-realtime/**"
       - "docs/display-*.md"
+      - "docs/display-content-sources.md"
       - "public/foon-offline-sw.js"
       - "scripts/display-*.test.mjs"
       - "scripts/display-advertising.schema.integration.test.mjs"
