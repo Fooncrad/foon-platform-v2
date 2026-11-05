@@ -4,7 +4,7 @@
 
 The display manager now offers a campaign publishing action. A merchant composes the creative once (existing image, hosted MP4/WebM, or a live menu/catalog source) and chooses either all branches or a set of specific branches. The server resolves the target set from enabled, non-paused displays registered to the authenticated tenant. A tenant with no branches can still target all registered displays.
 
-The campaign fan-out creates one logical `campaign_id` and inserts an identical slide payload for each target screen inside one database transaction. The player continues to receive normal scheduled slides because fan-out rows leave `campaign_match_key` null; the existing optional campaign URL filter therefore does not hide the new content.
+The campaign fan-out creates one logical `campaign_id` and inserts an identical slide payload for each target screen inside one database transaction. The player continues to receive normal scheduled slides because fan-out rows leave `campaign_match_key` null; the existing optional campaign URL filter therefore does not hide the new content. When enabled, the menu-cover destination writes the same FOON-hosted image into the tenant `storefront_config.coverUrl` through the existing resource-save path in the same transaction. This is consumed by both the restaurant menu cover and the activity storefront cover.
 
 ## Shared lifecycle
 
