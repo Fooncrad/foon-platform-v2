@@ -79,7 +79,6 @@ export async function POST(req:Request){
      await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screen.id,ctx.tenant,campaignId,mediaUrl,sourceType,sourceId,videoUrl,body.videoLoop!==false,transition,badge,null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
     }
     if(includeMenuBanner){
-     if(!(await tenantEntitlement(ctx.tenant,"branding.colors")).enabled)throw Object.assign(new Error("MENU_COVER_FEATURE_REQUIRED"),{status:403});
      let coverUrl=mediaUrl;
      if(!coverUrl&&sourceType==="restaurant_menu_item"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM restaurant_menu_items WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
      if(!coverUrl&&sourceType==="catalog_product"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM catalog_images WHERE product_id=? AND tenant_id=? ORDER BY sort_order,id LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
