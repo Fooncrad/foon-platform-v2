@@ -180,3 +180,38 @@ test("display manager can import tenant-authorized images from the FOON account 
  assert.match(assets,/body\.libraryId/);
  assert.match(assets,/user_media_library WHERE user_id=\?/);
 });
+
+
+test("one display campaign fans out atomically to every active screen in selected branches",async()=>{
+ const migration=await read("migrations/9999_display_unified_campaigns.sql");
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/api/display/[token]/route.ts");
+ assert.match(migration,/ADD COLUMN campaign_id CHAR\(36\) NULL/);
+ assert.match(migration,/display_slides_campaign_id_idx/);
+ assert.match(api,/action==="campaign"/);
+ assert.match(api,/SELECT id,branch_id FROM display_screens WHERE tenant_id=\? AND enabled=TRUE AND paused=FALSE/);
+ assert.match(api,/requestedBranches/);
+ assert.match(api,/beginTransaction\(\)/);
+ assert.match(api,/await conn\.commit\(\)/);
+ assert.match(api,/await conn\.rollback\(\)/);
+ assert.match(api,/campaign_id,media_url/);
+ assert.match(api,/campaignId/);
+ assert.match(api,/campaign_match_key/);
+ assert.match(api,/publishDisplayInvalidation/);
+ assert.match(api,/TOO_MANY_DISPLAYS/);
+ assert.match(manager,/campaignScope/);
+ assert.match(manager,/campaignBranchIds/);
+ assert.match(manager,/action:"campaign"/);
+ assert.match(manager,/نشر الحملة على الشاشات/);
+ assert.match(player,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+});
+
+test("editing or deleting one campaign slide applies to the whole campaign",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(api,/SELECT id,screen_id,campaign_id FROM display_slides/);
+ assert.match(api,/UPDATE display_slides SET enabled=\? WHERE campaign_id=\?/);
+ assert.match(api,/DELETE FROM display_slides WHERE campaign_id=\?/);
+ assert.match(api,/updatedScreens/);
+ assert.match(api,/deletedScreens/);
+});
