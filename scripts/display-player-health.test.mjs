@@ -14,7 +14,7 @@ test("display player reports bounded browser health without claiming native disp
  assert.match(route,/UPDATE display_screens SET player_health_json/);
  assert.match(player,/\/health/);
  assert.match(player,/setInterval\(\(\)=>void report\(\),30000\)/);
- assert.match(player,/document\.visibilitychange/);
+ assert.match(player,/document\.addEventListener\("visibilitychange"/);
  assert.match(manager,/player_health_at/);
  assert.match(manager,/player_error_code/);
  assert.match(migration,/player_health_json JSON/);
