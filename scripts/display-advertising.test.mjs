@@ -116,7 +116,7 @@ test("campaign matching keys filter only the matching slides",async()=>{
  assert.match(admin,/campaign_match_key/);
  assert.match(publicApi,/s.campaign_match_key IS NULL OR s.campaign_match_key=\?/);
  assert.match(manager,/Campaign key/);
- assert.match(player,/URLSearchParams\(window\.location\.search\)\.get\("campaign"\)/);
+ assert.match(player,/window\.location\.search\.match\(\/\[\?&\]campaign=/);
 });
 test("public display offline cache stores only unprotected playlists and same-origin image assets",async()=>{
  const api=await read("app/api/display/[token]/route.ts");
@@ -259,7 +259,7 @@ test("unified campaigns are first-class tenant records with a cascading slide re
  assert.match(manager,/type Campaign=/);
  assert.match(manager,/\[campaigns,setCampaigns\]=useState<Campaign\[]>\(\[\]\)/);
  assert.match(manager,/setCampaigns\(Array\.isArray\(d\.campaigns\)/);
- assert.match(manager,/Unified campaigns/);
+ assert.match(manager,/مستودع الإعلانات/);
 });
 
 test("campaign pause, resume and delete preserve manually changed menu covers",async()=>{
@@ -348,7 +348,7 @@ test("TV QR pairing uses a short-lived one-time code and a hashed device token",
  assert.match(claim,/action==="pairClaim"/);
  assert.match(claim,/requireTenantMembership/);
  assert.match(claim,/tenantEntitlement\(tenant,"display_advertising"\)/);
- assert.match(claim,/claimed_screen_id IS NULL FOR UPDATE/);
+ assert.match(claim,/claimed_screen_id IS NULL LIMIT 1 FOR UPDATE/);
  assert.match(claim,/String\(sessions\[0\]\.token_hash\)/);
  assert.match(tv,/QRCode\.toDataURL/);
  assert.match(tv,/restaurant\/display-pair\?code=/);
