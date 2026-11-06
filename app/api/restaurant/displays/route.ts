@@ -41,6 +41,30 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="pairClaim"){
+   const code=typeof body.code==="string"?body.code.trim():"";
+   const name=typeof body.name==="string"?body.name.trim():"";
+   const branchId=typeof body.branchId==="string"&&body.branchId?body.branchId:null;
+   if(!/^\d{8}$/.test(code)||!name||name.length>120)return reply({ok:false,code:"INVALID_PAIRING_INPUT"},400);
+   if(branchId&&!/^[a-f0-9-]{36}$/i.test(branchId))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
+   const conn=await database().getConnection();
+   let screenId="";
+   try{
+    await conn.beginTransaction();
+    const [sessions]=await conn.execute<RowDataPacket[]>("SELECT id,token_hash FROM display_pairing_sessions WHERE code_hash=? AND expires_at>UTC_TIMESTAMP() AND claimed_screen_id IS NULL LIMIT 1 FOR UPDATE",[digest(code)]);
+    if(!sessions.length){await conn.rollback();return reply({ok:false,code:"PAIRING_CODE_INVALID_OR_EXPIRED"},404);}
+    if(branchId){
+     const [branches]=await conn.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branchId,ctx.tenant]);
+     if(!branches.length){await conn.rollback();return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);}
+    }
+    screenId=randomUUID();
+    await conn.execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[screenId,ctx.tenant,branchId,name,String(sessions[0].token_hash),ctx.user]);
+    await conn.execute("UPDATE display_pairing_sessions SET claimed_screen_id=?,claimed_at=UTC_TIMESTAMP() WHERE id=? AND claimed_screen_id IS NULL",[screenId,sessions[0].id]);
+    await conn.commit();
+   }catch(error){await conn.rollback();throw error;}finally{conn.release();}
+   await publishDisplayInvalidation(ctx.tenant,screenId);
+   return reply({ok:true,id:screenId,name,branchId},201);
+  }
   if(action==="campaign"){
    const includeDisplays=body.includeDisplays!==false;
    const includeMenuBanner=body.includeMenuBanner===true;
@@ -54,9 +78,10 @@ export async function POST(req:Request){
    const sourceType=typeof body.sourceType==="string"?body.sourceType:"media";
    const sourceId=typeof body.sourceId==="string"&&/^[a-f0-9-]{36}$/i.test(body.sourceId)?body.sourceId:null;
    if(!["media","restaurant_menu_item","catalog_product","restaurant_menu_category","catalog_category"].includes(sourceType))return reply({ok:false,code:"INVALID_SOURCE"},400);
-   const mediaUrl=sourceType==="media"&&typeof body.mediaUrl==="string"&&/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl)?body.mediaUrl:null;
+   const mediaUrl=typeof body.mediaUrl==="string"&&/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl)?body.mediaUrl:null;
+   if(body.mediaUrl!=null&&body.mediaUrl!==""&&!mediaUrl)return reply({ok:false,code:"INVALID_MEDIA"},400);
    const videoUrl=sourceType==="media"&&typeof body.videoUrl==="string"&&body.videoUrl.trim()?body.videoUrl.trim():null;
-   if(sourceType==="media"?(Boolean(mediaUrl)===Boolean(videoUrl)):(!sourceId||body.mediaUrl||body.videoUrl))return reply({ok:false,code:"INVALID_MEDIA"},400);
+   if(sourceType==="media"?(Boolean(mediaUrl)===Boolean(videoUrl)):(!sourceId||Boolean(videoUrl)))return reply({ok:false,code:"INVALID_MEDIA"},400);
    if(videoUrl){try{const parsed=new URL(videoUrl);const host=parsed.hostname.toLowerCase();const privateHost=host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal")||host.includes(":")||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);if(parsed.protocol!=="https:"||parsed.username||parsed.password||privateHost||! /\.(mp4|webm)$/i.test(parsed.pathname))return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}catch{return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}}
    if(mediaUrl){const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE id=? AND tenant_id=? LIMIT 1",[mediaUrl.slice("/api/restaurant/assets/".length),ctx.tenant]);if(!assets.length)return reply({ok:false,code:"MEDIA_NOT_FOUND"},404);}
    const sourceTables:Record<string,[string,string]>={restaurant_menu_item:["restaurant_menu_items","enabled=TRUE"],catalog_product:["catalog_products","enabled=TRUE AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0') NOT IN ('1','true')"],restaurant_menu_category:["restaurant_menu_categories","enabled=TRUE"],catalog_category:["catalog_categories","enabled=TRUE"]};
@@ -67,7 +92,7 @@ export async function POST(req:Request){
    const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
    if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
    const [targetScreens]=includeDisplays?await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE AND (branch_id IS NULL OR EXISTS (SELECT 1 FROM branches b WHERE b.id=display_screens.branch_id AND b.tenant_id=display_screens.tenant_id AND b.enabled=TRUE))"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]):[[] as RowDataPacket[]];
-   if(includeDisplays&&!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
+   if(includeDisplays&&!targetScreens.length){const [stateRows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total,SUM(enabled=TRUE AND paused=TRUE) AS paused,SUM(enabled=FALSE) AS disabled FROM display_screens WHERE tenant_id=?",[ctx.tenant]);const state=stateRows[0]??{};return reply({ok:false,code:"NO_ACTIVE_DISPLAYS",screenState:{total:Number(state.total??0),paused:Number(state.paused??0),disabled:Number(state.disabled??0)}},409);}
    if(targetScreens.length>100)return reply({ok:false,code:"TOO_MANY_DISPLAYS",max:100},413);
    const campaignId=randomUUID();
    const conn=await database().getConnection();

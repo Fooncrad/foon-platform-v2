@@ -1,24 +1,46 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import QRCode from "qrcode";
+type PlayerResponse={ok:boolean;status:number;json:()=>Promise<unknown>};
+async function playerRequest(url:string,options:RequestInit={}):Promise<PlayerResponse>{
+ if(typeof window!=="undefined"&&typeof window.fetch==="function"){
+  const response=await window.fetch(url,options);
+  return {ok:response.ok,status:response.status,json:()=>response.json()};
+ }
+ return await new Promise<PlayerResponse>((resolve,reject)=>{
+  const xhr=new XMLHttpRequest();
+  xhr.open(options.method||"GET",url,true);
+  const headers=options.headers as Record<string,string>|undefined;
+  if(headers)Object.keys(headers).forEach(key=>xhr.setRequestHeader(key,headers[key]));
+  xhr.onreadystatechange=()=>{
+   if(xhr.readyState!==4)return;
+   if(xhr.status===0){reject(new Error("NETWORK_ERROR"));return;}
+   resolve({ok:xhr.status>=200&&xhr.status<300,status:xhr.status,json:async()=>JSON.parse(xhr.responseText||"{}")});
+  };
+  xhr.onerror=()=>reject(new Error("NETWORK_ERROR"));
+  xhr.send(typeof options.body==="string"?options.body:null);
+ });
+}
 type Slide={id:string;media_url:string;title_ar:string|null;title_en:string|null;title_fr:string|null;subtitle_ar:string|null;subtitle_en:string|null;subtitle_fr:string|null;duration_seconds:number;external_video_url:string|null;video_loop:boolean;transition_effect:string;badge_text:string|null};
 type Payload={screen:{id:string;name:string;refreshSeconds:number;qrEnabled:boolean;qrUrl:string;qrPosition:string;qrSize:number;qrForeground:string;qrBackground:string;displayLayout:string};slides:Slide[]};
 export default function DisplayPlayer({token}:{token:string}){
  const [data,setData]=useState<Payload|null>(null),[playback,setPlayback]=useState<{screenId:string;index:number}>({screenId:"",index:0}),[error,setError]=useState(false),[qrResult,setQrResult]=useState<{url:string;dataUrl:string}|null>(null),[pinRequired,setPinRequired]=useState(false),[pin,setPin]=useState(""),[pinError,setPinError]=useState(""),[mediaError,setMediaError]=useState<{slideId:string;source:string;code:string}|null>(null);
  const index=playback.screenId===data?.screen.id?playback.index:0;
- const load=useCallback(async()=>{try{const campaign=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("campaign"):"";const query=campaign&&/^[a-z0-9_-]{1,80}$/i.test(campaign)?"?campaign="+encodeURIComponent(campaign):"";const r=await fetch("/api/display/"+encodeURIComponent(token)+query,{cache:"no-store"});if(r.status===401){setPinRequired(true);setData(null);setError(false);return;}if(!r.ok)throw Error("DISPLAY_UNAVAILABLE");const d=await r.json();setData(d);setPinRequired(false);setError(false);}catch{setError(true);}},[token]);
+ const load=useCallback(async()=>{try{const campaign=typeof window!=="undefined"?(window.location.search.match(/[?&]campaign=([^&]+)/)?.[1]?decodeURIComponent(window.location.search.match(/[?&]campaign=([^&]+)/)![1]):""):"";const query=campaign&&/^[a-z0-9_-]{1,80}$/i.test(campaign)?"?campaign="+encodeURIComponent(campaign):"";const r=await playerRequest("/api/display/"+encodeURIComponent(token)+query,{cache:"no-store"});if(r.status===401){setPinRequired(true);setData(null);setError(false);return;}if(!r.ok)throw Error("DISPLAY_UNAVAILABLE");const d=await r.json() as Payload;setData(d);setPinRequired(false);setError(false);}catch{setError(true);}},[token]);
  useEffect(()=>{const initial=setTimeout(()=>void load(),0);const interval=Math.max(5000,Math.min(120000,(data?.screen.refreshSeconds??15)*1000));const timer=setInterval(()=>void load(),interval);return()=>{clearTimeout(initial);clearInterval(timer);};},[load,data?.screen.refreshSeconds]);
  useEffect(()=>{
   if(!data?.screen.id)return;
   let stopped=false,socket:WebSocket|null=null,retry:ReturnType<typeof setTimeout>|undefined,delay=3000;
   const connect=async()=>{
+   if(typeof window.WebSocket!=="function")return;
    try{
-    const response=await fetch("/api/display/"+encodeURIComponent(token)+"/realtime-ticket",{cache:"no-store"});
+    const response=await playerRequest("/api/display/"+encodeURIComponent(token)+"/realtime-ticket",{cache:"no-store"});
     if(!response.ok)throw new Error("REALTIME_TICKET_UNAVAILABLE");
     const auth=await response.json() as {url:string;ticket:string};
     if(stopped)return;
-    const url=new URL(auth.url);url.searchParams.set("ticket",auth.ticket);
-    socket=new WebSocket(url.toString());
+    const separator=auth.url.indexOf("?")>=0?"&":"?";
+    const socketUrl=auth.url+separator+"ticket="+encodeURIComponent(auth.ticket);
+    socket=new window.WebSocket(socketUrl);
     socket.onopen=()=>{delay=3000;void load();};
     socket.onmessage=event=>{
      try{const message=JSON.parse(String(event.data));if(message?.type==="display.invalidate"&&(!message.screenId||message.screenId===data.screen.id))void load();}catch{/* Ignore malformed gateway messages. */}
@@ -33,7 +55,7 @@ export default function DisplayPlayer({token}:{token:string}){
  const qrUrl=data?.screen.qrEnabled?data.screen.qrUrl:"";
  useEffect(()=>{if(!qrUrl)return;let active=true;void QRCode.toDataURL(qrUrl,{width:Math.max(80,Math.min(240,data?.screen.qrSize||140)),margin:1,errorCorrectionLevel:"M",color:{dark:data?.screen.qrForeground||"#111827",light:data?.screen.qrBackground||"#ffffff"}}).then(value=>{if(active)setQrResult({url:qrUrl,dataUrl:value});}).catch(()=>{if(active)setQrResult({url:qrUrl,dataUrl:""});});return()=>{active=false;};},[qrUrl,data?.screen.qrSize,data?.screen.qrForeground,data?.screen.qrBackground]);
  const qr=qrResult&&qrResult.url===data?.screen.qrUrl?qrResult.dataUrl:"";
- async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await fetch("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({}));setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
+ async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await playerRequest("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({})) as {code?:string};setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
  const layout=data?.screen.displayLayout??"single";
  const requestedLayoutCount=layout==="double"||layout==="split"?2:layout==="triple"?3:layout==="quad"?4:1;
  const layoutCount=Math.min(requestedLayoutCount,data?.slides.length??1);
@@ -49,8 +71,8 @@ export default function DisplayPlayer({token}:{token:string}){
    const platform=/android/.test(agent)?"android":/iphone|ipad|ipod/.test(agent)?"ios":/windows/.test(agent)?"windows":/macintosh|mac os/.test(agent)?"macos":/linux/.test(agent)?"linux":"other";
    const currentMediaError=mediaError&&activeSlideId&&mediaError.slideId===activeSlideId&&mediaError.source===activeMediaSource?mediaError.code:null;
    const errorCode=currentMediaError??(error?"PLAYLIST_UNAVAILABLE":null);
-   const payload={platform,playerVersion:"web-1",viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,online:navigator.onLine,visible:document.visibilityState==="visible",h264:Boolean(video.canPlayType('video/mp4; codecs="avc1.42E01E"')),webm:Boolean(video.canPlayType('video/webm; codecs="vp9"')),playbackState:error||currentMediaError?"error":activeSlideId?"playing":"idle",errorCode};
-   try{await fetch("/api/display/"+encodeURIComponent(token)+"/health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),keepalive:true});}catch{/* The next heartbeat reports recovery. */}
+   const payload={platform,playerVersion:"web-1",viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,online:navigator.onLine,visible:typeof document.visibilityState==="string"?document.visibilityState==="visible":true,h264:Boolean(video.canPlayType('video/mp4; codecs="avc1.42E01E"')),webm:Boolean(video.canPlayType('video/webm; codecs="vp9"')),playbackState:error||currentMediaError?"error":activeSlideId?"playing":"idle",errorCode};
+   try{await playerRequest("/api/display/"+encodeURIComponent(token)+"/health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),keepalive:true});}catch{/* The next heartbeat reports recovery. */}
   };
   void report();
   const timer=setInterval(()=>void report(),30000);

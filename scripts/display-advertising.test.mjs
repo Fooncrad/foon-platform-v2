@@ -116,7 +116,7 @@ test("campaign matching keys filter only the matching slides",async()=>{
  assert.match(admin,/campaign_match_key/);
  assert.match(publicApi,/s.campaign_match_key IS NULL OR s.campaign_match_key=\?/);
  assert.match(manager,/Campaign key/);
- assert.match(player,/URLSearchParams\(window\.location\.search\)\.get\("campaign"\)/);
+ assert.match(player,/window\.location\.search\.match\(\/\[\?&\]campaign=/);
 });
 test("public display offline cache stores only unprotected playlists and same-origin image assets",async()=>{
  const api=await read("app/api/display/[token]/route.ts");
@@ -136,8 +136,12 @@ test("display player combines authenticated WebSocket invalidations with polling
  const realtime=await read("lib/display/realtime.ts");
  const admin=await read("app/api/restaurant/displays/route.ts");
  const relay=await read("services/display-realtime/server.mjs");
- assert.match(player,/new WebSocket\(/);
+ assert.match(player,/new window\.WebSocket\(/);
+ assert.match(player,/typeof window\.WebSocket!=="function"/);
  assert.match(player,/realtime-ticket/);
+ assert.match(player,/typeof window\.fetch==="function"/);
+ assert.match(player,/new XMLHttpRequest\(\)/);
+ assert.doesNotMatch(player,/new URL\(auth\.url\)/);
  assert.match(player,/setInterval\(\(\)=>void load\(\)/);
  assert.match(ticketRoute,/verifyKioskSession/);
  assert.match(ticketRoute,/createDisplayRealtimeTicket/);
@@ -255,7 +259,7 @@ test("unified campaigns are first-class tenant records with a cascading slide re
  assert.match(manager,/type Campaign=/);
  assert.match(manager,/\[campaigns,setCampaigns\]=useState<Campaign\[]>\(\[\]\)/);
  assert.match(manager,/setCampaigns\(Array\.isArray\(d\.campaigns\)/);
- assert.match(manager,/Unified campaigns/);
+ assert.match(manager,/مستودع الإعلانات/);
 });
 
 test("campaign pause, resume and delete preserve manually changed menu covers",async()=>{
@@ -279,4 +283,81 @@ test("moving one campaign slide reorders the same campaign on every target scree
  assert.match(api,/SELECT id,screen_id,sort_order FROM display_slides WHERE campaign_id/);
  assert.match(api,/campaign_id<>\?/);
  assert.match(api,/changedScreens/);
+});
+
+
+test("catalog-backed campaigns auto-select product images and allow a tenant-owned library override",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const sources=await read("app/api/restaurant/displays/sources/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(sources,/imageUrl:x\.image_url\?String\(x\.image_url\):null/);
+ assert.match(manager,/setMedia\(next\?\.imageUrl\?\?\"\"\)/);
+ assert.match(manager,/mediaUrl:media\|\|null/);
+ assert.match(manager,/Campaign image/);
+ assert.match(manager,/importLibraryImage/);
+ assert.match(api,/const mediaUrl=typeof body\.mediaUrl===\"string\"/);
+ assert.match(api,/if\(body\.mediaUrl!=null&&body\.mediaUrl!==\"\"&&!mediaUrl\)/);
+ assert.match(api,/SELECT id FROM restaurant_assets WHERE id=\? AND tenant_id=\? LIMIT 1/);
+ assert.match(api,/sourceType===\"media\"\?/);
+});
+
+
+test("ad library separates available and paused campaigns and explains empty display targets",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(api,/code:"NO_ACTIVE_DISPLAYS",screenState/);
+ assert.match(api,/SUM\(enabled=TRUE AND paused=TRUE\)/);
+ assert.match(manager,/مستودع الإعلانات/);
+ assert.match(manager,/campaignFilter/);
+ assert.match(manager,/متاحة \(/);
+ assert.match(manager,/متوقفة \(/);
+ assert.match(manager,/campaignFilter==="paused"/);
+ assert.match(manager,/لا توجد شاشات مؤهلة للنشر حالياً/);
+ assert.match(manager,/Show campaign on displays/);
+});
+
+
+test("legacy TV browsers can poll and play without Fetch, URL, or WebSocket support",async()=>{
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(player,/if\(typeof window!==\"undefined\"&&typeof window\.fetch===\"function\"\)/);
+ assert.match(player,/new XMLHttpRequest\(\)/);
+ assert.match(player,/xhr\.open\(options\.method\|\|\"GET\",url,true\)/);
+ assert.match(player,/if\(typeof window\.WebSocket!==\"function\"\)return/);
+ assert.match(player,/const socketUrl=auth\.url\+separator\+\"ticket=\"\+encodeURIComponent\(auth\.ticket\)/);
+ assert.doesNotMatch(player,/new URL\(auth\.url\)/);
+ assert.match(player,/setInterval\(\(\)=>void load\(\)/);
+});
+
+
+test("TV QR pairing uses a short-lived one-time code and a hashed device token",async()=>{
+ const migration=await read("migrations/0163_display_screen_pairing.sql");
+ const pairing=await read("app/api/display/pairing/route.ts");
+ const claim=await read("app/api/restaurant/displays/route.ts");
+ const tv=await read("app/display/pair/pair-player.tsx");
+ const phone=await read("app/restaurant/display-pair/display-pair-client.tsx");
+ const page=await read("app/restaurant/display-pair/page.tsx");
+ assert.match(migration,/display_pairing_sessions/);
+ assert.match(migration,/code_hash CHAR\(64\)/);
+ assert.match(migration,/token_hash CHAR\(64\)/);
+ assert.match(migration,/expires_at DATETIME/);
+ assert.match(pairing,/randomBytes\(32\)/);
+ assert.match(pairing,/padStart\(8,"0"\)/);
+ assert.match(pairing,/DATE_ADD\(UTC_TIMESTAMP\(\),INTERVAL 10 MINUTE\)/);
+ assert.match(pairing,/digest\(token\)/);
+ assert.match(pairing,/claimed_screen_id/);
+ assert.match(claim,/action==="pairClaim"/);
+ assert.match(claim,/requireTenantMembership/);
+ assert.match(claim,/tenantEntitlement\(tenant,"display_advertising"\)/);
+ assert.match(claim,/claimed_screen_id IS NULL LIMIT 1 FOR UPDATE/);
+ assert.match(claim,/String\(sessions\[0\]\.token_hash\)/);
+ assert.match(tv,/QRCode\.toDataURL/);
+  assert.match(pairing,/restaurant\/display-pair\?code=/);
+ assert.match(tv,/window\.location\.replace\("\/display\/"\+/);
+ assert.match(phone,/action:"pairClaim"/);
+ assert.match(phone,/x-foon-tenant/);
+ assert.match(phone,/pairCode\.trim\(\)\.length!==8/);
+ assert.match(phone,/setPairCode/);
+ assert.match(page,/memberships/);
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(manager,/display\/pair/);
 });
