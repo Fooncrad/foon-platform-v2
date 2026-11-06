@@ -385,5 +385,5 @@ test("display pairing offers a safe account switch when a stale session has no e
  assert.ok(logout.includes('requestedNext=url.searchParams.get("next")'));
  assert.ok(logout.includes("requestedCode.length===8"));
  assert.ok(logout.includes('loginUrl.searchParams.set("next",safeNext)'));
- assert.ok(login.includes("restaurant/display-pair"));
+ assert.ok(login.includes("display-pair")&&login.includes("code=\\d{8}"));
 });
