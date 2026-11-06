@@ -1,0 +1,91 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {ACTIVITY_PRESETS} from "../lib/platform/activity-presets.ts";
+import {activitySectionUrl} from "../lib/tenant/workspace-routes.ts";
+
+const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+
+test("each of the fifteen business activities has an owner plan-upgrade route",()=>{
+ const activities=Object.keys(ACTIVITY_PRESETS);
+ assert.equal(activities.length,15);
+ for(const activity of activities){
+  const url=activitySectionUrl(activity,"subscription");
+  assert.match(url,/^\/[a-z-]+\/subscription$/);
+ }
+ const dashboard=read("app/restaurant/merchant-dashboard.tsx");
+ assert.match(dashboard,/active==="subscription"/);
+ assert.match(dashboard,/MerchantSubscriptionRequest tenantId=\{data\.tenantId\}/);
+ assert.match(dashboard,/data\.role==="owner"&&!data\.supportReadOnly&&!data\.adminAccess/);
+ assert.match(dashboard,/\{key:"subscription",label:.*roles:\["owner","manager"\]/);
+ assert.match(dashboard,/window\.history\.pushState\(null,"",activitySectionUrl\(data\.activityCode,section\)\)/);
+});
+
+test("category and item entitlement blocks provide a recovery path in every editor",()=>{
+ const notice=read("app/restaurant/plan-upgrade-notice.tsx");
+ for(const code of ["PLAN_LIMIT_REACHED","PLAN_FEATURE_REQUIRED"])
+  assert.ok(notice.includes(code));
+ assert.match(notice,/activitySectionUrl\(activity,"subscription"\)/);
+ for(const path of ["app/restaurant/activity-catalog-editor.tsx","app/restaurant/menu/category-editor.tsx","app/restaurant/resource-manager.tsx","app/restaurant/menu/bulk-import.tsx"]){
+  const content=read(path);
+  assert.ok(content.includes("PlanUpgradeNotice"),path);
+ }
+ const importer=read("app/restaurant/menu/bulk-import.tsx");
+ assert.match(importer,/isUpgradeError\(result\.code\)/);
+ assert.match(importer,/context='import'/);
+ const editor=read("app/restaurant/activity-catalog-editor.tsx");
+ assert.equal((editor.match(/activity=\{activityCode\?\?"restaurant"\} kind=/g)||[]).length,4);
+});
+
+test("upgrade choices display genuine activity-specific plan grants and present correct quota",()=>{
+ const api=read("app/api/tenant/subscription-requests/route.ts");
+ for(const term of ["tenantEntitlement","restaurant_menu_categories","catalog_categories","package_plan_activity_features","package_plan_prices","catalog_limit","catalog_enabled","quota:{used:"])
+  assert.ok(api.includes(term),term);
+ assert.match(api,/LEFT JOIN tenant_business_profiles p ON p\.tenant_id=t\.id/);
+ assert.match(api,/CASE WHEN t\.kind=\x27restaurant\x27 THEN \x27restaurant\x27/);
+ assert.match(api,/NULLIF\(p\.activity_code,\x27\x27\)/);
+ assert.match(api,/FROM tenants tenant LEFT JOIN tenant_business_profiles t ON BINARY t\.tenant_id=BINARY tenant\.id/);
+ assert.match(api,/COALESCE\(NULLIF\(t\.currency,\x27\x27\),\x27SAR\x27\)/);
+ assert.match(api,/BINARY af\.activity_code=BINARY t\.activity_code/);
+ assert.match(api,/\[featureKey,featureKey,id\]/);
+ assert.match(api,/featureKey=\["carwash","automotive","laundry","salon","publicworks"\]/);
+ assert.ok(api.includes('requireTenantMembership(user,id,["owner"],false)'));
+ assert.match(api,/status:'pending'|status:"pending"|status=\x27pending\x27/);
+ const ui=read("app/restaurant/payments/merchant-subscription-request.tsx");
+ for(const term of ["availablePlans","catalog_limit","catalog_enabled","quota.used","atLimit","pending","/contact","MerchantSubscriptionRequest"])
+  if(term!=="MerchantSubscriptionRequest")assert.ok(ui.includes(term),term);
+ assert.match(ui,/availablePlans\.map\(p=>/);
+ assert.match(ui,/prices\.filter\(p=>!atLimit\|\|expandsLimit\(p\)\)/);
+});
+
+test("paid upgrades still require manual admin approval and never bypass an entitlement check",()=>{
+ const server=read("app/api/tenant/subscription-requests/route.ts");
+ assert.match(server,/INSERT INTO platform_payment_requests/);
+ assert.match(server,/PAYMENT_ALREADY_PENDING/);
+ assert.match(server,/pr\.enabled=TRUE/);
+ assert.match(server,/pp\.code<>'free'/);
+ assert.doesNotMatch(server,/UPDATE tenant_subscriptions SET/);
+ const cap=read("lib/plans/catalog-capacity.ts");
+ assert.match(cap,/PLAN_LIMIT_REACHED/);
+ assert.match(cap,/assertCatalogCapacity/);
+});
+
+test("subscription payment history and submission APIs remain owner-only while managers see read-only plan features",()=>{
+ const api=read("app/api/tenant/subscription-requests/route.ts");
+ const dashboard=read("app/restaurant/merchant-dashboard.tsx");
+ const get=api.slice(api.indexOf("export async function GET"),api.indexOf("export async function POST"));
+ const post=api.slice(api.indexOf("export async function POST"));
+ assert.ok(api.includes('requireTenantMembership(user,id,["owner"],false)'));
+ assert.ok(get.includes("merchant(id)"));
+ assert.ok(post.includes("merchant(id)"));
+ assert.ok(dashboard.includes('data.role==="manager"&&<p className="restaurantFinePrint"'));
+ assert.ok(dashboard.includes("Only the business owner can request a plan upgrade."));
+});
+
+test("legacy tenants without a business profile retain the SAR plan-price fallback",()=>{
+ const api=read("app/api/tenant/subscription-requests/route.ts");
+ assert.ok(api.includes("JOIN tenants t ON BINARY t.id=BINARY ?"));
+ assert.ok(api.includes("LEFT JOIN tenant_business_profiles b ON BINARY b.tenant_id=BINARY t.id"));
+ assert.ok(api.includes("COALESCE(NULLIF(b.currency,''),'SAR')"));
+ assert.ok(!api.includes("JOIN tenant_business_profiles b ON b.tenant_id=? AND b.currency=pr.currency"));
+});
