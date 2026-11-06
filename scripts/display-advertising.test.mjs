@@ -286,12 +286,20 @@ test("moving one campaign slide reorders the same campaign on every target scree
 });
 
 
+test("selecting a catalog source never submits its external image URL as a FOON asset and disables incompatible menu-cover publishing",async()=>{
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(manager,/const sourceImage=next\?\.imageUrl\?\?""/);
+ assert.match(manager,/const isFoonAsset=sourceImage\.startsWith\("\/api\/restaurant\/assets\/"\)/);
+ assert.match(manager,/setMedia\(isFoonAsset\?sourceImage:""\)/);
+ assert.match(manager,/if\(!isFoonAsset\)setIncludeMenuBanner\(false\)/);
+});
+
 test("catalog-backed campaigns auto-select product images and allow a tenant-owned library override",async()=>{
  const api=await read("app/api/restaurant/displays/route.ts");
  const sources=await read("app/api/restaurant/displays/sources/route.ts");
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(sources,/imageUrl:x\.image_url\?String\(x\.image_url\):null/);
- assert.match(manager,/setMedia\(next\?\.imageUrl\?\?\"\"\)/);
+ assert.match(manager,/setMedia\(isFoonAsset\?sourceImage:\"\"\)/);
  assert.match(manager,/mediaUrl:media\|\|null/);
  assert.match(manager,/Campaign image/);
  assert.match(manager,/importLibraryImage/);
