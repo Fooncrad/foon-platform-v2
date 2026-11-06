@@ -15,7 +15,7 @@ export async function POST(req:Request){
  try{
   if(body.action==="start"){
    for(let attempt=0;attempt<5;attempt++){
-    const code=String(randomBytes(4).readUInt32BE(0)%1000000).padStart(6,"0");
+    const code=String(randomBytes(4).readUInt32BE(0)%100000000).padStart(8,"0");
     const token=randomBytes(32).toString("base64url");
     try{
      await database().execute("INSERT INTO display_pairing_sessions(id,code_hash,token_hash,expires_at) VALUES (?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 10 MINUTE))",[randomUUID(),digest(code),digest(token)]);
@@ -29,8 +29,8 @@ export async function POST(req:Request){
   if(body.action==="status"){
    const token=typeof body.token==="string"?body.token:"";
    if(!/^[A-Za-z0-9_-]{32,80}$/.test(token))return reply({ok:false,code:"INVALID_PAIRING_TOKEN"},400);
-   const [rows]=await database().execute<RowDataPacket[]>("SELECT claimed_screen_id,expires_at,expires_at>UTC_TIMESTAMP() AS valid FROM display_pairing_sessions WHERE token_hash=? LIMIT 1",[digest(token)]);
-   if(!rows.length||!Number(rows[0].valid))return reply({ok:false,code:"PAIRING_EXPIRED"},410);
+   const [rows]=await database().execute<RowDataPacket[]>("SELECT claimed_screen_id FROM display_pairing_sessions WHERE token_hash=? AND (expires_at>UTC_TIMESTAMP() OR claimed_screen_id IS NOT NULL) LIMIT 1",[digest(token)]);
+   if(!rows.length)return reply({ok:false,code:"PAIRING_EXPIRED"},410);
    return reply({ok:true,claimed:Boolean(rows[0].claimed_screen_id)});
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
