@@ -4,11 +4,11 @@
 
 The display manager now offers a campaign publishing action. A merchant composes the creative once (existing image, hosted MP4/WebM, or a live menu/catalog source), independently enables screen playback and/or the menu-cover destination, and chooses either all branches or a set of specific branches for screen playback. The server resolves the target set from enabled, non-paused displays registered to the authenticated tenant. A tenant with no branches can still target all registered displays.
 
-The campaign fan-out creates one logical `campaign_id` and inserts an identical slide payload for each target screen inside one database transaction. The player continues to receive normal scheduled slides because fan-out rows leave `campaign_match_key` null; the existing optional campaign URL filter therefore does not hide the new content. When enabled, the menu-cover destination writes the same FOON-hosted image into the tenant `storefront_config.coverUrl` through the existing resource-save path in the same transaction. This is consumed by both the restaurant menu cover and the activity storefront cover.
+The server first persists one tenant-scoped `display_campaigns` record containing the creative, destinations, branch scope and schedule. The campaign fan-out then inserts an identical slide payload for each target screen inside the same database transaction, with every slide linked to that one campaign ID. The player continues to receive normal scheduled slides because fan-out rows leave `campaign_match_key` null; the existing optional campaign URL filter therefore does not hide the new content. When enabled, the menu-cover destination writes the same FOON-hosted image into the tenant `storefront_config.coverUrl` through the existing resource-save path in the same transaction. This is consumed by both the restaurant menu cover and the activity storefront cover.
 
 ## Shared lifecycle
 
-Each fan-out row carries the same campaign UUID. Enabling/disabling or deleting one campaign copy updates/deletes all copies for that tenant campaign and invalidates every affected screen. This keeps the user experience as one campaign even though the current player protocol stores a playlist row per screen.
+Each fan-out row carries the same campaign UUID. The merchant dashboard lists campaign records and supports pause, resume and delete from one control. Pause/resume updates every slide copy and invalidates every affected screen. Delete removes the campaign record and its linked slide rows through the database cascade. Moving one slide from a screen playlist reorders the same campaign across every target screen so the campaign does not drift into different positions.
 
 ## Safety and bounds
 
