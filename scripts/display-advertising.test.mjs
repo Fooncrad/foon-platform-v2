@@ -249,9 +249,12 @@ test("unified campaigns are first-class tenant records with a cascading slide re
  assert.match(migration,/applied_cover_url VARCHAR\(500\)/);
  assert.match(migration,/ON DELETE CASCADE/);
  assert.match(api,/INSERT INTO display_campaigns/);
- assert.match(api,/SELECT id,status,destinations,branch_ids,creative/);
+ assert.match(api,/SELECT id,CASE WHEN status='paused' THEN 'paused'/);
+ assert.match(api,/destinations,branch_ids,creative/);
  assert.match(api,/UPDATE display_campaigns SET previous_cover_url/);
  assert.match(manager,/type Campaign=/);
+ assert.match(manager,/\[campaigns,setCampaigns\]=useState<Campaign\[]>\(\[\]\)/);
+ assert.match(manager,/setCampaigns\(Array\.isArray\(d\.campaigns\)/);
  assert.match(manager,/Unified campaigns/);
 });
 
