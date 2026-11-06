@@ -68,7 +68,7 @@ export async function POST(req:Request){
    const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
    if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
    const [targetScreens]=includeDisplays?await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE AND (branch_id IS NULL OR EXISTS (SELECT 1 FROM branches b WHERE b.id=display_screens.branch_id AND b.tenant_id=display_screens.tenant_id AND b.enabled=TRUE))"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]):[[] as RowDataPacket[]];
-   if(includeDisplays&&!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
+   if(includeDisplays&&!targetScreens.length){const [stateRows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total,SUM(enabled=TRUE AND paused=TRUE) AS paused,SUM(enabled=FALSE) AS disabled FROM display_screens WHERE tenant_id=?",[ctx.tenant]);const state=stateRows[0]??{};return reply({ok:false,code:"NO_ACTIVE_DISPLAYS",screenState:{total:Number(state.total??0),paused:Number(state.paused??0),disabled:Number(state.disabled??0)}},409);}
    if(targetScreens.length>100)return reply({ok:false,code:"TOO_MANY_DISPLAYS",max:100},413);
    const campaignId=randomUUID();
    const conn=await database().getConnection();
