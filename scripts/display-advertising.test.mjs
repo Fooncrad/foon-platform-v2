@@ -373,3 +373,17 @@ test("TV QR pairing uses a short-lived one-time code and a hashed device token",
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(manager,/display\/pair/);
 });
+
+
+test("display pairing offers a safe account switch when a stale session has no eligible tenant",async()=>{
+ const page=await read("app/restaurant/display-pair/page.tsx");
+ const logout=await read("app/api/auth/logout/route.ts");
+ const login=await read("app/login/page.tsx");
+ assert.ok(page.includes("تبديل الحساب وتسجيل الدخول"));
+ assert.ok(page.includes("code.length===8"));
+ assert.ok(page.includes('encodeURIComponent("/restaurant/display-pair?code="+code)'));
+ assert.ok(logout.includes('requestedNext=url.searchParams.get("next")'));
+ assert.ok(logout.includes("requestedCode.length===8"));
+ assert.ok(logout.includes('loginUrl.searchParams.set("next",safeNext)'));
+ assert.ok(login.includes("display-pair")&&login.includes("code=\\d{8}"));
+});
