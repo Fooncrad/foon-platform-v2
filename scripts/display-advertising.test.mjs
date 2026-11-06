@@ -296,3 +296,18 @@ test("catalog-backed campaigns auto-select product images and allow a tenant-own
  assert.match(api,/SELECT id FROM restaurant_assets WHERE id=\? AND tenant_id=\? LIMIT 1/);
  assert.match(api,/sourceType===\"media\"\?/);
 });
+
+
+test("ad library separates available and paused campaigns and explains empty display targets",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(api,/code:"NO_ACTIVE_DISPLAYS",screenState/);
+ assert.match(api,/SUM\(enabled=TRUE AND paused=TRUE\)/);
+ assert.match(manager,/مستودع الإعلانات/);
+ assert.match(manager,/campaignFilter/);
+ assert.match(manager,/متاحة \(/);
+ assert.match(manager,/متوقفة \(/);
+ assert.match(manager,/campaignFilter==="paused"/);
+ assert.match(manager,/لا توجد شاشات مؤهلة للنشر حالياً/);
+ assert.match(manager,/Show campaign on displays/);
+});
