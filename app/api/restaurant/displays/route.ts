@@ -10,6 +10,7 @@ import {requireAllAdditionalBranchesUnlocked} from "@/lib/restaurant/branch-pin"
 import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {createKioskPinRecord} from "@/lib/display/kiosk-security";
 import {publishDisplayInvalidation} from "@/lib/display/realtime";
+import {parseData,saveResource} from "@/lib/restaurant/operations";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
@@ -20,7 +21,7 @@ async function context(req:Request,write=false){
  let member;try{member=await requireTenantMembership(user,tenant,["owner","manager"],write);}catch{throw Object.assign(new Error("FORBIDDEN"),{status:403});}
  if(!(await tenantEntitlement(tenant,"display_advertising")).enabled)throw Object.assign(new Error("PLAN_FEATURE_REQUIRED"),{status:403});
  if(write)await requireAllAdditionalBranchesUnlocked(member.tenantId,user);
- return {user,tenant:member.tenantId};
+ return {user,tenant:member.tenantId,role:member.role};
 }
 function fail(e:unknown){const status=Number((e as {status?:number})?.status)||503;return reply({ok:false,code:e instanceof Error?e.message:"DISPLAY_UNAVAILABLE"},status);}
 export async function GET(req:Request){
@@ -28,7 +29,7 @@ export async function GET(req:Request){
  try{
   const [screens]=await database().execute<RowDataPacket[]>("SELECT id,name,branch_id,refresh_seconds,enabled,paused,qr_enabled,qr_position,qr_size,qr_foreground,qr_background,display_layout,kiosk_pin_hash,last_seen_at,player_health_json,player_health_at,player_error_code,CASE WHEN last_seen_at>=UTC_TIMESTAMP()-INTERVAL 60 SECOND THEN TRUE ELSE FALSE END AS is_online,created_at FROM display_screens WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100",[ctx.tenant]);
   const ids=screens.map(x=>String(x.id));let slides:RowDataPacket[]=[];
-  if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT s.id,s.screen_id,s.source_type,s.source_id,COALESCE(s.media_url,CASE WHEN s.source_type='restaurant_menu_item' THEN mi.image_url WHEN s.source_type='catalog_product' THEN (SELECT ci.image_url FROM catalog_images ci WHERE ci.tenant_id=s.tenant_id AND ci.product_id=s.source_id ORDER BY ci.sort_order,ci.id LIMIT 1) WHEN s.source_type='restaurant_menu_category' THEN (SELECT ri.image_url FROM restaurant_menu_items ri WHERE ri.tenant_id=s.tenant_id AND ri.category_id=s.source_id AND ri.enabled=TRUE AND ri.image_url IS NOT NULL ORDER BY ri.sort_order,ri.name LIMIT 1) WHEN s.source_type='catalog_category' THEN cc.image_url END) AS media_url,s.external_video_url,s.video_loop,s.transition_effect,COALESCE(s.badge_text,CASE WHEN s.source_type='restaurant_menu_item' THEN CONCAT(FORMAT(mi.price,2),' ',mi.currency) WHEN s.source_type='catalog_product' THEN CONCAT(FORMAT(cp.price,2),' ',cp.currency) END) AS badge_text,s.campaign_match_key,COALESCE(s.title_ar,mi.name,cp.name_ar,mc.name,cc.name_ar) AS title_ar,COALESCE(s.title_en,JSON_UNQUOTE(JSON_EXTRACT(mr.data,'$.nameEn')),cp.name_en,cc.name_en) AS title_en,COALESCE(s.title_fr,JSON_UNQUOTE(JSON_EXTRACT(mr.data,'$.nameFr')),cp.name_fr,cc.name_fr) AS title_fr,COALESCE(s.subtitle_ar,mi.description,cp.description_ar,cc.description_ar) AS subtitle_ar,COALESCE(s.subtitle_en,cp.description_en) AS subtitle_en,COALESCE(s.subtitle_fr,cp.description_fr) AS subtitle_fr,s.duration_seconds,s.sort_order,s.starts_at,s.ends_at,s.enabled FROM display_slides s LEFT JOIN restaurant_menu_items mi ON s.source_type='restaurant_menu_item' AND mi.id=s.source_id AND mi.tenant_id=s.tenant_id AND mi.enabled=TRUE LEFT JOIN restaurant_resources mr ON mr.id=mi.id AND mr.tenant_id=mi.tenant_id AND mr.kind='menu_item' LEFT JOIN catalog_products cp ON s.source_type='catalog_product' AND cp.id=s.source_id AND cp.tenant_id=s.tenant_id AND cp.enabled=TRUE AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.attributes,'$.__foon_archived')),'0') NOT IN ('1','true') LEFT JOIN restaurant_menu_categories mc ON s.source_type='restaurant_menu_category' AND mc.id=s.source_id AND mc.tenant_id=s.tenant_id AND mc.enabled=TRUE LEFT JOIN catalog_categories cc ON s.source_type='catalog_category' AND cc.id=s.source_id AND cc.tenant_id=s.tenant_id AND cc.enabled=TRUE WHERE s.tenant_id=? AND s.screen_id IN ("+marks+") ORDER BY s.sort_order,s.created_at",[ctx.tenant,...ids]);slides=rows;}
+  if(ids.length){const marks=ids.map(()=>"?").join(",");const [rows]=await database().execute<RowDataPacket[]>("SELECT s.id,s.screen_id,s.campaign_id,s.source_type,s.source_id,COALESCE(s.media_url,CASE WHEN s.source_type='restaurant_menu_item' THEN mi.image_url WHEN s.source_type='catalog_product' THEN (SELECT ci.image_url FROM catalog_images ci WHERE ci.tenant_id=s.tenant_id AND ci.product_id=s.source_id ORDER BY ci.sort_order,ci.id LIMIT 1) WHEN s.source_type='restaurant_menu_category' THEN (SELECT ri.image_url FROM restaurant_menu_items ri WHERE ri.tenant_id=s.tenant_id AND ri.category_id=s.source_id AND ri.enabled=TRUE AND ri.image_url IS NOT NULL ORDER BY ri.sort_order,ri.name LIMIT 1) WHEN s.source_type='catalog_category' THEN cc.image_url END) AS media_url,s.external_video_url,s.video_loop,s.transition_effect,COALESCE(s.badge_text,CASE WHEN s.source_type='restaurant_menu_item' THEN CONCAT(FORMAT(mi.price,2),' ',mi.currency) WHEN s.source_type='catalog_product' THEN CONCAT(FORMAT(cp.price,2),' ',cp.currency) END) AS badge_text,s.campaign_match_key,COALESCE(s.title_ar,mi.name,cp.name_ar,mc.name,cc.name_ar) AS title_ar,COALESCE(s.title_en,JSON_UNQUOTE(JSON_EXTRACT(mr.data,'$.nameEn')),cp.name_en,cc.name_en) AS title_en,COALESCE(s.title_fr,JSON_UNQUOTE(JSON_EXTRACT(mr.data,'$.nameFr')),cp.name_fr,cc.name_fr) AS title_fr,COALESCE(s.subtitle_ar,mi.description,cp.description_ar,cc.description_ar) AS subtitle_ar,COALESCE(s.subtitle_en,cp.description_en) AS subtitle_en,COALESCE(s.subtitle_fr,cp.description_fr) AS subtitle_fr,s.duration_seconds,s.sort_order,s.starts_at,s.ends_at,s.enabled FROM display_slides s LEFT JOIN restaurant_menu_items mi ON s.source_type='restaurant_menu_item' AND mi.id=s.source_id AND mi.tenant_id=s.tenant_id AND mi.enabled=TRUE LEFT JOIN restaurant_resources mr ON mr.id=mi.id AND mr.tenant_id=mi.tenant_id AND mr.kind='menu_item' LEFT JOIN catalog_products cp ON s.source_type='catalog_product' AND cp.id=s.source_id AND cp.tenant_id=s.tenant_id AND cp.enabled=TRUE AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.attributes,'$.__foon_archived')),'0') NOT IN ('1','true') LEFT JOIN restaurant_menu_categories mc ON s.source_type='restaurant_menu_category' AND mc.id=s.source_id AND mc.tenant_id=s.tenant_id AND mc.enabled=TRUE LEFT JOIN catalog_categories cc ON s.source_type='catalog_category' AND cc.id=s.source_id AND cc.tenant_id=s.tenant_id AND cc.enabled=TRUE WHERE s.tenant_id=? AND s.screen_id IN ("+marks+") ORDER BY s.sort_order,s.created_at",[ctx.tenant,...ids]);slides=rows;}
   return reply({ok:true,screens:screens.map(s=>({...s,kiosk_protected:Boolean(s.kiosk_pin_hash),kiosk_pin_hash:undefined,slides:slides.filter(x=>x.screen_id===s.id)}))});
  }catch{return reply({ok:false,code:"DISPLAY_LIST_FAILED"},503);}
 }
@@ -38,6 +39,61 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="campaign"){
+   const includeDisplays=body.includeDisplays!==false;
+   const includeMenuBanner=body.includeMenuBanner===true;
+   if(!includeDisplays&&!includeMenuBanner)return reply({ok:false,code:"NO_CAMPAIGN_DESTINATIONS"},400);
+   const requestedBranches=Array.isArray(body.branchIds)?body.branchIds.filter((x):x is string=>typeof x==="string"&&/^[a-f0-9-]{36}$/i.test(x)):null;
+   if(includeDisplays&&body.branchIds!==undefined&&(!requestedBranches||requestedBranches.length===0||requestedBranches.length>50||requestedBranches.length!==body.branchIds.length))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
+   if(requestedBranches?.length){
+    const [validBranches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND enabled=TRUE AND id IN ("+requestedBranches.map(()=>"?").join(",")+")",[ctx.tenant,...requestedBranches]);
+    if(validBranches.length!==new Set(requestedBranches).size)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);
+   }
+   const sourceType=typeof body.sourceType==="string"?body.sourceType:"media";
+   const sourceId=typeof body.sourceId==="string"&&/^[a-f0-9-]{36}$/i.test(body.sourceId)?body.sourceId:null;
+   if(!["media","restaurant_menu_item","catalog_product","restaurant_menu_category","catalog_category"].includes(sourceType))return reply({ok:false,code:"INVALID_SOURCE"},400);
+   const mediaUrl=sourceType==="media"&&typeof body.mediaUrl==="string"&&/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl)?body.mediaUrl:null;
+   const videoUrl=sourceType==="media"&&typeof body.videoUrl==="string"&&body.videoUrl.trim()?body.videoUrl.trim():null;
+   if(sourceType==="media"?(Boolean(mediaUrl)===Boolean(videoUrl)):(!sourceId||body.mediaUrl||body.videoUrl))return reply({ok:false,code:"INVALID_MEDIA"},400);
+   if(videoUrl){try{const parsed=new URL(videoUrl);const host=parsed.hostname.toLowerCase();const privateHost=host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal")||host.includes(":")||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);if(parsed.protocol!=="https:"||parsed.username||parsed.password||privateHost||! /\.(mp4|webm)$/i.test(parsed.pathname))return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}catch{return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}}
+   if(mediaUrl){const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE id=? AND tenant_id=? LIMIT 1",[mediaUrl.slice("/api/restaurant/assets/".length),ctx.tenant]);if(!assets.length)return reply({ok:false,code:"MEDIA_NOT_FOUND"},404);}
+   const sourceTables:Record<string,[string,string]>={restaurant_menu_item:["restaurant_menu_items","enabled=TRUE"],catalog_product:["catalog_products","enabled=TRUE AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0') NOT IN ('1','true')"],restaurant_menu_category:["restaurant_menu_categories","enabled=TRUE"],catalog_category:["catalog_categories","enabled=TRUE"]};
+   if(sourceType!=="media"){const [table,condition]=sourceTables[sourceType];const [rows]=await database().execute<RowDataPacket[]>("SELECT id FROM "+table+" WHERE id=? AND tenant_id=? AND "+condition+" LIMIT 1",[sourceId,ctx.tenant]);if(!rows.length)return reply({ok:false,code:"SOURCE_NOT_FOUND"},404);}
+   const duration=Math.max(5,Math.min(120,Number(body.durationSeconds)||10));
+   const startsAt=body.startsAt==null||body.startsAt===""?null:typeof body.startsAt==="string"?body.startsAt:null;
+   const endsAt=body.endsAt==null||body.endsAt===""?null:typeof body.endsAt==="string"?body.endsAt:null;
+   const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
+   if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
+   const [targetScreens]=includeDisplays?await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE AND (branch_id IS NULL OR EXISTS (SELECT 1 FROM branches b WHERE b.id=display_screens.branch_id AND b.tenant_id=display_screens.tenant_id AND b.enabled=TRUE))"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]):[[] as RowDataPacket[]];
+   if(includeDisplays&&!targetScreens.length)return reply({ok:false,code:"NO_ACTIVE_DISPLAYS"},409);
+   if(targetScreens.length>100)return reply({ok:false,code:"TOO_MANY_DISPLAYS",max:100},413);
+   const campaignId=randomUUID();
+   const conn=await database().getConnection();
+   try{
+    await conn.beginTransaction();
+    for(const screen of targetScreens){
+     const [lastOrder]=await conn.execute<RowDataPacket[]>("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM display_slides WHERE screen_id=? AND tenant_id=?",[screen.id,ctx.tenant]);
+     const id=randomUUID(),sortOrder=Number(lastOrder[0]?.next_order??0);
+     const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
+     const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
+     await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screen.id,ctx.tenant,campaignId,mediaUrl,sourceType,sourceId,videoUrl,body.videoLoop!==false,transition,badge,null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
+    }
+    if(includeMenuBanner){
+     let coverUrl=mediaUrl;
+     if(!coverUrl&&sourceType==="restaurant_menu_item"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM restaurant_menu_items WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
+     if(!coverUrl&&sourceType==="catalog_product"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM catalog_images WHERE product_id=? AND tenant_id=? ORDER BY sort_order,id LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
+     if(!coverUrl&&sourceType==="restaurant_menu_category"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM restaurant_menu_categories WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
+     if(!coverUrl&&sourceType==="catalog_category"){const [rows]=await conn.execute<RowDataPacket[]>("SELECT image_url FROM catalog_categories WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[sourceId,ctx.tenant]);coverUrl=typeof rows[0]?.image_url==="string"?String(rows[0].image_url):null;}
+     if(!coverUrl||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(coverUrl))throw Object.assign(new Error("BANNER_REQUIRES_FOON_IMAGE"),{status:400});
+     const [existing]=await conn.execute<RowDataPacket[]>("SELECT id,name,status,data,version FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND archived=FALSE AND status='active' LIMIT 1 FOR UPDATE",[ctx.tenant]);
+     const previous=existing[0];
+     await saveResource(conn,ctx.tenant,ctx.user,ctx.role,"storefront",previous?{id:String(previous.id),version:Number(previous.version),name:String(previous.name),status:String(previous.status),branchId:null,data:{...parseData(previous.data),coverUrl}}:{name:"واجهة النشاط",status:"active",branchId:null,data:{coverUrl}});
+    }
+    await conn.commit();
+   }catch(error){await conn.rollback();throw error;}finally{conn.release();}
+   await Promise.all(targetScreens.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.id))));
+   return reply({ok:true,campaignId,screenCount:targetScreens.length,menuBannerUpdated:includeMenuBanner,branchIds:[...new Set(targetScreens.map(s=>s.branch_id).filter(Boolean))]},201);
+  }
   if(action==="kioskPin"){
    if(typeof body.screenId!=="string"||typeof body.pin!=="string"||body.pin.length>8)return reply({ok:false,code:"INVALID_INPUT"},400);
    const pin=body.pin.trim();
@@ -97,7 +153,7 @@ export async function POST(req:Request){
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
- }catch{return reply({ok:false,code:"DISPLAY_SAVE_FAILED"},503);}
+ }catch(error){const status=Number((error as {status?:number})?.status);return reply({ok:false,code:status&&error instanceof Error?error.message:"DISPLAY_SAVE_FAILED"},status||503);}
 }
 export async function PATCH(req:Request){
  try{assertSameOrigin(req);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
@@ -132,8 +188,20 @@ export async function PATCH(req:Request){
      await conn.commit();await publishDisplayInvalidation(ctx.tenant,String(current[0].screen_id));return reply({ok:true});
     }catch{await conn.rollback();return reply({ok:false,code:"SLIDE_REORDER_FAILED"},503);}finally{conn.release();}
    }
-   if(body.enabled!==undefined){const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});}
-   const [target]=await database().execute<RowDataPacket[]>("SELECT screen_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);if(target.length)await publishDisplayInvalidation(ctx.tenant,String(target[0].screen_id));return reply({ok:true});
+   const [targets]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,campaign_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);
+   if(!targets.length)return reply({ok:false,code:"SLIDE_NOT_FOUND"},404);
+   const campaignId=typeof targets[0].campaign_id==="string"?targets[0].campaign_id:"";
+   const screenIds=campaignId?(await database().execute<RowDataPacket[]>("SELECT DISTINCT screen_id FROM display_slides WHERE campaign_id=? AND tenant_id=?",[campaignId,ctx.tenant]))[0]:[{screen_id:targets[0].screen_id}];
+   if(body.enabled!==undefined){
+    if(campaignId)await database().execute("UPDATE display_slides SET enabled=? WHERE campaign_id=? AND tenant_id=?",[Boolean(body.enabled),campaignId,ctx.tenant]);
+    else await database().execute("UPDATE display_slides SET enabled=? WHERE id=? AND tenant_id=?",[Boolean(body.enabled),body.id,ctx.tenant]);
+    await Promise.all(screenIds.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.screen_id))));
+    return reply({ok:true,updatedScreens:screenIds.length});
+   }
+   if(campaignId)await database().execute("DELETE FROM display_slides WHERE campaign_id=? AND tenant_id=?",[campaignId,ctx.tenant]);
+   else await database().execute("DELETE FROM display_slides WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);
+   await Promise.all(screenIds.map(screen=>publishDisplayInvalidation(ctx.tenant,String(screen.screen_id))));
+   return reply({ok:true,deletedScreens:screenIds.length});
   }
   return reply({ok:false,code:"INVALID_KIND"},400);
  }catch{return reply({ok:false,code:"DISPLAY_UPDATE_FAILED"},503);}
