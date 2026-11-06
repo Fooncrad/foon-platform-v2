@@ -3,6 +3,7 @@ import {database} from "@/lib/db/mysql";
 import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {readBranchActionBody} from "@/lib/restaurant/branch-action-body";
 import {requireAdditionalBranchUnlock,BranchPinError} from "@/lib/restaurant/branch-pin";
 import type {RowDataPacket} from "mysql2/promise";
 export const runtime="nodejs";
@@ -19,7 +20,9 @@ export async function PUT(request:Request){
  try{assertSameOrigin(request)}catch{return NextResponse.json({ok:false,code:"FORBIDDEN"},{status:403});}
  const user=await currentUserId();if(!user)return NextResponse.json({ok:false,code:"UNAUTHENTICATED"},{status:401});
  const tenant=request.headers.get("x-foon-tenant")??"";
- const body=await request.json().catch(()=>null);
+ const parsed=await readBranchActionBody(request);
+ if(parsed.error)return NextResponse.json({ok:false,code:parsed.error},{status:parsed.error==="BODY_TOO_LARGE"?413:400});
+ const body=parsed.body;
  if(!body||typeof body.branchId!=="string"||typeof body.latitude!=="number"||typeof body.longitude!=="number"
  ||!Number.isFinite(body.latitude)||!Number.isFinite(body.longitude)||body.latitude< -90||body.latitude>90||body.longitude< -180||body.longitude>180)
  return NextResponse.json({ok:false,code:"INVALID_INPUT"},{status:400});
