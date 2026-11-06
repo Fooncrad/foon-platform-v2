@@ -206,8 +206,8 @@ test("one display campaign fans out atomically to every active screen in selecte
  assert.match(manager,/campaignBranchIds/);
  assert.match(manager,/action:"campaign"/);
  assert.match(manager,/Show campaign on displays/);
- assert.match(manager,/نشر الحملة على الشاشات/);
- assert.match(player,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+ assert.match(manager,/نشر الحملة الموحدة/);
+ assert.match(player,/s\.campaign_match_key IS NULL OR s\.campaign_match_key=\?/);
 });
 
 test("editing or deleting one campaign slide applies to the whole campaign",async()=>{
@@ -234,4 +234,49 @@ test("unified campaign can publish the same FOON image into the public menu cove
  assert.match(api,/coverUrl/);
  assert.match(publicMenu,/branding\.coverUrl/);
  assert.match(activityStorefront,/branding\.coverUrl/);
+});
+
+
+test("unified campaigns are first-class tenant records with a cascading slide relationship",async()=>{
+ const migration=await read("migrations/9999_display_z_campaign_lifecycle.sql");
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(migration,/CREATE TABLE IF NOT EXISTS display_campaigns/);
+ assert.match(migration,/destinations JSON NOT NULL/);
+ assert.match(migration,/branch_ids JSON NULL/);
+ assert.match(migration,/creative JSON NOT NULL/);
+ assert.match(migration,/previous_cover_url VARCHAR\(500\)/);
+ assert.match(migration,/applied_cover_url VARCHAR\(500\)/);
+ assert.match(migration,/ON DELETE CASCADE/);
+ assert.match(api,/INSERT INTO display_campaigns/);
+ assert.match(api,/SELECT id,CASE WHEN status='paused' THEN 'paused'/);
+ assert.match(api,/destinations,branch_ids,creative/);
+ assert.match(api,/UPDATE display_campaigns SET previous_cover_url/);
+ assert.match(manager,/type Campaign=/);
+ assert.match(manager,/\[campaigns,setCampaigns\]=useState<Campaign\[]>\(\[\]\)/);
+ assert.match(manager,/setCampaigns\(Array\.isArray\(d\.campaigns\)/);
+ assert.match(manager,/Unified campaigns/);
+});
+
+test("campaign pause, resume and delete preserve manually changed menu covers",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(api,/body\.kind==="campaign"/);
+ assert.match(api,/UPDATE display_slides SET enabled=FALSE WHERE campaign_id/);
+ assert.match(api,/UPDATE display_slides SET enabled=TRUE WHERE campaign_id/);
+ assert.match(api,/DELETE FROM display_campaigns WHERE id=\? AND tenant_id=\?/);
+ assert.match(api,/storefrontData\.displayCampaignId===String\(body\.id\)/);
+ assert.match(api,/storefrontData\.coverUrl===appliedCover/);
+ assert.match(api,/delete nextData\.displayCampaignId/);
+ assert.match(manager,/action:"pause"/);
+ assert.match(manager,/action:"resume"/);
+ assert.match(manager,/action:"delete"/);
+});
+
+test("moving one campaign slide reorders the same campaign on every target screen",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(api,/SELECT id,screen_id,sort_order,campaign_id FROM display_slides/);
+ assert.match(api,/SELECT id,screen_id,sort_order FROM display_slides WHERE campaign_id/);
+ assert.match(api,/campaign_id<>\?/);
+ assert.match(api,/changedScreens/);
 });
