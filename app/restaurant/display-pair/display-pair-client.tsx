@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import {useMemo,useState} from "react";
 type Tenant={id:string;name:string;branches:{id:string;name:string}[]};
 export default function DisplayPairClient({code,tenants}:{code:string;tenants:Tenant[]}){
@@ -19,7 +20,7 @@ export default function DisplayPairClient({code,tenants}:{code:string;tenants:Te
   <form onSubmit={submit} style={{width:"min(520px,100%)",background:"#fff",border:"1px solid #dce5ef",borderRadius:20,padding:28,display:"grid",gap:16,boxShadow:"0 12px 40px #17365d12"}}>
    <div style={{fontSize:14,color:"#3272ad",fontWeight:700}}>FOON DISPLAY</div>
    <h1 style={{fontSize:28,margin:0}}>ربط شاشة جديدة</h1>
-   {done?<><p style={{fontSize:18,color:"#166534"}}>تم ربط الشاشة بنجاح. ستبدأ الشاشة تشغيل الإعلانات تلقائياً.</p><a href="/restaurant" style={{color:"#1769aa"}}>العودة إلى لوحة النشاط</a></>:<>
+   {done?<><p style={{fontSize:18,color:"#166534"}}>تم ربط الشاشة بنجاح. ستبدأ الشاشة تشغيل الإعلانات تلقائياً.</p><Link href="/restaurant" style={{color:"#1769aa"}}>العودة إلى لوحة النشاط</Link></>:<>
     <p style={{color:"#536579",margin:0}}>اختر النشاط والفرع، وسمّ الشاشة. الرمز صالح لمدة قصيرة ويستخدم مرة واحدة.</p>
     <label style={{display:"grid",gap:7}}>النشاط<select value={tenantId} onChange={event=>{setTenantId(event.target.value);setBranchId("");}} style={{padding:12,border:"1px solid #cbd5e1",borderRadius:10}}>{tenants.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     <label style={{display:"grid",gap:7}}>الفرع<select value={branchId} onChange={event=>setBranchId(event.target.value)} style={{padding:12,border:"1px solid #cbd5e1",borderRadius:10}}><option value="">كل الفروع / بدون فرع محدد</option>{branches.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
