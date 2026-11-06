@@ -61,3 +61,8 @@ Before approving a device model for production, test:
 ## Native adapter boundary
 
 The shared capability protocol is defined in [display-player-cross-platform.md](./display-player-cross-platform.md). It is the integration contract for future Windows, Linux, Android, and macOS native agents. This web-player release does not yet ship those agents, OS-level HDMI discovery, device enrollment/revocation APIs, or physical-device certification.
+## Player health telemetry
+
+The browser player sends a small health report every 30 seconds and when network/visibility state changes. The merchant dashboard can show the last report and a reported playback error. Reports include the browser-detected platform family, viewport size, online/visible state, and basic H.264/WebM decode declarations.
+
+These are browser-reported diagnostics only. They do not prove physical HDMI connection, negotiated output resolution, GPU decode performance, or 4K certification. Those require a native platform adapter and hardware testing. Health reports are scoped to the secret screen token and are not a substitute for authenticated native-device enrollment.
