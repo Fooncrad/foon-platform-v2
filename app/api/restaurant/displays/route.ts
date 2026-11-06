@@ -71,11 +71,15 @@ export async function POST(req:Request){
    const conn=await database().getConnection();
    try{
     await conn.beginTransaction();
+    const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
+    const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
+    const creative={sourceType,sourceId,mediaUrl,videoUrl,videoLoop:body.videoLoop!==false,transitionEffect:transition,badgeText:badge,durationSeconds:duration,titleAr:body.titleAr??null,titleEn:body.titleEn??null,titleFr:body.titleFr??null,subtitleAr:body.subtitleAr??null,subtitleEn:body.subtitleEn??null,subtitleFr:body.subtitleFr??null};
+    const destinations={screens:includeDisplays,menuBanner:includeMenuBanner,scope:includeDisplays?(requestedBranches?.length?"selected":"all"):"none"};
+    const campaignStatus=startsAt&&Date.parse(startsAt.replace(" ","T")+"Z")>Date.now()?"scheduled":"active";
+    await conn.execute("INSERT INTO display_campaigns(id,tenant_id,status,destinations,branch_ids,creative,starts_at,ends_at,created_by) VALUES (?,?,?,?,?,?,?,?,?)",[campaignId,ctx.tenant,campaignStatus,JSON.stringify(destinations),requestedBranches?.length?JSON.stringify(requestedBranches):null,JSON.stringify(creative),startsAt,endsAt,ctx.user]);
     for(const screen of targetScreens){
      const [lastOrder]=await conn.execute<RowDataPacket[]>("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM display_slides WHERE screen_id=? AND tenant_id=?",[screen.id,ctx.tenant]);
      const id=randomUUID(),sortOrder=Number(lastOrder[0]?.next_order??0);
-     const transition=["fade","zoom","slide","kenburns"].includes(String(body.transitionEffect))?String(body.transitionEffect):"fade";
-     const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
      await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screen.id,ctx.tenant,campaignId,mediaUrl,sourceType,sourceId,videoUrl,body.videoLoop!==false,transition,badge,null,...(["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(k=>typeof body[k]==="string"?String(body[k]).slice(0,k.startsWith("title")?180:500):null)),duration,sortOrder,startsAt,endsAt]);
     }
     if(includeMenuBanner){
@@ -87,7 +91,9 @@ export async function POST(req:Request){
      if(!coverUrl||!/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(coverUrl))throw Object.assign(new Error("BANNER_REQUIRES_FOON_IMAGE"),{status:400});
      const [existing]=await conn.execute<RowDataPacket[]>("SELECT id,name,status,data,version FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND archived=FALSE AND status='active' LIMIT 1 FOR UPDATE",[ctx.tenant]);
      const previous=existing[0];
-     await saveResource(conn,ctx.tenant,ctx.user,ctx.role,"storefront",previous?{id:String(previous.id),version:Number(previous.version),name:String(previous.name),status:String(previous.status),branchId:null,data:{...parseData(previous.data),coverUrl}}:{name:"واجهة النشاط",status:"active",branchId:null,data:{coverUrl}});
+     const previousCover=previous?parseData(previous.data).coverUrl:null;
+     await conn.execute("UPDATE display_campaigns SET previous_cover_url=?,applied_cover_url=? WHERE id=? AND tenant_id=?",[typeof previousCover==="string"?previousCover:null,coverUrl,campaignId,ctx.tenant]);
+     await saveResource(conn,ctx.tenant,ctx.user,ctx.role,"storefront",previous?{id:String(previous.id),version:Number(previous.version),name:String(previous.name),status:String(previous.status),branchId:null,data:{...parseData(previous.data),coverUrl,displayCampaignId:campaignId}}:{name:"واجهة النشاط",status:"active",branchId:null,data:{coverUrl,displayCampaignId:campaignId}});
     }
     await conn.commit();
    }catch(error){await conn.rollback();throw error;}finally{conn.release();}
