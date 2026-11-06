@@ -54,9 +54,9 @@ export async function POST(req:Request){
    const sourceType=typeof body.sourceType==="string"?body.sourceType:"media";
    const sourceId=typeof body.sourceId==="string"&&/^[a-f0-9-]{36}$/i.test(body.sourceId)?body.sourceId:null;
    if(!["media","restaurant_menu_item","catalog_product","restaurant_menu_category","catalog_category"].includes(sourceType))return reply({ok:false,code:"INVALID_SOURCE"},400);
-   const mediaUrl=sourceType==="media"&&typeof body.mediaUrl==="string"&&/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl)?body.mediaUrl:null;
+   const mediaUrl=typeof body.mediaUrl==="string"&&/^\/api\/restaurant\/assets\/[a-f0-9-]{36}$/i.test(body.mediaUrl)?body.mediaUrl:null;
    const videoUrl=sourceType==="media"&&typeof body.videoUrl==="string"&&body.videoUrl.trim()?body.videoUrl.trim():null;
-   if(sourceType==="media"?(Boolean(mediaUrl)===Boolean(videoUrl)):(!sourceId||body.mediaUrl||body.videoUrl))return reply({ok:false,code:"INVALID_MEDIA"},400);
+   if(sourceType==="media"?(Boolean(mediaUrl)===Boolean(videoUrl)):(!sourceId||Boolean(videoUrl)))return reply({ok:false,code:"INVALID_MEDIA"},400);
    if(videoUrl){try{const parsed=new URL(videoUrl);const host=parsed.hostname.toLowerCase();const privateHost=host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal")||host.includes(":")||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);if(parsed.protocol!=="https:"||parsed.username||parsed.password||privateHost||! /\.(mp4|webm)$/i.test(parsed.pathname))return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}catch{return reply({ok:false,code:"INVALID_VIDEO_URL"},400);}}
    if(mediaUrl){const [assets]=await database().execute<RowDataPacket[]>("SELECT id FROM restaurant_assets WHERE id=? AND tenant_id=? LIMIT 1",[mediaUrl.slice("/api/restaurant/assets/".length),ctx.tenant]);if(!assets.length)return reply({ok:false,code:"MEDIA_NOT_FOUND"},404);}
    const sourceTables:Record<string,[string,string]>={restaurant_menu_item:["restaurant_menu_items","enabled=TRUE"],catalog_product:["catalog_products","enabled=TRUE AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(attributes,'$.__foon_archived')),'0') NOT IN ('1','true')"],restaurant_menu_category:["restaurant_menu_categories","enabled=TRUE"],catalog_category:["catalog_categories","enabled=TRUE"]};
