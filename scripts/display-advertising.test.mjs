@@ -207,7 +207,7 @@ test("one display campaign fans out atomically to every active screen in selecte
  assert.match(manager,/action:"campaign"/);
  assert.match(manager,/Show campaign on displays/);
  assert.match(manager,/نشر الحملة الموحدة/);
- assert.match(player,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+ assert.match(player,/s\.campaign_match_key IS NULL OR s\.campaign_match_key=\?/);
 });
 
 test("editing or deleting one campaign slide applies to the whole campaign",async()=>{
