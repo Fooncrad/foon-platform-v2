@@ -327,3 +327,32 @@ test("legacy TV browsers can poll and play without Fetch, URL, or WebSocket supp
  assert.doesNotMatch(player,/new URL\(auth\.url\)/);
  assert.match(player,/setInterval\(\(\)=>void load\(\)/);
 });
+
+
+test("TV QR pairing uses a short-lived one-time code and a hashed device token",async()=>{
+ const migration=await read("migrations/9999_display_screen_pairing.sql");
+ const pairing=await read("app/api/display/pairing/route.ts");
+ const claim=await read("app/api/restaurant/displays/route.ts");
+ const tv=await read("app/display/pair/pair-player.tsx");
+ const phone=await read("app/restaurant/display-pair/display-pair-client.tsx");
+ const page=await read("app/restaurant/display-pair/page.tsx");
+ assert.match(migration,/display_pairing_sessions/);
+ assert.match(migration,/code_hash CHAR\\(64\\)/);
+ assert.match(migration,/token_hash CHAR\\(64\\)/);
+ assert.match(migration,/expires_at DATETIME/);
+ assert.match(pairing,/randomBytes\\(32\\)/);
+ assert.match(pairing,/DATE_ADD\\(UTC_TIMESTAMP\\(\\),INTERVAL 10 MINUTE\\)/);
+ assert.match(pairing,/digest\\(token\\)/);
+ assert.match(pairing,/claimed_screen_id/);
+ assert.match(claim,/action===\"pairClaim\"/);
+ assert.match(claim,/requireTenantMembership/);
+ assert.match(claim,/tenantEntitlement\\(tenant,\"display_advertising\"\\)/);
+ assert.match(claim,/claimed_screen_id IS NULL FOR UPDATE/);
+ assert.match(claim,/String\\(sessions\\[0\\]\\.token_hash\\)/);
+ assert.match(tv,/QRCode\\.toDataURL/);
+ assert.match(tv,/restaurant\\/display-pair\\?code=/);
+ assert.match(tv,/window\\.location\\.replace\\(\"\\/display\\/ /);
+ assert.match(phone,/action:\"pairClaim\"/);
+ assert.match(phone,/x-foon-tenant/);
+ assert.match(page,/memberships/);
+});
