@@ -75,7 +75,7 @@ export async function POST(req:Request){
     const badge=typeof body.badgeText==="string"?body.badgeText.trim().slice(0,64):null;
     const creative={sourceType,sourceId,mediaUrl,videoUrl,videoLoop:body.videoLoop!==false,transitionEffect:transition,badgeText:badge,durationSeconds:duration,titleAr:body.titleAr??null,titleEn:body.titleEn??null,titleFr:body.titleFr??null,subtitleAr:body.subtitleAr??null,subtitleEn:body.subtitleEn??null,subtitleFr:body.subtitleFr??null};
     const destinations={screens:includeDisplays,menuBanner:includeMenuBanner,scope:includeDisplays?(requestedBranches?.length?"selected":"all"):"none"};
-    const campaignStatus=startsAt&&Date.parse(startsAt.replace(" ","T")+"Z")>Date.now()?"scheduled":"active";
+    const campaignStatus=endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.now()?"completed":startsAt&&Date.parse(startsAt.replace(" ","T")+"Z")>Date.now()?"scheduled":"active";
     await conn.execute("INSERT INTO display_campaigns(id,tenant_id,status,destinations,branch_ids,creative,starts_at,ends_at,created_by) VALUES (?,?,?,?,?,?,?,?,?)",[campaignId,ctx.tenant,campaignStatus,JSON.stringify(destinations),requestedBranches?.length?JSON.stringify(requestedBranches):null,JSON.stringify(creative),startsAt,endsAt,ctx.user]);
     for(const screen of targetScreens){
      const [lastOrder]=await conn.execute<RowDataPacket[]>("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM display_slides WHERE screen_id=? AND tenant_id=?",[screen.id,ctx.tenant]);
