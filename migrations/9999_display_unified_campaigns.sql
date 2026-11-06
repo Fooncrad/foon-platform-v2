@@ -18,4 +18,5 @@ CREATE TABLE IF NOT EXISTS display_campaigns (
 
 ALTER TABLE display_slides
  ADD COLUMN campaign_id CHAR(36) NULL AFTER tenant_id,
- ADD INDEX display_slides_campaign_id_idx (tenant_id, campaign_id, enabled);
+ ADD INDEX display_slides_campaign_id_idx (tenant_id, campaign_id, enabled),
+ ADD CONSTRAINT display_slides_campaign_fk FOREIGN KEY (campaign_id) REFERENCES display_campaigns(id) ON DELETE CASCADE;
