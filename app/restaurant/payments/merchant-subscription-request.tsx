@@ -1,7 +1,9 @@
 "use client";
 import {useEffect,useState,type FormEvent} from "react";
 import {useUiLanguage} from "@/lib/i18n/ui-language";
-type Price={plan_id:string;name_ar:string;name_en:string;name_fr:string;billing_cycle:"monthly"|"yearly";currency:string;price:string};
+import Link from "next/link";
+type Price={plan_id:string;name_ar:string;name_en:string;name_fr:string;billing_cycle:"monthly"|"yearly";currency:string;price:string;catalog_enabled:number|string;catalog_limit:number|null};
+type Quota={used:number;productUsed:number;limit:number|null;enabled:boolean;feature:string};
 type Receipt={payment_request_id:string;receipt_number:string;amount:string;currency:string;issued_at:string;billing_cycle:string;name_ar:string;name_en:string;name_fr:string};
 type Request={id:string;amount:string;currency:string;billing_cycle:string;status:string;transfer_reference:string;review_note:string|null};
 export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}){
@@ -9,13 +11,14 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
  const [prices,setPrices]=useState<Price[]>([]),[requests,setRequests]=useState<Request[]>([]),[receipts,setReceipts]=useState<Receipt[]>([]),[chosen,setChosen]=useState(""),[reference,setReference]=useState("");
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState(""),[done,setDone]=useState("");
  const [evidence,setEvidence]=useState<File|null>(null);
+ const [quota,setQuota]=useState<Quota|null>(null);
  const reload=async()=>{
   const r=await fetch("/api/tenant/subscription-requests?tenantId="+encodeURIComponent(tenantId),{cache:"no-store"});
   const data=await r.json();if(!r.ok)throw Error(data.code??"REQUEST_FAILED");
-  setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);
+  setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);setQuota(data.quota??null);
  };
  useEffect(()=>{let active=true;fetch("/api/tenant/subscription-requests?tenantId="+encodeURIComponent(tenantId),{cache:"no-store"})
-  .then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.code??"LOAD_FAILED");if(active){setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);}})
+  .then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.code??"LOAD_FAILED");if(active){setPrices(data.prices??[]);setRequests(data.requests??[]);setReceipts(data.receipts??[]);setQuota(data.quota??null);}})
   .catch(()=>{if(active)setError(t("تعذر تحميل اشتراكات المنصة.","Subscriptions unavailable.","Abonnements indisponibles."));}).finally(()=>{if(active)setLoading(false);});
  return()=>{active=false;};},[tenantId,lang]);
  async function uploadEvidence(paymentRequestId:string,file:File){
@@ -43,16 +46,27 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
   }catch(e){setError(String(e instanceof Error?e.message:e));}finally{setBusy(false);}
  }
  const pending=requests.some(r=>r.status==="pending");
+ const atLimit=Boolean(quota?.enabled&&quota.limit!==null&&Math.max(quota.used,quota.productUsed)>=quota.limit);
+ const expandsLimit=(price:Price)=>Number(price.catalog_enabled)===1&&(price.catalog_limit===null||quota?.limit!==null&&Number(price.catalog_limit)>Math.max(quota?.limit??0,quota?.used??0,quota?.productUsed??0));
+ const availablePlans=prices.filter(p=>!atLimit||expandsLimit(p));
  return <section className="adminPanel" style={{padding:16,marginBlock:22,border:"1px solid var(--border, #777)",borderRadius:16}}>
   <h2>{t("الاشتراك المدفوع للمنصة","Platform paid subscription","Abonnement payant FOON")}</h2>
   <p>{t("هذا القسم لرسوم اشتراك FOON، وهو منفصل عن مدفوعات طلبات عملائك. التحويل لا يُعتمد آليًا: تأكد من بيانات حساب المنصة البنكي، ثم أرسل مرجع التحويل لتراجعه الإدارة.","FOON subscription fees are separate from customer checkout. Verify platform bank details, transfer, then submit the reference for manual verification.","Les abonnements FOON sont distincts des paiements clients. Vérifiez le compte bancaire et transmettez la référence pour examen.")}</p>
   {loading?<p role="status">{t("جارٍ التحميل…","Loading…","Chargement…")}</p>:<>
-  <form onSubmit={submit} style={{display:"grid",gap:12,maxWidth:640}}>
+  {quota&&<div role="status" style={{padding:12,border:"1px solid var(--border,#d6dde4)",borderRadius:12,marginBlock:14,background:"var(--surface,#fff)"}}>
+    <strong>{t("حدود الأقسام والمنتجات في الباقة الحالية","Current category and product allowance","Limite actuelle des catégories et produits")}</strong>
+    <p dir="ltr" style={{margin:"8px 0",fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{t("الأقسام","Categories","Catégories")}: {quota.used.toLocaleString("en-US")} / {quota.enabled?(quota.limit===null?"∞":quota.limit.toLocaleString("en-US")):"—"}</p>
+    <p dir="ltr" style={{margin:"8px 0",fontWeight:800,fontVariantNumeric:"tabular-nums"}}>{t("المنتجات","Products","Produits")}: {quota.productUsed.toLocaleString("en-US")} / {quota.enabled?(quota.limit===null?"∞":quota.limit.toLocaleString("en-US")):"—"}</p>
+    <p style={{margin:0}}>{atLimit?t("وصلت إلى حد الأقسام أو المنتجات. اختر باقة بسعة أكبر.","Category or product limit reached. Choose a paid plan with higher capacity.","Limite de catégories ou de produits atteinte. Choisissez une formule supérieure."):t("اختر الباقة المناسبة لنشاطك وقارن حد الأقسام والمنتجات.","Compare the category and product allowance of plans available for your activity.","Comparez les limites des catégories et des produits.")}</p>
+  </div>}
+  {!prices.length&&<p role="status">{t("لا توجد باقات مدفوعة مفعّلة بعملة نشاطك حاليًا. تواصل مع إدارة FOON لإتاحة الباقات والأسعار.","No paid plans are published in this business currency yet. Contact FOON administration for plan availability.","Aucune formule payante disponible dans cette devise. Contactez l’administration FOON.")} <Link href="/contact">{t("تواصل معنا","Contact us","Nous contacter")}</Link></p>}
+  {atLimit&&prices.length>0&&availablePlans.length===0&&<p role="status">{t("لا توجد باقة منشورة ترفع الحد الحالي للأقسام أو المنتجات. تواصل مع الإدارة لإعداد باقة أعلى.","No published paid plan increases your category or product limit. Contact administration to configure a suitable plan.","Aucune formule publiée ne relève ces limites. Contactez l’administration pour une offre adaptée.")} <Link href="/contact">{t("طلب المساعدة","Request help","Demander de l’aide")}</Link></p>}
+  {availablePlans.length>0&&<form onSubmit={submit} style={{display:"grid",gap:12,maxWidth:640}}>
    <label>{t("الباقة والدورة","Plan and cycle","Formule et période")}
     <select required value={chosen} disabled={pending||busy} onChange={e=>setChosen(e.target.value)}>
      <option value="">{t("اختر باقة مدفوعة","Choose a paid plan","Choisir une offre")}</option>
-     {prices.map(p=><option key={p.plan_id+":"+p.billing_cycle} value={p.plan_id+":"+p.billing_cycle}>
-      {lang==="en"?p.name_en:lang==="fr"?p.name_fr:p.name_ar} — {p.price} {p.currency} / {p.billing_cycle==="yearly"?t("سنوي","year","an"):t("شهري","month","mois")}
+     {availablePlans.map(p=><option key={p.plan_id+":"+p.billing_cycle} value={p.plan_id+":"+p.billing_cycle}>
+      {lang==="en"?p.name_en:lang==="fr"?p.name_fr:p.name_ar} — {p.price} {p.currency} / {p.billing_cycle==="yearly"?t("سنوي","year","an"):t("شهري","month","mois")} — {Number(p.catalog_enabled)===1?t("حد الأقسام والمنتجات: ","Categories/products: ","Catégories/produits : ")+(p.catalog_limit===null?t("غير محدود","Unlimited","Illimité"):p.catalog_limit):t("الكتالوج غير مشمول","Catalog not included","Catalogue non inclus")}
      </option>)}
     </select>
    </label>
@@ -64,7 +78,7 @@ export default function MerchantSubscriptionRequest({tenantId}:{tenantId:string}
     {evidence&&<small role="status">{t("الإيصال المحدد: ","Selected receipt: ","Reçu choisi : ")}{evidence.name}</small>}
    </label>
    <button type="submit" disabled={!chosen||!evidence||evidence.size>2097152||pending||busy}>{busy?t("جارٍ الإرسال…","Submitting…","Envoi…"):t("إرسال طلب اعتماد الدفع","Submit paid transfer for review","Envoyer le virement")}</button>
-  </form>
+  </form>}
   {pending&&<div><p role="status">{t("يمكنك رفع إيصال الدفع أو استبداله ما دام طلب الترقية قيد المراجعة.","You can upload or replace the payment receipt while the upgrade request is pending.","Vous pouvez ajouter ou remplacer le reçu tant que la demande est en attente.")}</p>
     <button type="button" disabled={busy||!evidence||evidence.size>2097152} onClick={()=>void retryEvidence()}>{t("رفع إيصال الدفع للطلب المعلّق","Upload receipt to pending request","Ajouter le reçu à la demande")}</button>
    </div>}

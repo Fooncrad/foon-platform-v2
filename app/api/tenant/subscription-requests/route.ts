@@ -5,6 +5,7 @@ import {currentUserId} from "@/lib/auth/session";
 import {requireTenantMembership} from "@/lib/auth/authorization";
 import {database} from "@/lib/db/mysql";
 import {assertSameOrigin} from "@/lib/security/origin";
+import {tenantEntitlement} from "@/lib/plans/entitlements";
 import {readLimitedJson} from "@/lib/security/limited-json";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -23,16 +24,27 @@ export async function GET(request:Request){
  const id=new URL(request.url).searchParams.get("tenantId");
  const auth=await merchant(id);if(auth.status!==200)return reply({ok:false,code:"FORBIDDEN"},auth.status);
  try{
-  const [[prices],[requests],[receipts]]=await Promise.all([
+  const [profile]=await database().execute<RowDataPacket[]>("SELECT COALESCE(NULLIF(p.activity_code,''),CASE WHEN t.kind='restaurant' THEN 'restaurant' ELSE '' END) AS activity_code FROM tenants t LEFT JOIN tenant_business_profiles p ON p.tenant_id=t.id WHERE t.id=? LIMIT 1",[id]);
+  const activity=String(profile[0]?.activity_code??"");
+  const featureKey=["carwash","automotive","laundry","salon","publicworks"].includes(activity)?"catalog":"digital_menu";
+  const categoryTable=activity==="restaurant"?"restaurant_menu_categories":"catalog_categories";
+  const productTable=activity==="restaurant"?"restaurant_menu_items":"catalog_products";
+  const [[prices],[requests],[receipts],[counts],[productCounts],currentGrant]=await Promise.all([
    database().execute<RowDataPacket[]>(
-    "SELECT pp.id AS plan_id,pp.name_ar,pp.name_en,pp.name_fr,pr.billing_cycle,pr.currency,pr.price "+
-    "FROM tenant_business_profiles t JOIN package_plan_prices pr ON pr.currency=t.currency AND pr.enabled=TRUE "+
-    "JOIN package_plans pp ON pp.id=pr.plan_id AND pp.enabled=TRUE AND pp.code<>'free' "+
-    "WHERE t.tenant_id=? AND pr.price>0 ORDER BY pp.sort_order,pr.billing_cycle",[id]),
+    "SELECT pp.id AS plan_id,pp.name_ar,pp.name_en,pp.name_fr,pr.billing_cycle,pr.currency,pr.price, "+
+    "COALESCE(af.enabled,pf.enabled,0) AS catalog_enabled,CASE WHEN af.plan_id IS NOT NULL THEN af.limit_value ELSE pf.limit_value END AS catalog_limit "+
+    "FROM tenants tenant LEFT JOIN tenant_business_profiles t ON BINARY t.tenant_id=BINARY tenant.id JOIN package_plan_prices pr ON BINARY pr.currency=BINARY COALESCE(NULLIF(t.currency,''),'SAR') AND pr.enabled=TRUE "+
+    "JOIN package_plans pp ON BINARY pp.id=BINARY pr.plan_id AND pp.enabled=TRUE AND pp.code<>'free' "+
+    "LEFT JOIN package_plan_features pf ON BINARY pf.plan_id=BINARY pp.id AND BINARY pf.feature_key=BINARY ? "+
+    "LEFT JOIN package_plan_activity_features af ON BINARY af.plan_id=BINARY pp.id AND BINARY af.activity_code=BINARY t.activity_code AND BINARY af.feature_key=BINARY ? "+
+    "WHERE BINARY tenant.id=BINARY ? AND pr.price>0 ORDER BY pp.sort_order,pr.billing_cycle",[featureKey,featureKey,id]),
    database().execute<RowDataPacket[]>("SELECT id,plan_id,amount,currency,billing_cycle,status,transfer_reference,review_note,created_at FROM platform_payment_requests WHERE tenant_id=? ORDER BY created_at DESC LIMIT 30",[id]),
-   database().execute<RowDataPacket[]>("SELECT r.payment_request_id,r.receipt_number,r.amount,r.currency,r.issued_at,p.billing_cycle,pl.name_ar,pl.name_en,pl.name_fr FROM platform_payment_receipts r JOIN platform_payment_requests p ON p.id=r.payment_request_id AND p.tenant_id=r.tenant_id AND p.status='approved' JOIN package_plans pl ON pl.id=p.plan_id WHERE r.tenant_id=? ORDER BY r.issued_at DESC LIMIT 50",[id])
+   database().execute<RowDataPacket[]>("SELECT r.payment_request_id,r.receipt_number,r.amount,r.currency,r.issued_at,p.billing_cycle,pl.name_ar,pl.name_en,pl.name_fr FROM platform_payment_receipts r JOIN platform_payment_requests p ON p.id=r.payment_request_id AND p.tenant_id=r.tenant_id AND p.status='approved' JOIN package_plans pl ON pl.id=p.plan_id WHERE r.tenant_id=? ORDER BY r.issued_at DESC LIMIT 50",[id]),
+   database().execute<RowDataPacket[]>("SELECT COUNT(*) AS used FROM "+categoryTable+" WHERE tenant_id=?",[id]),
+   database().execute<RowDataPacket[]>("SELECT COUNT(*) AS used FROM "+productTable+" WHERE tenant_id=?",[id]),
+   tenantEntitlement(String(id),featureKey)
   ]);
-  return reply({ok:true,prices,requests,receipts});
+  return reply({ok:true,prices,requests,receipts,quota:{used:Number(counts[0]?.used??0),productUsed:Number(productCounts[0]?.used??0),limit:currentGrant.limit,enabled:currentGrant.enabled,feature:featureKey}});
  }catch{return reply({ok:false,code:"SUBSCRIPTION_REQUESTS_UNAVAILABLE"},503);}
 }
 export async function POST(request:Request){
@@ -55,9 +67,12 @@ export async function POST(request:Request){
   const [pending]=await db.execute<RowDataPacket[]>("SELECT id FROM platform_payment_requests WHERE tenant_id=? AND status='pending' LIMIT 1",[id]);
   if(pending.length){await db.rollback();return reply({ok:false,code:"PAYMENT_ALREADY_PENDING"},409);}
   const [prices]=await db.execute<RowDataPacket[]>(
-   "SELECT pr.price,pr.currency FROM package_plan_prices pr JOIN package_plans p ON p.id=pr.plan_id AND p.enabled=TRUE AND p.code<>'free' "+
-   "JOIN tenant_business_profiles b ON b.tenant_id=? AND b.currency=pr.currency "+
-   "WHERE pr.plan_id=? AND pr.billing_cycle=? AND pr.enabled=TRUE AND pr.price>0 LIMIT 1",
+   "SELECT pr.price,pr.currency FROM package_plan_prices pr "+
+   "JOIN package_plans p ON BINARY p.id=BINARY pr.plan_id AND p.enabled=TRUE AND p.code<>'free' "+
+   "JOIN tenants t ON BINARY t.id=BINARY ? "+
+   "LEFT JOIN tenant_business_profiles b ON BINARY b.tenant_id=BINARY t.id "+
+   "WHERE BINARY pr.currency=BINARY COALESCE(NULLIF(b.currency,''),'SAR') "+
+   "AND BINARY pr.plan_id=BINARY ? AND pr.billing_cycle=? AND pr.enabled=TRUE AND pr.price>0 LIMIT 1",
    [id,payload.planId,payload.billingCycle]);
   if(!prices.length){await db.rollback();return reply({ok:false,code:"PAID_PLAN_NOT_AVAILABLE"},409);}
   const amount=String(prices[0].price),currency=String(prices[0].currency);
