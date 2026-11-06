@@ -41,6 +41,30 @@ export async function POST(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
+  if(action==="pairClaim"){
+   const code=typeof body.code==="string"?body.code.trim():"";
+   const name=typeof body.name==="string"?body.name.trim():"";
+   const branchId=typeof body.branchId==="string"&&body.branchId?body.branchId:null;
+   if(!/^\\d{6}$/.test(code)||!name||name.length>120)return reply({ok:false,code:"INVALID_PAIRING_INPUT"},400);
+   if(branchId&&!/^[a-f0-9-]{36}$/i.test(branchId))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
+   const conn=await database().getConnection();
+   let screenId="";
+   try{
+    await conn.beginTransaction();
+    const [sessions]=await conn.execute<RowDataPacket[]>("SELECT id,token_hash FROM display_pairing_sessions WHERE code_hash=? AND expires_at>UTC_TIMESTAMP() AND claimed_screen_id IS NULL LIMIT 1 FOR UPDATE",[digest(code)]);
+    if(!sessions.length){await conn.rollback();return reply({ok:false,code:"PAIRING_CODE_INVALID_OR_EXPIRED"},404);}
+    if(branchId){
+     const [branches]=await conn.execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branchId,ctx.tenant]);
+     if(!branches.length){await conn.rollback();return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);}
+    }
+    screenId=randomUUID();
+    await conn.execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[screenId,ctx.tenant,branchId,name,digest(code)===String(sessions[0].code_hash)?"":String(sessions[0].token_hash),ctx.user]);
+    await conn.execute("UPDATE display_pairing_sessions SET claimed_screen_id=?,claimed_at=UTC_TIMESTAMP() WHERE id=? AND claimed_screen_id IS NULL",[screenId,sessions[0].id]);
+    await conn.commit();
+   }catch(error){await conn.rollback();throw error;}finally{conn.release();}
+   await publishDisplayInvalidation(ctx.tenant,screenId);
+   return reply({ok:true,id:screenId,name,branchId},201);
+  }
   if(action==="campaign"){
    const includeDisplays=body.includeDisplays!==false;
    const includeMenuBanner=body.includeMenuBanner===true;
