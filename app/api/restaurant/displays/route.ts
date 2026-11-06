@@ -45,7 +45,7 @@ export async function POST(req:Request){
    const code=typeof body.code==="string"?body.code.trim():"";
    const name=typeof body.name==="string"?body.name.trim():"";
    const branchId=typeof body.branchId==="string"&&body.branchId?body.branchId:null;
-   if(!/^\\d{6}$/.test(code)||!name||name.length>120)return reply({ok:false,code:"INVALID_PAIRING_INPUT"},400);
+   if(!/^\d{6}$/.test(code)||!name||name.length>120)return reply({ok:false,code:"INVALID_PAIRING_INPUT"},400);
    if(branchId&&!/^[a-f0-9-]{36}$/i.test(branchId))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
    const conn=await database().getConnection();
    let screenId="";
@@ -58,7 +58,7 @@ export async function POST(req:Request){
      if(!branches.length){await conn.rollback();return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);}
     }
     screenId=randomUUID();
-    await conn.execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[screenId,ctx.tenant,branchId,name,digest(code)===String(sessions[0].code_hash)?"":String(sessions[0].token_hash),ctx.user]);
+    await conn.execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[screenId,ctx.tenant,branchId,name,String(sessions[0].token_hash),ctx.user]);
     await conn.execute("UPDATE display_pairing_sessions SET claimed_screen_id=?,claimed_at=UTC_TIMESTAMP() WHERE id=? AND claimed_screen_id IS NULL",[screenId,sessions[0].id]);
     await conn.commit();
    }catch(error){await conn.rollback();throw error;}finally{conn.release();}
