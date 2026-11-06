@@ -28,3 +28,15 @@ test("display manager requires explicit review before saving generated copy",asy
  assert.match(manager,/subtitleAr,subtitleEn,subtitleFr/);
  assert.match(manager,/titleAr,titleEn,titleFr/);
 });
+
+test("AI copy assistant also supports activity catalog descriptions without display entitlement",async()=>{
+ const route=await read("app/api/restaurant/displays/marketing-copy/route.ts");
+ const editor=await read("app/restaurant/activity-catalog-editor.tsx");
+ assert.match(route,/purpose==="menu_description"/);
+ assert.match(route,/descriptionAr/);
+ assert.match(route,/requestedLanguage/);
+ assert.match(route,/if\(purpose==="display_copy"\)/);
+ assert.match(editor,/purpose:"menu_description"/);
+ assert.match(editor,/Suggest description with AI|اقترح وصفاً بالذكاء الاصطناعي/);
+ assert.match(editor,/راجعه وعدّله قبل الحفظ/);
+});
