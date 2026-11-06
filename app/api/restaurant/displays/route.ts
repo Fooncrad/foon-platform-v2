@@ -169,6 +169,60 @@ export async function PATCH(req:Request){
  let body:Record<string,unknown>;try{body=await readLimitedJson(req,4096) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  if(typeof body?.id!=="string")return reply({ok:false,code:"INVALID_INPUT"},400);
  try{
+  if(body.kind==="campaign"){
+   if(!["pause","resume","delete"].includes(String(body.action)))return reply({ok:false,code:"INVALID_CAMPAIGN_ACTION"},400);
+   const conn=await database().getConnection();
+   let screenIds:string[]=[];
+   try{
+    await conn.beginTransaction();
+    const [campaignRows]=await conn.execute<RowDataPacket[]>("SELECT * FROM display_campaigns WHERE id=? AND tenant_id=? LIMIT 1 FOR UPDATE",[body.id,ctx.tenant]);
+    if(!campaignRows.length){await conn.rollback();return reply({ok:false,code:"CAMPAIGN_NOT_FOUND"},404);}
+    const campaign=campaignRows[0];
+    const [screenRows]=await conn.execute<RowDataPacket[]>("SELECT DISTINCT screen_id FROM display_slides WHERE campaign_id=? AND tenant_id=?",[body.id,ctx.tenant]);
+    screenIds=screenRows.map(row=>String(row.screen_id));
+    const [storefrontRows]=await conn.execute<RowDataPacket[]>("SELECT id,name,status,data,version FROM restaurant_resources WHERE tenant_id=? AND kind='storefront_config' AND archived=FALSE AND status='active' LIMIT 1 FOR UPDATE",[ctx.tenant]);
+    const storefront=storefrontRows[0];
+    const storefrontData=storefront?parseData(storefront.data):null;
+    const appliedCover=typeof campaign.applied_cover_url==="string"?String(campaign.applied_cover_url):null;
+    const previousCover=typeof campaign.previous_cover_url==="string"?String(campaign.previous_cover_url):null;
+    const ownsCurrentCover=Boolean(storefrontData&&storefrontData.displayCampaignId===String(body.id)&&storefrontData.coverUrl===appliedCover);
+    const saveCover=async(nextData:Record<string,string|number|null>)=>{
+     if(!storefront)return;
+     await saveResource(conn,ctx.tenant,ctx.user,ctx.role,"storefront",{id:String(storefront.id),version:Number(storefront.version),name:String(storefront.name),status:String(storefront.status),branchId:null,data:nextData});
+    };
+    if(body.action==="pause"){
+     await conn.execute("UPDATE display_slides SET enabled=FALSE WHERE campaign_id=? AND tenant_id=?",[body.id,ctx.tenant]);
+     if(ownsCurrentCover&&storefrontData){
+      const nextData={...storefrontData};
+      if(previousCover)nextData.coverUrl=previousCover;else delete nextData.coverUrl;
+      delete nextData.displayCampaignId;
+      await saveCover(nextData);
+     }
+     await conn.execute("UPDATE display_campaigns SET status='paused' WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);
+    }else if(body.action==="resume"){
+     await conn.execute("UPDATE display_slides SET enabled=TRUE WHERE campaign_id=? AND tenant_id=?",[body.id,ctx.tenant]);
+     const starts=campaign.starts_at?new Date(campaign.starts_at).getTime():0;
+     const ends=campaign.ends_at?new Date(campaign.ends_at).getTime():0;
+     const nextStatus=ends&&ends<=Date.now()?"completed":starts&&starts>Date.now()?"scheduled":"active";
+     await conn.execute("UPDATE display_campaigns SET status=? WHERE id=? AND tenant_id=?",[nextStatus,body.id,ctx.tenant]);
+     const canReapplyCover=appliedCover&&storefrontData&&(storefrontData.displayCampaignId===String(body.id)||storefrontData.coverUrl===previousCover||(!storefrontData.coverUrl&&!previousCover));
+     if(canReapplyCover){
+      await saveCover({...storefrontData,coverUrl:appliedCover,displayCampaignId:String(body.id)});
+     }
+    }else{
+     if(ownsCurrentCover&&storefrontData){
+      const nextData={...storefrontData};
+      if(previousCover)nextData.coverUrl=previousCover;else delete nextData.coverUrl;
+      delete nextData.displayCampaignId;
+      await saveCover(nextData);
+     }
+     await conn.execute("DELETE FROM display_campaigns WHERE id=? AND tenant_id=?",[body.id,ctx.tenant]);
+    }
+    await conn.commit();
+   }catch{await conn.rollback();return reply({ok:false,code:"CAMPAIGN_UPDATE_FAILED"},503);}finally{conn.release();}
+   await Promise.all(screenIds.map(screenId=>publishDisplayInvalidation(ctx.tenant,screenId)));
+   return reply({ok:true,action:body.action,updatedScreens:screenIds.length});
+  }
   if(body.kind==="screen"){
    const allowed:Record<string,unknown>={};if(typeof body.name==="string"&&body.name.trim())allowed.name=body.name.trim().slice(0,120);
    if(typeof body.paused==="boolean")allowed.paused=body.paused;if(typeof body.enabled==="boolean")allowed.enabled=body.enabled;
