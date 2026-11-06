@@ -136,8 +136,12 @@ test("display player combines authenticated WebSocket invalidations with polling
  const realtime=await read("lib/display/realtime.ts");
  const admin=await read("app/api/restaurant/displays/route.ts");
  const relay=await read("services/display-realtime/server.mjs");
- assert.match(player,/new WebSocket\(/);
+ assert.match(player,/new window\.WebSocket\(/);
+ assert.match(player,/typeof window\.WebSocket!=="function"/);
  assert.match(player,/realtime-ticket/);
+ assert.match(player,/typeof window\.fetch==="function"/);
+ assert.match(player,/new XMLHttpRequest\(\)/);
+ assert.doesNotMatch(player,/new URL\(auth\.url\)/);
  assert.match(player,/setInterval\(\(\)=>void load\(\)/);
  assert.match(ticketRoute,/verifyKioskSession/);
  assert.match(ticketRoute,/createDisplayRealtimeTicket/);
@@ -310,4 +314,16 @@ test("ad library separates available and paused campaigns and explains empty dis
  assert.match(manager,/campaignFilter==="paused"/);
  assert.match(manager,/لا توجد شاشات مؤهلة للنشر حالياً/);
  assert.match(manager,/Show campaign on displays/);
+});
+
+
+test("legacy TV browsers can poll and play without Fetch, URL, or WebSocket support",async()=>{
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(player,/if\(typeof window!==\"undefined\"&&typeof window\.fetch===\"function\"\)/);
+ assert.match(player,/new XMLHttpRequest\(\)/);
+ assert.match(player,/xhr\.open\(options\.method\|\|\"GET\",url,true\)/);
+ assert.match(player,/if\(typeof window\.WebSocket!==\"function\"\)return/);
+ assert.match(player,/const socketUrl=auth\.url\+separator\+\"ticket=\"\+encodeURIComponent\(auth\.ticket\)/);
+ assert.doesNotMatch(player,/new URL\(auth\.url\)/);
+ assert.match(player,/setInterval\(\(\)=>void load\(\)/);
 });
