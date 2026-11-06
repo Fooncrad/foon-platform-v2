@@ -45,7 +45,7 @@ export async function POST(req:Request){
    const code=typeof body.code==="string"?body.code.trim():"";
    const name=typeof body.name==="string"?body.name.trim():"";
    const branchId=typeof body.branchId==="string"&&body.branchId?body.branchId:null;
-   if(!/^\d{6}$/.test(code)||!name||name.length>120)return reply({ok:false,code:"INVALID_PAIRING_INPUT"},400);
+   if(!/^\d{8}$/.test(code)||!name||name.length>120)return reply({ok:false,code:"INVALID_PAIRING_INPUT"},400);
    if(branchId&&!/^[a-f0-9-]{36}$/i.test(branchId))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
    const conn=await database().getConnection();
    let screenId="";
