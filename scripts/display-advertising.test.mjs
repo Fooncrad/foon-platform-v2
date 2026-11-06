@@ -238,7 +238,7 @@ test("unified campaign can publish the same FOON image into the public menu cove
 
 
 test("unified campaigns are first-class tenant records with a cascading slide relationship",async()=>{
- const migration=await read("migrations/9999_display_unified_campaigns.sql");
+ const migration=await read("migrations/9999_display_z_campaign_lifecycle.sql");
  const api=await read("app/api/restaurant/displays/route.ts");
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(migration,/CREATE TABLE IF NOT EXISTS display_campaigns/);
