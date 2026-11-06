@@ -299,7 +299,7 @@ test("catalog-backed campaigns auto-select product images and allow a tenant-own
  const sources=await read("app/api/restaurant/displays/sources/route.ts");
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(sources,/imageUrl:x\.image_url\?String\(x\.image_url\):null/);
- assert.match(manager,/setMedia\(next\?\.imageUrl\?\?\"\"\)/);
+ assert.match(manager,/setMedia\(isFoonAsset\?sourceImage:\"\"\)/);
  assert.match(manager,/mediaUrl:media\|\|null/);
  assert.match(manager,/Campaign image/);
  assert.match(manager,/importLibraryImage/);
