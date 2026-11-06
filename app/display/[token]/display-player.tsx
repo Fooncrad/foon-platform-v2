@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import QRCode from "qrcode";
-type PlayerResponse={ok:boolean;status:number;json:()=>Promise<any>};
+type PlayerResponse={ok:boolean;status:number;json:()=>Promise<unknown>};
 async function playerRequest(url:string,options:RequestInit={}):Promise<PlayerResponse>{
  if(typeof window!=="undefined"&&typeof window.fetch==="function"){
   const response=await window.fetch(url,options);
@@ -26,7 +26,7 @@ type Payload={screen:{id:string;name:string;refreshSeconds:number;qrEnabled:bool
 export default function DisplayPlayer({token}:{token:string}){
  const [data,setData]=useState<Payload|null>(null),[playback,setPlayback]=useState<{screenId:string;index:number}>({screenId:"",index:0}),[error,setError]=useState(false),[qrResult,setQrResult]=useState<{url:string;dataUrl:string}|null>(null),[pinRequired,setPinRequired]=useState(false),[pin,setPin]=useState(""),[pinError,setPinError]=useState(""),[mediaError,setMediaError]=useState<{slideId:string;source:string;code:string}|null>(null);
  const index=playback.screenId===data?.screen.id?playback.index:0;
- const load=useCallback(async()=>{try{const campaign=typeof window!=="undefined"?(window.location.search.match(/[?&]campaign=([^&]+)/)?.[1]?decodeURIComponent(window.location.search.match(/[?&]campaign=([^&]+)/)![1]):""):"";const query=campaign&&/^[a-z0-9_-]{1,80}$/i.test(campaign)?"?campaign="+encodeURIComponent(campaign):"";const r=await playerRequest("/api/display/"+encodeURIComponent(token)+query,{cache:"no-store"});if(r.status===401){setPinRequired(true);setData(null);setError(false);return;}if(!r.ok)throw Error("DISPLAY_UNAVAILABLE");const d=await r.json();setData(d);setPinRequired(false);setError(false);}catch{setError(true);}},[token]);
+ const load=useCallback(async()=>{try{const campaign=typeof window!=="undefined"?(window.location.search.match(/[?&]campaign=([^&]+)/)?.[1]?decodeURIComponent(window.location.search.match(/[?&]campaign=([^&]+)/)![1]):""):"";const query=campaign&&/^[a-z0-9_-]{1,80}$/i.test(campaign)?"?campaign="+encodeURIComponent(campaign):"";const r=await playerRequest("/api/display/"+encodeURIComponent(token)+query,{cache:"no-store"});if(r.status===401){setPinRequired(true);setData(null);setError(false);return;}if(!r.ok)throw Error("DISPLAY_UNAVAILABLE");const d=await r.json() as Payload;setData(d);setPinRequired(false);setError(false);}catch{setError(true);}},[token]);
  useEffect(()=>{const initial=setTimeout(()=>void load(),0);const interval=Math.max(5000,Math.min(120000,(data?.screen.refreshSeconds??15)*1000));const timer=setInterval(()=>void load(),interval);return()=>{clearTimeout(initial);clearInterval(timer);};},[load,data?.screen.refreshSeconds]);
  useEffect(()=>{
   if(!data?.screen.id)return;
@@ -53,7 +53,7 @@ export default function DisplayPlayer({token}:{token:string}){
  const qrUrl=data?.screen.qrEnabled?data.screen.qrUrl:"";
  useEffect(()=>{if(!qrUrl)return;let active=true;void QRCode.toDataURL(qrUrl,{width:Math.max(80,Math.min(240,data?.screen.qrSize||140)),margin:1,errorCorrectionLevel:"M",color:{dark:data?.screen.qrForeground||"#111827",light:data?.screen.qrBackground||"#ffffff"}}).then(value=>{if(active)setQrResult({url:qrUrl,dataUrl:value});}).catch(()=>{if(active)setQrResult({url:qrUrl,dataUrl:""});});return()=>{active=false;};},[qrUrl,data?.screen.qrSize,data?.screen.qrForeground,data?.screen.qrBackground]);
  const qr=qrResult&&qrResult.url===data?.screen.qrUrl?qrResult.dataUrl:"";
- async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await playerRequest("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({}));setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
+ async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await playerRequest("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({})) as {code?:string};setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
  const layout=data?.screen.displayLayout??"single";
  const requestedLayoutCount=layout==="double"||layout==="split"?2:layout==="triple"?3:layout==="quad"?4:1;
  const layoutCount=Math.min(requestedLayoutCount,data?.slides.length??1);
