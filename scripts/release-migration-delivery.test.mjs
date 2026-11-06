@@ -11,7 +11,6 @@ test("only explicitly approved migration prefixes may repeat",()=>{
  const approvedDuplicates=new Map([
   ["0018",["0018_automatic_free_stores.sql","0018_customer_notifications.sql"]],
   ["0060",["0060_order_notes.sql","0060_tenant_business_profiles.sql"]],
-  ["9999",["9999_display_advertising.sql","9999_display_advertising_kiosk_campaign_matching.sql","9999_display_player_health_telemetry.sql","9999_display_catalog_sources.sql"]]
  ]);
  const files=readdirSync(directory).filter(file=>/^\d{4}_.+\.sql$/.test(file));
  const byPrefix=new Map();
@@ -40,6 +39,8 @@ test("only explicitly approved migration prefixes may repeat",()=>{
  const displayGrant=readFileSync(join(fileURLToPath(directory),"0156_display_advertising_entitlement.sql"),"utf8");
  assert.match(displayGrant,/p\.code='enterprise'/);
  const displayHealth=readFileSync(join(fileURLToPath(directory),"9999_display_player_health_telemetry.sql"),"utf8");
+ const unifiedCampaign=readFileSync(join(fileURLToPath(directory),"0162_display_unified_campaigns.sql"),"utf8");
+ assert.match(unifiedCampaign,/ADD COLUMN campaign_id CHAR\(36\)/);
  assert.match(displayHealth,/player_health_json JSON/);
 });
 test("delivery preferences safely handle empty allowed-country lists",()=>{
