@@ -341,6 +341,7 @@ test("TV QR pairing uses a short-lived one-time code and a hashed device token",
  assert.match(migration,/token_hash CHAR\(64\)/);
  assert.match(migration,/expires_at DATETIME/);
  assert.match(pairing,/randomBytes\(32\)/);
+ assert.match(pairing,/padStart\(8,"0"\)/);
  assert.match(pairing,/DATE_ADD\(UTC_TIMESTAMP\(\),INTERVAL 10 MINUTE\)/);
  assert.match(pairing,/digest\(token\)/);
  assert.match(pairing,/claimed_screen_id/);
@@ -354,5 +355,9 @@ test("TV QR pairing uses a short-lived one-time code and a hashed device token",
  assert.match(tv,/window\.location\.replace\("\/display\/"\+/);
  assert.match(phone,/action:"pairClaim"/);
  assert.match(phone,/x-foon-tenant/);
+ assert.match(phone,/pairCode\.trim\(\)\.length!==8/);
+ assert.match(phone,/setPairCode/);
  assert.match(page,/memberships/);
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(manager,/display\/pair/);
 });
