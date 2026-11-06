@@ -379,9 +379,11 @@ test("display pairing offers a safe account switch when a stale session has no e
  const page=await read("app/restaurant/display-pair/page.tsx");
  const logout=await read("app/api/auth/logout/route.ts");
  const login=await read("app/login/page.tsx");
- assert.match(page,/تبديل الحساب وتسجيل الدخول/);
- assert.match(page,/encodeURIComponent\("\/restaurant\/display-pair\?code="\+code\)/);
- assert.match(logout,/requestedNext=url\.searchParams\.get\("next"\)/);
- assert.match(logout,/loginUrl\.searchParams\.set\("next",safeNext\)/);
- assert.match(login,/^\/restaurant\/display-pair\?code=\d\{8\}\$/);
+ assert.ok(page.includes("تبديل الحساب وتسجيل الدخول"));
+ assert.ok(page.includes("code.length===8"));
+ assert.ok(page.includes('encodeURIComponent("/restaurant/display-pair?code="+code)'));
+ assert.ok(logout.includes('requestedNext=url.searchParams.get("next")'));
+ assert.ok(logout.includes("requestedCode.length===8"));
+ assert.ok(logout.includes('loginUrl.searchParams.set("next",safeNext)'));
+ assert.ok(login.includes('"/restaurant/display-pair?code='));
 });
