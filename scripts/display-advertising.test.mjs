@@ -26,8 +26,8 @@ test("public playback uses an unguessable token hash and only active scheduled s
  const api=await read("app/api/display/[token]/route.ts");
  assert.match(api,/createHash\("sha256"\)/);
  assert.match(api,/token_hash=\?/);
- assert.match(api,/enabled=TRUE AND \(campaign_match_key IS NULL OR campaign_match_key=\?\) AND \(starts_at IS NULL OR starts_at<=UTC_TIMESTAMP\(\)\)/);
- assert.match(api,/ends_at IS NULL OR ends_at>UTC_TIMESTAMP\(\)/);
+ assert.match(api,/s.enabled=TRUE AND \(s.campaign_match_key IS NULL OR s.campaign_match_key=\?\) AND \(s.starts_at IS NULL OR s.starts_at<=UTC_TIMESTAMP\(\)\)/);
+ assert.match(api,/s.ends_at IS NULL OR s.ends_at>UTC_TIMESTAMP\(\)/);
 });
 test("merchant workspace exposes the displays module and a fullscreen public player",async()=>{
  const dashboard=await read("app/restaurant/merchant-dashboard.tsx");
@@ -45,7 +45,7 @@ test("display creatives upload through the existing tenant asset pipeline and su
  const manager=await read("app/restaurant/display-manager.tsx");
  const player=await read("app/display/[token]/display-player.tsx");
  assert.match(api,/INVALID_SCHEDULE/);
- assert.match(publicApi,/starts_at IS NULL OR starts_at<=UTC_TIMESTAMP/);
+ assert.match(publicApi,/s.starts_at IS NULL OR s.starts_at<=UTC_TIMESTAMP/);
  assert.match(manager,/FormData\(\)/);
  assert.match(manager,/\/api\/restaurant\/assets/);
  assert.match(manager,/datetime-local/);
@@ -114,7 +114,7 @@ test("campaign matching keys filter only the matching slides",async()=>{
  assert.match(migration,/campaign_match_key VARCHAR\(80\)/);
  assert.match(admin,/INVALID_CAMPAIGN_KEY/);
  assert.match(admin,/campaign_match_key/);
- assert.match(publicApi,/campaign_match_key IS NULL OR campaign_match_key=\?/);
+ assert.match(publicApi,/s.campaign_match_key IS NULL OR s.campaign_match_key=\?/);
  assert.match(manager,/Campaign key/);
  assert.match(player,/URLSearchParams\(window\.location\.search\)\.get\("campaign"\)/);
 });
@@ -145,4 +145,38 @@ test("display player combines authenticated WebSocket invalidations with polling
  assert.match(admin,/publishDisplayInvalidation/);
  assert.match(relay,/verifyTicket/);
  assert.match(relay,/display\.invalidate/);
+});
+
+test("live display creatives resolve tenant-owned restaurant menu and activity catalog products",async()=>{
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const sources=await read("app/api/restaurant/displays/sources/route.ts");
+ const player=await read("app/api/display/[token]/route.ts");
+ const migration=await read("migrations/9999_display_catalog_sources.sql");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(migration,/source_type ENUM/);
+ assert.match(admin,/sourceType==="restaurant_menu_item"/);
+ assert.match(admin,/sourceType==="catalog_product"/);
+ assert.match(admin,/sourceType==="restaurant_menu_category"/);
+ assert.match(admin,/sourceType==="catalog_category"/);
+ assert.match(sources,/restaurant_menu_items/);
+ assert.match(sources,/catalog_products/);
+ assert.match(sources,/restaurant_menu_categories/);
+ assert.match(sources,/catalog_categories/);
+ assert.match(player,/COALESCE\(s\.title_ar,mi\.name,cp\.name_ar,mc\.name,cc\.name_ar\)/);
+ assert.match(player,/catalog_images/);
+ assert.match(manager,/\/api\/restaurant\/displays\/sources/);
+ assert.match(manager,/sourceId:chosenSource\?\.id/);
+});
+
+test("display manager can import tenant-authorized images from the FOON account library",async()=>{
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const library=await read("app/api/account/library/route.ts");
+ const assets=await read("app/api/restaurant/assets/route.ts");
+ assert.match(manager,/fetch\("\/api\/account\/library"/);
+ assert.match(manager,/librarySelection/);
+ assert.match(manager,/libraryId:librarySelection/);
+ assert.match(manager,/\/api\/restaurant\/assets/);
+ assert.match(library,/user_media_library/);
+ assert.match(assets,/body\.libraryId/);
+ assert.match(assets,/user_media_library WHERE user_id=\?/);
 });
