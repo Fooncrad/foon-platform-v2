@@ -330,7 +330,7 @@ test("legacy TV browsers can poll and play without Fetch, URL, or WebSocket supp
 
 
 test("TV QR pairing uses a short-lived one-time code and a hashed device token",async()=>{
- const migration=await read("migrations/9999_display_screen_pairing.sql");
+ const migration=await read("migrations/0163_display_screen_pairing.sql");
  const pairing=await read("app/api/display/pairing/route.ts");
  const claim=await read("app/api/restaurant/displays/route.ts");
  const tv=await read("app/display/pair/pair-player.tsx");
