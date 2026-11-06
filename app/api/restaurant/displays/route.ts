@@ -46,7 +46,7 @@ export async function POST(req:Request){
    const includeMenuBanner=body.includeMenuBanner===true;
    if(!includeDisplays&&!includeMenuBanner)return reply({ok:false,code:"NO_CAMPAIGN_DESTINATIONS"},400);
    const requestedBranches=Array.isArray(body.branchIds)?body.branchIds.filter((x):x is string=>typeof x==="string"&&/^[a-f0-9-]{36}$/i.test(x)):null;
-   if(includeDisplays&&body.branchIds!==undefined&&(!requestedBranches||requestedBranches.length===0||requestedBranches.length>50||requestedBranches.length!==body.branchIds.length))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
+   if(includeDisplays&&body.branchIds!==undefined&&(!Array.isArray(body.branchIds)||!requestedBranches||requestedBranches.length===0||requestedBranches.length>50||requestedBranches.length!==body.branchIds.length))return reply({ok:false,code:"INVALID_BRANCH_SELECTION"},400);
    if(requestedBranches?.length){
     const [validBranches]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE tenant_id=? AND enabled=TRUE AND id IN ("+requestedBranches.map(()=>"?").join(",")+")",[ctx.tenant,...requestedBranches]);
     if(validBranches.length!==new Set(requestedBranches).size)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);
