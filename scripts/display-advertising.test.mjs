@@ -359,11 +359,11 @@ test("TV QR pairing uses a short-lived one-time code and a hashed device token",
  assert.match(claim,/claimed_screen_id IS NULL LIMIT 1 FOR UPDATE/);
  assert.match(claim,/String\(sessions\[0\]\.token_hash\)/);
  assert.match(tv,/QRCode\.toDataURL/);
-  assert.match(pairing,/const appUrl=process\\.env\\.APP_URL\\?\\.trim\\(\\)/);
-  assert.match(pairing,/new URL\\("\\/restaurant\\/display-pair",appUrl\\)/);
-  assert.match(pairing,/publicUrl\\.searchParams\\.set\\("code",code\\)/);
-  assert.match(pairing,/publicUrl\\.protocol!=="https:"/);
-  assert.doesNotMatch(pairing,/new URL\\(req\\.url\\)\\.origin/);
+  assert.match(pairing,/const appUrl=process\.env\.APP_URL\?\.trim\(\)/);
+  assert.match(pairing,/new URL\("\/restaurant\/display-pair",appUrl\)/);
+  assert.match(pairing,/publicUrl\.searchParams\.set\("code",code\)/);
+  assert.match(pairing,/publicUrl\.protocol!=="https:"/);
+  assert.doesNotMatch(pairing,/new URL\(req\.url\)\.origin/);
  assert.match(tv,/window\.location\.replace\("\/display\/"\+/);
  assert.match(phone,/action:"pairClaim"/);
  assert.match(phone,/x-foon-tenant/);
