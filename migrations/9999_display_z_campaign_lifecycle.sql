@@ -18,4 +18,5 @@ CREATE TABLE IF NOT EXISTS display_campaigns (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE display_slides
+ ADD INDEX display_slides_campaign_fk_idx (campaign_id),
  ADD CONSTRAINT display_slides_campaign_fk FOREIGN KEY (campaign_id) REFERENCES display_campaigns(id) ON DELETE CASCADE;
