@@ -280,3 +280,19 @@ test("moving one campaign slide reorders the same campaign on every target scree
  assert.match(api,/campaign_id<>\?/);
  assert.match(api,/changedScreens/);
 });
+
+
+test("catalog-backed campaigns auto-select product images and allow a tenant-owned library override",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const sources=await read("app/api/restaurant/displays/sources/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(sources,/imageUrl:x\.image_url\?String\(x\.image_url\):null/);
+ assert.match(manager,/setMedia\(next\?\.imageUrl\?\?\"\"\)/);
+ assert.match(manager,/mediaUrl:media\|\|null/);
+ assert.match(manager,/Campaign image/);
+ assert.match(manager,/importLibraryImage/);
+ assert.match(api,/const mediaUrl=typeof body\.mediaUrl===\"string\"/);
+ assert.match(api,/if\(body\.mediaUrl!=null&&body\.mediaUrl!==\"\"&&!mediaUrl\)/);
+ assert.match(api,/SELECT id FROM restaurant_assets WHERE id=\? AND tenant_id=\? LIMIT 1/);
+ assert.match(api,/sourceType===\"media\"\?/);
+});
