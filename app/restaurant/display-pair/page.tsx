@@ -9,7 +9,6 @@ export default async function RestaurantDisplayPairPage({searchParams}:{searchPa
  const {code=""}=await searchParams;
  const user=await currentUserId();
  if(!user)redirect("/login?next="+encodeURIComponent("/restaurant/display-pair?code="+code));
- if(!/^\d{8}$/.test(code))return <main dir="rtl" style={{padding:32,fontFamily:"Arial,sans-serif"}}><h1>رمز الربط غير صالح</h1><p>امسح رمز QR الظاهر على شاشة التلفزيون مرة أخرى.</p></main>;
  const db=database();
  const [rows]=await db.execute<RowDataPacket[]>("SELECT t.id,t.name FROM memberships m JOIN tenants t ON t.id=m.tenant_id AND t.status='active' WHERE m.user_id=? AND m.status='active' AND m.role IN ('owner','manager') ORDER BY m.created_at",[user]);
  const ids=rows.map(row=>String(row.id));
