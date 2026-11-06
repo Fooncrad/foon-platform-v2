@@ -32,13 +32,15 @@ export default function DisplayPlayer({token}:{token:string}){
   if(!data?.screen.id)return;
   let stopped=false,socket:WebSocket|null=null,retry:ReturnType<typeof setTimeout>|undefined,delay=3000;
   const connect=async()=>{
+   if(typeof window.WebSocket!=="function")return;
    try{
     const response=await playerRequest("/api/display/"+encodeURIComponent(token)+"/realtime-ticket",{cache:"no-store"});
     if(!response.ok)throw new Error("REALTIME_TICKET_UNAVAILABLE");
     const auth=await response.json() as {url:string;ticket:string};
     if(stopped)return;
-    const url=new URL(auth.url);url.searchParams.set("ticket",auth.ticket);
-    socket=new WebSocket(url.toString());
+    const separator=auth.url.indexOf("?")>=0?"&":"?";
+    const socketUrl=auth.url+separator+"ticket="+encodeURIComponent(auth.ticket);
+    socket=new window.WebSocket(socketUrl);
     socket.onopen=()=>{delay=3000;void load();};
     socket.onmessage=event=>{
      try{const message=JSON.parse(String(event.data));if(message?.type==="display.invalidate"&&(!message.screenId||message.screenId===data.screen.id))void load();}catch{/* Ignore malformed gateway messages. */}
