@@ -206,7 +206,7 @@ test("one display campaign fans out atomically to every active screen in selecte
  assert.match(manager,/campaignBranchIds/);
  assert.match(manager,/action:"campaign"/);
  assert.match(manager,/Show campaign on displays/);
- assert.match(manager,/نشر الحملة على الشاشات/);
+ assert.match(manager,/نشر الحملة الموحدة/);
  assert.match(player,/campaign_match_key IS NULL OR campaign_match_key=\?/);
 });
 
