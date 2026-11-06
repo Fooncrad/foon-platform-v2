@@ -26,7 +26,7 @@ export default function LoginPage(){
    const body=await res.json().catch(()=>({}));
    if(!res.ok){if(ACCOUNT_HELP_CODES.has(String(body.code))){router.replace("/account-status?code="+encodeURIComponent(accountHelpCode(body.code)));return;}if(body.code==="STAFF_ACCESS_PENDING"||body.code==="STAFF_ACCESS_SUSPENDED"){setErrorCode(String(body.code));setError(localizedPlanNotice(String(body.code),lang)??t.failure);return;}const code=body.code==="INVALID_CREDENTIALS"?"LOGIN_INVALID":body.code==="TOO_MANY_ATTEMPTS"?"LOGIN_RATE_LIMIT":"ACTION_FAILED";setErrorCode(code);const reference=typeof body.incidentId==="string"?body.incidentId:"";const referenceLabel=lang==="en"?" · Reference: ":lang==="fr"?" · Référence : ":" · رقم المرجع: ";setError(getSystemMessage(code,lang).detail+(reference?referenceLabel+reference:""));return;}
    if(body.emailVerificationRequired){router.replace("/verify-email");router.refresh();return;}
-   const next=new URLSearchParams(window.location.search).get("next");router.replace(next&&/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)?next:"/account");router.refresh();
+   const next=new URLSearchParams(window.location.search).get("next");const safeNext=next&&(/^\/receipts\/[a-f0-9-]{36}(?:\?view=pos)?$/i.test(next)||/^\/restaurant\/display-pair\?code=\d{8}$/.test(next))?next:"/account";router.replace(safeNext);router.refresh();
   }catch{setErrorCode("NETWORK_ERROR");setError(getSystemMessage("NETWORK_ERROR",lang).detail)}finally{setBusy(false)}
  }
  async function googleSignIn(){
