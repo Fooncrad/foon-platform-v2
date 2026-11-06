@@ -180,12 +180,23 @@ export async function PATCH(req:Request){
    if(body.move==="up"||body.move==="down"){
     const conn=await database().getConnection();
     try{await conn.beginTransaction();
-     const [current]=await conn.execute<RowDataPacket[]>("SELECT id,screen_id,sort_order FROM display_slides WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,ctx.tenant]);
+     const [current]=await conn.execute<RowDataPacket[]>("SELECT id,screen_id,sort_order,campaign_id FROM display_slides WHERE id=? AND tenant_id=? FOR UPDATE",[body.id,ctx.tenant]);
      if(!current.length){await conn.rollback();return reply({ok:false,code:"SLIDE_NOT_FOUND"},404);}
      const direction=body.move==="up"?"<":">",order=body.move==="up"?"DESC":"ASC";
-     const [neighbor]=await conn.query<RowDataPacket[]>("SELECT id,sort_order FROM display_slides WHERE screen_id=? AND tenant_id=? AND sort_order "+direction+" ? ORDER BY sort_order "+order+",created_at "+order+" LIMIT 1 FOR UPDATE",[current[0].screen_id,ctx.tenant,current[0].sort_order]);
-     if(neighbor.length){await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[current[0].sort_order,neighbor[0].id,ctx.tenant]);await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[neighbor[0].sort_order,current[0].id,ctx.tenant]);}
-     await conn.commit();await publishDisplayInvalidation(ctx.tenant,String(current[0].screen_id));return reply({ok:true});
+     const campaignId=typeof current[0].campaign_id==="string"?String(current[0].campaign_id):"";
+     const [movingRows]=campaignId
+      ?await conn.execute<RowDataPacket[]>("SELECT id,screen_id,sort_order FROM display_slides WHERE campaign_id=? AND tenant_id=? FOR UPDATE",[campaignId,ctx.tenant])
+      :[[current[0]] as RowDataPacket[]];
+     const changedScreens=new Set<string>();
+     for(const moving of movingRows){
+      const [neighbor]=await conn.query<RowDataPacket[]>("SELECT id,sort_order FROM display_slides WHERE screen_id=? AND tenant_id=? AND "+(campaignId?"campaign_id<>? AND ":"")+"sort_order "+direction+" ? ORDER BY sort_order "+order+",created_at "+order+" LIMIT 1 FOR UPDATE",campaignId?[moving.screen_id,ctx.tenant,campaignId,moving.sort_order]:[moving.screen_id,ctx.tenant,moving.sort_order]);
+      if(neighbor.length){
+       await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[moving.sort_order,neighbor[0].id,ctx.tenant]);
+       await conn.execute("UPDATE display_slides SET sort_order=? WHERE id=? AND tenant_id=?",[neighbor[0].sort_order,moving.id,ctx.tenant]);
+       changedScreens.add(String(moving.screen_id));
+      }
+     }
+     await conn.commit();await Promise.all([...changedScreens].map(screenId=>publishDisplayInvalidation(ctx.tenant,screenId)));return reply({ok:true,updatedScreens:changedScreens.size});
     }catch{await conn.rollback();return reply({ok:false,code:"SLIDE_REORDER_FAILED"},503);}finally{conn.release();}
    }
    const [targets]=await database().execute<RowDataPacket[]>("SELECT id,screen_id,campaign_id FROM display_slides WHERE id=? AND tenant_id=? LIMIT 1",[body.id,ctx.tenant]);
