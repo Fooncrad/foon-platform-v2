@@ -33,7 +33,7 @@ export default function DisplayPlayer({token}:{token:string}){
   let stopped=false,socket:WebSocket|null=null,retry:ReturnType<typeof setTimeout>|undefined,delay=3000;
   const connect=async()=>{
    try{
-    const response=await fetch("/api/display/"+encodeURIComponent(token)+"/realtime-ticket",{cache:"no-store"});
+    const response=await playerRequest("/api/display/"+encodeURIComponent(token)+"/realtime-ticket",{cache:"no-store"});
     if(!response.ok)throw new Error("REALTIME_TICKET_UNAVAILABLE");
     const auth=await response.json() as {url:string;ticket:string};
     if(stopped)return;
@@ -53,7 +53,7 @@ export default function DisplayPlayer({token}:{token:string}){
  const qrUrl=data?.screen.qrEnabled?data.screen.qrUrl:"";
  useEffect(()=>{if(!qrUrl)return;let active=true;void QRCode.toDataURL(qrUrl,{width:Math.max(80,Math.min(240,data?.screen.qrSize||140)),margin:1,errorCorrectionLevel:"M",color:{dark:data?.screen.qrForeground||"#111827",light:data?.screen.qrBackground||"#ffffff"}}).then(value=>{if(active)setQrResult({url:qrUrl,dataUrl:value});}).catch(()=>{if(active)setQrResult({url:qrUrl,dataUrl:""});});return()=>{active=false;};},[qrUrl,data?.screen.qrSize,data?.screen.qrForeground,data?.screen.qrBackground]);
  const qr=qrResult&&qrResult.url===data?.screen.qrUrl?qrResult.dataUrl:"";
- async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await fetch("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({}));setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
+ async function unlockKiosk(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setPinError("");try{const response=await playerRequest("/api/display/"+encodeURIComponent(token),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({pin})});if(!response.ok){const result=await response.json().catch(()=>({}));setPinError(result.code==="KIOSK_TEMPORARILY_LOCKED"?"تم إيقاف المحاولة مؤقتًا. حاول بعد خمس دقائق.":"رمز PIN غير صحيح.");return;}setPin("");setPinRequired(false);await load();}catch{setPinError("تعذر التحقق من الرمز. تحقق من الاتصال وحاول مجددًا.");}}
  const layout=data?.screen.displayLayout??"single";
  const requestedLayoutCount=layout==="double"||layout==="split"?2:layout==="triple"?3:layout==="quad"?4:1;
  const layoutCount=Math.min(requestedLayoutCount,data?.slides.length??1);
@@ -70,7 +70,7 @@ export default function DisplayPlayer({token}:{token:string}){
    const currentMediaError=mediaError&&activeSlideId&&mediaError.slideId===activeSlideId&&mediaError.source===activeMediaSource?mediaError.code:null;
    const errorCode=currentMediaError??(error?"PLAYLIST_UNAVAILABLE":null);
    const payload={platform,playerVersion:"web-1",viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,online:navigator.onLine,visible:typeof document.visibilityState==="string"?document.visibilityState==="visible":true,h264:Boolean(video.canPlayType('video/mp4; codecs="avc1.42E01E"')),webm:Boolean(video.canPlayType('video/webm; codecs="vp9"')),playbackState:error||currentMediaError?"error":activeSlideId?"playing":"idle",errorCode};
-   try{await fetch("/api/display/"+encodeURIComponent(token)+"/health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),keepalive:true});}catch{/* The next heartbeat reports recovery. */}
+   try{await playerRequest("/api/display/"+encodeURIComponent(token)+"/health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),keepalive:true});}catch{/* The next heartbeat reports recovery. */}
   };
   void report();
   const timer=setInterval(()=>void report(),30000);
