@@ -19,8 +19,12 @@ export async function POST(req:Request){
     const token=randomBytes(32).toString("base64url");
     try{
      await database().execute("INSERT INTO display_pairing_sessions(id,code_hash,token_hash,expires_at) VALUES (?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 10 MINUTE))",[randomUUID(),digest(code),digest(token)]);
-     const origin=new URL(req.url).origin;
-     return reply({ok:true,code,token,expiresInSeconds:600,pairUrl:origin+"/restaurant/display-pair?code="+code},201);
+     const appUrl=process.env.APP_URL?.trim();
+     if(!appUrl)throw new Error("APP_URL_REQUIRED");
+     const publicUrl=new URL("/restaurant/display-pair",appUrl);
+     if(publicUrl.protocol!=="https:"&&publicUrl.hostname!=="localhost"&&publicUrl.hostname!=="127.0.0.1")throw new Error("APP_URL_INVALID");
+     publicUrl.searchParams.set("code",code);
+     return reply({ok:true,code,token,expiresInSeconds:600,pairUrl:publicUrl.toString()},201);
     }catch(error){
      if(attempt===4)throw error;
     }
