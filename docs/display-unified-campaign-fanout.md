@@ -22,7 +22,7 @@ Each fan-out row carries the same campaign UUID. The merchant dashboard lists ca
 
 ## Migration
 
-`9999_display_unified_campaigns.sql` adds a nullable campaign UUID and lookup index to existing display slides. Existing rows remain unchanged.
+The already released `9999_display_unified_campaigns.sql` remains unchanged. The additive `9999_display_z_campaign_lifecycle.sql` creates the tenant campaign table and links slide rows with a cascading campaign foreign key. Existing display rows keep a null campaign ID and remain unchanged.
 
 ## Not included in this slice
 
