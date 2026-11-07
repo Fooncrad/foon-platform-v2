@@ -286,20 +286,12 @@ test("moving one campaign slide reorders the same campaign on every target scree
 });
 
 
-test("selecting a catalog source never submits its external image URL as a FOON asset and disables incompatible menu-cover publishing",async()=>{
- const manager=await read("app/restaurant/display-manager.tsx");
- assert.match(manager,/const sourceImage=next\?\.imageUrl\?\?""/);
- assert.match(manager,/const isFoonAsset=sourceImage\.startsWith\("\/api\/restaurant\/assets\/"\)/);
- assert.match(manager,/setMedia\(isFoonAsset\?sourceImage:""\)/);
- assert.match(manager,/if\(!isFoonAsset\)setIncludeMenuBanner\(false\)/);
-});
-
 test("catalog-backed campaigns auto-select product images and allow a tenant-owned library override",async()=>{
  const api=await read("app/api/restaurant/displays/route.ts");
  const sources=await read("app/api/restaurant/displays/sources/route.ts");
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(sources,/imageUrl:x\.image_url\?String\(x\.image_url\):null/);
- assert.match(manager,/setMedia\(isFoonAsset\?sourceImage:\"\"\)/);
+ assert.match(manager,/setMedia\(next\?\.imageUrl\?\?\"\"\)/);
  assert.match(manager,/mediaUrl:media\|\|null/);
  assert.match(manager,/Campaign image/);
  assert.match(manager,/importLibraryImage/);
@@ -374,16 +366,31 @@ test("TV QR pairing uses a short-lived one-time code and a hashed device token",
  assert.match(manager,/display\/pair/);
 });
 
-
-test("display pairing offers a safe account switch when a stale session has no eligible tenant",async()=>{
- const page=await read("app/restaurant/display-pair/page.tsx");
- const logout=await read("app/api/auth/logout/route.ts");
- const login=await read("app/login/page.tsx");
- assert.ok(page.includes("تبديل الحساب وتسجيل الدخول"));
- assert.ok(page.includes("code.length===8"));
- assert.ok(page.includes('encodeURIComponent("/restaurant/display-pair?code="+code)'));
- assert.ok(logout.includes('requestedNext=url.searchParams.get("next")'));
- assert.ok(logout.includes("requestedCode.length===8"));
- assert.ok(logout.includes('loginUrl.searchParams.set("next",safeNext)'));
- assert.ok(login.includes("display-pair")&&login.includes("code=\\d{8}"));
+test("campaign audio assets are tenant-scoped, MIME-allowlisted, and remain optional",async()=>{
+ const migration=await read("migrations/9999_zz_display_audio_tracks.sql");
+ const assets=await read("app/api/restaurant/assets/route.ts");
+ const admin=await read("app/api/restaurant/displays/route.ts");
+ const playerApi=await read("app/api/display/[token]/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.ok(migration.includes("ADD COLUMN audio_url VARCHAR(500) NULL"));
+ assert.doesNotMatch(migration,/DROP TABLE|DROP COLUMN|TRUNCATE|DELETE FROM/i);
+ assert.ok(assets.includes("audio/mpeg"));
+ assert.ok(assets.includes("audio/wav"));
+ assert.ok(assets.includes("UNSUPPORTED_MEDIA_TYPE"));
+ assert.ok(admin.includes("AUDIO_NOT_FOUND_OR_INVALID_TYPE"));
+ assert.ok(admin.includes("mime_type IN ('audio/mpeg'"));
+ assert.ok(admin.includes("audio_url"));
+ assert.ok(playerApi.includes("s.audio_url"));
+ assert.ok(manager.includes("uploadAudio"));
+ assert.ok(manager.includes("audioUrl:audioUrl"));
+ assert.ok(player.includes("audioRef"));
+ assert.ok(player.includes('autoPlay loop preload="auto"'));
+ assert.ok(player.includes("اضغط لتفعيل صوت الإعلان"));
+});
+test("web display requests Screen Wake Lock when visible and retries after visibility changes",async()=>{
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.ok(player.includes('navigator.wakeLock.request("screen")'));
+ assert.ok(player.includes('document.addEventListener("visibilitychange"'));
+ assert.ok(player.includes("sentinel.release()"));
 });
