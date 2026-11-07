@@ -213,7 +213,7 @@ export async function POST(req:Request){
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
- }catch(error){const requestId=randomUUID();logDisplaySaveFailure(error,action,requestId);const status=Number((error as {status?:number})?.status);return reply({ok:false,code:status&&error instanceof Error?error.message:"DISPLAY_SAVE_FAILED",requestId},status||503);}
+ }catch(error){const requestId=randomUUID();logDisplaySaveFailure(error,action,requestId);const status=Number((error as {status?:number})?.status);const message=error instanceof Error?error.message:"";const code=status&&/^[A-Z][A-Z0-9_]{1,80}$/.test(message)?message:"DISPLAY_SAVE_FAILED";return reply({ok:false,code,requestId},status||503);}
 }
 export async function PATCH(req:Request){
  try{assertSameOrigin(req);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
