@@ -169,7 +169,7 @@ test("live display creatives resolve tenant-owned restaurant menu and activity c
  assert.match(player,/COALESCE\(s\.title_ar,mi\.name,cp\.name_ar,mc\.name,cc\.name_ar\)/);
  assert.match(player,/catalog_images/);
  assert.match(manager,/\/api\/restaurant\/displays\/sources/);
- assert.match(manager,/sourceId:chosenSource\?\.id/);
+ assert.match(manager,/sourceId:chosenSources\.length>0\?null:\(chosenSource\?\.id\?\?null\)/);
 });
 
 test("display manager can import tenant-authorized images from the FOON account library",async()=>{
