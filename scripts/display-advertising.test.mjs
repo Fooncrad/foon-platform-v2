@@ -433,7 +433,7 @@ test("web display requests Screen Wake Lock when visible and retries after visib
 });
 
 
-test("display save failures log safe database diagnostics without exposing SQL or error messages",async()=>{
+test("display campaign creation accepts the expanded bounded JSON payload used by multilingual creative forms",async()=>{\n const api=await read("app/api/restaurant/displays/route.ts");\n assert.match(api,/readLimitedJson\\(req,65536\\)/);\n assert.doesNotMatch(api,/readLimitedJson\\(req,8192\\)/);\n});\n\ntest("display save failures log safe database diagnostics without exposing SQL or error messages",async()=>{
  const api=await read("app/api/restaurant/displays/route.ts");
  assert.match(api,/function logDisplaySaveFailure\(/);
  assert.match(api,/event:"FOON_DISPLAY_SAVE_FAILED"/);
