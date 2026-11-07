@@ -470,3 +470,16 @@ test("one display campaign accepts multiple tenant-owned images as ordered slide
  assert.match(api,/display_slides\(id,screen_id,tenant_id,campaign_id,media_url/);
  assert.match(player,/setPlayback\(\{screenId:data\.screen\.id,index:\(index\+layoutCount\)%data\.slides\.length\}\)/);
 });
+
+
+test("each managed ad has a confirmed delete action wired to the tenant-scoped slide deletion API",async()=>{
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(manager,/حذف هذا الإعلان من جميع الشاشات التي تعرضه/);
+ assert.match(manager,/send\("PATCH",\{kind:"slide",id:slide\.id\}\)/);
+ assert.doesNotMatch(manager,/send\("DELETE",\{kind:"slide"/);
+ assert.match(manager,/d\.deletedScreens/);
+ assert.match(api,/SELECT id,screen_id,campaign_id FROM display_slides WHERE id=\? AND tenant_id=\?/);
+ assert.match(api,/DELETE FROM display_slides WHERE campaign_id=\? AND tenant_id=\?/);
+ assert.match(api,/publishDisplayInvalidation\(ctx\.tenant,String\(screen\.screen_id\)\)/);
+});
