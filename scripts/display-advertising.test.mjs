@@ -300,12 +300,12 @@ test("catalog-backed campaigns auto-select product images and allow a tenant-own
  const manager=await read("app/restaurant/display-manager.tsx");
  assert.match(sources,/imageUrl:x\.image_url\?String\(x\.image_url\):null/);
  assert.match(manager,/setMedia\(isFoonAsset\?sourceImage:\"\"\)/);
- assert.match(manager,/mediaUrl:media\|\|null/);
+ assert.match(manager,/mediaUrl:\(mediaUrls\[0\]\?\?\(chosenSource\?null:media\)\)\|\|null/);
  assert.match(manager,/Campaign image/);
  assert.match(manager,/importLibraryImage/);
- assert.match(api,/const mediaUrl=typeof body\.mediaUrl===\"string\"/);
- assert.match(api,/if\(body\.mediaUrl!=null&&body\.mediaUrl!==\"\"&&!mediaUrl\)/);
- assert.match(api,/SELECT id FROM restaurant_assets WHERE id=\? AND tenant_id=\? LIMIT 1/);
+ assert.match(api,/const requestedMediaUrls=Array\.isArray\(body\.mediaUrls\)/);
+ assert.match(api,/const mediaUrl=mediaUrls\[0\]\?\?null/);
+ assert.match(api,/mime_type LIKE 'image\/%'/);
  assert.match(api,/sourceType===\"media\"\?/);
 });
 
