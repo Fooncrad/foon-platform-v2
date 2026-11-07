@@ -22,7 +22,7 @@ export default function PairPlayer(){
    const next={code:result.data.code,token:result.data.token,pairUrl:result.data.pairUrl};
    if(stopped)return;
    setSession(next);
-   try{const image=await QRCode.toDataURL(next.pairUrl,{width:280,margin:2,errorCorrectionLevel:"M"});if(!stopped)setQr(image);}catch{/* The short code remains available if QR generation fails. */}
+   try{const image=await QRCode.toDataURL(next.pairUrl,{width:420,margin:3,errorCorrectionLevel:"H"});if(!stopped)setQr(image);}catch{/* The short code remains available if QR generation fails. */}
    timer=setInterval(()=>{
     void request({action:"status",token:next.token}).then(status=>{
      if(!status.ok){if(status.data.code==="PAIRING_EXPIRED"){if(timer)clearInterval(timer);setError("انتهت صلاحية الرمز. أعد تحميل الصفحة لإنشاء رمز جديد.");}return;}
@@ -36,12 +36,12 @@ export default function PairPlayer(){
   }).catch(reason=>{if(!stopped)setError(reason instanceof Error?reason.message:"تعذر إنشاء رمز الربط");});
   return()=>{stopped=true;if(timer)clearInterval(timer);};
  },[]);
- return <main style={{position:"fixed",inset:0,background:"#071426",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Arial,sans-serif",padding:24,textAlign:"center"}}>
-  <section style={{width:"min(900px,100%)",display:"flex",flexDirection:"column",alignItems:"center",gap:18}}>
-   <div style={{fontSize:18,letterSpacing:4,color:"#8eb8df"}}>FOON DISPLAY</div>
-   <h1 style={{fontSize:"clamp(28px,5vw,48px)",margin:0}}>اربط هذه الشاشة بحساب FOON</h1>
-   <p style={{fontSize:"clamp(16px,2vw,22px)",color:"#c4d4e5",margin:0}}>افتح كاميرا جوالك وامسح الرمز، ثم اختر النشاط والفرع واسم الشاشة</p>
-   {session?<><div style={{background:"#fff",padding:12,borderRadius:18,minHeight:qr?304:90,minWidth:qr?304:90,display:"flex",alignItems:"center",justifyContent:"center"}}>{qr?<img src={qr} alt="رمز ربط شاشة FOON" width="280" height="280"/>:<span style={{color:"#111"}}>جارٍ تجهيز رمز QR</span>}</div><div style={{fontSize:16,color:"#a9c4df"}}>أو أدخل الرمز يدوياً</div><div style={{fontSize:"clamp(42px,8vw,76px)",fontWeight:800,letterSpacing:12,fontVariantNumeric:"tabular-nums"}}>{session.code}</div><div style={{color:"#9fb5cc",fontSize:15}}>الرمز صالح لمدة 10 دقائق. ستبدأ الإعلانات تلقائياً بعد الربط.</div></>:<div style={{fontSize:18,color:error?"#ffb4a9":"#b6cce2"}}>{error||"جارٍ إنشاء رمز ربط آمن..."}</div>}
+ return <main style={{position:"fixed",inset:0,boxSizing:"border-box",background:"#071426",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Arial,sans-serif",padding:"max(20px, 4vmin, env(safe-area-inset-top)) max(20px, 4vmin, env(safe-area-inset-right)) max(20px, 4vmin, env(safe-area-inset-bottom)) max(20px, 4vmin, env(safe-area-inset-left))",textAlign:"center",overflowY:"auto",overscrollBehavior:"contain"}}>
+  <section style={{boxSizing:"border-box",width:"min(1100px,100%)",maxHeight:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"clamp(7px,1.5vmin,18px)",padding:"clamp(4px,1.5vmin,18px)",margin:"auto"}}>
+   <div style={{fontSize:"clamp(12px,1.8vmin,20px)",letterSpacing:"clamp(2px,.35vw,5px)",color:"#8eb8df"}}>FOON DISPLAY</div>
+   <h1 style={{fontSize:"clamp(22px,4.2vmin,50px)",lineHeight:1.2,margin:0,maxWidth:"100%",overflowWrap:"anywhere"}}>اربط هذه الشاشة بحساب FOON</h1>
+   <p style={{fontSize:"clamp(14px,2.1vmin,24px)",lineHeight:1.45,color:"#c4d4e5",margin:0,maxWidth:900}}>افتح كاميرا جوالك وامسح الرمز، ثم اختر النشاط والفرع واسم الشاشة</p>
+   {session?<><div style={{boxSizing:"border-box",background:"#fff",padding:"clamp(6px,1vmin,12px)",borderRadius:18,width:"clamp(160px,min(34vh,32vw),420px)",maxWidth:"min(82vw,55vh)",aspectRatio:"1 / 1",display:"flex",alignItems:"center",justifyContent:"center",flex:"0 1 auto"}}>{qr?<img src={qr} alt="رمز ربط شاشة FOON" style={{display:"block",width:"100%",height:"100%",objectFit:"contain"}}/>:<span style={{color:"#111",fontSize:"clamp(13px,1.8vmin,20px)"}}>جارٍ تجهيز رمز QR</span>}</div><div style={{fontSize:"clamp(13px,1.8vmin,19px)",color:"#a9c4df"}}>أو أدخل الرمز يدوياً</div><div style={{fontSize:"clamp(34px,7vmin,88px)",lineHeight:1.1,fontWeight:800,letterSpacing:"clamp(5px,1.1vw,14px)",fontVariantNumeric:"tabular-nums",maxWidth:"100%",overflowWrap:"anywhere"}}>{session.code}</div><div style={{color:"#9fb5cc",fontSize:"clamp(12px,1.6vmin,18px)",lineHeight:1.4}}>الرمز صالح لمدة 10 دقائق. ستبدأ الإعلانات تلقائياً بعد الربط.</div></>:<div style={{fontSize:"clamp(14px,2vmin,22px)",color:error?"#ffb4a9":"#b6cce2",overflowWrap:"anywhere"}}>{error||"جارٍ إنشاء رمز ربط آمن..."}</div>}
   </section>
  </main>;
 }

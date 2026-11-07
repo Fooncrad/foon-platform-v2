@@ -66,3 +66,16 @@ The shared capability protocol is defined in [display-player-cross-platform.md](
 The browser player sends a small health report every 30 seconds and when network/visibility state changes. The merchant dashboard can show the last report and a reported playback error. Reports include the browser-detected platform family, viewport size, online/visible state, and basic H.264/WebM decode declarations.
 
 These are browser-reported diagnostics only. They do not prove physical HDMI connection, negotiated output resolution, GPU decode performance, or 4K certification. Those require a native platform adapter and hardware testing. Health reports are scoped to the secret screen token and are not a substitute for authenticated native-device enrollment.
+
+
+## Campaign audio and browser wake lock
+
+Campaigns may attach a tenant-owned audio bed (MP3, WAV, AAC, OGG, or WebM audio, up to 10 MB). The player keeps one audio element alive across image transitions within the campaign. Browsers may block audible autoplay; when that happens, the player displays a first-interaction control. For unattended installations, qualify the kiosk browser/device policy and test audio output before rollout. Silent campaigns remain supported.
+
+While the player page is visible, it requests the browser Screen Wake Lock API when available and re-requests after the page becomes visible again. This can reduce browser/OS screen dimming, but it cannot override all TV energy settings and does not power on a TV that is off or in deep standby.
+
+## Remote operations versus physical power
+
+The merchant console can remotely change FOON playback state (pause/enable screens and campaigns), request a playlist refresh through invalidation/polling, and change supported player settings. These are software/player commands only.
+
+Physical panel or device power-on/off, reboot, HDMI output changes, and vendor-specific sleep control require a separately installed and authenticated native agent or a supported vendor/MDM/CEC/WOL integration. Availability varies by exact model, firmware, network, and standby mode. Do not report a physical power command as successful until the device agent returns a verified hardware acknowledgement.

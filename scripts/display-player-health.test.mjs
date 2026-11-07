@@ -29,3 +29,19 @@ test("health endpoint rejects invalid and oversized device claims",async()=>{
  assert.match(route,/v\.playbackState==="playing"\|\|v\.playbackState==="idle"\|\|v\.playbackState==="error"/);
  assert.match(route,/v\.errorCode===null/);
 });
+
+test("paused screens remain online and the player displays remote pause state",async()=>{
+ const route=await read("app/api/display/[token]/health/route.ts");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.doesNotMatch(route,/AND paused=FALSE/);
+ assert.ok(player.includes("d.paused"));
+ assert.match(player,/تم إيقاف العرض عن بُعد/);
+ assert.ok(player.includes('playbackState:paused?"idle"'));
+});
+
+test("paused player status is returned only after kiosk PIN verification",async()=>{
+ const route=await read("app/api/display/[token]/route.ts");
+ const pin=route.indexOf("verifyKioskSession(token");
+ const paused=route.indexOf("paused:true");
+ assert.ok(pin>=0&&paused>pin,"paused response must follow kiosk PIN validation");
+});
