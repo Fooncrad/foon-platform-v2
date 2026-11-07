@@ -454,7 +454,7 @@ test("display ads require a scanned QR pairing and explicit owner activation bef
  assert.match(player,/activationRequired/);
  assert.match(player,/بانتظار تفعيل الشاشة/);
  assert.match(tv,/بعد الربط ستبقى الشاشة بانتظار تفعيلها من لوحة FOON/);
- assert.match(managerApi,/if\(action==="screen"\)\{\s*return reply\(\{ok:false,code:"QR_PAIRING_REQUIRED"\},409\)/);
+ assert.match(managerApi,/if\(action==="screen"\)return reply\(\{ok:false,code:"QR_PAIRING_REQUIRED"\},409\)/);
 });
 
 test("one display campaign accepts multiple tenant-owned images as ordered slides under one campaign id",async()=>{
