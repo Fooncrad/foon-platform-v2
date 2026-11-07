@@ -11,8 +11,10 @@ const hash=(s:string)=>createHash("sha256").update(s).digest("hex");
 export async function GET(_req:Request,{params}:{params:Promise<{token:string}>}){
  const {token}=await params;if(!/^[A-Za-z0-9_-]{32,80}$/.test(token))return NextResponse.json({ok:false},{status:404});
  try{
-  const [screens]=await database().execute<RowDataPacket[]>("SELECT s.id,s.name,s.refresh_seconds,s.paused,s.kiosk_pin_salt,s.kiosk_pin_hash,s.qr_enabled,s.qr_position,s.qr_size,s.qr_foreground,s.qr_background,s.display_layout,t.slug FROM display_screens s JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.token_hash=? AND s.enabled=TRUE LIMIT 1",[hash(token)]);
+  const [screens]=await database().execute<RowDataPacket[]>("SELECT s.id,s.name,s.refresh_seconds,s.enabled,s.paused,s.kiosk_pin_salt,s.kiosk_pin_hash,s.qr_enabled,s.qr_position,s.qr_size,s.qr_foreground,s.qr_background,s.display_layout,t.slug,EXISTS(SELECT 1 FROM display_pairing_sessions ps WHERE ps.claimed_screen_id=s.id) AS is_paired FROM display_screens s JOIN tenants t ON t.id=s.tenant_id AND t.status='active' WHERE s.token_hash=? LIMIT 1",[hash(token)]);
   if(!screens.length)return NextResponse.json({ok:false},{status:404,headers:{"Cache-Control":"no-store"}});
+  if(!Boolean(screens[0].is_paired))return NextResponse.json({ok:false,code:"SCREEN_QR_PAIRING_REQUIRED"},{status:403,headers:{"Cache-Control":"no-store"}});
+  if(!Boolean(screens[0].enabled))return NextResponse.json({ok:false,code:"SCREEN_PENDING_ACTIVATION"},{status:403,headers:{"Cache-Control":"no-store"}});
   const protectedByPin=Boolean(screens[0].kiosk_pin_hash);
   if(protectedByPin&&!verifyKioskSession(token,String(screens[0].kiosk_pin_hash),readCookie(_req,"foon_display_kiosk"))){
    return NextResponse.json({ok:false,kioskProtected:true},{status:401,headers:{"Cache-Control":"no-store"}});
