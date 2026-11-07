@@ -432,3 +432,41 @@ test("display save failures log safe database diagnostics without exposing SQL o
  assert.doesNotMatch(api,/error\.stack|value\.message|error\.message\?\?/);
  assert.doesNotMatch(api,/console\.error\([^\n]*(?:sql|bindings|password|token)/i);
 });
+
+
+test("display ads require a scanned QR pairing and explicit owner activation before playback",async()=>{
+ const managerApi=await read("app/api/restaurant/displays/route.ts");
+ const playerApi=await read("app/api/display/[token]/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ const tv=await read("app/display/pair/pair-player.tsx");
+ assert.match(managerApi,/EXISTS\(SELECT 1 FROM display_pairing_sessions ps WHERE ps\.claimed_screen_id=display_screens\.id\) AS is_paired/);
+ assert.match(managerApi,/INSERT INTO display_screens\(id,tenant_id,branch_id,name,token_hash,enabled,created_by\) VALUES \(\?,\?,\?,\?,\?,FALSE,\?\)/);
+ assert.match(managerApi,/EXISTS \(SELECT 1 FROM display_pairing_sessions ps WHERE ps\.claimed_screen_id=display_screens\.id\)/);
+ assert.match(managerApi,/if\(body\.enabled===true\).*QR_PAIRING_REQUIRED/);
+ assert.match(managerApi,/code:"QR_PAIRING_REQUIRED"/);
+ assert.match(playerApi,/AS is_paired FROM display_screens/);
+ assert.match(playerApi,/SCREEN_QR_PAIRING_REQUIRED/);
+ assert.match(playerApi,/SCREEN_PENDING_ACTIVATION/);
+ assert.match(manager,/is_paired:boolean/);
+ assert.match(manager,/بانتظار مسح QR وربط الشاشة/);
+ assert.match(manager,/disabled=\{busy\|\|!s\.is_paired\}/);
+ assert.match(player,/activationRequired/);
+ assert.match(player,/بانتظار تفعيل الشاشة/);
+ assert.match(tv,/بعد الربط ستبقى الشاشة بانتظار تفعيلها من لوحة FOON/);
+ assert.match(managerApi,/if\(action==="screen"\)return reply\(\{ok:false,code:"QR_PAIRING_REQUIRED"\},409\)/);
+});
+
+test("one display campaign accepts multiple tenant-owned images as ordered slides under one campaign id",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const player=await read("app/display/[token]/display-player.tsx");
+ assert.match(manager,/type=\"file\" accept=\"image\/\*\" multiple/);
+ assert.match(manager,/mediaUrls:\s*mediaUrls\.length\?mediaUrls/);
+ assert.match(api,/const requestedMediaUrls=Array\.isArray\(body\.mediaUrls\)/);
+ assert.match(api,/requestedMediaUrls\.length>20/);
+ assert.match(api,/const slideMedia=mediaUrls\.length\?mediaUrls/);
+ assert.match(api,/for\(const slideMediaUrl of slideMedia\)/);
+ assert.match(api,/display_slides\(id,screen_id,tenant_id,campaign_id,media_url/);
+ assert.match(player,/setPlayback\(\{screenId:data\.screen\.id,index:\(index\+layoutCount\)%data\.slides\.length\}\)/);
+});
