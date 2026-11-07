@@ -33,12 +33,14 @@ function logDisplaySaveFailure(error:unknown,action:unknown,requestId:string){
 const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
 async function attachPendingCampaignsToScreen(conn:import("mysql2/promise").PoolConnection,tenantId:string,screenId:string,branchId:string|null){
  const [rows]=await conn.execute<RowDataPacket[]>("SELECT id,status,destinations,branch_ids,creative,starts_at,ends_at FROM display_campaigns WHERE tenant_id=? AND status IN ('active','scheduled','paused') AND (ends_at IS NULL OR ends_at>UTC_TIMESTAMP()) ORDER BY created_at",[tenantId]);
- const decode=(value:unknown):any=>{if(typeof value!=="string")return value;try{return JSON.parse(value);}catch{return null;}};
+ const decode=(value:unknown):unknown=>{if(typeof value!=="string")return value;try{return JSON.parse(value) as unknown;}catch{return null;}};
  for(const campaign of rows){
-  const destinations=decode(campaign.destinations),branches=decode(campaign.branch_ids),creative=decode(campaign.creative);
-  if(!destinations||destinations.screens!==true||!creative||typeof creative!=="object")continue;
+  const destinations=decode(campaign.destinations) as Record<string,unknown>|null;
+  const branches=decode(campaign.branch_ids);
+  const creative=decode(campaign.creative) as Record<string,unknown>|null;
+  if(!destinations||destinations.screens!==true||!creative)continue;
   if(Array.isArray(branches)&&(!branchId||!branches.includes(branchId)))continue;
-  const mediaUrls=Array.isArray(creative.mediaUrls)?creative.mediaUrls.filter((url:unknown):url is string=>typeof url==="string"):[];
+  const mediaUrls=Array.isArray(creative.mediaUrls)?creative.mediaUrls.filter((url):url is string=>typeof url==="string"):[];
   const mediaUrl=typeof creative.mediaUrl==="string"?creative.mediaUrl:null;
   const sourceType=typeof creative.sourceType==="string"?creative.sourceType:"media";
   const sourceId=typeof creative.sourceId==="string"?creative.sourceId:null;
@@ -63,7 +65,6 @@ async function attachPendingCampaignsToScreen(conn:import("mysql2/promise").Pool
   }
  }
 }
-
 async function context(req:Request,write=false){
  const user=await currentUserId();if(!user)throw Object.assign(new Error("UNAUTHENTICATED"),{status:401});
  const tenant=req.headers.get("x-foon-tenant")??"";if(!tenant)throw Object.assign(new Error("TENANT_REQUIRED"),{status:400});
