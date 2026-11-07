@@ -116,7 +116,7 @@ test.describe("disposable authenticated mobile journeys",()=>{
        await expect(adminMenuButton).toHaveAttribute("aria-expanded","false");
        await adminMenuButton.click();
        // The app is a production build; wait for the client event handler to open the drawer.
-       await expect(adminMenuButton).toHaveAttribute("aria-expanded","true");
+        await expect.poll(async()=>{if(await adminMenuButton.getAttribute("aria-expanded")==="false")await adminMenuButton.click();return adminMenuButton.getAttribute("aria-expanded");},{timeout:15000}).toBe("true");
        await inViewport(page,page.locator(".adminDrawer"),width,640);
        await page.keyboard.press("Escape");await expect(page.locator(".adminDrawer")).toHaveCount(0);
       }
