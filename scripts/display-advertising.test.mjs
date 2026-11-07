@@ -169,7 +169,7 @@ test("live display creatives resolve tenant-owned restaurant menu and activity c
  assert.match(player,/COALESCE\(s\.title_ar,mi\.name,cp\.name_ar,mc\.name,cc\.name_ar\)/);
  assert.match(player,/catalog_images/);
  assert.match(manager,/\/api\/restaurant\/displays\/sources/);
- assert.match(manager,/sourceId:chosenSource\?\.id/);
+ assert.match(manager,/sourceId:chosenSources\.length>0\?null:\(chosenSource\?\.id\?\?null\)/);
 });
 
 test("display manager can import tenant-authorized images from the FOON account library",async()=>{
@@ -313,8 +313,8 @@ test("catalog-backed campaigns auto-select product images and allow a tenant-own
 test("ad library separates available and paused campaigns and explains empty display targets",async()=>{
  const api=await read("app/api/restaurant/displays/route.ts");
  const manager=await read("app/restaurant/display-manager.tsx");
- assert.match(api,/code:"NO_ACTIVE_DISPLAYS",screenState/);
- assert.match(api,/SUM\(enabled=TRUE AND paused=TRUE\)/);
+ assert.doesNotMatch(api,/code:"NO_ACTIVE_DISPLAYS"/);
+ assert.match(api,/attachPendingCampaignsToScreen/);
  assert.match(manager,/مستودع الإعلانات/);
  assert.match(manager,/campaignFilter/);
  assert.match(manager,/متاحة \(/);
@@ -324,6 +324,21 @@ test("ad library separates available and paused campaigns and explains empty dis
  assert.match(manager,/Show campaign on displays/);
 });
 
+
+
+test("campaigns can be saved before any screen is paired and are attached only after a QR claim",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.doesNotMatch(api,/NO_ACTIVE_DISPLAYS/);
+ assert.match(api,/INSERT INTO display_campaigns/);
+ assert.match(api,/async function attachPendingCampaignsToScreen/);
+ assert.match(api,/destinations\.screens!==true/);
+ assert.match(api,/Array\.isArray\(branches\)&&\(!branchId\|\|!branches\.includes\(branchId\)\)/);
+ assert.match(api,/await attachPendingCampaignsToScreen\(conn,ctx\.tenant,screenId,branchId\)/);
+ assert.match(api,/mediaUrls\.length\?mediaUrls/);
+ assert.match(api,/campaign\.status!=="paused"/);
+ assert.match(api,/INSERT INTO display_slides\(id,screen_id,tenant_id,campaign_id,media_url/);
+ assert.match(api,/if\(body\.enabled===true\).*QR_PAIRING_REQUIRED/);
+});
 
 test("legacy TV browsers can poll and play without Fetch, URL, or WebSocket support",async()=>{
  const player=await read("app/display/[token]/display-player.tsx");
@@ -469,4 +484,17 @@ test("one display campaign accepts multiple tenant-owned images as ordered slide
  assert.match(api,/for\(const slideMediaUrl of slideMedia\)/);
  assert.match(api,/display_slides\(id,screen_id,tenant_id,campaign_id,media_url/);
  assert.match(player,/setPlayback\(\{screenId:data\.screen\.id,index:\(index\+layoutCount\)%data\.slides\.length\}\)/);
+});
+
+
+test("each managed ad has a confirmed delete action wired to the tenant-scoped slide deletion API",async()=>{
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(manager,/حذف هذا الإعلان من جميع الشاشات التي تعرضه واستبعاده من مستودع الحملات/);
+ assert.match(manager,/slide\.campaign_id\?\{kind:"campaign",id:slide\.campaign_id,action:"delete"\}:\{kind:"slide",id:slide\.id\}/);
+ assert.doesNotMatch(manager,/send\("DELETE",\{kind:"slide"/);
+ assert.match(manager,/d\.deletedScreens/);
+ assert.match(api,/SELECT id,screen_id,campaign_id FROM display_slides WHERE id=\? AND tenant_id=\?/);
+ assert.match(api,/DELETE FROM display_slides WHERE campaign_id=\? AND tenant_id=\?/);
+ assert.match(api,/publishDisplayInvalidation\(ctx\.tenant,String\(screen\.screen_id\)\)/);
 });
