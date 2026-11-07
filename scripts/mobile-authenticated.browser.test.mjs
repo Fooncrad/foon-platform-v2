@@ -122,11 +122,16 @@ test.describe("disposable authenticated mobile journeys",()=>{
       }
       if(root===".publicMenu"){
        const name={ar:"حجز طاولة",en:"Book a table",fr:"Réserver une table"}[language];
-       await page.locator(".publicMenuInfoBar .publicMenuServices").getByRole("button",{name,exact:true}).click();
-       // The page may retain a closed dialog beside the currently open one.
-       // Scope assertions to the native open dialog, never to hidden siblings.
+       const bookingButton=page.locator(".publicMenuInfoBar .publicMenuServices").getByRole("button",{name,exact:true});
        const bookingDialog=page.locator("dialog.publicMenuServiceDialog[open]");
-       await expect(bookingDialog).toHaveCount(1);
+       // On a cold production build, the server-rendered control can be visible
+       // before React has attached its click handler. Retry until the real dialog
+       // opens instead of treating an early pre-hydration click as an app failure.
+       await expect(bookingButton).toBeEnabled();
+       await expect.poll(async()=>{
+        if(await bookingDialog.count()===0)await bookingButton.click();
+        return bookingDialog.count();
+       },{timeout:15000,message:"Booking dialog should open after the public menu hydrates"}).toBe(1);
        await inViewport(page,bookingDialog,width,640);
        await page.keyboard.press("Escape");await expect(bookingDialog).toHaveCount(0);
       }

@@ -417,3 +417,18 @@ test("web display requests Screen Wake Lock when visible and retries after visib
  assert.ok(player.includes("sentinel.release()"));
 });
 
+
+test("display save failures log safe database diagnostics without exposing SQL or error messages",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(api,/function logDisplaySaveFailure\(/);
+ assert.match(api,/event:"FOON_DISPLAY_SAVE_FAILED"/);
+ assert.match(api,/requestId/);
+ assert.match(api,/mysqlCode:safe\(value\.code/);
+ assert.match(api,/mysqlErrno:errno/);
+ assert.match(api,/mysqlSqlState:safe\(value\.sqlState/);
+ assert.match(api,/errorName:safe\(value\.name/);
+ assert.match(api,/console\.error\(JSON\.stringify\(/);
+ assert.match(api,/code=status&&\/\^\[A-Z\]\[A-Z0-9_\]\{1,80\}\$\//);
+ assert.doesNotMatch(api,/error\.stack|value\.message|error\.message\?\?/);
+ assert.doesNotMatch(api,/console\.error\([^\n]*(?:sql|bindings|password|token)/i);
+});
