@@ -475,8 +475,8 @@ test("one display campaign accepts multiple tenant-owned images as ordered slide
 test("each managed ad has a confirmed delete action wired to the tenant-scoped slide deletion API",async()=>{
  const manager=await read("app/restaurant/display-manager.tsx");
  const api=await read("app/api/restaurant/displays/route.ts");
- assert.match(manager,/حذف هذا الإعلان من جميع الشاشات التي تعرضه/);
- assert.match(manager,/send\("PATCH",\{kind:"slide",id:slide\.id\}\)/);
+ assert.match(manager,/حذف هذا الإعلان من جميع الشاشات التي تعرضه واستبعاده من مستودع الحملات/);
+ assert.match(manager,/slide\.campaign_id\?\{kind:"campaign",id:slide\.campaign_id,action:"delete"\}:\{kind:"slide",id:slide\.id\}/);
  assert.doesNotMatch(manager,/send\("DELETE",\{kind:"slide"/);
  assert.match(manager,/d\.deletedScreens/);
  assert.match(api,/SELECT id,screen_id,campaign_id FROM display_slides WHERE id=\? AND tenant_id=\?/);
