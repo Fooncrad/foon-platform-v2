@@ -88,7 +88,7 @@ export async function GET(req:Request){
 export async function POST(req:Request){
  try{assertSameOrigin(req);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
  let ctx;try{ctx=await context(req,true);}catch(e){return fail(e);}
- let body:Record<string,unknown>;try{body=await readLimitedJson(req,8192) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
+ let body:Record<string,unknown>;try{body=await readLimitedJson(req,65536) as Record<string,unknown>;}catch{return reply({ok:false,code:"INVALID_INPUT"},400);}
  const action=body?.action;
  try{
   if(action==="pairClaim"){
