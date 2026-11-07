@@ -433,6 +433,13 @@ test("web display requests Screen Wake Lock when visible and retries after visib
 });
 
 
+test("display campaign creation accepts the expanded bounded JSON payload used by multilingual creative forms",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(api,/readLimitedJson\(req,65536\)/);
+ assert.doesNotMatch(api,/readLimitedJson\(req,8192\)/);
+});
+
+
 test("display save failures log safe database diagnostics without exposing SQL or error messages",async()=>{
  const api=await read("app/api/restaurant/displays/route.ts");
  assert.match(api,/function logDisplaySaveFailure\(/);
