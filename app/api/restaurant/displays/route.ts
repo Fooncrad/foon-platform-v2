@@ -14,6 +14,22 @@ import {parseData,saveResource} from "@/lib/restaurant/operations";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const reply=(body:object,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
+function logDisplaySaveFailure(error:unknown,action:unknown,requestId:string){
+ const value=error&&typeof error==="object"?error as {name?:unknown;code?:unknown;errno?:unknown;sqlState?:unknown}:{};
+ const safe=(input:unknown,pattern:RegExp,max:number)=>typeof input==="string"&&pattern.test(input)?input.slice(0,max):null;
+ const errno=typeof value.errno==="number"&&Number.isSafeInteger(value.errno)?value.errno:null;
+ const actionName=["campaign","pairClaim","kioskPin","rotate","screen","slide"].includes(String(action))?String(action):"unknown";
+ console.error(JSON.stringify({
+  event:"FOON_DISPLAY_SAVE_FAILED",
+  requestId,
+  action:actionName,
+  errorName:safe(value.name,/^[A-Za-z][A-Za-z0-9_]*$/,64),
+  mysqlCode:safe(value.code,/^[A-Z0-9_]+$/,64),
+  mysqlErrno:errno,
+  mysqlSqlState:safe(value.sqlState,/^[A-Z0-9]{5}$/,5)
+ }));
+}
+
 const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
 async function context(req:Request,write=false){
  const user=await currentUserId();if(!user)throw Object.assign(new Error("UNAUTHENTICATED"),{status:401});
@@ -197,7 +213,7 @@ export async function POST(req:Request){
    return reply({ok:true,id},201);
   }
   return reply({ok:false,code:"INVALID_ACTION"},400);
- }catch(error){const status=Number((error as {status?:number})?.status);return reply({ok:false,code:status&&error instanceof Error?error.message:"DISPLAY_SAVE_FAILED"},status||503);}
+ }catch(error){const requestId=randomUUID();logDisplaySaveFailure(error,action,requestId);const status=Number((error as {status?:number})?.status);return reply({ok:false,code:status&&error instanceof Error?error.message:"DISPLAY_SAVE_FAILED",requestId},status||503);}
 }
 export async function PATCH(req:Request){
  try{assertSameOrigin(req);}catch{return reply({ok:false,code:"FORBIDDEN"},403);}
