@@ -507,3 +507,14 @@ test("campaign save failures expose only safe database diagnostics and a request
  assert.match(manager,/d\.databaseCode,d\.requestId/);
  assert.match(manager,/حذف الإعلان نهائياً/);
 });
+
+test("campaign image selection respects the API 20-image cap for library imports and catalog multi-select",async()=>{
+ const manager=await read("app/restaurant/display-manager.tsx");
+ const api=await read("app/api/restaurant/displays/route.ts");
+ assert.match(manager,/if\\(mediaUrls\\.length>=20\\)/);
+ assert.match(manager,/mediaUrls\\.length>=20/);
+ assert.match(manager,/selectedIds\\.slice\\(0,20\\)/);
+ assert.match(manager,/selectedIds\\.length>20/);
+ assert.match(manager,/الحد الأقصى 20 صورة في الإعلان الواحد/);
+ assert.match(api,/requestedMediaUrls\\.length>20/);
+});
