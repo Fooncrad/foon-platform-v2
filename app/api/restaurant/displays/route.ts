@@ -172,16 +172,7 @@ export async function POST(req:Request){
    await publishDisplayInvalidation(ctx.tenant,String(body.screenId));
    return reply({ok:true,token});
   }
-  if(action==="screen"){
-   return reply({ok:false,code:"QR_PAIRING_REQUIRED"},409);
-   if(typeof body.name!=="string"||!body.name.trim()||body.name.length>120)return reply({ok:false,code:"INVALID_NAME"},400);
-   const branch=typeof body.branchId==="string"&&body.branchId?body.branchId:null;
-   if(branch){const [b]=await database().execute<RowDataPacket[]>("SELECT id FROM branches WHERE id=? AND tenant_id=? AND enabled=TRUE LIMIT 1",[branch,ctx.tenant]);if(!b.length)return reply({ok:false,code:"BRANCH_NOT_FOUND"},404);}
-   const id=randomUUID(),token=randomBytes(32).toString("base64url");
-   await database().execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,created_by) VALUES (?,?,?,?,?,?)",[id,ctx.tenant,branch,body.name.trim(),digest(token),ctx.user]);
-   await publishDisplayInvalidation(ctx.tenant,id);
-   return reply({ok:true,id,token},201);
-  }
+  if(action==="screen")return reply({ok:false,code:"QR_PAIRING_REQUIRED"},409);
   if(action==="slide"){
    if(typeof body.screenId!=="string")return reply({ok:false,code:"INVALID_INPUT"},400);
    const sourceType=typeof body.sourceType==="string"?body.sourceType:"media";
@@ -277,7 +268,7 @@ export async function PATCH(req:Request){
    return reply({ok:true,action:body.action,updatedScreens:screenIds.length});
   }
   if(body.kind==="screen"){
-   if(body.enabled===true){const [paired]=await database().execute<RowDataPacket[]>("SELECT id FROM display_pairing_sessions WHERE claimed_screen_id=? LIMIT 1",[body.id]);if(!paired.length)return reply({ok:false,code:"QR_PAIRING_REQUIRED"},409);}
+   if(body.enabled===true){const [paired]=await database().execute<RowDataPacket[]>("SELECT ps.id FROM display_pairing_sessions ps JOIN display_screens s ON s.id=ps.claimed_screen_id WHERE ps.claimed_screen_id=? AND s.tenant_id=? LIMIT 1",[body.id,ctx.tenant]);if(!paired.length)return reply({ok:false,code:"QR_PAIRING_REQUIRED"},409);}
    const allowed:Record<string,unknown>={};if(typeof body.name==="string"&&body.name.trim())allowed.name=body.name.trim().slice(0,120);
    if(typeof body.paused==="boolean")allowed.paused=body.paused;if(typeof body.enabled==="boolean")allowed.enabled=body.enabled;
    if(typeof body.qrEnabled==="boolean")allowed.qr_enabled=body.qrEnabled;
