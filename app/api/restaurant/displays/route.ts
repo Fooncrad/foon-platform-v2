@@ -31,6 +31,39 @@ function logDisplaySaveFailure(error:unknown,action:unknown,requestId:string){
 }
 
 const digest=(token:string)=>createHash("sha256").update(token).digest("hex");
+async function attachPendingCampaignsToScreen(conn:import("mysql2/promise").PoolConnection,tenantId:string,screenId:string,branchId:string|null){
+ const [rows]=await conn.execute<RowDataPacket[]>("SELECT id,status,destinations,branch_ids,creative,starts_at,ends_at FROM display_campaigns WHERE tenant_id=? AND status IN ('active','scheduled','paused') AND (ends_at IS NULL OR ends_at>UTC_TIMESTAMP()) ORDER BY created_at",[tenantId]);
+ const decode=(value:unknown):any=>{if(typeof value!=="string")return value;try{return JSON.parse(value);}catch{return null;}};
+ for(const campaign of rows){
+  const destinations=decode(campaign.destinations),branches=decode(campaign.branch_ids),creative=decode(campaign.creative);
+  if(!destinations||destinations.screens!==true||!creative||typeof creative!=="object")continue;
+  if(Array.isArray(branches)&&(!branchId||!branches.includes(branchId)))continue;
+  const mediaUrls=Array.isArray(creative.mediaUrls)?creative.mediaUrls.filter((url:unknown):url is string=>typeof url==="string"):[];
+  const mediaUrl=typeof creative.mediaUrl==="string"?creative.mediaUrl:null;
+  const sourceType=typeof creative.sourceType==="string"?creative.sourceType:"media";
+  const sourceId=typeof creative.sourceId==="string"?creative.sourceId:null;
+  const videoUrl=typeof creative.videoUrl==="string"?creative.videoUrl:null;
+  const audioUrl=typeof creative.audioUrl==="string"?creative.audioUrl:null;
+  const slideMedia=mediaUrls.length?mediaUrls:(mediaUrl?[mediaUrl]:(sourceType!=="media"?[null]:[]));
+  if(!slideMedia.length&&!videoUrl)continue;
+  const [lastOrder]=await conn.execute<RowDataPacket[]>("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM display_slides WHERE screen_id=? AND tenant_id=?",[screenId,tenantId]);
+  let sortOrder=Number(lastOrder[0]?.next_order??0);
+  const transition=["fade","zoom","slide","kenburns"].includes(String(creative.transitionEffect))?String(creative.transitionEffect):"fade";
+  const badge=typeof creative.badgeText==="string"?creative.badgeText:null;
+  const enabled=campaign.status!=="paused";
+  const titles=["titleAr","titleEn","titleFr","subtitleAr","subtitleEn","subtitleFr"].map(key=>typeof creative[key]==="string"?String(creative[key]).slice(0,key.startsWith("title")?180:500):null);
+  const duration=Math.max(5,Math.min(120,Number(creative.durationSeconds)||10));
+  for(const slideMediaUrl of slideMedia){
+   const id=randomUUID();
+   await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,audio_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,enabled,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screenId,tenantId,campaign.id,slideMediaUrl,audioUrl,mediaUrls.length?"media":sourceType,mediaUrls.length?null:sourceId,null,creative.videoLoop!==false,transition,badge,null,...titles,duration,enabled,sortOrder++,campaign.starts_at,campaign.ends_at]);
+  }
+  if(videoUrl){
+   const id=randomUUID();
+   await conn.execute("INSERT INTO display_slides(id,screen_id,tenant_id,campaign_id,media_url,audio_url,source_type,source_id,external_video_url,video_loop,transition_effect,badge_text,campaign_match_key,title_ar,title_en,title_fr,subtitle_ar,subtitle_en,subtitle_fr,duration_seconds,enabled,sort_order,starts_at,ends_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",[id,screenId,tenantId,campaign.id,null,audioUrl,"media",null,videoUrl,creative.videoLoop!==false,transition,badge,null,...titles,duration,enabled,sortOrder++,campaign.starts_at,campaign.ends_at]);
+  }
+ }
+}
+
 async function context(req:Request,write=false){
  const user=await currentUserId();if(!user)throw Object.assign(new Error("UNAUTHENTICATED"),{status:401});
  const tenant=req.headers.get("x-foon-tenant")??"";if(!tenant)throw Object.assign(new Error("TENANT_REQUIRED"),{status:400});
@@ -76,6 +109,7 @@ export async function POST(req:Request){
     screenId=randomUUID();
     await conn.execute("INSERT INTO display_screens(id,tenant_id,branch_id,name,token_hash,enabled,created_by) VALUES (?,?,?,?,?,FALSE,?)",[screenId,ctx.tenant,branchId,name,String(sessions[0].token_hash),ctx.user]);
     await conn.execute("UPDATE display_pairing_sessions SET claimed_screen_id=?,claimed_at=UTC_TIMESTAMP() WHERE id=? AND claimed_screen_id IS NULL",[screenId,sessions[0].id]);
+    await attachPendingCampaignsToScreen(conn,ctx.tenant,screenId,branchId);
     await conn.commit();
    }catch(error){await conn.rollback();throw error;}finally{conn.release();}
    await publishDisplayInvalidation(ctx.tenant,screenId);
@@ -114,7 +148,6 @@ export async function POST(req:Request){
    const validDate=(value:string|null)=>value===null||(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)&&Number.isFinite(Date.parse(value.replace(" ","T")+"Z")));
    if(!validDate(startsAt)||!validDate(endsAt)||(startsAt&&endsAt&&Date.parse(endsAt.replace(" ","T")+"Z")<=Date.parse(startsAt.replace(" ","T")+"Z")))return reply({ok:false,code:"INVALID_SCHEDULE"},400);
    const [targetScreens]=includeDisplays?await database().execute<RowDataPacket[]>("SELECT id,branch_id FROM display_screens WHERE tenant_id=? AND enabled=TRUE AND paused=FALSE AND EXISTS (SELECT 1 FROM display_pairing_sessions ps WHERE ps.claimed_screen_id=display_screens.id) AND (branch_id IS NULL OR EXISTS (SELECT 1 FROM branches b WHERE b.id=display_screens.branch_id AND b.tenant_id=display_screens.tenant_id AND b.enabled=TRUE))"+(requestedBranches?.length?" AND branch_id IN ("+requestedBranches.map(()=>"?").join(",")+")":"")+" ORDER BY created_at LIMIT 101",[ctx.tenant,...(requestedBranches??[])]):[[] as RowDataPacket[]];
-   if(includeDisplays&&!targetScreens.length){const [stateRows]=await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total,SUM(enabled=TRUE AND paused=TRUE) AS paused,SUM(enabled=FALSE) AS disabled FROM display_screens WHERE tenant_id=?",[ctx.tenant]);const state=stateRows[0]??{};return reply({ok:false,code:"NO_ACTIVE_DISPLAYS",screenState:{total:Number(state.total??0),paused:Number(state.paused??0),disabled:Number(state.disabled??0)}},409);}
    if(targetScreens.length>100)return reply({ok:false,code:"TOO_MANY_DISPLAYS",max:100},413);
    const campaignId=randomUUID();
    const conn=await database().getConnection();
