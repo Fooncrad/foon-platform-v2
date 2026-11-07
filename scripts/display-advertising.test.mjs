@@ -498,3 +498,12 @@ test("each managed ad has a confirmed delete action wired to the tenant-scoped s
  assert.match(api,/DELETE FROM display_slides WHERE campaign_id=\? AND tenant_id=\?/);
  assert.match(api,/publishDisplayInvalidation\(ctx\.tenant,String\(screen\.screen_id\)\)/);
 });
+
+test("campaign save failures expose only safe database diagnostics and a request id to the manager",async()=>{
+ const api=await read("app/api/restaurant/displays/route.ts");
+ const manager=await read("app/restaurant/display-manager.tsx");
+ assert.match(api,/databaseCode,action:typeof action==="string"\?action:"unknown"/);
+ assert.match(api,/requestId,databaseCode/);
+ assert.match(manager,/d\.databaseCode,d\.requestId/);
+ assert.match(manager,/حذف الإعلان نهائياً/);
+});
